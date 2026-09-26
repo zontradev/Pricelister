@@ -553,20 +553,26 @@
 
                     <div class="find-workspace-card">
                         <form id="find-workspace-form" class="find-form" autocomplete="off">
-                            <div class="form-group" style="margin-bottom:0;">
+                            <div class="form-group">
                                 <label for="workspace-id-input">Workspace ID</label>
-                                <div class="input-with-btn">
-                                    <input type="text" id="workspace-id-input" name="workspaceId"
-                                        placeholder="e.g. ws_8f3k2m9p1x" required minlength="6" maxlength="40"
-                                        spellcheck="false" autocomplete="off">
-                                    <button type="submit" class="btn btn-primary" id="find-workspace-btn">
-                                        <span class="btn-text">Find</span>
-                                        <span class="spinner-sm" style="display:none;"></span>
-                                    </button>
-                                </div>
+                                <input type="text" id="workspace-id-input" name="workspaceId"
+                                    placeholder="e.g. ZZE..........." required minlength="6" maxlength="40"
+                                    spellcheck="false" autocomplete="off" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 1rem;">
                             </div>
-                            <p class="form-hint" style="font-size:0.8rem;color:#94a3b8;margin-top:0.75rem;">
-                                Only public workspace information is shown.
+                            
+                            <div class="form-group" style="margin-bottom: 1.5rem;">
+                                <label for="worker-ident-value">Worker Email or ID</label>
+                                <input type="text" id="worker-ident-value"
+                                    placeholder="Enter worker email or ID..." required
+                                    spellcheck="false" autocomplete="off" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px;">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" id="find-workspace-btn" style="width: 100%; justify-content: center;">
+                                <span class="btn-text">Secure Find</span>
+                                <span class="spinner-sm" style="display:none;"></span>
+                            </button>
+                            <p class="form-hint" style="font-size:0.8rem;color:#94a3b8;margin-top:0.75rem; text-align: center;">
+                                Both Workspace ID and Worker details are required to view workspace info securely.
                             </p>
                         </form>
 
@@ -587,29 +593,60 @@
                             <p id="find-error-message">Unable to search right now. Please try again later.</p>
                         </div>
 
-                        <div id="find-result" class="find-result" style="display:none;">
-                            <div class="result-header">
+                        <div id="find-result" class="find-result" style="display:none; text-align: left;">
+                            <div class="result-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
                                 <div class="result-avatar">
                                     <img src="pricelister_org.png" alt="Workspace">
                                 </div>
                                 <div>
-                                    <h3 id="result-ws-name">—</h3>
-                                    <div class="result-id">ID: <code id="result-ws-id">—</code></div>
+                                    <h3 id="result-ws-name" style="margin:0; font-size: 1.25rem; color: var(--primary);">—</h3>
+                                    <div class="result-id" style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">Workspace ID: <code id="result-ws-id">—</code></div>
                                 </div>
                             </div>
-                            <div class="result-details">
-                                <div class="detail-row">
-                                    <span class="label">Admin Email</span>
-                                    <span class="value" id="result-admin-email">—</span>
+                            
+                            <h4 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Admin Details</h4>
+                            <div class="result-details" style="background: var(--surface-50); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--border-color);">
+                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin Name</span>
+                                    <span class="value" id="result-admin-name" style="color: var(--text-primary); font-weight: 600;">—</span>
                                 </div>
-                                <div class="detail-row">
-                                    <span class="label">Total Workers</span>
-                                    <span class="value" id="result-workers">—</span>
+                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin Email</span>
+                                    <span class="value" id="result-admin-email" style="color: var(--text-primary);">—</span>
+                                </div>
+                                <div class="detail-row" style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin ID</span>
+                                    <span class="value" id="result-admin-id" style="color: var(--text-primary); font-family: monospace; font-size: 0.8rem;">—</span>
                                 </div>
                             </div>
-                            <p style="font-size:0.8rem;color:#94a3b8;margin:0;">
-                                This is public information only. To join this workspace you need an invitation from the admin.
-                            </p>
+
+                            <h4 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Your Member Profile</h4>
+                            <div class="result-details" style="background: rgba(59, 130, 246, 0.05); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid rgba(59, 130, 246, 0.2);">
+                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member Name</span>
+                                    <span class="value" id="result-worker-name" style="color: var(--text-primary); font-weight: 600;">—</span>
+                                </div>
+                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member Email</span>
+                                    <span class="value" id="result-worker-email" style="color: var(--text-primary);">—</span>
+                                </div>
+                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member ID</span>
+                                    <span class="value" id="result-worker-id" style="color: var(--text-primary); font-family: monospace; font-size: 0.8rem;">—</span>
+                                </div>
+                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Role</span>
+                                    <span class="value badge" id="result-worker-role" style="background: var(--primary); color: white; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">—</span>
+                                </div>
+                                <div class="detail-row" style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Joined At</span>
+                                    <span class="value" id="result-worker-joined" style="color: var(--text-primary);">—</span>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 1.5rem; text-align: center;">
+                                <a href="app.html" class="btn btn-primary" style="width: 100%; justify-content: center;">Go to Workspace</a>
+                            </div>
                         </div>
                     </div>
                 </div>
