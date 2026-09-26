@@ -47,14 +47,7 @@ export const hasUnsavedChanges = () => {
             if (prdSubmitBtn && !prdSubmitBtn.disabled) return true;
         }
 
-        // 3. Invoice Editor: Editor open with unsaved changes or items
-        const invEditor = document.getElementById('invoice-editor-view');
-        const invSubmitBtn = document.getElementById('inv-submit-btn');
-        if (invEditor && invEditor.style.display !== 'none') {
-            if (invSubmitBtn && !invSubmitBtn.disabled) return true;
-        }
-
-        // 4. Category Form: Form open with unsaved changes
+        // 3. Category Form: Form open with unsaved changes
         const catFormContainer = document.getElementById('category-form-container');
         const catSubmitBtn = document.getElementById('cat-submit-btn');
         if (catFormContainer && catFormContainer.style.display !== 'none') {
