@@ -18,7 +18,9 @@ export const authService = {
         if (CONFIG.APP_MODE === 'test') {
             const devSession = localStorage.getItem('mock_dev_session');
             if (devSession) {
-                callback(JSON.parse(devSession));
+                const user = JSON.parse(devSession);
+                authService.saveAccountToRegistry(user);
+                callback(user);
                 return () => {}; // dummy unsubscribe
             }
         }
@@ -28,10 +30,11 @@ export const authService = {
                 const appUser = {
                     uid: user.uid,
                     email: user.email || 'test.user@pricelister.app',
-                    displayName: user.displayName || 'Test User',
+                    displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'Test User'),
                     photoURL: user.photoURL || null,
                     role: 'PENDING'
                 };
+                authService.saveAccountToRegistry(appUser);
                 callback(appUser);
             } else {
                 callback(null);
@@ -39,9 +42,22 @@ export const authService = {
         });
     },
     
-    loginWithGoogle: async () => {
+    loginWithGoogle: async (forceSelectAccount = true) => {
         try {
+            if (forceSelectAccount) {
+                googleProvider.setCustomParameters({ prompt: 'select_account' });
+            } else {
+                googleProvider.setCustomParameters({});
+            }
             const result = await signInWithPopup(auth, googleProvider);
+            if (result && result.user) {
+                authService.saveAccountToRegistry({
+                    uid: result.user.uid,
+                    email: result.user.email,
+                    displayName: result.user.displayName,
+                    photoURL: result.user.photoURL
+                });
+            }
             return result.user;
         } catch (error) {
             console.error("Google Sign-In Error:", error);
@@ -59,7 +75,53 @@ export const authService = {
             role: 'CREATOR_ADMIN'
         };
         localStorage.setItem('mock_dev_session', JSON.stringify(mockUser));
+        authService.saveAccountToRegistry(mockUser);
         return mockUser;
+    },
+
+    saveAccountToRegistry: (user) => {
+        if (!user || !user.email) return;
+        try {
+            const key = 'pricelister_saved_accounts';
+            const raw = localStorage.getItem(key);
+            let list = raw ? JSON.parse(raw) : [];
+            // Filter out duplicates
+            list = list.filter(acc => acc.email.toLowerCase() !== user.email.toLowerCase());
+            list.unshift({
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName || user.email.split('@')[0],
+                photoURL: user.photoURL || null,
+                lastActive: Date.now()
+            });
+            // Keep top 6 accounts
+            localStorage.setItem(key, JSON.stringify(list.slice(0, 6)));
+        } catch (e) {
+            console.warn("Account registry save error:", e);
+        }
+    },
+
+    getSavedAccounts: () => {
+        try {
+            const raw = localStorage.getItem('pricelister_saved_accounts');
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    },
+
+    removeSavedAccount: (email) => {
+        try {
+            const key = 'pricelister_saved_accounts';
+            const raw = localStorage.getItem(key);
+            if (raw) {
+                let list = JSON.parse(raw);
+                list = list.filter(acc => acc.email.toLowerCase() !== (email || '').toLowerCase());
+                localStorage.setItem(key, JSON.stringify(list));
+            }
+        } catch (e) {
+            console.warn("Account removal error:", e);
+        }
     },
     
     logout: async () => {
@@ -85,3 +147,4 @@ export const authService = {
         return auth.currentUser;
     }
 };
+

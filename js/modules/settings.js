@@ -1,9 +1,12 @@
 import { firestoreService } from '../../firebase/firestore.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
+import { getRoleBadgeHtml } from '../auth-handler.js';
 import { getSettingsService } from '../services/settingsService.js';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
+import { openExcelImportModal, openExportModal } from './importExportModal.js';
+import { downloadSampleExcelTemplate } from '../utils/exportEngine.js';
 
 const db = getFirestore(firebaseApp);
 
@@ -92,11 +95,7 @@ export const renderSettings = async (container, workspaceId) => {
 
         // Show Admin/Co-Admin badge in header
         if (roleBadgeArea) {
-            roleBadgeArea.innerHTML = `
-                <span class="badge" style="background: ${isAdmin ? '#be123c' : '#9c27b0'}; color: white; padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 600;">
-                    ${isAdmin ? 'Creator Admin' : 'Co-Admin'} Mode
-                </span>
-            `;
+            roleBadgeArea.innerHTML = getRoleBadgeHtml(isAdmin ? 'CREATOR_ADMIN' : 'CO_ADMIN');
         }
 
         // 3. LOAD WORKSPACE SETTINGS FROM SERVER (ReceiptData & Workspaces)
@@ -203,6 +202,47 @@ export const renderSettings = async (container, workspaceId) => {
                     </form>
                 </div>
 
+                <!-- 4. DATA MANAGEMENT & EXPORT / IMPORT -->
+                <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); grid-column: 1 / -1; background: var(--surface-0); border: 1px solid var(--border-color);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:1rem;">
+                        <div>
+                            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.25rem 0; display:flex; align-items:center; gap:0.5rem;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                Data Management & Excel Tools
+                            </h3>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Import spreadsheets with auto-category grouping, generate custom Excel & PDF reports, or download full backups.</p>
+                        </div>
+                        <button id="btn-settings-sample-template" class="btn btn-secondary" style="font-size:0.85rem; display:flex; align-items:center; gap:0.4rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            Sample Excel Template
+                        </button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+                        <div style="background: var(--surface-50); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <strong style="display:block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">Excel & CSV Import</strong>
+                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Batch add products with automatic column detection, category clustering, and custom color assignment.</p>
+                            </div>
+                            <button id="btn-settings-import-excel" class="btn btn-primary" style="font-size: 0.85rem; font-weight: 600; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                Launch Import Tool
+                            </button>
+                        </div>
+
+                        <div style="background: var(--surface-50); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <strong style="display:block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">Custom Data Exporter</strong>
+                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Export customizable Excel spreadsheets, printable PDF price lists with catalogs, or full JSON backups.</p>
+                            </div>
+                            <button id="btn-settings-export-data" class="btn btn-secondary" style="font-size: 0.85rem; font-weight: 600; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Launch Exporter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- SAVE ACTIONS -->
                 <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem;">
                     <button type="button" id="btn-save-settings" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;">
@@ -267,6 +307,28 @@ export const renderSettings = async (container, workspaceId) => {
                     btnSave.disabled = false;
                     btnSave.textContent = 'Save Workspace Settings';
                 }
+            });
+        }
+
+        // Data Management Button Handlers
+        const btnSample = contentArea.querySelector('#btn-settings-sample-template');
+        if (btnSample) {
+            btnSample.addEventListener('click', () => downloadSampleExcelTemplate());
+        }
+
+        const btnImport = contentArea.querySelector('#btn-settings-import-excel');
+        if (btnImport) {
+            btnImport.addEventListener('click', () => {
+                openExcelImportModal(workspaceId, () => {
+                    showAlert.success("Spreadsheet data successfully imported into workspace!");
+                });
+            });
+        }
+
+        const btnExport = contentArea.querySelector('#btn-settings-export-data');
+        if (btnExport) {
+            btnExport.addEventListener('click', () => {
+                openExportModal(workspaceId, { workspaceInfo: wsData });
             });
         }
 

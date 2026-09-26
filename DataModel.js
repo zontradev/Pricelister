@@ -29,6 +29,55 @@ export function generateInvoiceUniqueId() {
     return generateUniqueId();
 }
 
+// --- Base34 14-Character Generator (Android ProductViewModel.kt Parity) ---
+export function generateWorkspaceId() {
+    const chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    let time = Date.now();
+    const timeSb = [];
+    while (time > 0) {
+        timeSb.push(chars[time % 34]);
+        time = Math.floor(time / 34);
+    }
+    const timestampPart = timeSb.reverse().join("");
+    const randomLen = Math.max(14 - timestampPart.length, 4);
+    let randomPart = "";
+    for (let i = 0; i < randomLen; i++) {
+        randomPart += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return (timestampPart + randomPart).substring(0, 14);
+}
+
+// --- Worker ID Generator (Android ProductViewModel.kt Parity) ---
+export function generateWorkerId() {
+    const timestampPart = Date.now().toString(36).toUpperCase();
+    const chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+    let randomPart = "";
+    for (let i = 0; i < 6; i++) {
+        randomPart += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return timestampPart + randomPart;
+}
+
+export class WorkspaceInfo {
+    constructor(data = {}) {
+        this.workspaceId = data.workspaceId || generateWorkspaceId();
+        this.name = data.name || "";
+        this.description = data.description || "Main";
+        this.adminEmail = data.adminEmail || "";
+        this.adminName = data.adminName || "";
+        this.adminId = data.adminId || generateWorkerId();
+        this.createdAt = Number(data.createdAt) || Date.now();
+        this.workersCount = Number(data.workersCount) || 0;
+        this.adminProductCount = Number(data.adminProductCount) || 0;
+        this.adminInvoiceCount = Number(data.adminInvoiceCount) || 0;
+        this.adminCategoryCount = Number(data.adminCategoryCount) || 0;
+        this.adminBusinessCount = Number(data.adminBusinessCount) || 0;
+        this.adminClientCount = Number(data.adminClientCount) || 0;
+        this.adminTotalDeleted = Number(data.adminTotalDeleted) || 0;
+        this.adminTotalDeletedCount = Number(data.adminTotalDeletedCount) || 0;
+    }
+}
+
 export class Invoice {
     constructor(data = {}) {
         this.additionalCut = Number(data.additionalCut) || 0.0;

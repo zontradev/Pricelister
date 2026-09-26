@@ -8,6 +8,7 @@ import { showAlert } from '../alert-handler.js';
 import { calculateInvoiceTotal } from '../utils/invoiceCalculator.js';
 import { toggleContextPanel } from '../workspace.js';
 import { generateUniqueId } from '../../DataModel.js';
+import { exportInvoicesExcel } from '../utils/exportEngine.js';
 
 export const renderInvoices = async (container, workspaceId, isBusinessInvoice) => {
     const invoiceService = getInvoiceService(workspaceId);
@@ -55,10 +56,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <h2 style="margin: 0 0 0.35rem 0;">${typeLabel}s</h2>
                     <div id="inv-vending-badge" style="display: inline-block;"></div>
                 </div>
-                <button id="btn-add-invoice" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                    + Add ${typeLabel}
-                </button>
+                <div style="display:flex; gap:0.6rem; align-items:center;">
+                    <button id="btn-export-invoices-excel" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px; font-weight:600;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Export Excel
+                    </button>
+                    <button id="btn-add-invoice" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px; font-weight:600;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                        + Add ${typeLabel}
+                    </button>
+                </div>
             </div>
 
             <!-- FILTER & SEARCH TOOLBAR -->
@@ -1717,6 +1724,19 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             btnSubmit.textContent = editingInvoiceId ? "Update Invoice" : "Save Invoice";
         }
     });
+
+    // Export Invoices Excel Click Handler
+    const btnExportInv = container.querySelector('#btn-export-invoices-excel');
+    if (btnExportInv) {
+        btnExportInv.addEventListener('click', () => {
+            if (!rawInvoices || rawInvoices.length === 0) {
+                showAlert.warning("No invoices available to export.");
+                return;
+            }
+            exportInvoicesExcel(rawInvoices);
+            showAlert.success(`Exported ${rawInvoices.length} invoices to Excel!`);
+        });
+    }
 
     loadData();
 };

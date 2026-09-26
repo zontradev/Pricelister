@@ -3,6 +3,7 @@ import { getCategoryService } from '../services/categoryService.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 import { storageService } from '../../supabase/storage.js';
+import { openExcelImportModal, openExportModal } from './importExportModal.js';
 
 export const renderProducts = async (container, workspaceId) => {
     const productService = getProductService(workspaceId);
@@ -11,9 +12,25 @@ export const renderProducts = async (container, workspaceId) => {
     
     // UI Layout
     container.innerHTML = `
-        <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
-            <h2>Products</h2>
-            <button id="btn-add-product" class="btn btn-primary">Add Product</button>
+        <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; flex-wrap:wrap; gap:1rem;">
+            <div>
+                <h2 style="margin:0 0 0.25rem 0;">Products</h2>
+                <p style="margin:0; font-size:0.85rem; color:var(--text-secondary);">Manage your product catalog, prices, categories, and inventory</p>
+            </div>
+            <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+                <button id="btn-import-excel" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Import Excel
+                </button>
+                <button id="btn-export-products" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Export
+                </button>
+                <button id="btn-add-product" class="btn btn-primary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Add Product
+                </button>
+            </div>
         </div>
         
         <!-- CUSTOM CATEGORY MODAL -->
@@ -553,6 +570,27 @@ export const renderProducts = async (container, workspaceId) => {
             btn.disabled = false;
         }
     });
+
+    // Import Excel & Export Click Handlers
+    const btnImport = container.querySelector('#btn-import-excel');
+    if (btnImport) {
+        btnImport.addEventListener('click', () => {
+            openExcelImportModal(workspaceId, () => {
+                loadData();
+            });
+        });
+    }
+
+    const btnExport = container.querySelector('#btn-export-products');
+    if (btnExport) {
+        btnExport.addEventListener('click', async () => {
+            const [pList, cList] = await Promise.all([
+                productService.getAllActiveProducts().catch(() => []),
+                categoryService.getAllCategories().catch(() => [])
+            ]);
+            openExportModal(workspaceId, { products: pList, categories: cList });
+        });
+    }
 
     loadData();
 };

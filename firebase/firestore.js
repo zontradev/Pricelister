@@ -86,42 +86,49 @@ export const firestoreService = {
             // According to Android rules: isWorkspaceAdmin(workspaceId) means document ID == uid
             const documentId = uid; 
             
-            // Base34 14-Character Generator (Android match)
+            // Base34 14-Character Generator (Android ProductViewModel.kt Parity)
             const chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
             let time = Date.now();
-            let timeStr = "";
+            const timeSb = [];
             while (time > 0) {
-                timeStr = chars[time % 34] + timeStr;
+                timeSb.push(chars[time % 34]);
                 time = Math.floor(time / 34);
             }
-            const randomLen = Math.max(14 - timeStr.length, 4);
+            const timestampPart = timeSb.reverse().join("");
+            const randomLen = Math.max(14 - timestampPart.length, 4);
             let randomPart = "";
-            for(let i=0; i<randomLen; i++) {
+            for (let i = 0; i < randomLen; i++) {
                 randomPart += chars[Math.floor(Math.random() * chars.length)];
             }
-            const newWorkspaceId = timeStr + randomPart;
+            const newWorkspaceId = (timestampPart + randomPart).substring(0, 14);
+
+            // Generate Worker/Admin ID (Android Parity)
+            const adminWorkerId = Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 8).toUpperCase();
             
-            // 1. Create Workspace Doc matching Android structure
+            // 1. Create Workspace Doc matching Android structure with exact required fields
             const workspaceRef = doc(db, 'Workspaces', documentId);
-            await setDoc(workspaceRef, {
+            const wsDocData = {
                 workspaceId: newWorkspaceId,
-                name: workspaceData.name,
-                description: "",
+                name: (workspaceData.name || "").trim(),
+                description: (workspaceData.description || "Main").trim(),
                 phone: workspaceData.phone || "",
                 address: workspaceData.address || "",
-                email: workspaceData.email || "",
-                adminEmail: email,
-                adminName: workspaceData.name, // generic fallback
-                adminId: uid, // Use UID as the worker ID for the admin initially
-                createdAt: serverTimestamp(),
+                email: workspaceData.email || email || "",
+                adminEmail: email || workspaceData.adminEmail || "",
+                adminName: workspaceData.adminName || workspaceData.name || "Eycon Contact",
+                adminId: workspaceData.adminId || adminWorkerId,
+                createdAt: Date.now(),
                 workersCount: 0,
                 adminProductCount: 0,
                 adminInvoiceCount: 0,
                 adminCategoryCount: 0,
                 adminBusinessCount: 0,
                 adminClientCount: 0,
+                adminTotalDeleted: 0,
                 adminTotalDeletedCount: 0
-            });
+            };
+
+            await setDoc(workspaceRef, wsDocData);
             
             // 2. Update User Profile in userCollection
             const userRef = doc(db, 'userCollection', uid);
@@ -131,11 +138,55 @@ export const firestoreService = {
                 createdAt: serverTimestamp()
             }, { merge: true });
             
-            return workspaceId;
+            return newWorkspaceId;
         } catch (error) {
             console.error("Error creating workspace:", error);
             throw error;
         }
+    },
+
+    // ---------------------------------------------
+    // REALTIME ROLE LISTENER
+    // ---------------------------------------------
+    listenToUserRole: (uid, email, onRoleChange) => {
+        if (!uid) return () => {};
+        
+        // Check if Admin
+        const wsRef = doc(db, 'Workspaces', uid);
+        const unsubWs = onSnapshot(wsRef, (snap) => {
+            if (snap.exists()) {
+                onRoleChange('CREATOR_ADMIN', snap.data());
+            } else {
+                // If not admin, listen to Connections doc
+                const connRef = doc(db, 'Connections', uid);
+                const unsubConn = onSnapshot(connRef, async (connSnap) => {
+                    if (connSnap.exists()) {
+                        const connData = connSnap.data();
+                        const adminUid = connData.adminUid;
+                        let role = connData.role || 'WORKER';
+                        
+                        if (email && adminUid) {
+                            try {
+                                const memberRef = doc(db, `Workspaces/${adminUid}/Members`, email.toLowerCase());
+                                const memberSnap = await getDoc(memberRef);
+                                if (memberSnap.exists() && memberSnap.data().role) {
+                                    role = memberSnap.data().role;
+                                }
+                            } catch (e) {
+                                console.warn("Member role read error:", e);
+                            }
+                        }
+                        onRoleChange(role, connData);
+                    } else {
+                        onRoleChange(null, null);
+                    }
+                }, (err) => console.warn("Conn listen error:", err));
+                
+                return unsubConn;
+            }
+        }, (err) => console.warn("Ws listen error:", err));
+
+        return unsubWs;
     },
 
     // ---------------------------------------------
@@ -200,6 +251,17 @@ export const firestoreService = {
         } catch (error) {
             console.error("Error rejecting invite:", error);
             throw error;
+        }
+    },
+
+    getWorkspaceMembers: async (adminUid) => {
+        try {
+            const membersRef = collection(db, `Workspaces/${adminUid}/Members`);
+            const snap = await getDocs(membersRef);
+            return snap.docs.map(d => ({ email: d.id, ...d.data() }));
+        } catch (e) {
+            console.warn("Error fetching workspace members:", e);
+            return [];
         }
     }
 };

@@ -5,6 +5,7 @@ import { getInvoiceService } from '../services/invoiceService.js';
 import { getPeopleService } from '../services/peopleService.js';
 import { getSettingsService } from '../services/settingsService.js';
 import { showAlert } from '../alert-handler.js';
+import { getRoleBadgeHtml, openAccountSwitcherModal } from '../auth-handler.js';
 
 export const renderProfile = async (container, workspaceId) => {
     const currentUser = authService.getCurrentUser();
@@ -72,18 +73,123 @@ export const renderProfile = async (container, workspaceId) => {
         const totalInvoices = custInvoices.length + busInvoices.length;
         const initial = displayName.charAt(0).toUpperCase();
 
-        const roleColor = role === 'CREATOR_ADMIN' ? 'var(--primary)' : '#2563eb';
-        const roleBg = role === 'CREATOR_ADMIN' ? 'rgba(225, 29, 72, 0.12)' : 'rgba(37, 99, 235, 0.12)';
+        // 1. Calculate Member/Admin Creations & Deletions (Parity with MembersScreen.kt)
+        const isAdmin = role === 'CREATOR_ADMIN' || role === 'ADMIN' || role === 'CREATOR' || wsData?.id === currentUser.uid;
+        let productCount = 0;
+        let invoiceCount = 0;
+        let categoryCount = 0;
+        let clientCount = 0;
+        let businessCount = 0;
+        let totalDeleted = 0;
+        let joinedTimestamp = Date.now();
+
+        if (isAdmin && wsData) {
+            productCount = Number(wsData.adminProductCount ?? products.length);
+            invoiceCount = Number(wsData.adminInvoiceCount ?? totalInvoices);
+            categoryCount = Number(wsData.adminCategoryCount ?? 0);
+            clientCount = Number(wsData.adminClientCount ?? businesses.length);
+            businessCount = Number(wsData.adminBusinessCount ?? businesses.length);
+            totalDeleted = Number(wsData.adminTotalDeleted ?? wsData.adminTotalDeletedCount ?? 0);
+            joinedTimestamp = wsData.createdAt;
+        } else {
+            // For workers and co-admins, attempt to read from Members subcollection
+            try {
+                const adminUid = wsData?.id || workspaceId;
+                const members = await firestoreService.getWorkspaceMembers(adminUid);
+                const myMember = members.find(m => m.email?.toLowerCase() === email.toLowerCase());
+                if (myMember) {
+                    productCount = Number(myMember.productAdded ?? 0);
+                    invoiceCount = Number(myMember.invoiceAdded ?? 0);
+                    categoryCount = Number(myMember.categoryAdded ?? 0);
+                    clientCount = Number(myMember.clientAdded ?? 0);
+                    businessCount = Number(myMember.businessAdded ?? 0);
+                    totalDeleted = Number(myMember.totalDeleted ?? 0);
+                    joinedTimestamp = myMember.joinedAt || myMember.timestamp || Date.now();
+                }
+            } catch (err) {
+                console.warn("Could not load worker contribution counters:", err);
+            }
+        }
+
+        const joinedDateFormatted = (() => {
+            if (!joinedTimestamp) return 'N/A';
+            const d = typeof joinedTimestamp === 'number' 
+                ? new Date(joinedTimestamp) 
+                : (joinedTimestamp.toDate ? joinedTimestamp.toDate() : new Date());
+            return isNaN(d.getTime()) ? 'Active Member' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        })();
 
         container.innerHTML = `
             <div class="module-header" style="margin-bottom: 2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                 <div>
                     <h2 style="margin:0 0 0.35rem 0;">My Profile</h2>
-                    <p style="color: var(--text-secondary); margin: 0;">Account identity, access tier, and workspace footprint.</p>
+                    <p style="color: var(--text-secondary); margin: 0;">Account identity, access tier, and personal contributions footprint.</p>
                 </div>
-                <div style="display:flex; gap:0.75rem;">
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                    <button id="btn-profile-switch-acc" class="btn btn-primary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                        Switch / Add Account
+                    </button>
                     <button id="btn-profile-settings" class="btn btn-secondary">Workspace Settings</button>
                     <button id="btn-profile-logout" class="btn btn-outline" style="color:var(--danger); border-color:var(--danger);">Sign Out</button>
+                </div>
+            </div>
+
+            <!-- MY CONTRIBUTIONS & CREATIONS DASHBOARD CARD (Android MembersScreen.kt Parity) -->
+            <div class="card" style="padding: 2rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); margin-bottom: 2rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-color); padding-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">
+                            ACTIVITY & CREATION DASHBOARD
+                        </div>
+                        <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                            My Contributions & Creations
+                        </h3>
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--text-secondary); background:var(--surface-50); padding:0.4rem 0.85rem; border-radius:8px; border:1px solid var(--border-color);">
+                        Joined: <strong style="color:var(--text-primary);">${joinedDateFormatted}</strong>
+                    </div>
+                </div>
+
+                <!-- Clean Grid of Creation Metrics (Matching Android MembersScreen.kt) -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Products</span>
+                        <strong style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${productCount}</strong>
+                    </div>
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Invoices</span>
+                        <strong style="font-size:1.75rem; font-weight:800; color:var(--primary);">${invoiceCount}</strong>
+                    </div>
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Categories</span>
+                        <strong style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${categoryCount}</strong>
+                    </div>
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Clients</span>
+                        <strong style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${clientCount}</strong>
+                    </div>
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Businesses</span>
+                        <strong style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${businessCount}</strong>
+                    </div>
+                </div>
+
+                <!-- Highlighted Deletion Tracker (Matching MembersScreen.kt DeleteSweep) -->
+                <div style="background:rgba(239, 68, 68, 0.08); border:1.5px solid rgba(239, 68, 68, 0.35); border-radius:10px; padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <div style="width:38px; height:38px; border-radius:8px; background:rgba(239, 68, 68, 0.15); color:#ef4444; display:flex; align-items:center; justify-content:center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </div>
+                        <div>
+                            <strong style="color:#b91c1c; font-size:0.95rem; display:block;">Total Deletions Tracker</strong>
+                            <span style="color:#ef4444; font-size:0.8rem;">Recorded item removals & deletions</span>
+                        </div>
+                    </div>
+                    <div style="font-size:1.6rem; font-weight:900; color:#b91c1c; font-family:monospace; background:white; padding:0.25rem 0.85rem; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">
+                        ${String(totalDeleted).padStart(2, '0')}
+                    </div>
                 </div>
             </div>
 
@@ -95,14 +201,14 @@ export const renderProfile = async (container, workspaceId) => {
                         <div style="display:flex; align-items:center; gap:1.25rem; margin-bottom:1.5rem;">
                             ${photoURL 
                                 ? `<img src="${photoURL}" alt="${displayName}" style="width:72px; height:72px; border-radius:50%; object-fit:cover; border:3px solid var(--surface-200); box-shadow:0 4px 10px rgba(0,0,0,0.1);">` 
-                                : `<div style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #e11d48, #be123c); color:white; font-size:1.75rem; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(225,29,72,0.3);">${initial}</div>`
+                                : `<div style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #334155, #0f172a); color:white; font-size:1.75rem; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">${initial}</div>`
                             }
                             <div>
                                 <h3 style="margin:0 0 0.25rem 0; font-size:1.35rem; color:var(--text-primary); font-weight:700;">${displayName}</h3>
                                 <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.5rem;">${email}</div>
-                                <span class="badge" style="background:${roleBg}; color:${roleColor}; font-weight:700; font-size:0.78rem; padding:0.25rem 0.65rem;">
-                                    ${role}
-                                </span>
+                                <div>
+                                    ${getRoleBadgeHtml(role)}
+                                </div>
                             </div>
                         </div>
 
@@ -117,7 +223,7 @@ export const renderProfile = async (container, workspaceId) => {
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span style="color:var(--text-secondary);">Active Role</span>
-                                <strong style="color:${roleColor};">${role}</strong>
+                                <div>${getRoleBadgeHtml(role)}</div>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span style="color:var(--text-secondary);">Auth Provider</span>
@@ -172,6 +278,7 @@ export const renderProfile = async (container, workspaceId) => {
                 </div>
             </div>
 
+
             <!-- SECURITY & ACTIONS CARD -->
             <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float);">
                 <h3 style="margin:0 0 1rem 0; font-size:1.15rem; color:var(--text-primary); font-weight:700;">Account Actions</h3>
@@ -185,6 +292,10 @@ export const renderProfile = async (container, workspaceId) => {
         `;
 
         // Event Listeners
+        container.querySelector('#btn-profile-switch-acc')?.addEventListener('click', () => {
+            openAccountSwitcherModal(currentUser);
+        });
+
         container.querySelector('#btn-profile-settings')?.addEventListener('click', () => {
             window.location.hash = '#/settings';
         });

@@ -285,6 +285,55 @@ tbody tr:hover {
     color: var(--text-secondary);
 }
 
+/* Realtime Role Badges - Professional Theme: Worker (Black text, Grey accent), Co-Admin (Green text), Admin (Green Glow Gradient) */
+.badge-role {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.badge-role-admin {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.45), 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid rgba(5, 150, 105, 0.8) !important;
+    font-weight: 700 !important;
+}
+
+.badge-role-coadmin {
+    background: rgba(22, 163, 74, 0.12) !important;
+    color: #16a34a !important;
+    border: 1px solid rgba(22, 163, 74, 0.35) !important;
+    font-weight: 600 !important;
+}
+
+.badge-role-worker {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    font-weight: 600 !important;
+}
+
+[data-theme="dark"] .badge-role-worker {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border: 1px solid #475569 !important;
+}
+
+[data-theme="dark"] .badge-role-coadmin {
+    background: rgba(22, 163, 74, 0.22) !important;
+    color: #4ade80 !important;
+    border: 1px solid rgba(74, 222, 128, 0.4) !important;
+}
+
 /* Member Status Badges - High contrast, always visible */
 .badge-status {
     display: inline-flex;
@@ -925,5 +974,29 @@ tbody tr:hover {
     border-top: 1px solid var(--border-color);
     flex-wrap: wrap;
     gap: 0.75rem;
+}
+
+/* ===== IMPORT & EXPORT ENGINE STYLES ===== */
+.export-format-card {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.export-format-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+.export-format-card.active {
+    border-color: var(--primary) !important;
+    background: rgba(16, 185, 129, 0.08) !important;
+}
+
+#import-dropzone:hover {
+    border-color: var(--primary) !important;
+    background: rgba(16, 185, 129, 0.06) !important;
+}
+
+.active-filter-tab {
+    background: var(--primary) !important;
+    color: #ffffff !important;
+    border-color: var(--primary) !important;
 }
 

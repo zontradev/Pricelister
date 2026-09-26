@@ -1,6 +1,7 @@
 import { firestoreService } from '../../firebase/firestore.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
+import { getRoleBadgeHtml } from '../auth-handler.js';
 import { getFirestore, doc, collection, getDoc, setDoc, deleteDoc, updateDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 
@@ -223,7 +224,6 @@ export const renderWorkers = async (container, workspaceId) => {
                     `;
                 }
 
-                const myRoleDisp = isAdmin ? 'Admin' : (isCoAdmin ? 'Co-Admin' : 'Worker');
                 const myStatusUpper = (myMemberData.status || 'JOINED').toUpperCase();
                 const myIsPending = myStatusUpper === 'PENDING';
                 const myStatusDisp = effectiveIsRestricted ? 'Restricted' : (myIsPending ? 'Pending' : 'Joined');
@@ -233,18 +233,17 @@ export const renderWorkers = async (container, workspaceId) => {
                 myInfoContent.innerHTML = `
                     <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Email:</strong> <span>${myMemberData.email || currentUser.email}</span></div>
                     <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Worker ID:</strong> <span style="font-family: monospace; font-size: 0.9rem;">${myMemberData.appWorkerId || currentUser.uid}</span></div>
-                    <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Role:</strong> <span class="badge" style="background: ${isCoAdmin ? '#9c27b0' : (isAdmin ? '#be123c' : 'var(--primary)')}; color: white; font-weight:600;">${myRoleDisp}</span></div>
+                    <div style="display:flex; align-items:center;"><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Role:</strong> <span>${getRoleBadgeHtml(myMemberData.role || wsInfo.role)}</span></div>
                     <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Status:</strong> <span class="badge-status ${myStatusClass}"><span class="badge-status-dot ${myDotClass}"></span><span>${myStatusDisp}</span></span></div>
                     <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Joined:</strong> <span>${joinedDate}</span></div>
                     ${restrictionsHtml}
                 `;
             } else {
                 // Fallback if the user (e.g. Creator Admin) is not technically in the Members subcollection yet
-                const myRoleDisp = isAdmin ? 'Admin' : (isCoAdmin ? 'Co-Admin' : 'Worker');
                 myInfoContent.innerHTML = `
                     <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Email:</strong> <span>${currentUser.email || 'Unknown'}</span></div>
                     <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Worker ID:</strong> <span style="font-family: monospace; font-size: 0.9rem;">${currentUser.uid}</span></div>
-                    <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Role:</strong> <span class="badge" style="background: ${isCoAdmin ? '#9c27b0' : (isAdmin ? '#be123c' : 'var(--primary)')}; color: white; font-weight:600;">${myRoleDisp}</span></div>
+                    <div style="display:flex; align-items:center;"><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Role:</strong> <span>${getRoleBadgeHtml(wsInfo.role || 'CREATOR_ADMIN')}</span></div>
                     <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Status:</strong> <span class="badge-status badge-status-joined"><span class="badge-status-dot dot-joined"></span><span>Joined</span></span></div>
                     <div><strong style="color: var(--text-secondary); display:inline-block; width: 100px;">Joined:</strong> <span>Workspace Creator</span></div>
                 `;
@@ -253,20 +252,7 @@ export const renderWorkers = async (container, workspaceId) => {
             // --- POPULATE MEMBERS TABLE ---
             tbody.innerHTML = members.map(m => {
                 const rUpper = (m.role || 'WORKER').toUpperCase();
-                let roleDisp = 'Worker';
-                let roleStyle = 'color: var(--text-primary); font-weight: 500;';
-                let mIsAdmin = false;
-                let mIsCoAdmin = false;
-
-                if (rUpper === 'CREATOR_ADMIN' || rUpper === 'ADMIN' || rUpper === 'CREATOR' || m.isCreator) {
-                    roleDisp = 'Admin';
-                    roleStyle = 'color: var(--primary); font-weight: 700;';
-                    mIsAdmin = true;
-                } else if (rUpper === 'CO_ADMIN' || rUpper === 'CO-ADMIN') {
-                    roleDisp = 'Co-Admin';
-                    roleStyle = 'color: #9c27b0; font-weight: 700;';
-                    mIsCoAdmin = true;
-                }
+                let roleBadgeRender = getRoleBadgeHtml(m.isCreator ? 'CREATOR_ADMIN' : m.role);
 
                 const statusUpper = (m.status || 'JOINED').toUpperCase();
                 const isPending = statusUpper === 'PENDING';
@@ -349,7 +335,7 @@ export const renderWorkers = async (container, workspaceId) => {
                 return `
                 <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.15s ease;">
                     <td style="padding:1rem;"><strong>${m.email}</strong></td>
-                    <td style="padding:1rem;"><span style="${roleStyle}">${roleDisp}</span></td>
+                    <td style="padding:1rem;">${roleBadgeRender}</td>
                     <td style="padding:1rem;">${statusBadgeHtml}</td>
                     ${actionHtml}
                 </tr>`;

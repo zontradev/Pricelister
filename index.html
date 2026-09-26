@@ -14,6 +14,9 @@
     <link rel="stylesheet" href="css/responsive.css">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script type="module" src="config.js"></script>
 
     <style>
@@ -822,7 +825,7 @@
             </div>
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:2rem;">
                 <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid #e2e8f0;">
-                    <div style="width:48px;height:48px;border-radius:10px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);background:white;">
+                    <div style="width:48px;height:48px;border-radius:10px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);background:white;display:flex;align-items:center;justify-content:center;">
                         <img src="pricelister_org.png" alt="Workspace" style="width:100%;height:100%;object-fit:contain;">
                     </div>
                     <div>
@@ -831,69 +834,114 @@
                     </div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:0.75rem;">
-                    <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;">
                         <span style="color:#64748b;">User Account</span>
                         <div style="display:flex;align-items:center;gap:0.5rem;color:#334155;font-weight:500;">
-                            <div style="width:20px;height:20px;border-radius:50%;background:#cbd5e1;display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;" id="launcher-avatar">?</div>
+                            <img id="launcher-photo" class="user-picture" style="width:24px;height:24px;min-width:24px;display:none;" alt="User">
+                            <div style="width:24px;height:24px;border-radius:50%;background:#334155;display:flex;align-items:center;justify-content:center;color:white;font-size:0.75rem;font-weight:bold;" id="launcher-avatar">?</div>
                             <span id="launcher-account-email">user@example.com</span>
                         </div>
                     </div>
-                    <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
-                        <span style="color:#64748b;">Access Role</span>
-                        <span id="launcher-user-role" class="badge" style="background:rgba(225, 29, 72, 0.12);color:#e11d48;">CREATOR_ADMIN</span>
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;">
+                        <span style="color:#64748b;">Realtime Role</span>
+                        <span id="launcher-user-role" class="badge-role badge-role-admin">Admin</span>
                     </div>
-                    <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;">
                         <span style="color:#64748b;">Since Joined</span>
                         <span id="launcher-joined-date" style="color:#334155;font-weight:500;">...</span>
                     </div>
                 </div>
             </div>
-            <button onclick="window.location.href='app.html'" class="btn btn-primary btn-block mb-4" style="font-size:1.15rem;padding:0.85rem;border-radius:8px;">
+            <button onclick="window.location.href='app.html'" class="btn btn-primary btn-block mb-4" style="font-size:1.1rem;padding:0.85rem;border-radius:8px;font-weight:600;">
                 Enter Workspace →
             </button>
             <button id="launcher-change-account-btn" class="btn btn-block" style="background:transparent;color:var(--text-secondary);border:1px solid #e2e8f0;font-weight:500;">
-                Change Account
+                ⇄ Change / Switch Account
             </button>
         </div>
     </div>
 
-    <!-- WORKSPACE SETUP -->
-    <div id="workspace-setup-container" style="display:none;">
-        <div class="setup-container card">
+    <!-- WORKSPACE SETUP / NO WORKSPACE FOUND -->
+    <div id="workspace-setup-container" style="display:none;padding:2rem;">
+        <div class="setup-container card" style="max-width:540px;margin:3rem auto;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.08);">
+            
+            <!-- No Workspace Found Header -->
             <div class="text-center mb-4">
-                <h1 style="color:var(--primary);">Welcome!</h1>
-                <p>Let's set up your workspace or join an existing one.</p>
+                <div style="width:54px;height:54px;border-radius:50%;background:#f1f5f9;color:#64748b;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem auto;border:1px solid #e2e8f0;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><line x1="3.27" y1="6.96" x2="12" y2="12.01"></line><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+                <h1 style="color:var(--text-primary);font-weight:800;font-size:1.6rem;margin-bottom:0.35rem;">No Workspace Found</h1>
+                <p style="color:var(--text-secondary);font-size:0.95rem;margin:0;">No active workspace is connected with this account yet.</p>
             </div>
-            <div id="pending-invites-section" style="display:none;margin-bottom:2rem;">
-                <h3 style="font-size:1.1rem;color:#334155;border-bottom:1px solid var(--border-color);padding-bottom:0.5rem;margin-bottom:1rem;">Pending Invitations</h3>
-                <div id="pending-invites-list" style="display:flex;flex-direction:column;gap:1rem;"></div>
+
+            <!-- Current Account Status Card -->
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:0.85rem 1rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+                <div style="display:flex;align-items:center;gap:0.75rem;overflow:hidden;">
+                    <img id="setup-account-photo" class="user-picture" style="width:32px;height:32px;min-width:32px;display:none;" alt="User">
+                    <div id="setup-account-avatar" class="user-avatar" style="width:32px;height:32px;min-width:32px;font-size:0.85rem;">?</div>
+                    <div style="overflow:hidden;">
+                        <div id="setup-account-email" style="font-size:0.85rem;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">user@example.com</div>
+                        <div style="font-size:0.75rem;color:#64748b;">Signed-in Google Account</div>
+                    </div>
+                </div>
+                <button id="setup-change-account-btn" class="btn btn-xs btn-outline" style="white-space:nowrap;font-size:0.75rem;">
+                    ⇄ Switch Account
+                </button>
+            </div>
+
+            <!-- Pending Invitations Notification Section (Join Workspace) -->
+            <div id="pending-invites-section" style="display:none;margin-bottom:1.75rem;">
+                <div style="background:rgba(16, 185, 129, 0.08);border:1.5px solid rgba(16, 185, 129, 0.4);border-radius:12px;padding:1.25rem;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;color:#065f46;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        <strong style="font-size:1rem;">Workspace Join Request(s) Available</strong>
+                    </div>
+                    <p style="font-size:0.85rem;color:#065f46;margin:0 0 1rem 0;">You have an invitation to join the following workspace:</p>
+                    <div id="pending-invites-list" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+                </div>
+                
                 <div style="display:flex;align-items:center;margin:1.5rem 0;">
-                    <div style="flex-grow:1;height:1px;background:#e0e0e0;"></div>
-                    <span style="padding:0 1rem;color:var(--text-muted);font-size:0.85rem;">OR CREATE NEW</span>
-                    <div style="flex-grow:1;height:1px;background:#e0e0e0;"></div>
+                    <div style="flex-grow:1;height:1px;background:#e2e8f0;"></div>
+                    <span style="padding:0 0.85rem;color:var(--text-muted);font-size:0.8rem;font-weight:600;">OR CREATE A NEW WORKSPACE</span>
+                    <div style="flex-grow:1;height:1px;background:#e2e8f0;"></div>
                 </div>
             </div>
-            <form id="workspace-setup-form">
-                <div class="form-group">
-                    <label for="ws-name">Business / Workspace Name</label>
-                    <input type="text" id="ws-name" required placeholder="My Business">
-                </div>
-                <div class="form-group">
-                    <label for="ws-phone">Business Phone</label>
-                    <input type="text" id="ws-phone" required placeholder="Phone Number">
-                </div>
-                <div class="form-group">
-                    <label for="ws-address">Business Address</label>
-                    <textarea id="ws-address" required placeholder="Full Address"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="ws-email">Business Email</label>
-                    <input type="email" id="ws-email" required placeholder="contact@business.com">
-                </div>
-                <button type="submit" class="btn btn-primary btn-block mt-20">Create Workspace</button>
-            </form>
+
+            <!-- Create Workspace Form -->
+            <div>
+                <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);margin:0 0 1rem 0;display:flex;align-items:center;gap:0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Create New Workspace
+                </h3>
+                <form id="workspace-setup-form">
+                    <div class="form-group" style="margin-bottom:1rem;">
+                        <label for="ws-name" style="font-weight:600;font-size:0.85rem;margin-bottom:0.35rem;display:block;">Business / Workspace Name *</label>
+                        <input type="text" id="ws-name" required placeholder="e.g. Lashker Traders & Diaper House" style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.92rem;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:1rem;">
+                        <label for="ws-desc" style="font-weight:600;font-size:0.85rem;margin-bottom:0.35rem;display:block;">Description</label>
+                        <input type="text" id="ws-desc" value="Main" placeholder="Main" style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.92rem;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:1rem;">
+                        <label for="ws-phone" style="font-weight:600;font-size:0.85rem;margin-bottom:0.35rem;display:block;">Business Phone</label>
+                        <input type="text" id="ws-phone" placeholder="e.g. +1 555-0199" style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.92rem;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:1rem;">
+                        <label for="ws-address" style="font-weight:600;font-size:0.85rem;margin-bottom:0.35rem;display:block;">Business Address</label>
+                        <textarea id="ws-address" rows="2" placeholder="Store address or headquarters" style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.92rem;resize:vertical;"></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom:1.5rem;">
+                        <label for="ws-email" style="font-weight:600;font-size:0.85rem;margin-bottom:0.35rem;display:block;">Business Contact Email</label>
+                        <input type="email" id="ws-email" placeholder="contact@business.com" style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.92rem;">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" style="padding:0.85rem;font-size:1rem;font-weight:700;border-radius:8px;box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                        Create Workspace →
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
+
 
     <!-- ===================== SCRIPTS ===================== -->
     <script type="module">

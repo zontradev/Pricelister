@@ -9,6 +9,7 @@ import { renderPeople } from './modules/people.js';
 import { renderInvoices } from './modules/invoices.js';
 import { renderSettings } from './modules/settings.js';
 import { renderWorkers } from './modules/workers.js';
+import { renderMembers } from './modules/members.js';
 import { renderProfile } from './modules/profile.js';
 import { renderAnalyticsHub } from './modules/analyticsHub.js';
 import { authService } from '../firebase/auth.js';
@@ -25,6 +26,7 @@ const renderPlaceholder = (container, title) => {
 const routes = {
     '/overview': { render: (c, w) => renderOverview(c, w), title: 'Workspace / Overview' },
     '/analytics': { render: (c, w, feat) => renderAnalyticsHub(c, w, feat), title: 'Workspace / Data Analytics' },
+    '/members': { render: (c, w) => renderMembers(c, w), title: 'Workspace / Members & Contributions' },
     '/products': { render: (c, w) => renderProducts(c, w), title: 'Products / All Products' },
     '/categories': { render: (c, w) => renderCategories(c, w), title: 'Products / Categories' },
     '/invoices/customer': { render: (c, w) => renderInvoices(c, w, false), title: 'Sales / Customer Invoices' },
@@ -36,6 +38,7 @@ const routes = {
     '/settings': { render: (c, w) => renderSettings(c, w), title: 'Settings / General' },
     '/profile': { render: (c, w) => renderProfile(c, w), title: 'Account / My Profile' }
 };
+
 
 export const initRouter = async (workspaceIdParam = null) => {
     // Resolve current workspace ID once for the router
@@ -92,7 +95,10 @@ export const initRouter = async (workspaceIdParam = null) => {
 
             // Update active nav state
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            const activeNav = document.querySelector(`.nav-item[href="#${path}"]`) || document.querySelector(`.nav-item[data-route="analytics"]`);
+            let activeNav = document.querySelector(`.nav-item[href="#${path}"]`);
+            if (!activeNav && path.startsWith('/analytics')) {
+                activeNav = document.querySelector('.nav-item[data-route="analytics"]');
+            }
             if (activeNav) activeNav.classList.add('active');
             
             // Close context panel on route change

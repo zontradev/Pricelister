@@ -1,4 +1,5 @@
 import { firebaseApp } from '../firebase/firebase-config.js';
+import { formatRoleBadge } from './auth-handler.js';
 import { 
     getFirestore, 
     collection, 
@@ -270,15 +271,7 @@ export function initFindWorkspace() {
             if (resWorkerEmail) resWorkerEmail.textContent = memberProfile.email || '—';
             if (resWorkerId) resWorkerId.textContent = memberProfile.id || '—';
             if (resWorkerRole) {
-                resWorkerRole.textContent = memberProfile.role || 'Worker';
-                const rUpper = (memberProfile.role || '').toUpperCase();
-                if (rUpper.includes('ADMIN')) {
-                    resWorkerRole.style.background = '#be123c';
-                } else if (rUpper.includes('CO')) {
-                    resWorkerRole.style.background = '#9c27b0';
-                } else {
-                    resWorkerRole.style.background = 'var(--primary)';
-                }
+                formatRoleBadge(memberProfile.role, resWorkerRole);
             }
 
             if (resWorkerJoined) {
