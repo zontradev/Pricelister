@@ -1,0 +1,54 @@
+/* Responsive adjustments */
+
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    /* Mobile Sidebar Handling */
+    .sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        transform: translateX(0);
+    }
+    
+    .sidebar-collapsed .sidebar {
+        width: 260px; /* retain width */
+        transform: translateX(-100%);
+    }
+
+    /* By default on mobile, start collapsed (managed by JS typically, but CSS handles visual) */
+    body:not(.sidebar-collapsed) #app-shell::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 90;
+    }
+
+    .main-content {
+        width: 100%;
+    }
+
+    .context-panel {
+        width: 100%;
+        top: 0;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .module-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}

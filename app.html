@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceLister Workspace</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/modern-ui.css">
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script type="module" src="config.js"></script>
+    <script type="module" src="DataModel.js"></script>
+</head>
+<body class="app-loading">
+    <div id="alert-container"></div>
+    
+    <!-- Full Screen Loader for Auth Check -->
+    <div id="app-loader" class="full-loader">
+        <div class="spinner"></div>
+        <p id="loader-text">Loading Workspace...</p>
+        <div id="loader-error" style="color: #ff4d4f; max-width: 400px; margin-top: 1rem; font-size: 0.9rem; word-break: break-all; display: none;"></div>
+    </div>
+
+    <!-- Main Application Shell (hidden until auth verified) -->
+    <div id="app-shell" style="display: none;">
+        <!-- Persistent Left Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header" style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
+                <img src="pricelister_org.png" alt="Logo" style="height: 28px; width: auto; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0; flex-grow: 1;">PriceLister</h2>
+                <button id="toggle-sidebar" class="icon-btn">☰</button>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="nav-section">
+                    <h3 class="nav-section-title">WORKSPACE</h3>
+                    <ul class="nav-tree">
+                        <li><a href="#/overview" class="nav-item active" data-route="overview">Overview</a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3 class="nav-section-title">PRODUCTS</h3>
+                    <ul class="nav-tree">
+                        <li><a href="#/products" class="nav-item" data-route="products">All Products</a></li>
+                        <li><a href="#/categories" class="nav-item" data-route="categories">Categories</a></li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <h3 class="nav-section-title">SALES</h3>
+                    <ul class="nav-tree">
+                        <li><a href="#/invoices/customer" class="nav-item" data-route="customer-invoices">Customer Invoices</a></li>
+                        <li><a href="#/invoices/business" class="nav-item" data-route="business-invoices">Business Invoices</a></li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <h3 class="nav-section-title">PEOPLE</h3>
+                    <ul class="nav-tree">
+                        <li><a href="#/customers" class="nav-item" data-route="customers">Customers & Clients</a></li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <h3 class="nav-section-title">B2B</h3>
+                    <ul class="nav-tree">
+                        <li><a href="#/businesses" class="nav-item" data-route="businesses">Businesses</a></li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <h3 class="nav-section-title">WORKSPACE SETTINGS</h3>
+                    <ul class="nav-tree">
+                        <li><a href="#/workers" class="nav-item" data-route="workers">Workers & Permissions</a></li>
+                        <li><a href="#/settings" class="nav-item" data-route="settings">Settings</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <div class="user-details">
+                        <span id="user-email">user@example.com</span>
+                        <span id="user-role" class="badge">Role</span>
+                    </div>
+                </div>
+                <button id="logout-btn" class="btn btn-sm btn-outline">Logout</button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="topbar">
+                <div style="display:flex; align-items:center;">
+                    <button id="open-sidebar" class="icon-btn" style="display: none; margin-right: 1rem; font-size: 1.25rem; background:transparent; border:none; cursor:pointer; color:var(--text-primary);">☰</button>
+                    <div class="breadcrumbs" id="breadcrumbs">Workspace / Overview</div>
+                </div>
+                <div class="topbar-actions">
+                    <!-- Global search/actions can go here -->
+                </div>
+            </header>
+            
+            <!-- Central Workspace: This is where modules load -->
+            <div id="workspace-container" class="workspace-area">
+                <!-- Modules injected here via JS -->
+            </div>
+        </main>
+        
+        <!-- Optional Right Panel (Context/Details) -->
+        <aside class="context-panel" id="context-panel">
+            <div class="context-header">
+                <h3 id="context-title">Details</h3>
+                <button id="close-context" class="icon-btn">×</button>
+            </div>
+            <div id="context-content" class="context-content"></div>
+        </aside>
+    <script>
+        window.addEventListener('error', function(event) {
+            const errEl = document.getElementById('loader-error');
+            if (errEl) {
+                errEl.style.display = 'block';
+                let errorMsg = '<strong>Script Error:</strong> ' + (event.message || 'Unknown Error') + '<br>';
+                if (event.filename) {
+                    errorMsg += '<small><strong>File:</strong> ' + event.filename + ' (Line: ' + event.lineno + ', Col: ' + event.colno + ')</small><br>';
+                }
+                if (event.error && event.error.stack) {
+                    errorMsg += '<pre style="text-align:left; background:rgba(255,0,0,0.1); padding:10px; border-radius:4px; font-size:11px; margin-top:8px; overflow-x:auto;">' + event.error.stack + '</pre>';
+                }
+                errEl.innerHTML = errorMsg;
+                const spinner = document.querySelector('.spinner');
+                if(spinner) spinner.style.display = 'none';
+            }
+        });
+        window.addEventListener('unhandledrejection', function(event) {
+            const errEl = document.getElementById('loader-error');
+            if (errEl) {
+                errEl.style.display = 'block';
+                let errorMsg = '<strong>Promise Error:</strong> ' + (event.reason ? event.reason.message : 'Unknown') + '<br>';
+                if (event.reason && event.reason.stack) {
+                    errorMsg += '<pre style="text-align:left; background:rgba(255,0,0,0.1); padding:10px; border-radius:4px; font-size:11px; margin-top:8px; overflow-x:auto;">' + event.reason.stack + '</pre>';
+                }
+                errEl.innerHTML = errorMsg;
+                const spinner = document.querySelector('.spinner');
+                if(spinner) spinner.style.display = 'none';
+            }
+        });
+    </script>
+    <script type="module">
+        import { initAuthHandler } from './js/auth-handler.js';
+        import { initWorkspace } from './js/workspace.js';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            initAuthHandler('app');
+            initWorkspace();
+        });
+    </script>
+</body>
+</html>
