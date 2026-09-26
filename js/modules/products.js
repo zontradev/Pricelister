@@ -293,6 +293,13 @@ export const renderProducts = async (container, workspaceId) => {
         
         tbody.innerHTML = filtered.map(prd => {
             const catName = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category)?.name || prd.category || 'Unknown';
+            const isCreatorSelf = prd.creatorId && (prd.creatorId === currentUser.uid || prd.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase());
+            const creatorTag = prd.creatorId 
+                ? (isCreatorSelf 
+                    ? `<span class="badge" style="background:rgba(16,185,129,0.12); color:#059669; font-size:0.72rem; padding:0.1rem 0.45rem; border-radius:4px; font-weight:600;" title="Created by you">By You</span>` 
+                    : `<span class="badge" style="background:rgba(100,116,139,0.1); color:#64748b; font-size:0.72rem; padding:0.1rem 0.45rem; border-radius:4px;" title="Creator ID: ${prd.creatorId}">Creator: ${prd.creatorId.substring(0, 8)}</span>`)
+                : '';
+
             return `
                 <tr style="border-bottom: 1px solid var(--border-color);">
                     <td style="padding:1rem;">
@@ -301,7 +308,10 @@ export const renderProducts = async (container, workspaceId) => {
                             : `<div style="width: 48px; height: 48px; background: var(--surface-200); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.7rem;">None</div>`}
                     </td>
                     <td style="padding:1rem;">
-                        <strong>${prd.name}</strong><br>
+                        <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.2rem;">
+                            <strong>${prd.name}</strong>
+                            ${creatorTag}
+                        </div>
                         <small style="color:var(--text-muted)">${prd.sizeWeight ? prd.sizeWeight : ''} ${prd.upcCode ? ' | UPC: ' + prd.upcCode : ''}</small>
                     </td>
                     <td style="padding:1rem;"><span class="badge">${catName}</span></td>

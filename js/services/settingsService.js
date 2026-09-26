@@ -18,6 +18,9 @@ export const getSettingsService = (workspaceId) => {
                 const receiptData = receiptSnap && receiptSnap.exists() ? receiptSnap.data() : {};
                 const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
 
+                const localCurrency = localStorage.getItem('pricelister_currency_symbol') || '$';
+                const resolvedCurrency = receiptData["Currency"] || wsData.currencySymbol || localCurrency;
+
                 return {
                     enableVending: receiptData["Vending"] !== undefined ? Boolean(receiptData["Vending"]) : (wsData.enableVending !== undefined ? Boolean(wsData.enableVending) : false),
                     shopName: receiptData["Shop Name"] || wsData.name || '',
@@ -27,7 +30,8 @@ export const getSettingsService = (workspaceId) => {
                     customerName: receiptData["Customer Name"] !== undefined ? receiptData["Customer Name"] : true,
                     customerNumber: receiptData["Customer number"] !== undefined ? receiptData["Customer number"] : true,
                     name: wsData.name || '',
-                    email: wsData.email || ''
+                    email: wsData.email || '',
+                    currencySymbol: resolvedCurrency
                 };
             } catch (err) {
                 console.error("Error fetching workspace settings:", err);
@@ -40,7 +44,8 @@ export const getSettingsService = (workspaceId) => {
                     customerName: true,
                     customerNumber: true,
                     name: '',
-                    email: ''
+                    email: '',
+                    currencySymbol: localStorage.getItem('pricelister_currency_symbol') || '$'
                 };
             }
         },
@@ -48,6 +53,11 @@ export const getSettingsService = (workspaceId) => {
         saveWorkspaceSettings: async (settings) => {
             const receiptRef = doc(db, 'ReceiptData', workspaceId);
             const wsRef = doc(db, 'Workspaces', workspaceId);
+
+            const cleanCurrency = (settings.currencySymbol || '$').trim().substring(0, 3) || '$';
+            try {
+                localStorage.setItem('pricelister_currency_symbol', cleanCurrency);
+            } catch(e) {}
 
             const receiptPayload = {
                 "Vending": Boolean(settings.enableVending),
@@ -57,6 +67,7 @@ export const getSettingsService = (workspaceId) => {
                 "End Massage": settings.endMessage || '',
                 "Customer Name": settings.customerName !== undefined ? settings.customerName : true,
                 "Customer number": settings.customerNumber !== undefined ? settings.customerNumber : true,
+                "Currency": cleanCurrency,
                 "last_updated": new Date()
             };
 
@@ -65,6 +76,7 @@ export const getSettingsService = (workspaceId) => {
                 email: settings.email || '',
                 phone: settings.phone || '',
                 address: settings.address || '',
+                currencySymbol: cleanCurrency,
                 enableVending: Boolean(settings.enableVending)
             };
 

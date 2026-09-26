@@ -12,6 +12,7 @@ import { renderSettings } from './modules/settings.js';
 import { renderWorkers } from './modules/workers.js';
 import { renderMembers } from './modules/members.js';
 import { renderProfile } from './modules/profile.js';
+import { renderMailbox } from './modules/mailbox.js';
 import { renderAnalyticsHub } from './modules/analyticsHub.js';
 import { authService } from '../firebase/auth.js';
 import { firestoreService } from '../firebase/firestore.js';
@@ -38,7 +39,8 @@ const routes = {
     '/clients': { render: (c, w) => renderPeople(c, w, 'clients'), title: 'People / Clients' },
     '/workers': { render: (c, w) => renderWorkers(c, w), title: 'Settings / Workers' },
     '/settings': { render: (c, w) => renderSettings(c, w), title: 'Settings / General' },
-    '/profile': { render: (c, w) => renderProfile(c, w), title: 'Account / My Profile' }
+    '/profile': { render: (c, w) => renderProfile(c, w), title: 'Account / My Profile' },
+    '/mailbox': { render: (c, w) => renderMailbox(c, w), title: 'Account / Mailbox' }
 };
 
 

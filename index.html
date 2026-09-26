@@ -566,18 +566,18 @@
                             </div>
                             
                             <div class="form-group" style="margin-bottom: 1.5rem;">
-                                <label for="worker-ident-value">Worker Email or ID</label>
+                                <label for="worker-ident-value">Worker Email or ID <span style="color:var(--text-muted); font-weight:normal;">(Optional)</span></label>
                                 <input type="text" id="worker-ident-value"
-                                    placeholder="Enter worker email or ID..." required
+                                    placeholder="Enter your email or worker ID to verify membership..."
                                     spellcheck="false" autocomplete="off" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px;">
                             </div>
 
                             <button type="submit" class="btn btn-primary" id="find-workspace-btn" style="width: 100%; justify-content: center;">
-                                <span class="btn-text">Secure Find</span>
+                                <span class="btn-text">Find Workspace</span>
                                 <span class="spinner-sm" style="display:none;"></span>
                             </button>
                             <p class="form-hint" style="font-size:0.8rem;color:#94a3b8;margin-top:0.75rem; text-align: center;">
-                                Both Workspace ID and Worker details are required to view workspace info securely.
+                                Enter the 14-character Workspace ID, Admin Email, or Admin UID to locate your workspace.
                             </p>
                         </form>
 
@@ -589,12 +589,12 @@
                         <div id="find-not-found" class="find-state" style="display:none;">
                             <div style="margin-bottom:0.75rem; color:var(--text-muted);"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
                             <h3>Workspace not found</h3>
-                            <p>No workspace matches this ID. Please double-check and try again.</p>
+                            <p>No workspace matches this ID or details. Please double-check and try again.</p>
                         </div>
 
                         <div id="find-error" class="find-state" style="display:none;">
                             <div style="margin-bottom:0.75rem; color:var(--error);"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
-                            <h3>Access Restricted</h3>
+                            <h3>Search Error</h3>
                             <p id="find-error-message">Unable to search right now. Please try again later.</p>
                         </div>
 
@@ -645,32 +645,34 @@
                                 </div>
                             </div>
 
-                            <h4 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Your Member Profile</h4>
-                            <div class="result-details" style="background: rgba(225, 29, 72, 0.04); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid rgba(225, 29, 72, 0.18);">
-                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member Name</span>
-                                    <span class="value" id="result-worker-name" style="color: var(--text-primary); font-weight: 600;">—</span>
-                                </div>
-                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member Email</span>
-                                    <span class="value" id="result-worker-email" style="color: var(--text-primary);">—</span>
-                                </div>
-                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member ID</span>
-                                    <span class="value" id="result-worker-id" style="color: var(--text-primary); font-family: monospace; font-size: 0.8rem;">—</span>
-                                </div>
-                                <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Role</span>
-                                    <span class="value badge" id="result-worker-role" style="background: var(--primary); color: white; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">—</span>
-                                </div>
-                                <div class="detail-row" style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Joined At</span>
-                                    <span class="value" id="result-worker-joined" style="color: var(--text-primary);">—</span>
+                            <div id="result-worker-section" style="display:none;">
+                                <h4 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Verified Member Profile</h4>
+                                <div class="result-details" style="background: rgba(16, 185, 129, 0.04); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid rgba(16, 185, 129, 0.25);">
+                                    <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member Name</span>
+                                        <span class="value" id="result-worker-name" style="color: var(--text-primary); font-weight: 600;">—</span>
+                                    </div>
+                                    <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member Email</span>
+                                        <span class="value" id="result-worker-email" style="color: var(--text-primary);">—</span>
+                                    </div>
+                                    <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member ID</span>
+                                        <span class="value" id="result-worker-id" style="color: var(--text-primary); font-family: monospace; font-size: 0.8rem;">—</span>
+                                    </div>
+                                    <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Role</span>
+                                        <span class="value badge" id="result-worker-role" style="background: var(--primary); color: white; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">—</span>
+                                    </div>
+                                    <div class="detail-row" style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Joined At</span>
+                                        <span class="value" id="result-worker-joined" style="color: var(--text-primary);">—</span>
+                                    </div>
                                 </div>
                             </div>
                             
                             <div style="margin-top: 1.5rem; text-align: center;">
-                                <a href="app.html" class="btn btn-primary" style="width: 100%; justify-content: center;">Go to Workspace</a>
+                                <a href="app.html" class="btn btn-primary" style="width: 100%; justify-content: center;">Launch PriceLister</a>
                             </div>
                         </div>
                     </div>

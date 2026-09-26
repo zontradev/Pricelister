@@ -180,6 +180,12 @@ export const renderProfile = async (container, workspaceId) => {
                             Workspace Settings
                         </button>
                     ` : ''}
+                    ${!isAdmin ? `
+                        <button id="btn-profile-leave-ws" class="btn btn-outline" style="color:var(--danger); border-color:var(--danger); font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                            Leave Workspace
+                        </button>
+                    ` : ''}
                     <button id="btn-profile-logout" class="btn btn-outline" style="color:var(--danger); border-color:var(--danger); font-weight:600;">Sign Out</button>
                 </div>
             </div>
@@ -539,6 +545,18 @@ export const renderProfile = async (container, workspaceId) => {
                 invoices: [...liveCustInvoices, ...liveBusInvoices], 
                 workspaceInfo: wsData 
             });
+        });
+
+        container.querySelector('#btn-profile-leave-ws')?.addEventListener('click', async () => {
+            if (await showAlert.confirm('Are you sure you want to leave this workspace? You will lose access until invited again.')) {
+                try {
+                    await firestoreService.leaveWorkspace(workspaceId, currentUser);
+                    showAlert.success("You have left the workspace.");
+                    window.location.href = 'index.html';
+                } catch (err) {
+                    showAlert.error("Failed to leave workspace: " + (err.message || 'Unknown error'));
+                }
+            }
         });
 
         container.querySelector('#btn-profile-logout')?.addEventListener('click', async () => {

@@ -52,5 +52,29 @@ export const storageService = {
         } catch(e) {
             console.error("Failed to delete image:", e);
         }
+    },
+
+    deleteWorkspaceAssets: async (workspaceDocUid) => {
+        if (!supabaseApp || !workspaceDocUid) return;
+        try {
+            const { data: files, error: listErr } = await supabaseApp.storage
+                .from('product_images')
+                .list(workspaceDocUid);
+            if (listErr) {
+                console.warn("Could not list workspace assets:", listErr);
+                return;
+            }
+            if (files && files.length > 0) {
+                const paths = files.map(f => `${workspaceDocUid}/${f.name}`);
+                const { error: removeErr } = await supabaseApp.storage
+                    .from('product_images')
+                    .remove(paths);
+                if (removeErr) {
+                    console.warn("Could not delete workspace assets:", removeErr);
+                }
+            }
+        } catch (e) {
+            console.warn("deleteWorkspaceAssets error:", e);
+        }
     }
 };

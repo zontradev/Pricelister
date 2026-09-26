@@ -6,6 +6,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { CONFIG } from '../config.js';
+import { storageService } from '../supabase/storage.js';
 
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
@@ -254,6 +255,125 @@ export const firestoreService = {
             console.error("Error rejecting invite:", error);
             throw error;
         }
+    },
+
+    listenUserInvites: (email, callback) => {
+        if (!email) return () => {};
+        const q = query(collection(db, 'Invites'), where('workerEmail', '==', email.toLowerCase()));
+        return onSnapshot(q, (snap) => {
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            callback(list);
+        }, (err) => console.warn("Invites listen error:", err));
+    },
+
+    leaveWorkspace: async (adminUid, currentUser = null) => {
+        const user = currentUser || auth.currentUser;
+        if (!user || !user.uid) throw new Error("No authenticated user.");
+        
+        if (adminUid === user.uid) {
+            throw new Error("Workspace creators cannot leave their own workspace. If you wish to destroy this workspace, use Delete Workspace.");
+        }
+
+        const email = (user.email || '').trim().toLowerCase();
+
+        // 1. Delete user connection
+        await deleteDoc(doc(db, 'Connections', user.uid)).catch(e => console.warn("Conn delete error:", e));
+
+        // 2. Remove member doc in workspace
+        if (email) {
+            await deleteDoc(doc(db, `Workspaces/${adminUid}/Members`, email)).catch(e => console.warn("Member doc delete error:", e));
+        }
+
+        // 3. Decrement workersCount in workspace
+        await updateDoc(doc(db, 'Workspaces', adminUid), {
+            workersCount: increment(-1)
+        }).catch(e => console.warn("Workers count update error:", e));
+
+        // Clear local storage cache
+        try {
+            localStorage.removeItem('pricelister_last_workspace_id');
+        } catch(e) {}
+    },
+
+    deleteEntireWorkspace: async (adminUid, currentUser = null) => {
+        const user = currentUser || auth.currentUser;
+        if (!user || !user.uid) throw new Error("No authenticated user.");
+
+        if (adminUid !== user.uid) {
+            throw new Error("Only the primary workspace admin/creator can delete this workspace.");
+        }
+
+        // 1. Check member count - MUST be 0 members (except the admin themselves)
+        const membersRef = collection(db, `Workspaces/${adminUid}/Members`);
+        const membersSnap = await getDocs(membersRef);
+        const activeOtherMembers = membersSnap.docs.filter(d => {
+            const m = d.data();
+            const mEmail = (m.email || d.id || '').toLowerCase();
+            const isSelf = mEmail === (user.email || '').toLowerCase() || m.workerUid === user.uid;
+            return !isSelf;
+        });
+
+        if (activeOtherMembers.length > 0) {
+            throw new Error(`Cannot delete workspace. There are still ${activeOtherMembers.length} active member(s) connected. Please remove all members first from the Workers tab.`);
+        }
+
+        // 2. Delete all subcollections: Products, Invoices, BusinessInvoices, Categories, ClientProfiles, BusinessProfiles, CustomerProfiles, Members, AppSettings, ReceiptData
+        const subcollections = [
+            'Products',
+            'Invoices',
+            'BusinessInvoices',
+            'Categories',
+            'ClientProfiles',
+            'BusinessProfiles',
+            'CustomerProfiles',
+            'Members',
+            'AppSettings',
+            'ReceiptData'
+        ];
+
+        for (const sub of subcollections) {
+            try {
+                const subRef = collection(db, `Workspaces/${adminUid}/${sub}`);
+                const snap = await getDocs(subRef);
+                const deletePromises = snap.docs.map(d => deleteDoc(d.ref));
+                await Promise.all(deletePromises);
+            } catch (err) {
+                console.warn(`Error clearing subcollection ${sub}:`, err);
+            }
+        }
+
+        // 3. Delete any pending invites sent for this workspace
+        try {
+            const invitesQ = query(collection(db, 'Invites'), where('adminUid', '==', adminUid));
+            const invitesSnap = await getDocs(invitesQ);
+            const inviteDeletes = invitesSnap.docs.map(d => deleteDoc(d.ref));
+            await Promise.all(inviteDeletes);
+        } catch (err) {
+            console.warn("Error deleting workspace invites:", err);
+        }
+
+        // 4. Delete Supabase assets folder for this workspace
+        try {
+            await storageService.deleteWorkspaceAssets(adminUid);
+        } catch (err) {
+            console.warn("Error deleting Supabase workspace assets:", err);
+        }
+
+        // 5. Delete the main Workspace document
+        await deleteDoc(doc(db, 'Workspaces', adminUid));
+
+        // 6. Update user role in userCollection
+        try {
+            await updateDoc(doc(db, 'userCollection', user.uid), {
+                role: 'USER',
+                workspaceId: null
+            });
+        } catch(e) {}
+
+        // Clear local storage cache
+        try {
+            localStorage.removeItem('pricelister_last_workspace_id');
+        } catch(e) {}
     },
 
     getWorkspaceMembers: async (adminUid) => {
