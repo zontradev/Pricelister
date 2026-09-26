@@ -3,10 +3,11 @@ import { getCategoryService } from '../services/categoryService.js';
 import { getInvoiceService } from '../services/invoiceService.js';
 import { getPeopleService } from '../services/peopleService.js';
 import { calculateInvoiceTotal } from '../utils/invoiceCalculator.js';
+import { formatCurrency } from '../utilities.js';
 import { showAlert } from '../alert-handler.js';
 
 // Helper for currency formatting
-const formatCurr = (n) => '$' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatCurr = (n) => formatCurrency(n);
 const formatNum = (n) => Number(n || 0).toLocaleString();
 
 const getInvoiceTime = (inv) => {

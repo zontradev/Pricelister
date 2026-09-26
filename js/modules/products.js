@@ -4,6 +4,7 @@ import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 import { storageService } from '../../supabase/storage.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
+import { formatCurrency } from '../utilities.js';
 
 export const renderProducts = async (container, workspaceId) => {
     const productService = getProductService(workspaceId);
@@ -315,7 +316,7 @@ export const renderProducts = async (container, workspaceId) => {
                         <small style="color:var(--text-muted)">${prd.sizeWeight ? prd.sizeWeight : ''} ${prd.upcCode ? ' | UPC: ' + prd.upcCode : ''}</small>
                     </td>
                     <td style="padding:1rem;"><span class="badge">${catName}</span></td>
-                    <td style="padding:1rem;">$${Number(prd.salePrice).toFixed(2)}</td>
+                    <td style="padding:1rem;">${formatCurrency(prd.salePrice)}</td>
                     <td style="padding:1rem;">${prd.quantity}</td>
                     <td style="padding:1rem;">
                         <button class="btn btn-sm btn-secondary edit-prd" data-id="${prd.id}">Edit</button>

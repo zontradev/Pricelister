@@ -128,12 +128,28 @@ export const firestoreService = {
                 adminBusinessCount: 0,
                 adminClientCount: 0,
                 adminTotalDeleted: 0,
-                adminTotalDeletedCount: 0
+                adminTotalDeletedCount: 0,
+                currency: (workspaceData.currency || workspaceData.currencySymbol || "$").trim().substring(0, 3) || "$",
+                currencySymbol: (workspaceData.currencySymbol || workspaceData.currency || "$").trim().substring(0, 3) || "$"
             };
 
             await setDoc(workspaceRef, wsDocData);
             
-            // 2. Update User Profile in userCollection
+            // 2. Initialize ReceiptData with Currency & Shop Details
+            const receiptRef = doc(db, 'ReceiptData', documentId);
+            await setDoc(receiptRef, {
+                "Vending": false,
+                "Shop Name": (workspaceData.name || "").trim(),
+                "Address / Subtitle": workspaceData.address || "",
+                "Phone Number": workspaceData.phone || "",
+                "End Massage": "",
+                "Customer Name": true,
+                "Customer number": true,
+                "Currency": (workspaceData.currency || workspaceData.currencySymbol || "$").trim().substring(0, 3) || "$",
+                "last_updated": new Date()
+            }, { merge: true });
+
+            // 3. Update User Profile in userCollection
             const userRef = doc(db, 'userCollection', uid);
             await setDoc(userRef, {
                 email: email,

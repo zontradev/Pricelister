@@ -455,6 +455,7 @@ export const renderSettings = async (container, workspaceId) => {
                 try {
                     const updatedPayload = {
                         enableVending: Boolean(contentArea.querySelector('#set-vending')?.checked),
+                        currency: (contentArea.querySelector('#set-currency')?.value || '$').trim().substring(0, 3) || '$',
                         currencySymbol: (contentArea.querySelector('#set-currency')?.value || '$').trim().substring(0, 3) || '$',
                         name: contentArea.querySelector('#set-name')?.value.trim() || '',
                         email: contentArea.querySelector('#set-email')?.value.trim() || '',

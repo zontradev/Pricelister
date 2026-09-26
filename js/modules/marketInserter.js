@@ -3,6 +3,7 @@ import { getProductService } from '../services/productService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { showAlert } from '../alert-handler.js';
 import { generateUniqueId } from '../utils/idGenerator.js';
+import { getAppCurrencySymbol } from '../utilities.js';
 
 /**
  * Market Inserter Module (Dedicated In-Page Section)
@@ -114,10 +115,10 @@ export const renderMarketInserter = async (container, workspaceId) => {
                                 <th style="width: 155px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Category *</th>
                                 <th style="width: 105px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Size / Weight</th>
                                 <th style="width: 90px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Stock (Qty)</th>
-                                <th style="width: 100px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Base Cost</th>
-                                <th style="width: 100px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Wholesale</th>
-                                <th style="width: 110px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color); color: var(--primary);">Sale Price *</th>
-                                <th style="width: 95px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">MRP</th>
+                                <th style="width: 100px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Base Cost (${getAppCurrencySymbol()})</th>
+                                <th style="width: 100px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Wholesale (${getAppCurrencySymbol()})</th>
+                                <th style="width: 110px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color); color: var(--primary);">Sale Price * (${getAppCurrencySymbol()})</th>
+                                <th style="width: 95px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">MRP (${getAppCurrencySymbol()})</th>
                                 <th style="width: 130px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">UPC / Barcode</th>
                                 <th style="width: 120px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Variations</th>
                                 <th style="width: 115px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Mfg Date</th>

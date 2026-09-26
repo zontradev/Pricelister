@@ -3,6 +3,8 @@ import { firestoreService } from '../firebase/firestore.js';
 import { showAlert } from './alert-handler.js';
 import { CONFIG } from '../config.js';
 import { initRouter } from './router.js';
+import { setAppCurrencySymbol } from './utilities.js';
+import { openCurrencyPickerModal } from './modules/currencyModal.js';
 
 let routerInitialized = false;
 let roleListenerUnsub = null;
@@ -372,6 +374,9 @@ export const initAuthHandler = (pageType) => {
                         window.location.href = 'index.html';
                         return;
                     }
+                    if (workspace.currency || workspace.currencySymbol) {
+                        setAppCurrencySymbol(workspace.currency || workspace.currencySymbol);
+                    }
                     document.body.classList.remove('app-loading');
                     
                     // Update bottom-left UI with user profile info
@@ -480,7 +485,9 @@ export const initAuthHandler = (pageType) => {
                         description: 'Main',
                         phone: '000-000-0000',
                         address: 'Local Test Environment',
-                        email: 'dev@pricelister.app'
+                        email: 'dev@pricelister.app',
+                        currency: '$',
+                        currencySymbol: '$'
                     });
                 }
                 
@@ -498,6 +505,42 @@ export const initAuthHandler = (pageType) => {
     // Workspace Setup Form (Create Workspace)
     const setupForm = document.getElementById('workspace-setup-form');
     if (setupForm) {
+        const wsCurrInput = document.getElementById('ws-currency');
+        const wsCurrPreview = document.getElementById('ws-currency-preview');
+        const btnWsFindCurrency = document.getElementById('btn-ws-find-currency');
+
+        const updateWsCurrPreview = (val) => {
+            const sym = (val || '$').trim().substring(0, 3) || '$';
+            if (wsCurrPreview) {
+                const separator = /^[A-Za-z]+$/.test(sym) ? ' ' : '';
+                wsCurrPreview.textContent = `${sym}${separator}1,250.00`;
+            }
+        };
+
+        if (wsCurrInput) {
+            wsCurrInput.addEventListener('input', (e) => {
+                updateWsCurrPreview(e.target.value);
+            });
+        }
+
+        if (btnWsFindCurrency) {
+            btnWsFindCurrency.addEventListener('click', () => {
+                openCurrencyPickerModal(wsCurrInput?.value || '$', (selectedSymbol) => {
+                    const cleanSymbol = (selectedSymbol || '$').trim().substring(0, 3) || '$';
+                    if (wsCurrInput) wsCurrInput.value = cleanSymbol;
+                    updateWsCurrPreview(cleanSymbol);
+                });
+            });
+        }
+
+        setupForm.querySelectorAll('.btn-ws-curr-preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sym = (btn.getAttribute('data-symbol') || '$').substring(0, 3);
+                if (wsCurrInput) wsCurrInput.value = sym;
+                updateWsCurrPreview(sym);
+            });
+        });
+
         setupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const currentUser = authService.getCurrentUser();
@@ -508,6 +551,8 @@ export const initAuthHandler = (pageType) => {
             btn.textContent = 'Creating Workspace...';
             
             const descInput = document.getElementById('ws-desc');
+            const chosenCurrency = (document.getElementById('ws-currency')?.value || "$").trim().substring(0, 3) || "$";
+
             const workspaceData = {
                 name: (document.getElementById('ws-name')?.value || "").trim(),
                 description: (descInput?.value || "Main").trim(),
@@ -515,10 +560,13 @@ export const initAuthHandler = (pageType) => {
                 address: (document.getElementById('ws-address')?.value || "").trim(),
                 email: (document.getElementById('ws-email')?.value || currentUser.email || "").trim(),
                 adminName: currentUser.displayName || (document.getElementById('ws-name')?.value || "Eycon Contact").trim(),
-                adminEmail: currentUser.email || ""
+                adminEmail: currentUser.email || "",
+                currency: chosenCurrency,
+                currencySymbol: chosenCurrency
             };
             
             try {
+                setAppCurrencySymbol(chosenCurrency);
                 await firestoreService.createWorkspace(currentUser.uid, currentUser.email, workspaceData);
                 showAlert.success('Workspace created successfully!');
                 window.location.href = 'app.html';

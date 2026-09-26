@@ -18,6 +18,7 @@ export const setAppCurrencySymbol = (symbol) => {
     try {
         const clean = (symbol || '$').trim().substring(0, 3) || '$';
         localStorage.setItem('pricelister_currency_symbol', clean);
+        window.dispatchEvent(new CustomEvent('pricelister-currency-changed', { detail: { currency: clean } }));
         return clean;
     } catch (e) {
         return '$';
@@ -25,9 +26,11 @@ export const setAppCurrencySymbol = (symbol) => {
 };
 
 export const formatCurrency = (amount, customSymbol = null) => {
-    const sym = customSymbol !== null ? customSymbol.substring(0, 3) : getAppCurrencySymbol();
+    const sym = (customSymbol !== null ? customSymbol : getAppCurrencySymbol()).trim().substring(0, 3) || '$';
     const num = Number(amount) || 0;
-    return `${sym} ${num.toFixed(2)}`;
+    const formattedNum = num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const separator = /^[A-Za-z]+$/.test(sym) ? ' ' : '';
+    return `${sym}${separator}${formattedNum}`;
 };
 
 export const formatDate = (timestamp) => {

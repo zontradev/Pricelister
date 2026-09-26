@@ -1,6 +1,8 @@
 import { getProductService } from './services/productService.js';
 import { getInvoiceService } from './services/invoiceService.js';
+import { getSettingsService } from './services/settingsService.js';
 import { calculateInvoiceTotal } from './utils/invoiceCalculator.js';
+import { formatCurrency, getAppCurrencySymbol, setAppCurrencySymbol } from './utilities.js';
 
 export const initWorkspace = () => {
     const sidebar = document.getElementById('sidebar');
@@ -540,7 +542,7 @@ export const renderOverview = async (container, workspaceId) => {
 
     if (!workspaceId) return;
 
-    const formatCurr = (val) => '$' + Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatCurr = (val) => formatCurrency(val);
     const formatNum = (val) => Number(val || 0).toLocaleString();
 
     let cachedProducts = [];

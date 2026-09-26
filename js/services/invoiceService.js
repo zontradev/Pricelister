@@ -228,12 +228,36 @@ export const getInvoiceService = (workspaceId) => {
         deleteInvoice: async (id, isBusiness = false) => {
             const repo = isBusiness ? businessInvoiceRepo : customerInvoiceRepo;
             let itemCreatorId = null;
+            let inv = null;
             try {
-                const inv = await repo.getById(id);
+                inv = await repo.getById(id);
                 itemCreatorId = inv?.creatorId || null;
             } catch(e) {}
+
             await repo.delete(id);
             await firestoreService.updateMetricsCounter(workspaceId, 'invoice', false, itemCreatorId, 1);
+
+            // Decrement Invoice counts for connected Business
+            if (inv?.businessId) {
+                try {
+                    const allBusinesses = await businessRepo.getAll();
+                    const bus = allBusinesses.find(b => b.uniqueId === inv.businessId || b.id === inv.businessId);
+                    if (bus && (bus.invoiceCount || 0) > 0) {
+                        await businessRepo.update(bus.id, { invoiceCount: Math.max(0, (bus.invoiceCount || 0) - 1) });
+                    }
+                } catch(e) { console.error("Failed to decrement business invoice count", e); }
+            }
+
+            // Decrement Invoice counts for connected Client (if Business Invoice)
+            if (isBusiness && inv?.clientId) {
+                try {
+                    const allClients = await clientRepo.getAll();
+                    const cli = allClients.find(c => c.uniqueId === inv.clientId || c.id === inv.clientId);
+                    if (cli && (cli.invoiceCount || 0) > 0) {
+                        await clientRepo.update(cli.id, { invoiceCount: Math.max(0, (cli.invoiceCount || 0) - 1) });
+                    }
+                } catch(e) { console.error("Failed to decrement client invoice count", e); }
+            }
         },
 
         updateInvoiceStatus: async (id, status, isBusiness = false) => {

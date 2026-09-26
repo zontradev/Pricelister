@@ -9,6 +9,7 @@ import { calculateInvoiceTotal } from '../utils/invoiceCalculator.js';
 import { toggleContextPanel } from '../workspace.js';
 import { generateUniqueId } from '../../DataModel.js';
 import { exportInvoicesExcel } from '../utils/exportEngine.js';
+import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
 
 export const renderInvoices = async (container, workspaceId, isBusinessInvoice) => {
     const invoiceService = getInvoiceService(workspaceId);
@@ -288,7 +289,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                             <!-- Picker Footer Actions -->
                             <div class="picker-footer">
                                 <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                    Selected: <strong id="picker-count-disp" style="color: var(--primary);">0</strong> products (<strong id="picker-units-disp">0</strong> units) &bull; Est. Total: <strong id="picker-subtotal-disp" style="color: var(--text-primary);">$0.00</strong>
+                                    Selected: <strong id="picker-count-disp" style="color: var(--primary);">0</strong> products (<strong id="picker-units-disp">0</strong> units) &bull; Est. Total: <strong id="picker-subtotal-disp" style="color: var(--text-primary);">${formatCurrency(0)}</strong>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem;">
                                     <button type="button" id="picker-close-btn" class="btn btn-secondary">Hide Picker</button>
@@ -327,7 +328,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 <input type="number" id="inv-discount" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
                             </div>
                             <div style="flex:1; min-width: 140px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Additional Cut ($)</label>
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Additional Cut (${getAppCurrencySymbol()})</label>
                                 <input type="number" id="inv-add-cut" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
                             </div>
                             ${isBusinessInvoice ? `
@@ -336,7 +337,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 <input type="number" id="inv-tax" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
                             </div>
                             <div style="flex:1; min-width: 140px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Shipping Cost ($)</label>
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Shipping Cost (${getAppCurrencySymbol()})</label>
                                 <input type="number" id="inv-shipping" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
                             </div>
                             ` : ''}
@@ -675,7 +676,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         if (pickerCountDisp) pickerCountDisp.textContent = totalCount;
         if (pickerUnitsDisp) pickerUnitsDisp.textContent = totalUnits;
-        if (pickerSubtotalDisp) pickerSubtotalDisp.textContent = `$${totalCost.toFixed(2)}`;
+        if (pickerSubtotalDisp) pickerSubtotalDisp.textContent = formatCurrency(totalCost);
 
         // Update Select All Visible / Deselect All Visible button state dynamically
         const visible = getVisibleProducts();
@@ -780,7 +781,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         </span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 0.25rem;">
-                        <span class="picker-price">$${Number(p.salePrice || 0).toFixed(2)}</span>
+                        <span class="picker-price">${formatCurrency(p.salePrice || 0)}</span>
                         ${categoryDisplayName ? `<span style="font-size:0.72rem; color:var(--text-muted); font-weight:500;">${categoryDisplayName}</span>` : ''}
                     </div>
 
@@ -1008,11 +1009,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:0.65rem 0.85rem; border:1px solid var(--border-color); border-radius:8px; gap: 0.5rem; flex-wrap: wrap;">
                     <div style="flex: 2; min-width: 150px;">
                         <div style="font-weight:600; font-size: 0.9rem; color:var(--text-primary);">${item.productName}</div>
-                        <div style="font-size:0.78rem; color:var(--text-muted);">${item.sizeWeight ? item.sizeWeight + ' &bull; ' : ''}$${Number(item.unitPrice).toFixed(2)} each</div>
+                        <div style="font-size:0.78rem; color:var(--text-muted);">${item.sizeWeight ? item.sizeWeight + ' &bull; ' : ''}${formatCurrency(item.unitPrice)} each</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                         <input type="number" min="1" value="${item.quantity}" class="form-control item-qty-input" data-index="${idx}" style="width:70px; padding:0.25rem 0.5rem; text-align: center; height: 32px; font-size: 0.85rem;">
-                        <span style="font-weight:700; min-width: 75px; text-align: right; color: var(--text-primary);">$${(item.quantity * item.unitPrice).toFixed(2)}</span>
+                        <span style="font-weight:700; min-width: 75px; text-align: right; color: var(--text-primary);">${formatCurrency(item.quantity * item.unitPrice)}</span>
                         <button type="button" class="btn btn-sm btn-secondary remove-item-btn" data-index="${idx}" style="color:var(--danger); padding:0.25rem 0.55rem; font-size: 0.85rem;">&times;</button>
                     </div>
                 </div>
@@ -1060,13 +1061,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const totals = calculateInvoiceTotal(invoiceItems, dPct, addCut, tPct, ship);
 
         container.querySelector('#inv-live-totals').innerHTML = `
-            <div>Subtotal: $${totals.subtotal.toFixed(2)}</div>
-            ${dPct > 0 ? `<div style="color:var(--primary);">Discount (${dPct}%): -$${(totals.subtotal * (dPct/100)).toFixed(2)}</div>` : ''}
-            ${addCut > 0 ? `<div style="color:var(--primary);">Additional Cut: -$${addCut.toFixed(2)}</div>` : ''}
-            ${tPct > 0 ? `<div>Tax (${tPct}%): +$${totals.taxAmount.toFixed(2)}</div>` : ''}
-            ${ship > 0 ? `<div>Shipping: +$${ship.toFixed(2)}</div>` : ''}
-            <div style="font-weight:700; font-size:1.25rem; margin-top:0.5rem; color:var(--primary); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">Grand Total: $${totals.grandTotal.toFixed(2)}</div>
-            <div style="font-size:0.85rem; color:var(--text-muted);">Est. Profit: $${totals.totalProfit.toFixed(2)}</div>
+            <div>Subtotal: ${formatCurrency(totals.subtotal)}</div>
+            ${dPct > 0 ? `<div style="color:var(--primary);">Discount (${dPct}%): -${formatCurrency(totals.subtotal * (dPct/100))}</div>` : ''}
+            ${addCut > 0 ? `<div style="color:var(--primary);">Additional Cut: -${formatCurrency(addCut)}</div>` : ''}
+            ${tPct > 0 ? `<div>Tax (${tPct}%): +${formatCurrency(totals.taxAmount)}</div>` : ''}
+            ${ship > 0 ? `<div>Shipping: +${formatCurrency(ship)}</div>` : ''}
+            <div style="font-weight:700; font-size:1.25rem; margin-top:0.5rem; color:var(--primary); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">Grand Total: ${formatCurrency(totals.grandTotal)}</div>
+            <div style="font-size:0.85rem; color:var(--text-muted);">Est. Profit: ${formatCurrency(totals.totalProfit)}</div>
         `;
     };
 
@@ -1097,10 +1098,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <div style="display:flex; justify-content:space-between; padding:0.75rem 0; border-bottom:1px solid var(--border-color);">
                             <div>
                                 <div style="font-weight:600; color:var(--text-primary);">${item.productName}</div>
-                                <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">${item.quantity} &times; $${Number(item.unitPrice).toFixed(2)}</div>
+                                <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">${item.quantity} &times; ${formatCurrency(item.unitPrice)}</div>
                             </div>
                             <div style="font-weight:600; color:var(--text-primary); display:flex; align-items:center;">
-                                $${Number(item.totalPrice || (item.quantity * item.unitPrice)).toFixed(2)}
+                                ${formatCurrency(item.totalPrice || (item.quantity * item.unitPrice))}
                             </div>
                         </div>
                     `).join('');
@@ -1148,11 +1149,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                             <div style="background: var(--surface-50); padding: 1.25rem; border-radius: 8px;">
                                 ${inv.discountPercent > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; color:var(--text-secondary);"><span style="font-size:0.9rem;">Discount (${inv.discountPercent}%)</span><span></span></div>` : ''}
                                 ${inv.taxPercent > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; color:var(--text-secondary);"><span style="font-size:0.9rem;">Tax (${inv.taxPercent}%)</span><span></span></div>` : ''}
-                                ${inv.shippingCost > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; color:var(--text-secondary);"><span style="font-size:0.9rem;">Shipping</span><span>+$${Number(inv.shippingCost).toFixed(2)}</span></div>` : ''}
+                                ${inv.shippingCost > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; color:var(--text-secondary);"><span style="font-size:0.9rem;">Shipping</span><span>+${formatCurrency(inv.shippingCost)}</span></div>` : ''}
                                 
                                 <div style="display:flex; justify-content:space-between; margin-top:0.5rem; padding-top:1rem; border-top:1px solid var(--border-color); font-weight:700; font-size:1.25rem; color:var(--text-primary);">
                                     <span>Grand Total</span>
-                                    <span style="color:var(--primary);">$${Number(inv.totalPrice).toFixed(2)}</span>
+                                    <span style="color:var(--primary);">${formatCurrency(inv.totalPrice)}</span>
                                 </div>
                             </div>
                             
@@ -1302,7 +1303,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <td style="padding:1rem;">
                         <span class="${badgeClass}">${statusLabel}</span>
                     </td>
-                    <td style="padding:1rem; font-weight: 700; color: var(--text-primary);">$${Number(inv.totalPrice).toFixed(2)}</td>
+                    <td style="padding:1rem; font-weight: 700; color: var(--text-primary);">${formatCurrency(inv.totalPrice)}</td>
                     <td style="padding:1rem 1.25rem;">
                         <div style="display:flex; gap:0.4rem;">
                             <button class="btn btn-sm btn-secondary view-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">View</button>
@@ -1672,6 +1673,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 invoiceData.clientPhone = cli.phone || '';
                 invoiceData.clientEmail = cli.email || '';
                 invoiceData.customerName = cli.name || '';
+                invoiceData.customerNumber = cli.phone || '';
 
                 const invTitle = (container.querySelector('#inv-title')?.value || '').trim();
                 if (!invTitle) throw new Error("Invoice Title is required.");

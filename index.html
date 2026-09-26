@@ -559,16 +559,16 @@
                     <div class="find-workspace-card">
                         <form id="find-workspace-form" class="find-form" autocomplete="off">
                             <div class="form-group">
-                                <label for="workspace-id-input">Workspace ID</label>
+                                <label for="workspace-id-input">Workspace ID, UID, or Email</label>
                                 <input type="text" id="workspace-id-input" name="workspaceId"
-                                    placeholder="e.g. ZZEAXCV8....." required minlength="1" maxlength="40"
+                                    placeholder="Enter Workspace ID, User/Admin UID, or Email..." required minlength="1" maxlength="120"
                                     spellcheck="false" autocomplete="off" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 1rem;">
                             </div>
                             
                             <div class="form-group" style="margin-bottom: 1.5rem;">
                                 <label for="worker-ident-value">Worker Email or ID <span style="color:var(--text-muted); font-weight:normal;">(Optional)</span></label>
                                 <input type="text" id="worker-ident-value"
-                                    placeholder="Enter your email or worker ID to verify membership..."
+                                    placeholder="Enter your email or worker ID to verify membership..." maxlength="120"
                                     spellcheck="false" autocomplete="off" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px;">
                             </div>
 
@@ -577,7 +577,7 @@
                                 <span class="spinner-sm" style="display:none;"></span>
                             </button>
                             <p class="form-hint" style="font-size:0.8rem;color:#94a3b8;margin-top:0.75rem; text-align: center;">
-                                Enter the 14-character Workspace ID, Admin Email, or Admin UID to locate your workspace.
+                                Enter your Workspace ID, Admin UID, Worker UID, Admin Email, or Name to locate your workspace.
                             </p>
                         </form>
 
@@ -932,9 +932,41 @@
                         <label for="ws-address" style="font-weight:600;font-size:0.85rem;margin-bottom:0.35rem;display:block;">Business Address</label>
                         <textarea id="ws-address" rows="2" placeholder="Store address or headquarters" style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.92rem;resize:vertical;"></textarea>
                     </div>
-                    <div class="form-group" style="margin-bottom:1.5rem;">
+                    <div class="form-group" style="margin-bottom:1rem;">
                         <label for="ws-email" style="font-weight:600;font-size:0.85rem;margin-bottom:0.35rem;display:block;">Business Contact Email</label>
                         <input type="email" id="ws-email" placeholder="contact@business.com" style="width:100%;padding:0.65rem 0.85rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.92rem;">
+                    </div>
+
+                    <!-- Workspace Currency Selection Group -->
+                    <div class="form-group" style="margin-bottom:1.5rem; background: var(--surface-50); padding: 1rem; border-radius: 10px; border: 1px solid #cbd5e1;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                            <label for="ws-currency" style="font-weight:700;font-size:0.85rem;margin:0;display:block; color:var(--text-primary);">
+                                Workspace Currency *
+                            </label>
+                            <div style="background:#ffffff; border:1px solid #cbd5e1; padding:0.25rem 0.65rem; border-radius:6px; font-size:0.8rem; display:flex; align-items:center; gap:0.35rem; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                                <span style="color:var(--text-muted);">Preview:</span>
+                                <strong id="ws-currency-preview" style="color:var(--primary); font-family:monospace; font-size:0.95rem;">$ 1,250.00</strong>
+                            </div>
+                        </div>
+                        
+                        <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.65rem;">
+                            <input type="text" id="ws-currency" maxlength="3" value="$" placeholder="$" style="width:95px; text-align:center; padding:0.55rem 0.65rem; border-radius:8px; border:1px solid #cbd5e1; font-size:1.1rem; font-weight:700; font-family:monospace; letter-spacing:1px; background:#ffffff;">
+                            <button type="button" id="btn-ws-find-currency" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; padding:0.55rem 0.95rem; font-weight:600; white-space:nowrap;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                Find Country / Symbol
+                            </button>
+                        </div>
+
+                        <!-- Quick preset shortcuts -->
+                        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;" id="ws-currency-presets">
+                            <button type="button" class="btn-ws-curr-preset" data-symbol="$" style="padding:0.3rem 0.55rem; font-size:0.78rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer;">🇺🇸 $ USD</button>
+                            <button type="button" class="btn-ws-curr-preset" data-symbol="৳" style="padding:0.3rem 0.55rem; font-size:0.78rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer;">🇧🇩 ৳ BDT</button>
+                            <button type="button" class="btn-ws-curr-preset" data-symbol="€" style="padding:0.3rem 0.55rem; font-size:0.78rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer;">🇪🇺 € EUR</button>
+                            <button type="button" class="btn-ws-curr-preset" data-symbol="£" style="padding:0.3rem 0.55rem; font-size:0.78rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer;">🇬🇧 £ GBP</button>
+                            <button type="button" class="btn-ws-curr-preset" data-symbol="₹" style="padding:0.3rem 0.55rem; font-size:0.78rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer;">🇮🇳 ₹ INR</button>
+                            <button type="button" class="btn-ws-curr-preset" data-symbol="د.إ" style="padding:0.3rem 0.55rem; font-size:0.78rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer;">🇦🇪 د.إ AED</button>
+                            <button type="button" class="btn-ws-curr-preset" data-symbol="¥" style="padding:0.3rem 0.55rem; font-size:0.78rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer;">🇯🇵 ¥ JPY</button>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary btn-block" style="padding:0.85rem;font-size:1rem;font-weight:700;border-radius:8px;box-shadow:0 4px 12px rgba(16,185,129,0.3);">
                         Create Workspace →

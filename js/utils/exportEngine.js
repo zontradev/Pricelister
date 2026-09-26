@@ -1,8 +1,4 @@
-/**
- * PriceLister - Export Engine
- * Generates Excel Workbooks, Sample Import Templates, Printable PDFs,
- * and Full Workspace Backups with granular user data choices.
- */
+import { formatCurrency } from '../utilities.js';
 
 /**
  * Downloads a Blob to user machine with given filename
@@ -431,8 +427,8 @@ export const exportProductsPdf = (products = [], categories = [], userOptions = 
         category: resolveCategoryName(p.category, categories),
         size: p.sizeWeight || '—',
         quantity: p.quantity ?? '0',
-        cost: typeof p.price === 'number' ? `$${p.price.toFixed(2)}` : '—',
-        salePrice: typeof p.salePrice === 'number' ? `$${p.salePrice.toFixed(2)}` : '—',
+        cost: typeof p.price === 'number' ? formatCurrency(p.price) : '—',
+        salePrice: typeof p.salePrice === 'number' ? formatCurrency(p.salePrice) : '—',
         upc: p.upcCode || '—'
     }));
 
@@ -526,7 +522,7 @@ export const exportInvoicesExcel = (invoices = [], userOptions = {}) => {
  * 5. EXPORT FULL WORKSPACE BACKUP JSON
  * Guarded with 100MB - 150MB browser memory ceiling
  */
-export const exportWorkspaceBackupJson = ({ workspaceData, products, categories, invoices, businesses, customers }) => {
+export const exportWorkspaceBackupJson = ({ workspaceData, products, categories, invoices, businesses, customers, clients }) => {
     const backupPackage = {
         version: "2.0",
         exportTimestamp: Date.now(),
@@ -537,14 +533,16 @@ export const exportWorkspaceBackupJson = ({ workspaceData, products, categories,
             categories: (categories || []).length,
             invoices: (invoices || []).length,
             businesses: (businesses || []).length,
-            customers: (customers || []).length
+            customers: (customers || []).length,
+            clients: (clients || []).length
         },
         data: {
             products: products || [],
             categories: categories || [],
             invoices: invoices || [],
             businesses: businesses || [],
-            customers: customers || []
+            customers: customers || [],
+            clients: clients || []
         }
     };
 

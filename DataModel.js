@@ -75,54 +75,65 @@ export class WorkspaceInfo {
         this.adminClientCount = Number(data.adminClientCount) || 0;
         this.adminTotalDeleted = Number(data.adminTotalDeleted) || 0;
         this.adminTotalDeletedCount = Number(data.adminTotalDeletedCount) || 0;
+        this.currency = data.currency || data.currencySymbol || "$";
+        this.currencySymbol = data.currencySymbol || data.currency || "$";
     }
 }
 
 export class Invoice {
     constructor(data = {}) {
         this.additionalCut = Number(data.additionalCut) || 0.0;
+        this.busInvNumber = data.busInvNumber || data.invoiceNumber || "";
         this.businessAddress = data.businessAddress || "";
         this.businessEmail = data.businessEmail || "";
         this.businessId = data.businessId || "";
         this.businessName = data.businessName || "";
         this.businessPhone = data.businessPhone || "";
+        this.clientAddress = data.clientAddress || "";
+        this.clientEmail = data.clientEmail || "";
+        this.clientPhone = data.clientPhone || "";
         this.clientId = data.clientId || "";
-        this.customerId = data.customerId || "";
         this.creatorId = data.creatorId || "";
+        this.customerId = data.customerId || "";
         this.customerName = data.customerName || "";
-        this.customerNumber = data.customerNumber || "";
+        this.customerNumber = data.customerNumber !== undefined ? String(data.customerNumber) : "";
         this.discountPercent = Number(data.discountPercent) || 0.0;
-        this.invoiceNumber = data.invoiceNumber || "";
+        this.invoiceNumber = data.invoiceNumber || data.busInvNumber || "";
         this.isBusinessInvoice = data.isBusinessInvoice !== undefined ? Boolean(data.isBusinessInvoice) : false;
-        this.items = data.items || []; // Array of InvoiceItem
-        this.status = data.status || "Paid"; // Ensure Title Case like Android ("Paid", "Unpaid", "Draft")
-        this.timestamp = data.timestamp || Date.now();
+        this.items = (data.items || []).map(item => new InvoiceItem(item));
+        this.note = data.note !== undefined ? String(data.note) : "";
+        this.shippingCost = Number(data.shippingCost) || 0.0;
+        this.status = data.status || "Paid"; // "Paid", "Unpaid", "Draft"
+        this.taxPercent = Number(data.taxPercent) || 0.0;
+        this.timestamp = Number(data.timestamp) || Date.now();
+        this.title = data.title || "Invoice";
         this.totalPrice = Number(data.totalPrice) || 0.0;
         this.totalProfit = Number(data.totalProfit) || 0.0;
         this.uniqueId = data.uniqueId || generateInvoiceUniqueId();
-        
-        if (this.isBusinessInvoice) {
-            this.busInvNumber = data.busInvNumber || data.invoiceNumber || "";
-            this.clientAddress = data.clientAddress || "";
-            this.clientEmail = data.clientEmail || "";
-            this.clientPhone = data.clientPhone || "";
-            this.note = data.note || "";
-            this.shippingCost = Number(data.shippingCost) || 0.0;
-            this.taxPercent = Number(data.taxPercent) || 0.0;
-            this.title = data.title || "Invoice";
-        }
     }
 }
 
 export class InvoiceItem {
     constructor(data = {}) {
-        this.productId = data.productId || null;
+        let pId = data.productId;
+        if (pId !== null && pId !== undefined && pId !== '' && !isNaN(Number(pId)) && typeof pId !== 'boolean') {
+            const num = Number(pId);
+            pId = Number.isInteger(num) ? num : num;
+        } else if (pId === undefined) {
+            pId = null;
+        }
+
+        this.itemProfit = Number(data.itemProfit) !== undefined && !isNaN(Number(data.itemProfit)) 
+            ? Number(data.itemProfit) 
+            : 0.0;
+        this.productId = pId;
         this.productName = data.productName || "";
-        this.quantity = data.quantity || 1;
-        this.unitPrice = data.unitPrice || 0.0;
-        this.totalPrice = data.totalPrice || 0.0;
-        this.unitCost = data.unitCost || 0.0; // Crucial: explicitly store unit cost
-        this.itemProfit = data.itemProfit || 0.0; // Crucial: explicitly store item profit
+        this.quantity = Number(data.quantity) || 1;
+        this.totalPrice = Number(data.totalPrice) !== undefined && !isNaN(Number(data.totalPrice)) 
+            ? Number(data.totalPrice) 
+            : (this.quantity * (Number(data.unitPrice) || 0.0));
+        this.unitCost = Number(data.unitCost) || 0.0;
+        this.unitPrice = Number(data.unitPrice) || 0.0;
     }
 }
 
@@ -156,15 +167,16 @@ export class Product {
 
 export class BusinessProfile {
     constructor(data = {}) {
-        this.id = data.id || null;
-        this.uniqueId = data.uniqueId || generateInvoiceUniqueId();
-        this.name = data.name || "";
         this.address = data.address || "";
-        this.phone = data.phone || "";
         this.email = data.email || "";
-        this.creatorId = data.creatorId || "";
-        this.timestamp = data.timestamp || Date.now();
+        this.id = data.id || null;
+        this.invoiceCount = Number(data.invoiceCount) || 0;
+        this.name = data.name || "";
+        this.phone = data.phone || "";
+        this.timestamp = Number(data.timestamp) || Date.now();
+        this.uniqueId = data.uniqueId || generateInvoiceUniqueId();
         this.updatedTimestamp = data.updatedTimestamp || Date.now();
+        this.creatorId = data.creatorId || "";
     }
 }
 

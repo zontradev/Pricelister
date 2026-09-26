@@ -93,15 +93,18 @@ export const getPeopleService = (workspaceId) => {
             if (workerPermission && workerPermission.disableDelete) throw new Error("Permission denied.");
 
             const invoiceRepo = createRepository('Invoices', workspaceId);
-            const [allInvoices, bus] = await Promise.all([
+            const busInvoiceRepo = createRepository('BusinessInvoices', workspaceId);
+            const [custInvs, busInvs, bus] = await Promise.all([
                 invoiceRepo.getAll().catch(() => []),
+                busInvoiceRepo.getAll().catch(() => []),
                 businessRepo.getById(id).catch(() => null)
             ]);
 
+            const allInvoices = [...(custInvs || []), ...(busInvs || [])];
             const uId = bus?.uniqueId || id;
             const name = (bus?.name || '').trim().toLowerCase();
 
-            const connectedInvs = (allInvoices || []).filter(inv =>
+            const connectedInvs = allInvoices.filter(inv =>
                 (inv.businessId && (inv.businessId === uId || inv.businessId === id)) ||
                 (inv.businessName && inv.businessName.trim().toLowerCase() === name)
             );

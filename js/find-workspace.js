@@ -60,13 +60,219 @@ export function initFindWorkspace() {
         }, 20);
     };
 
+    /**
+     * Comprehensive lookup helper:
+     * Resolves workspace document & data given an identifier string (UID, workspaceId, AdminId, Email, Name)
+     */
+    async function searchWorkspaceByIdentifier(rawKey) {
+        if (!rawKey) return null;
+        const key = rawKey.trim().replace(/^['"]|['"]$/g, '');
+        if (!key) return null;
+
+        // Mock bypass
+        if (key === 'dev-mock-uid' || key === 'ws_dev_mock') {
+            return {
+                id: 'ws_dev_mock',
+                data: {
+                    workspaceId: 'DEV_MOCK_WS_ID',
+                    name: 'Local Dev Workspace',
+                    adminName: 'Lead Developer',
+                    adminEmail: 'developer@local.test',
+                    adminId: 'DEV_MOCK_ADMIN_ID',
+                    adminProductCount: 24,
+                    adminInvoiceCount: 8,
+                    adminCategoryCount: 4,
+                    adminClientCount: 12,
+                    createdAt: Date.now()
+                },
+                sourceWorker: null
+            };
+        }
+
+        const collectionsToCheck = ['Workspaces', 'workspaces'];
+
+        // 1. Direct Document Lookup by ID (UID or Doc ID)
+        for (const coll of collectionsToCheck) {
+            try {
+                const snap = await getDoc(doc(db, coll, key));
+                if (snap.exists()) {
+                    return { id: snap.id, data: snap.data(), sourceWorker: null };
+                }
+            } catch (e) {}
+        }
+
+        // 2. Check Connections collection (Worker UID -> adminUid -> Workspace)
+        for (const coll of ['Connections', 'connections']) {
+            try {
+                const connSnap = await getDoc(doc(db, coll, key));
+                if (connSnap.exists()) {
+                    const cData = connSnap.data();
+                    const targetUid = cData.adminUid || cData.workspaceDocUid || cData.workspaceId;
+                    if (targetUid) {
+                        for (const wsColl of collectionsToCheck) {
+                            try {
+                                const wsSnap = await getDoc(doc(db, wsColl, targetUid));
+                                if (wsSnap.exists()) {
+                                    return {
+                                        id: wsSnap.id,
+                                        data: wsSnap.data(),
+                                        sourceWorker: {
+                                            name: cData.name || cData.workerName || 'Connected Member',
+                                            email: cData.email || cData.workerEmail || '',
+                                            id: key,
+                                            role: cData.role || 'WORKER',
+                                            joinedAt: cData.timestamp || cData.joinedAt || null
+                                        }
+                                    };
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // 3. Check Connections query by email if key contains '@'
+        if (key.includes('@')) {
+            const emailLower = key.toLowerCase();
+            for (const coll of ['Connections', 'connections']) {
+                try {
+                    const qConn = query(collection(db, coll), where('email', '==', emailLower));
+                    const qSnap = await getDocs(qConn);
+                    if (!qSnap.empty) {
+                        const cData = qSnap.docs[0].data();
+                        const targetUid = cData.adminUid || cData.workspaceDocUid;
+                        if (targetUid) {
+                            for (const wsColl of collectionsToCheck) {
+                                try {
+                                    const wsSnap = await getDoc(doc(db, wsColl, targetUid));
+                                    if (wsSnap.exists()) {
+                                        return {
+                                            id: wsSnap.id,
+                                            data: wsSnap.data(),
+                                            sourceWorker: {
+                                                name: cData.name || 'Connected Member',
+                                                email: emailLower,
+                                                id: qSnap.docs[0].id,
+                                                role: cData.role || 'WORKER',
+                                                joinedAt: cData.timestamp || null
+                                            }
+                                        };
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+
+        // 4. Query Workspaces by workspaceId, adminId, adminEmail, email, name
+        for (const coll of collectionsToCheck) {
+            try {
+                // workspaceId exact
+                const qWs = query(collection(db, coll), where('workspaceId', '==', key));
+                const sWs = await getDocs(qWs);
+                if (!sWs.empty) return { id: sWs.docs[0].id, data: sWs.docs[0].data(), sourceWorker: null };
+
+                // workspaceId uppercase
+                if (key !== key.toUpperCase()) {
+                    const qUp = query(collection(db, coll), where('workspaceId', '==', key.toUpperCase()));
+                    const sUp = await getDocs(qUp);
+                    if (!sUp.empty) return { id: sUp.docs[0].id, data: sUp.docs[0].data(), sourceWorker: null };
+                }
+
+                // adminId exact
+                const qAdm = query(collection(db, coll), where('adminId', '==', key));
+                const sAdm = await getDocs(qAdm);
+                if (!sAdm.empty) return { id: sAdm.docs[0].id, data: sAdm.docs[0].data(), sourceWorker: null };
+
+                // adminId uppercase
+                if (key !== key.toUpperCase()) {
+                    const qAdmUp = query(collection(db, coll), where('adminId', '==', key.toUpperCase()));
+                    const sAdmUp = await getDocs(qAdmUp);
+                    if (!sAdmUp.empty) return { id: sAdmUp.docs[0].id, data: sAdmUp.docs[0].data(), sourceWorker: null };
+                }
+
+                // adminEmail / email if contains @
+                if (key.includes('@')) {
+                    const emailLower = key.toLowerCase();
+                    const qEm1 = query(collection(db, coll), where('adminEmail', '==', emailLower));
+                    const sEm1 = await getDocs(qEm1);
+                    if (!sEm1.empty) return { id: sEm1.docs[0].id, data: sEm1.docs[0].data(), sourceWorker: null };
+
+                    const qEm2 = query(collection(db, coll), where('email', '==', emailLower));
+                    const sEm2 = await getDocs(qEm2);
+                    if (!sEm2.empty) return { id: sEm2.docs[0].id, data: sEm2.docs[0].data(), sourceWorker: null };
+                }
+
+                // workspace name
+                const qNm = query(collection(db, coll), where('name', '==', key));
+                const sNm = await getDocs(qNm);
+                if (!sNm.empty) return { id: sNm.docs[0].id, data: sNm.docs[0].data(), sourceWorker: null };
+            } catch (e) {
+                console.warn(`Query search on ${coll} warning:`, e);
+            }
+        }
+
+        // 5. Check userCollection/{key}
+        try {
+            const userSnap = await getDoc(doc(db, 'userCollection', key));
+            if (userSnap.exists()) {
+                const uData = userSnap.data();
+                const possibleUid = uData.adminUid || uData.workspaceId || userSnap.id;
+                for (const wsColl of collectionsToCheck) {
+                    try {
+                        const wsSnap = await getDoc(doc(db, wsColl, possibleUid));
+                        if (wsSnap.exists()) {
+                            return { id: wsSnap.id, data: wsSnap.data(), sourceWorker: null };
+                        }
+                    } catch (e) {}
+                }
+            }
+        } catch (e) {}
+
+        // 6. Deep Scan across Workspaces collection (case-insensitive fallback)
+        for (const coll of collectionsToCheck) {
+            try {
+                const allSnap = await getDocs(collection(db, coll));
+                const targetClean = key.toLowerCase();
+
+                for (const d of allSnap.docs) {
+                    const data = d.data();
+                    const docId = d.id.toLowerCase();
+                    const wsId = (data.workspaceId || '').toLowerCase();
+                    const admId = (data.adminId || '').toLowerCase();
+                    const admEmail = (data.adminEmail || data.email || '').toLowerCase();
+                    const wsName = (data.name || '').toLowerCase();
+                    const admName = (data.adminName || '').toLowerCase();
+
+                    if (
+                        docId === targetClean ||
+                        wsId === targetClean ||
+                        admId === targetClean ||
+                        admEmail === targetClean ||
+                        wsName === targetClean ||
+                        admName === targetClean
+                    ) {
+                        return { id: d.id, data: data, sourceWorker: null };
+                    }
+                }
+            } catch (e) {
+                console.warn(`Deep scan error on ${coll}:`, e);
+            }
+        }
+
+        return null;
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const rawWsInput = (inputId?.value || '').trim();
         const rawIdent = (inputIdentValue?.value || '').trim();
         
-        if (!rawWsInput) {
+        if (!rawWsInput && !rawIdent) {
             if (inputId) inputId.focus();
             return;
         }
@@ -87,163 +293,54 @@ export function initFindWorkspace() {
         }
 
         try {
-            // =========================================================================
-            // STEP 1: FIND WORKSPACE DOCUMENT ACROSS ALL SEARCH STRATEGIES
-            // =========================================================================
-            let wsDoc = null;
-            let wsData = null;
-
-            // 1a. Direct Document Lookup by ID / UID
-            try {
-                const directSnap = await getDoc(doc(db, 'Workspaces', rawWsInput));
-                if (directSnap.exists()) {
-                    wsDoc = directSnap;
-                    wsData = directSnap.data();
-                }
-            } catch (err) {
-                console.warn("Direct workspace lookup error:", err);
+            // STEP 1: Search using primary input (or fallback to secondary input if swapped)
+            let match = await searchWorkspaceByIdentifier(rawWsInput);
+            
+            // If primary input did not match, try secondary input
+            if (!match && rawIdent) {
+                match = await searchWorkspaceByIdentifier(rawIdent);
             }
 
-            // 1b. Query by 'workspaceId' (both exact and uppercase)
-            if (!wsDoc) {
-                try {
-                    const qWs = query(collection(db, 'Workspaces'), where('workspaceId', '==', rawWsInput));
-                    const snapWs = await getDocs(qWs);
-                    if (!snapWs.empty) {
-                        wsDoc = snapWs.docs[0];
-                        wsData = wsDoc.data();
-                    } else if (rawWsInput !== rawWsInput.toUpperCase()) {
-                        const qUpper = query(collection(db, 'Workspaces'), where('workspaceId', '==', rawWsInput.toUpperCase()));
-                        const snapUpper = await getDocs(qUpper);
-                        if (!snapUpper.empty) {
-                            wsDoc = snapUpper.docs[0];
-                            wsData = wsDoc.data();
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Query by workspaceId error:", err);
-                }
-            }
-
-            // 1c. Query by 'adminId'
-            if (!wsDoc) {
-                try {
-                    const qAdmin = query(collection(db, 'Workspaces'), where('adminId', '==', rawWsInput));
-                    const snapAdmin = await getDocs(qAdmin);
-                    if (!snapAdmin.empty) {
-                        wsDoc = snapAdmin.docs[0];
-                        wsData = wsDoc.data();
-                    } else if (rawWsInput !== rawWsInput.toUpperCase()) {
-                        const qAdminUp = query(collection(db, 'Workspaces'), where('adminId', '==', rawWsInput.toUpperCase()));
-                        const snapAdminUp = await getDocs(qAdminUp);
-                        if (!snapAdminUp.empty) {
-                            wsDoc = snapAdminUp.docs[0];
-                            wsData = wsDoc.data();
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Query by adminId error:", err);
-                }
-            }
-
-            // 1d. Query by 'adminEmail' or 'email'
-            if (!wsDoc && rawWsInput.includes('@')) {
-                try {
-                    const emailLower = rawWsInput.toLowerCase();
-                    const qEmail = query(collection(db, 'Workspaces'), where('adminEmail', '==', emailLower));
-                    const snapEmail = await getDocs(qEmail);
-                    if (!snapEmail.empty) {
-                        wsDoc = snapEmail.docs[0];
-                        wsData = wsDoc.data();
-                    } else {
-                        const qEmail2 = query(collection(db, 'Workspaces'), where('email', '==', emailLower));
-                        const snapEmail2 = await getDocs(qEmail2);
-                        if (!snapEmail2.empty) {
-                            wsDoc = snapEmail2.docs[0];
-                            wsData = wsDoc.data();
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Query by adminEmail error:", err);
-                }
-            }
-
-            // 1e. Query by Workspace 'name'
-            if (!wsDoc) {
-                try {
-                    const qName = query(collection(db, 'Workspaces'), where('name', '==', rawWsInput));
-                    const snapName = await getDocs(qName);
-                    if (!snapName.empty) {
-                        wsDoc = snapName.docs[0];
-                        wsData = wsDoc.data();
-                    }
-                } catch (err) {
-                    console.warn("Query by name error:", err);
-                }
-            }
-
-            // 1f. Fallback Scan (if direct queries yielded nothing, check top-level docs)
-            if (!wsDoc) {
-                try {
-                    const allSnap = await getDocs(collection(db, 'Workspaces'));
-                    const cleanTarget = rawWsInput.toLowerCase();
-                    for (const d of allSnap.docs) {
-                        const data = d.data();
-                        const docId = d.id.toLowerCase();
-                        const wsId = (data.workspaceId || '').toLowerCase();
-                        const admId = (data.adminId || '').toLowerCase();
-                        const admEmail = (data.adminEmail || data.email || '').toLowerCase();
-                        const wsName = (data.name || '').toLowerCase();
-
-                        if (docId === cleanTarget || wsId === cleanTarget || admId === cleanTarget || admEmail === cleanTarget || wsName === cleanTarget) {
-                            wsDoc = d;
-                            wsData = data;
-                            break;
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Fallback scan error:", e);
-                }
-            }
-
-            // Workspace not found
-            if (!wsDoc || !wsData) {
+            // Not found
+            if (!match || !match.data) {
                 if (loadingState) loadingState.style.display = 'none';
                 if (notFoundState) notFoundState.style.display = 'block';
                 return;
             }
 
-            // =========================================================================
-            // STEP 2: VERIFY WORKER / MEMBER CREDENTIALS (IF PROVIDED)
-            // =========================================================================
-            let memberProfile = null;
-            const cleanIdent = rawIdent.toLowerCase();
+            const wsDocId = match.id;
+            const wsData = match.data;
+            let memberProfile = match.sourceWorker || null;
 
-            if (rawIdent) {
-                // 2a. Check if identifier belongs to the Admin/Creator
+            // STEP 2: Determine & verify member profile
+            const identToVerify = rawIdent || (!match.sourceWorker && rawWsInput ? rawWsInput : '');
+            const cleanIdent = identToVerify.trim().toLowerCase();
+
+            if (cleanIdent && !memberProfile) {
+                // Check if matches admin/creator
                 const admEmailMatch = (wsData.adminEmail || wsData.email || '').toLowerCase() === cleanIdent;
                 const admIdMatch = (wsData.adminId || '').toLowerCase() === cleanIdent;
-                const docIdMatch = wsDoc.id.toLowerCase() === cleanIdent;
+                const docIdMatch = wsDocId.toLowerCase() === cleanIdent;
                 const admNameMatch = (wsData.adminName || '').toLowerCase() === cleanIdent;
 
                 if (admEmailMatch || admIdMatch || docIdMatch || admNameMatch) {
                     memberProfile = {
                         name: wsData.adminName || 'Workspace Creator',
-                        email: wsData.adminEmail || wsData.email || rawIdent,
-                        id: wsData.adminId || wsDoc.id,
+                        email: wsData.adminEmail || wsData.email || identToVerify,
+                        id: wsData.adminId || wsDocId,
                         role: 'CREATOR_ADMIN',
                         status: 'Active (Creator)',
                         joinedAt: wsData.createdAt || null
                     };
                 }
 
-                // 2b. Check Members subcollection
+                // Check Members subcollection
                 if (!memberProfile) {
                     for (const sub of ['Members', 'members']) {
                         if (memberProfile) break;
                         try {
-                            // Direct doc lookup by email
-                            const mDocRef = doc(db, 'Workspaces', wsDoc.id, sub, cleanIdent);
+                            // Direct doc lookup by email or UID
+                            const mDocRef = doc(db, 'Workspaces', wsDocId, sub, cleanIdent);
                             const mSnap = await getDoc(mDocRef);
                             if (mSnap.exists()) {
                                 const d = mSnap.data();
@@ -259,7 +356,7 @@ export function initFindWorkspace() {
                             }
 
                             // Query all members in subcollection
-                            const collRef = collection(db, 'Workspaces', wsDoc.id, sub);
+                            const collRef = collection(db, 'Workspaces', wsDocId, sub);
                             const allMembersSnap = await getDocs(collRef);
                             for (const md of allMembersSnap.docs) {
                                 const d = md.data();
@@ -290,22 +387,22 @@ export function initFindWorkspace() {
                                 }
                             }
                         } catch (err) {
-                            console.warn(`Subcollection ${sub} search error:`, err);
+                            console.warn(`Subcollection ${sub} search warning:`, err);
                         }
                     }
                 }
 
-                // 2c. Check Connections collection
+                // Check Connections collection
                 if (!memberProfile) {
                     try {
-                        const connSnap = await getDoc(doc(db, 'Connections', rawIdent));
+                        const connSnap = await getDoc(doc(db, 'Connections', identToVerify));
                         if (connSnap.exists()) {
                             const conn = connSnap.data();
-                            if (conn.adminUid === wsDoc.id || (wsData.adminEmail && conn.adminEmail === wsData.adminEmail)) {
+                            if (conn.adminUid === wsDocId || (wsData.adminEmail && conn.adminEmail === wsData.adminEmail)) {
                                 memberProfile = {
                                     name: conn.name || 'Connected Worker',
-                                    email: conn.email || conn.workerEmail || rawIdent,
-                                    id: rawIdent,
+                                    email: conn.email || conn.workerEmail || identToVerify,
+                                    id: identToVerify,
                                     role: conn.role || 'WORKER',
                                     status: 'Joined',
                                     joinedAt: conn.timestamp || null
@@ -318,14 +415,12 @@ export function initFindWorkspace() {
 
             if (loadingState) loadingState.style.display = 'none';
 
-            // =========================================================================
-            // STEP 3: RENDER SEARCH RESULTS
-            // =========================================================================
+            // STEP 3: Render Search Results
             if (resWsName) resWsName.textContent = wsData.name || 'PriceLister Workspace';
-            if (resWsId) resWsId.textContent = wsData.workspaceId || wsDoc.id;
+            if (resWsId) resWsId.textContent = wsData.workspaceId || wsDocId;
             if (resAdminName) resAdminName.textContent = wsData.adminName || 'Admin';
             if (resAdminEmail) resAdminEmail.textContent = wsData.adminEmail || wsData.email || '—';
-            if (resAdminId) resAdminId.textContent = wsData.adminId || wsDoc.id;
+            if (resAdminId) resAdminId.textContent = wsData.adminId || wsDocId;
 
             // Animate Stats
             animateStat(document.getElementById('res-stat-products'), wsData.adminProductCount ?? 0);

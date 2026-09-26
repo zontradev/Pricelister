@@ -19,6 +19,7 @@ import { firestoreService } from '../../firebase/firestore.js';
 import { getProductService } from '../services/productService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { showAlert } from '../alert-handler.js';
+import { formatCurrency } from '../utilities.js';
 
 /**
  * 1. EXCEL & CSV IMPORT MODAL
@@ -394,7 +395,7 @@ export const openExcelImportModal = async (workspaceId, onImportSuccess) => {
                 </td>
                 <td style="padding: 0.45rem 0.75rem;">${catBadge}</td>
                 <td style="padding: 0.45rem 0.75rem; color:var(--text-secondary);">${row.productData.sizeWeight || '—'}</td>
-                <td style="padding: 0.45rem 0.75rem; text-align:right; font-weight:700; color:var(--primary);">${row.productData.salePrice > 0 ? '$' + Number(row.productData.salePrice).toFixed(2) : '—'}</td>
+                <td style="padding: 0.45rem 0.75rem; text-align:right; font-weight:700; color:var(--primary);">${row.productData.salePrice > 0 ? formatCurrency(row.productData.salePrice) : '—'}</td>
                 <td style="padding: 0.45rem 0.75rem; color:var(--text-secondary); font-size:0.75rem;">${row.productData.upcCode || '—'}</td>
             `;
 
@@ -476,6 +477,7 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
     let invoices = preloadedData.invoices || [];
     let businesses = preloadedData.businesses || [];
     let customers = preloadedData.customers || [];
+    let clients = preloadedData.clients || [];
     let workspaceInfo = preloadedData.workspaceInfo || {};
 
     if (products.length === 0 || categories.length === 0) {
@@ -772,7 +774,8 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
                     categories,
                     invoices,
                     businesses,
-                    customers
+                    customers,
+                    clients
                 });
                 showAlert(`Full workspace backup exported successfully!`, 'success');
                 closeModal();
