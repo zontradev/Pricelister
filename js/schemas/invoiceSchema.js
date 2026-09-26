@@ -11,14 +11,27 @@ export const validateInvoice = (data) => {
         errors.push('isBusinessInvoice must be a boolean.');
     }
 
+    // Issuer Business is mandatory for both invoice types
+    if (!data.businessId || typeof data.businessId !== 'string' || data.businessId.trim() === '') {
+        errors.push('Issuer Business is required.');
+    }
+
     if (data.isBusinessInvoice) {
-        if (!data.businessId || typeof data.businessId !== 'string') {
-            errors.push('Business ID is required for a Business Invoice.');
+        // 5 mandatory items for Business Invoice: Business*, Client*, Title*, Invoice Number*, At least one item*
+        if (!data.clientId || typeof data.clientId !== 'string' || data.clientId.trim() === '') {
+            errors.push('Client (Billed To) is required for a Business Invoice.');
+        }
+        if (!data.title || typeof data.title !== 'string' || data.title.trim() === '') {
+            errors.push('Invoice Title is required.');
+        }
+        const invNum = data.invoiceNumber || data.busInvNumber;
+        if (!invNum || typeof invNum !== 'string' || invNum.trim() === '') {
+            errors.push('Business Invoice Number is required.');
         }
     } else {
-        if ((!data.customerName || typeof data.customerName !== 'string' || data.customerName.trim() === '') &&
-            (!data.customerNumber || typeof data.customerNumber !== 'string' || data.customerNumber.trim() === '')) {
-            errors.push('Customer Name or Number is required for a standard Customer Invoice.');
+        // 3 mandatory items for Customer Invoice: Business*, Customer Name*, At least one item*
+        if (!data.customerName || typeof data.customerName !== 'string' || data.customerName.trim() === '') {
+            errors.push('Customer Name is required.');
         }
     }
 

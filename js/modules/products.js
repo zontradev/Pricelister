@@ -195,7 +195,16 @@ export const renderProducts = async (container, workspaceId) => {
                         </tr>
                     </thead>
                     <tbody id="product-list-body">
-                        <tr><td colspan="6" style="padding:1rem; text-align:center;">Loading...</td></tr>
+                        ${Array(5).fill(0).map(() => `
+                            <tr class="skeleton-row" style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 40px; height: 40px; border-radius: 6px;"></div></td>
+                                <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 140px; height: 18px;"></div><div class="skeleton-shimmer" style="width: 80px; height: 12px; margin-top: 4px;"></div></td>
+                                <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 90px; height: 22px; border-radius: 12px;"></div></td>
+                                <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 60px; height: 18px;"></div></td>
+                                <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 50px; height: 18px;"></div></td>
+                                <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 70px; height: 28px; border-radius: 4px;"></div></td>
+                            </tr>
+                        `).join('')}
                     </tbody>
                 </table>
             </div>
@@ -276,7 +285,7 @@ export const renderProducts = async (container, workspaceId) => {
                     <td style="padding:1rem;">
                         <button class="btn btn-sm btn-secondary edit-prd" data-id="${prd.id}">Edit</button>
                         <button class="btn btn-sm btn-secondary dup-prd" data-id="${prd.id}">Duplicate</button>
-                        <button class="btn btn-sm btn-outline arch-prd" data-id="${prd.id}">Archive</button>
+                        <button class="btn btn-sm btn-outline del-prd" data-id="${prd.id}" style="color:var(--danger);">Delete</button>
                     </td>
                 </tr>
             `}).join('');
@@ -371,17 +380,18 @@ export const renderProducts = async (container, workspaceId) => {
             });
         });
 
-        // Archive
-        container.querySelectorAll('.arch-prd').forEach(btn => {
+        // Delete Product
+        container.querySelectorAll('.del-prd').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
-                if (await showAlert.confirm('Archive this product? It will not appear in the active list but remains available for existing invoices.')) {
+                const prd = activeProducts.find(p => p.id === id);
+                if (prd && await showAlert.confirm(`Delete product "${prd.name}" permanently?`)) {
                     try {
-                        await productService.archiveProduct(id);
-                        showAlert.success('Product archived');
+                        await productService.deleteProduct(id);
+                        showAlert.success('Product deleted successfully');
                         loadData();
                     } catch (err) {
-                        showAlert.error(err.message);
+                        showAlert.error(err.message || 'Failed to delete product');
                     }
                 }
             });

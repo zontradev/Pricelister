@@ -75,7 +75,15 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     </tr>
                 </thead>
                 <tbody id="people-list-body">
-                    <tr><td colspan="5" style="padding:1rem; text-align:center;">Loading...</td></tr>
+                    ${Array(5).fill(0).map(() => `
+                        <tr class="skeleton-row" style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 140px; height: 18px;"></div><div class="skeleton-shimmer" style="width: 80px; height: 12px; margin-top: 4px;"></div></td>
+                            <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 120px; height: 16px;"></div></td>
+                            <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 160px; height: 16px;"></div></td>
+                            <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 70px; height: 22px; border-radius: 12px;"></div></td>
+                            <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 80px; height: 28px; border-radius: 4px;"></div></td>
+                        </tr>
+                    `).join('')}
                 </tbody>
             </table>
         </div>

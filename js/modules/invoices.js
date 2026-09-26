@@ -57,7 +57,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 </div>
                 <button id="btn-add-invoice" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                    + Create ${typeLabel}
+                    + Add ${typeLabel}
                 </button>
             </div>
 
@@ -113,7 +113,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                             </tr>
                         </thead>
                         <tbody id="invoices-table-body">
-                            <!-- Loaded via JS -->
+                            ${Array(5).fill(0).map(() => `
+                                <tr class="skeleton-row" style="border-bottom: 1px solid var(--border-color);">
+                                    <td style="padding:1rem 1.25rem;"><div class="skeleton-shimmer" style="width: 100px; height: 18px;"></div></td>
+                                    <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 75px; height: 18px;"></div></td>
+                                    <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 130px; height: 18px;"></div></td>
+                                    <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 65px; height: 22px; border-radius: 9999px;"></div></td>
+                                    <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 70px; height: 18px;"></div></td>
+                                    <td style="padding:1rem 1.25rem;"><div class="skeleton-shimmer" style="width: 140px; height: 28px; border-radius: 8px;"></div></td>
+                                </tr>
+                            `).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -147,14 +156,14 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <!-- SECTION 1: ISSUER (YOUR BUSINESS) -->
                     <div class="form-section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 1 — ISSUER (YOUR BUSINESS)</h4>
+                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 1 — ISSUER (YOUR BUSINESS) *</h4>
                             <button type="button" id="btn-quick-add-business" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px;">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> + New Business
                             </button>
                         </div>
                         <div style="display:flex; gap:1rem; align-items:flex-end;">
                             <div style="flex:1;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Business *</label>
+                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Business <span style="color:var(--danger);">*</span></label>
                                 <select id="inv-business" class="form-control" style="width:100%; padding:0.55rem;" required>
                                     <option value="">Loading businesses...</option>
                                 </select>
@@ -167,16 +176,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     ${isBusinessInvoice ? `
                     <div class="form-section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 2 — BILLED TO (CLIENT BUSINESS)</h4>
+                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 2 — BILLED TO (CLIENT BUSINESS) *</h4>
                             <button type="button" id="btn-quick-add-client" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px;">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> + New Client
                             </button>
                         </div>
                         <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap: wrap;">
                             <div style="flex:1; min-width: 220px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Client</label>
-                                <select id="inv-client" class="form-control" style="width:100%; padding:0.55rem;">
-                                    <option value="">None / Custom</option>
+                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Client <span style="color:var(--danger);">*</span></label>
+                                <select id="inv-client" class="form-control" style="width:100%; padding:0.55rem;" required>
+                                    <option value="">Select Client...</option>
                                 </select>
                             </div>
                         </div>
@@ -188,17 +197,17 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 3 — BUSINESS INVOICE INFO</h4>
                         <div style="display:flex; gap:1rem; flex-wrap: wrap;">
                             <div style="flex:1; min-width: 220px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Title</label>
-                                <input type="text" id="inv-title" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. Commercial Supply Order" value="Invoice">
+                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Title <span style="color:var(--danger);">*</span></label>
+                                <input type="text" id="inv-title" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. Invoice" value="Invoice" required>
                             </div>
                             <div style="flex:1; min-width: 220px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                                    <label style="font-weight: 500; font-size: 0.85rem; margin: 0;">Business Invoice Number</label>
+                                    <label style="font-weight: 600; font-size: 0.85rem; margin: 0;">Business Invoice Number <span style="color:var(--danger);">*</span></label>
                                     <button type="button" id="btn-regen-bus-id" class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; display:inline-flex; align-items:center; gap:4px;">
                                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Re-roll
                                     </button>
                                 </div>
-                                <input type="text" id="inv-bus-number" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; color: var(--primary);" placeholder="BusInv-000000">
+                                <input type="text" id="inv-bus-number" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; color: var(--primary);" placeholder="BusInv-000000" required>
                             </div>
                         </div>
                     </div>
@@ -212,7 +221,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         </div>
                         <div style="display:flex; gap:1rem; margin-bottom: 1rem; flex-wrap: wrap;">
                             <div style="flex:1; min-width: 220px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Invoice Number</label>
+                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Invoice Number</label>
                                 <input type="text" id="inv-cust-number" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; background: var(--surface-50); color: var(--primary);" readonly>
                             </div>
                         </div>
@@ -225,7 +234,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 </select>
                             </div>
                             <div style="flex:1; min-width: 180px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Or Customer Name *</label>
+                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Customer Name <span style="color:var(--danger);">*</span></label>
                                 <input type="text" id="inv-customer-name" required class="form-control" style="width:100%; padding:0.55rem;" placeholder="Enter customer name">
                             </div>
                             <div style="flex:1; min-width: 180px;">
@@ -239,7 +248,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <!-- SECTION: PRODUCTS SELECTION -->
                     <div class="form-section">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION ${isBusinessInvoice ? '4' : '3'} — PRODUCTS SELECTION</h4>
+                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION ${isBusinessInvoice ? '4' : '3'} — PRODUCTS SELECTION <span style="color:var(--danger);">*</span></h4>
                             <button type="button" id="btn-toggle-picker" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.45rem;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                                 <span id="picker-toggle-text">Open Advanced Product Picker</span>
@@ -622,6 +631,27 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         return found ? (found.uniqueId || found.id || found.name) : catVal;
     };
 
+    const getVisibleProducts = () => {
+        return allProducts.filter(p => {
+            if (pickerCategoryFilter !== 'ALL') {
+                const prodCatUniqueId = getCategoryUniqueId(p.category);
+                if (prodCatUniqueId !== pickerCategoryFilter && p.category !== pickerCategoryFilter) {
+                    return false;
+                }
+            }
+            if (pickerSearchQuery) {
+                const q = pickerSearchQuery.toLowerCase();
+                const name = (p.name || '').toLowerCase();
+                const catName = getCategoryName(p.category).toLowerCase();
+                const catRaw = (p.category || '').toLowerCase();
+                const upc = (p.upcCode || '').toLowerCase();
+                const size = (p.sizeWeight || '').toLowerCase();
+                return name.includes(q) || catName.includes(q) || catRaw.includes(q) || upc.includes(q) || size.includes(q);
+            }
+            return true;
+        });
+    };
+
     const updatePickerSummary = () => {
         let totalCount = 0;
         let totalUnits = 0;
@@ -639,6 +669,23 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (pickerCountDisp) pickerCountDisp.textContent = totalCount;
         if (pickerUnitsDisp) pickerUnitsDisp.textContent = totalUnits;
         if (pickerSubtotalDisp) pickerSubtotalDisp.textContent = `$${totalCost.toFixed(2)}`;
+
+        // Update Select All Visible / Deselect All Visible button state dynamically
+        const visible = getVisibleProducts();
+        const selectableVisible = isVendingActive ? visible.filter(p => Number(p.quantity || 0) > 0) : visible;
+        const allVisibleSelected = selectableVisible.length > 0 && selectableVisible.every(p => pickerSelections[p.id] !== undefined);
+
+        if (pickerBtnSelectAll) {
+            if (selectableVisible.length === 0) {
+                pickerBtnSelectAll.textContent = 'Select All Visible';
+                pickerBtnSelectAll.disabled = true;
+            } else {
+                pickerBtnSelectAll.disabled = false;
+                pickerBtnSelectAll.textContent = allVisibleSelected 
+                    ? `Deselect All Visible (${selectableVisible.length})` 
+                    : `Select All Visible (${selectableVisible.length})`;
+            }
+        }
     };
 
     const renderPickerCategories = () => {
@@ -681,6 +728,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 target.classList.add('active');
                 pickerCategoryFilter = target.getAttribute('data-cat-id');
                 renderPickerGrid();
+                updatePickerSummary();
             });
         });
     };
@@ -688,24 +736,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const renderPickerGrid = () => {
         if (!pickerGridContainer) return;
 
-        let filtered = allProducts.filter(p => {
-            if (pickerCategoryFilter !== 'ALL') {
-                const prodCatUniqueId = getCategoryUniqueId(p.category);
-                if (prodCatUniqueId !== pickerCategoryFilter && p.category !== pickerCategoryFilter) {
-                    return false;
-                }
-            }
-            if (pickerSearchQuery) {
-                const q = pickerSearchQuery.toLowerCase();
-                const name = (p.name || '').toLowerCase();
-                const catName = getCategoryName(p.category).toLowerCase();
-                const catRaw = (p.category || '').toLowerCase();
-                const upc = (p.upcCode || '').toLowerCase();
-                const size = (p.sizeWeight || '').toLowerCase();
-                return name.includes(q) || catName.includes(q) || catRaw.includes(q) || upc.includes(q) || size.includes(q);
-            }
-            return true;
-        });
+        const filtered = getVisibleProducts();
 
         if (filtered.length === 0) {
             pickerGridContainer.innerHTML = `
@@ -713,6 +744,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <div style="font-weight: 500; font-size: 0.95rem;">No products match your search or category filter.</div>
                 </div>
             `;
+            updatePickerSummary();
             return;
         }
 
@@ -870,20 +902,32 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         });
     }
 
+    // Toggle Select All Visible / Deselect All Visible for current section
     if (pickerBtnSelectAll) {
         pickerBtnSelectAll.addEventListener('click', () => {
-            allProducts.forEach(p => {
-                const stock = Number(p.quantity || 0);
-                if (isVendingActive && stock <= 0) return;
-                if (pickerSelections[p.id] === undefined) {
-                    pickerSelections[p.id] = 1;
-                }
-            });
+            const visible = getVisibleProducts();
+            const selectableVisible = isVendingActive ? visible.filter(p => Number(p.quantity || 0) > 0) : visible;
+            const allVisibleSelected = selectableVisible.length > 0 && selectableVisible.every(p => pickerSelections[p.id] !== undefined);
+
+            if (allVisibleSelected) {
+                // Deselect only the currently visible section items (keeping other sections untouched!)
+                selectableVisible.forEach(p => {
+                    delete pickerSelections[p.id];
+                });
+            } else {
+                // Select all currently visible items (accumulating with previous category selections!)
+                selectableVisible.forEach(p => {
+                    if (pickerSelections[p.id] === undefined) {
+                        pickerSelections[p.id] = 1;
+                    }
+                });
+            }
             renderPickerGrid();
             updatePickerSummary();
         });
     }
 
+    // Clear all selections across all sections
     if (pickerBtnClearSel) {
         pickerBtnClearSel.addEventListener('click', () => {
             pickerSelections = {};
@@ -1605,25 +1649,34 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             }
 
             if (isBusinessInvoice) {
+                // 5 mandatory items: Business*, Client*, Title*, Invoice Number*, At least one item*
                 const cSelect = container.querySelector('#inv-client');
-                if (cSelect && cSelect.value) {
-                    const cli = allClients.find(c => c.id === cSelect.value);
-                    if (cli) {
-                        invoiceData.clientId = cli.uniqueId || cli.id;
-                        invoiceData.clientAddress = cli.address || '';
-                        invoiceData.clientPhone = cli.phone || '';
-                        invoiceData.clientEmail = cli.email || '';
-                        invoiceData.customerName = cli.name || '';
-                    }
+                if (!cSelect || !cSelect.value) {
+                    throw new Error("Client (Billed To) is required for Business Invoices.");
                 }
 
-                invoiceData.title = container.querySelector('#inv-title')?.value || 'Invoice';
+                const cli = allClients.find(c => c.id === cSelect.value);
+                if (!cli) {
+                    throw new Error("Please select a valid Client.");
+                }
+
+                invoiceData.clientId = cli.uniqueId || cli.id;
+                invoiceData.clientAddress = cli.address || '';
+                invoiceData.clientPhone = cli.phone || '';
+                invoiceData.clientEmail = cli.email || '';
+                invoiceData.customerName = cli.name || '';
+
+                const invTitle = (container.querySelector('#inv-title')?.value || '').trim();
+                if (!invTitle) throw new Error("Invoice Title is required.");
+                invoiceData.title = invTitle;
                 
-                const busInvNum = container.querySelector('#inv-bus-number')?.value.trim();
-                invoiceData.busInvNumber = busInvNum || generateRandomBusInvId();
-                invoiceData.invoiceNumber = invoiceData.busInvNumber;
+                const busInvNum = (container.querySelector('#inv-bus-number')?.value || '').trim();
+                if (!busInvNum) throw new Error("Business Invoice Number is required.");
+                invoiceData.busInvNumber = busInvNum;
+                invoiceData.invoiceNumber = busInvNum;
 
             } else {
+                // 3 mandatory items: Business*, Customer Name*, At least one item*
                 const cSelect = container.querySelector('#inv-customer');
                 if (cSelect && cSelect.value) {
                     const cust = allCustomers.find(c => c.id === cSelect.value);
