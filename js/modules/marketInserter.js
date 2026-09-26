@@ -685,3 +685,11 @@ export const renderMarketInserter = async (container, workspaceId) => {
         }
     });
 };
+
+/**
+ * Backward compatibility helper for modal caller -> redirects to the dedicated route
+ */
+export const openMarketInserterModal = (workspaceId, onDone) => {
+    window.location.hash = '#/market-inserter';
+};
+

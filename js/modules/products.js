@@ -4,7 +4,6 @@ import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 import { storageService } from '../../supabase/storage.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
-import { openMarketInserterModal } from './marketInserter.js';
 
 export const renderProducts = async (container, workspaceId) => {
     const productService = getProductService(workspaceId);

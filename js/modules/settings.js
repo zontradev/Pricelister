@@ -6,7 +6,6 @@ import { getSettingsService } from '../services/settingsService.js';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
-import { openMarketInserterModal } from './marketInserter.js';
 import { downloadHeadersOnlyTemplate, downloadExampleDataTemplate } from '../utils/exportEngine.js';
 
 const db = getFirestore(firebaseApp);
@@ -332,9 +331,7 @@ export const renderSettings = async (container, workspaceId) => {
         const btnMarketInserter = contentArea.querySelector('#btn-settings-market-inserter');
         if (btnMarketInserter) {
             btnMarketInserter.addEventListener('click', () => {
-                openMarketInserterModal(workspaceId, () => {
-                    showAlert.success("Market Inserter batch completed!");
-                });
+                window.location.hash = '#/market-inserter';
             });
         }
 
