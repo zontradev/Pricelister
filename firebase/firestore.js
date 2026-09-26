@@ -527,6 +527,8 @@ export const createRepository = (collectionName, workspaceId) => {
             return onSnapshot(q, (snap) => {
                 const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 callback(data);
+            }, (err) => {
+                console.warn(`Error listening to ${baseCollectionPath}:`, err);
             });
         },
         

@@ -45,8 +45,6 @@ export const hasUnsavedChanges = () => {
         const prdSubmitBtn = document.getElementById('prd-submit-btn');
         if (prdFormContainer && prdFormContainer.style.display !== 'none') {
             if (prdSubmitBtn && !prdSubmitBtn.disabled) return true;
-            const prdName = document.getElementById('prd-name')?.value?.trim();
-            if (prdName) return true;
         }
 
         // 3. Invoice Editor: Editor open with unsaved changes or items
@@ -54,9 +52,6 @@ export const hasUnsavedChanges = () => {
         const invSubmitBtn = document.getElementById('inv-submit-btn');
         if (invEditor && invEditor.style.display !== 'none') {
             if (invSubmitBtn && !invSubmitBtn.disabled) return true;
-            const custName = document.getElementById('inv-customer-name')?.value?.trim();
-            const busId = document.getElementById('inv-business')?.value;
-            if (custName || busId) return true;
         }
 
         // 4. Category Form: Form open with unsaved changes
@@ -74,13 +69,16 @@ export const hasUnsavedChanges = () => {
         }
 
         // 6. Market Inserter: Open grid with pending rows
-        const miRows = document.querySelectorAll('#mi-grid-body tr.mi-grid-row');
-        if (miRows && miRows.length > 0) {
-            const hasData = Array.from(miRows).some(row => {
-                const nameInp = row.querySelector('.mi-inp-name')?.value?.trim();
-                return Boolean(nameInp);
-            });
-            if (hasData) return true;
+        const miGrid = document.getElementById('mi-grid-body');
+        if (miGrid) {
+            const miRows = miGrid.querySelectorAll('tr.mi-grid-row');
+            if (miRows && miRows.length > 0) {
+                const hasData = Array.from(miRows).some(row => {
+                    const nameInp = row.querySelector('.mi-inp-name')?.value?.trim();
+                    return Boolean(nameInp);
+                });
+                if (hasData) return true;
+            }
         }
     } catch (e) {
         console.warn("Edit safety check warning:", e);

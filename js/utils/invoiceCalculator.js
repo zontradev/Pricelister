@@ -33,10 +33,10 @@ export const calculateInvoiceTotal = (items, discountPercent, additionalCut, tax
     let grandTotal = subtotal;
     let finalProfit = totalProfit;
 
-    // Apply adjustments
     const discPct = parseFloat(discountPercent || 0);
+    let discountAmount = 0;
     if (discPct > 0) {
-        const discountAmount = grandTotal * (discPct / 100);
+        discountAmount = grandTotal * (discPct / 100);
         grandTotal -= discountAmount;
         finalProfit -= discountAmount; // discount eats into profit
     }
@@ -48,8 +48,9 @@ export const calculateInvoiceTotal = (items, discountPercent, additionalCut, tax
     }
 
     const taxPct = parseFloat(taxPercent || 0);
+    let taxAmount = 0;
     if (taxPct > 0) {
-        const taxAmount = grandTotal * (taxPct / 100);
+        taxAmount = grandTotal * (taxPct / 100);
         grandTotal += taxAmount; 
     }
 
@@ -60,6 +61,9 @@ export const calculateInvoiceTotal = (items, discountPercent, additionalCut, tax
 
     return {
         subtotal,
+        discountAmount,
+        taxAmount,
+        shippingAmount: shipping,
         grandTotal,
         totalProfit: finalProfit
     };

@@ -464,10 +464,29 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         return found ? (found.uniqueId || found.id || found.name) : catVal;
     }
 
-    // Helper: Generate Random Business Invoice ID
-    function generateRandomBusInvId() {
-        const random6Digits = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-        return `BusInv-${random6Digits}`;
+    // Helper: Safe Date Parsing & Formatting for Firestore / Epoch Timestamps
+    function getInvoiceTime(inv) {
+        if (!inv) return 0;
+        const ts = inv.timestamp || inv.createdAt || inv.updatedTimestamp;
+        if (!ts) return 0;
+        if (typeof ts === 'number') return ts;
+        if (typeof ts.toDate === 'function') {
+            try { return ts.toDate().getTime(); } catch (e) {}
+        }
+        if (typeof ts.seconds === 'number') {
+            return ts.seconds * 1000;
+        }
+        if (typeof ts === 'string') {
+            const parsed = Date.parse(ts);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+        return 0;
+    }
+
+    function formatInvoiceDate(inv) {
+        const time = getInvoiceTime(inv);
+        if (!time) return 'N/A';
+        return new Date(time).toLocaleDateString();
     }
 
     // State for Smart Button / Dirty Checking
@@ -1064,6 +1083,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     // Render items list
     const renderItemsList = () => {
         const list = container.querySelector('#invoice-items-list');
+        if (!list) return;
         if (invoiceItems.length === 0) {
             list.innerHTML = `<div style="color:var(--text-muted); font-size:0.875rem; padding:0.75rem 0; text-align:center; background:var(--surface-50); border-radius:8px;">No products added yet. Click above to pick products.</div>`;
         } else {
@@ -1118,6 +1138,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Calculate live totals
     const updateLiveTotals = () => {
+        const liveTotalsEl = container.querySelector('#inv-live-totals');
+        if (!liveTotalsEl) return;
+
         const dPct = parseFloat(container.querySelector('#inv-discount')?.value || 0);
         const addCut = parseFloat(container.querySelector('#inv-add-cut')?.value || 0);
         const tPct = parseFloat(container.querySelector('#inv-tax')?.value || 0);
@@ -1125,7 +1148,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         const totals = calculateInvoiceTotal(invoiceItems, dPct, addCut, tPct, ship);
 
-        container.querySelector('#inv-live-totals').innerHTML = `
+        liveTotalsEl.innerHTML = `
             <div>Subtotal: ${formatCurrency(totals.subtotal)}</div>
             ${dPct > 0 ? `<div style="color:var(--primary);">Discount (${dPct}%): -${formatCurrency(totals.subtotal * (dPct/100))}</div>` : ''}
             ${addCut > 0 ? `<div style="color:var(--primary);">Additional Cut: -${formatCurrency(addCut)}</div>` : ''}
@@ -1139,6 +1162,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Skeleton loader
     const renderSkeleton = () => {
+        if (!tbody) return;
         tbody.innerHTML = Array(5).fill(0).map(() => `
             <tr class="skeleton-row" style="border-bottom: 1px solid var(--border-color);">
                 <td style="padding:1rem 1.25rem;"><div class="skeleton-shimmer" style="width: 100px; height: 18px;"></div></td>
@@ -1186,7 +1210,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 </div>
                                 <div style="text-align:right;">
                                     <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); letter-spacing:0.5px;">Issued Date</div>
-                                    <div style="font-weight:600; font-size:1.05rem; margin-top:0.25rem; color:var(--text-primary);">${new Date(inv.timestamp).toLocaleDateString()}</div>
+                                    <div style="font-weight:600; font-size:1.05rem; margin-top:0.25rem; color:var(--text-primary);">${formatInvoiceDate(inv)}</div>
                                 </div>
                             </div>
                             
@@ -1265,6 +1289,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Filter and Render Rows
     const applyFiltersAndRender = () => {
+        if (!tbody) return;
+
         const countAllEl = container.querySelector('#count-all');
         const countPaidEl = container.querySelector('#count-paid');
         const countUnpaidEl = container.querySelector('#count-unpaid');
@@ -1287,7 +1313,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
             
             filtered = filtered.filter(inv => {
-                const invTime = inv.timestamp || 0;
+                const invTime = getInvoiceTime(inv);
                 if (activeDateFilter === 'TODAY') {
                     return invTime >= startOfToday;
                 } else if (activeDateFilter === 'THIS_WEEK') {
@@ -1324,8 +1350,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         // Sort
         filtered.sort((a, b) => {
-            if (activeSort === 'NEWEST') return (b.timestamp || 0) - (a.timestamp || 0);
-            if (activeSort === 'OLDEST') return (a.timestamp || 0) - (b.timestamp || 0);
+            if (activeSort === 'NEWEST') return getInvoiceTime(b) - getInvoiceTime(a);
+            if (activeSort === 'OLDEST') return getInvoiceTime(a) - getInvoiceTime(b);
             if (activeSort === 'REVENUE_DESC') return (Number(b.totalPrice) || 0) - (Number(a.totalPrice) || 0);
             if (activeSort === 'REVENUE_ASC') return (Number(a.totalPrice) || 0) - (Number(b.totalPrice) || 0);
             return 0;
@@ -1364,7 +1390,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <code style="font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.04); padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 700; color: var(--text-primary);">${displayInvNumber}</code>
                         ${inv.uniqueId ? `<div style="font-size:0.72rem; font-family:monospace; color:var(--text-muted); margin-top:3px;" title="Document uniqueId">${inv.uniqueId}</div>` : ''}
                     </td>
-                    <td style="padding:1rem; color: var(--text-secondary); font-size: 0.9rem;">${new Date(inv.timestamp).toLocaleDateString()}</td>
+                    <td style="padding:1rem; color: var(--text-secondary); font-size: 0.9rem;">${formatInvoiceDate(inv)}</td>
                     <td style="padding:1rem; color: var(--text-primary);">${entityDisplay}</td>
                     <td style="padding:1rem;">
                         <span class="${badgeClass}">${statusLabel}</span>
@@ -1387,7 +1413,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     // Load Data
     const loadData = async () => {
         try {
-            // Load Categories
+            renderSkeleton();
+
+            // Load Categories safely
             try {
                 allCategories = await categoryService.getAllCategories();
             } catch (catErr) {
@@ -1395,8 +1423,14 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 allCategories = [];
             }
 
-            // Load Vending status
-            isVendingActive = await settingsService.isVendingEnabled();
+            // Load Vending status safely
+            try {
+                isVendingActive = await settingsService.isVendingEnabled();
+            } catch (vendErr) {
+                console.warn("Could not load vending status:", vendErr);
+                isVendingActive = false;
+            }
+
             const badgeEl = container.querySelector('#inv-vending-badge');
             const formVendingIndicator = container.querySelector('#form-vending-indicator');
 
@@ -1412,39 +1446,53 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     : `<span style="color: var(--text-muted);">Vending Mode Off</span>`;
             }
 
-            // Load products
-            allProducts = await productService.getAllActiveProducts();
+            // Load products safely
+            try {
+                allProducts = await productService.getAllActiveProducts();
+            } catch (prodErr) {
+                console.warn("Could not load products:", prodErr);
+                allProducts = [];
+            }
+
             const prodSelect = container.querySelector('#inv-add-product-select');
             if (prodSelect) {
                 prodSelect.innerHTML = '<option value="">Select a product...</option>' + 
                     allProducts.map(p => {
                         const catName = getCategoryName(p.category);
                         const catBadge = catName ? ` [${catName}]` : '';
-                        return `<option value="${p.id}">${p.name}${catBadge} - $${p.salePrice} (Stock: ${p.quantity})</option>`;
+                        return `<option value="${p.id}">${p.name}${catBadge} - ${formatCurrency(p.salePrice || 0)} (Stock: ${p.quantity || 0})</option>`;
                     }).join('');
             }
 
             renderPickerCategories();
 
-            // Load businesses
-            await reloadBusinesses();
-
-            // Load clients or customers
-            if (isBusinessInvoice) {
-                await reloadClients();
-            } else {
-                await reloadCustomers();
+            // Load businesses safely
+            try {
+                await reloadBusinesses();
+            } catch (bErr) {
+                console.warn("Could not reload businesses:", bErr);
             }
 
-            renderSkeleton();
+            // Load clients or customers safely
+            try {
+                if (isBusinessInvoice) {
+                    await reloadClients();
+                } else {
+                    await reloadCustomers();
+                }
+            } catch (entErr) {
+                console.warn("Could not reload clients/customers:", entErr);
+            }
 
             // Realtime Invoice Listener
             if (container._invoiceUnsubscribe) {
-                container._invoiceUnsubscribe();
+                try {
+                    container._invoiceUnsubscribe();
+                } catch (e) {}
             }
             
             container._invoiceUnsubscribe = invoiceService.listenInvoices(isBusinessInvoice, (invoices) => {
-                rawInvoices = invoices;
+                rawInvoices = invoices || [];
                 applyFiltersAndRender();
             });
 
@@ -1458,7 +1506,12 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Reload Entity Dropdowns
     const reloadBusinesses = async (selectedId = null) => {
-        allBusinesses = await peopleService.getAllBusinesses();
+        try {
+            allBusinesses = (await peopleService.getAllBusinesses()) || [];
+        } catch (e) {
+            console.warn("reloadBusinesses error:", e);
+            allBusinesses = [];
+        }
         const busSelect = container.querySelector('#inv-business');
         if (!busSelect) return;
         busSelect.innerHTML = '<option value="">Select Business (Issuer)...</option>' + 
@@ -1472,7 +1525,12 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     };
 
     const reloadClients = async (selectedId = null) => {
-        allClients = await peopleService.getAllClients();
+        try {
+            allClients = (await peopleService.getAllClients()) || [];
+        } catch (e) {
+            console.warn("reloadClients error:", e);
+            allClients = [];
+        }
         const cliSelect = container.querySelector('#inv-client');
         if (!cliSelect) return;
         cliSelect.innerHTML = '<option value="">None / Custom</option>' + 
@@ -1482,7 +1540,12 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     };
 
     const reloadCustomers = async (selectedId = null) => {
-        allCustomers = await peopleService.getAllCustomers();
+        try {
+            allCustomers = (await peopleService.getAllCustomers()) || [];
+        } catch (e) {
+            console.warn("reloadCustomers error:", e);
+            allCustomers = [];
+        }
         const custSelect = container.querySelector('#inv-customer');
         if (!custSelect) return;
         custSelect.innerHTML = '<option value="">Walk-in / None</option>' + 
@@ -1491,8 +1554,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             custSelect.value = selectedId;
             const c = allCustomers.find(x => x.id === selectedId);
             if (c) {
-                container.querySelector('#inv-customer-name').value = c.name;
-                container.querySelector('#inv-customer-phone').value = c.phone || '';
+                const nameEl = container.querySelector('#inv-customer-name');
+                const phoneEl = container.querySelector('#inv-customer-phone');
+                if (nameEl) nameEl.value = c.name;
+                if (phoneEl) phoneEl.value = c.phone || '';
             }
         }
     };
