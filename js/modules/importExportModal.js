@@ -228,7 +228,6 @@ export const openExcelImportModal = async (workspaceId, onImportSuccess) => {
     let currentFilter = 'all'; // 'all', 'valid', 'skipped'
 
     const btnHeadersTemplate = modalOverlay.querySelector('#btn-modal-headers-template');
-    const btnSample = modalOverlay.querySelector('#btn-modal-sample-template');
 
     const closeModal = () => modalOverlay.remove();
     btnClose.addEventListener('click', closeModal);

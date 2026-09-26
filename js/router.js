@@ -5,6 +5,7 @@
 import { renderOverview } from './workspace.js';
 import { renderProducts } from './modules/products.js';
 import { renderCategories } from './modules/categories.js';
+import { renderMarketInserter } from './modules/marketInserter.js';
 import { renderPeople } from './modules/people.js';
 import { renderInvoices } from './modules/invoices.js';
 import { renderSettings } from './modules/settings.js';
@@ -28,6 +29,7 @@ const routes = {
     '/analytics': { render: (c, w, feat) => renderAnalyticsHub(c, w, feat), title: 'Workspace / Data Analytics' },
     '/members': { render: (c, w) => renderMembers(c, w), title: 'Workspace / Members & Contributions' },
     '/products': { render: (c, w) => renderProducts(c, w), title: 'Products / All Products' },
+    '/market-inserter': { render: (c, w) => renderMarketInserter(c, w), title: 'Products / Market Inserter' },
     '/categories': { render: (c, w) => renderCategories(c, w), title: 'Products / Categories' },
     '/invoices/customer': { render: (c, w) => renderInvoices(c, w, false), title: 'Sales / Customer Invoices' },
     '/invoices/business': { render: (c, w) => renderInvoices(c, w, true), title: 'Sales / Business Invoices' },

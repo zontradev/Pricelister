@@ -4,6 +4,7 @@ import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 import { storageService } from '../../supabase/storage.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
+import { openMarketInserterModal } from './marketInserter.js';
 
 export const renderProducts = async (container, workspaceId) => {
     const productService = getProductService(workspaceId);
@@ -12,12 +13,16 @@ export const renderProducts = async (container, workspaceId) => {
     
     // UI Layout
     container.innerHTML = `
-        <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; flex-wrap:wrap; gap:1rem;">
+        <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:1rem;">
             <div>
                 <h2 style="margin:0 0 0.25rem 0;">Products</h2>
                 <p style="margin:0; font-size:0.85rem; color:var(--text-secondary);">Manage your product catalog, prices, categories, and inventory</p>
             </div>
             <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+                <button id="btn-market-inserter" class="btn btn-primary" style="display:flex; align-items:center; gap:0.4rem; font-weight:700; background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow:0 3px 10px rgba(16, 185, 129, 0.25);" title="Open Market Inserter spreadsheet grid (up to 250 products)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
+                    Market Inserter
+                </button>
                 <button id="btn-import-excel" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     Import Excel
@@ -31,6 +36,19 @@ export const renderProducts = async (container, workspaceId) => {
                     Add Product
                 </button>
             </div>
+        </div>
+
+        <!-- PRODUCTS NAVIGATION TABS -->
+        <div class="tabs" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+            <button class="tab-btn active-tab" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:700; cursor:pointer; color:var(--primary); border-bottom:2px solid var(--primary);">
+                All Products
+            </button>
+            <button class="tab-btn" onclick="window.location.hash='#/market-inserter'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
+                Market Inserter (Grid)
+            </button>
+            <button class="tab-btn" onclick="window.location.hash='#/categories'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
+                Categories
+            </button>
         </div>
         
         <!-- CUSTOM CATEGORY MODAL -->
@@ -495,7 +513,7 @@ export const renderProducts = async (container, workspaceId) => {
                 const originalText = btnLabel.textContent;
                 btnLabel.textContent = 'Uploading...';
                 
-                const url = await storageService.uploadImage(file);
+                const url = await storageService.uploadImage(file, workspaceId);
                 
                 container.querySelector('#prd-image').value = url;
                 const preview = container.querySelector('#prd-image-preview');
@@ -640,6 +658,16 @@ export const renderProducts = async (container, workspaceId) => {
             btn.disabled = false;
         }
     });
+
+    // Market Inserter Handler
+    const btnMarketInserter = container.querySelector('#btn-market-inserter');
+    if (btnMarketInserter) {
+        btnMarketInserter.addEventListener('click', () => {
+            openMarketInserterModal(workspaceId, () => {
+                loadData();
+            });
+        });
+    }
 
     // Import Excel & Export Click Handlers
     const btnImport = container.querySelector('#btn-import-excel');

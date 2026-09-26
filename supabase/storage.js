@@ -5,19 +5,21 @@ import { supabaseApp } from './supabase-config.js';
  */
 
 export const storageService = {
-    uploadImage: async (file) => {
+    uploadImage: async (file, workspaceDocUid = 'default') => {
         if (!supabaseApp) throw new Error("Supabase is not initialized. Check your internet connection or script loading.");
         
-        // Generate a unique path for Android compatibility: timestamp_filename
-        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        const filePath = `${fileName}`;
+        // Exact Android parity format: {workspaceDocUid}/product_{timestamp}_{6char_random}.jpg
+        const randPart = Math.random().toString(36).substring(2, 8);
+        const fileName = `product_${Date.now()}_${randPart}.jpg`;
+        const filePath = `${workspaceDocUid}/${fileName}`;
 
-        // Upload to the exact bucket used in Android
+        // Upload to the exact product_images bucket in Supabase
         const { data, error } = await supabaseApp.storage
             .from('product_images')
             .upload(filePath, file, {
                 cacheControl: '3600',
-                upsert: false
+                upsert: false,
+                contentType: file.type || 'image/jpeg'
             });
 
         if (error) {
@@ -36,7 +38,7 @@ export const storageService = {
     deleteImage: async (url) => {
         if (!supabaseApp || !url) return;
         try {
-            // Android uses format: https://[project-id].supabase.co/storage/v1/object/public/product_images/filename.jpg
+            // Extracts the exact "{workspaceDocUid}/product_{timestamp}_{random}.jpg" path from the public URL
             const parts = url.split('/product_images/');
             if (parts.length > 1) {
                 const filePath = parts[1];

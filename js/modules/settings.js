@@ -6,6 +6,7 @@ import { getSettingsService } from '../services/settingsService.js';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
+import { openMarketInserterModal } from './marketInserter.js';
 import { downloadHeadersOnlyTemplate, downloadExampleDataTemplate } from '../utils/exportEngine.js';
 
 const db = getFirestore(firebaseApp);
@@ -227,10 +228,21 @@ export const renderSettings = async (container, workspaceId) => {
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
                         <div style="background: var(--surface-50); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
                             <div>
+                                <strong style="display:block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">Market Inserter (Grid)</strong>
+                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Insert up to 250 products at once in a fast spreadsheet grid with live image picking & duplicate protection.</p>
+                            </div>
+                            <button id="btn-settings-market-inserter" class="btn btn-primary" style="font-size: 0.85rem; font-weight: 700; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
+                                Launch Market Inserter
+                            </button>
+                        </div>
+
+                        <div style="background: var(--surface-50); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
                                 <strong style="display:block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">Excel & CSV Import</strong>
                                 <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Batch add products with automatic column detection, category clustering, and custom color assignment.</p>
                             </div>
-                            <button id="btn-settings-import-excel" class="btn btn-primary" style="font-size: 0.85rem; font-weight: 600; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+                            <button id="btn-settings-import-excel" class="btn btn-secondary" style="font-size: 0.85rem; font-weight: 600; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 Launch Import Tool
                             </button>
@@ -317,6 +329,15 @@ export const renderSettings = async (container, workspaceId) => {
         }
 
         // Data Management Button Handlers
+        const btnMarketInserter = contentArea.querySelector('#btn-settings-market-inserter');
+        if (btnMarketInserter) {
+            btnMarketInserter.addEventListener('click', () => {
+                openMarketInserterModal(workspaceId, () => {
+                    showAlert.success("Market Inserter batch completed!");
+                });
+            });
+        }
+
         const btnHeaders = contentArea.querySelector('#btn-settings-headers-template');
         if (btnHeaders) {
             btnHeaders.addEventListener('click', () => downloadHeadersOnlyTemplate());

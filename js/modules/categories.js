@@ -15,7 +15,7 @@ export const renderCategories = async (container, workspaceId) => {
 
     // UI Layout
     container.innerHTML = `
-        <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; flex-wrap:wrap; gap:1rem;">
+        <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:1rem;">
             <div>
                 <h2 style="margin:0 0 0.35rem 0;">Categories</h2>
                 <div style="font-size:0.9rem; color:var(--text-secondary);" id="cat-count-badge">Loading categories...</div>
@@ -23,6 +23,19 @@ export const renderCategories = async (container, workspaceId) => {
             <button id="btn-add-category" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
                 + Add Category
+            </button>
+        </div>
+
+        <!-- PRODUCTS NAVIGATION TABS -->
+        <div class="tabs" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+            <button class="tab-btn" onclick="window.location.hash='#/products'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
+                All Products
+            </button>
+            <button class="tab-btn" onclick="window.location.hash='#/market-inserter'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
+                Market Inserter (Grid)
+            </button>
+            <button class="tab-btn active-tab" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:700; cursor:pointer; color:var(--primary); border-bottom:2px solid var(--primary);">
+                Categories
             </button>
         </div>
         

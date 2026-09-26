@@ -39,6 +39,60 @@ export const getProductService = (workspaceId) => {
             return await repo.add(JSON.parse(JSON.stringify(newProduct)));
         },
 
+        bulkAddProducts: async (productsList, creatorId, workerPermission = null, onProgress = null) => {
+            if (workerPermission && workerPermission.disableAdd) {
+                throw new Error("You don't have permission to add products.");
+            }
+
+            const results = [];
+            const total = productsList.length;
+
+            for (let i = 0; i < total; i++) {
+                const item = productsList[i];
+                if (onProgress) {
+                    onProgress(i + 1, total, item.name || `Product ${i + 1}`);
+                }
+
+                let finalImageUri = item.imageUri || "";
+                if (item.imageFile instanceof File || item.imageFile instanceof Blob) {
+                    try {
+                        finalImageUri = await storageService.uploadImage(item.imageFile, workspaceId);
+                    } catch (imgErr) {
+                        console.warn(`Failed to upload image for ${item.name}:`, imgErr);
+                    }
+                }
+
+                const newProduct = new Product({
+                    name: item.name || "",
+                    category: item.category || "",
+                    sizeWeight: item.sizeWeight || "",
+                    quantity: Number(item.quantity) || 0,
+                    price: Number(item.price) || 0.0,
+                    salePrice: Number(item.salePrice) || 0.0,
+                    basePrice: Number(item.basePrice) || 0.0,
+                    mrp: Number(item.mrp) || 0.0,
+                    mfgDate: item.mfgDate || "",
+                    expDate: item.expDate || "",
+                    note: item.note || "",
+                    upcCode: item.upcCode || "",
+                    imageUri: finalImageUri,
+                    variations: Array.isArray(item.variations) ? item.variations : [],
+                    labelColor: item.labelColor || "",
+                    workspaceId: workspaceId,
+                    uniqueId: item.uniqueId || generateUniqueId(),
+                    creatorId: creatorId,
+                    timestamp: item.timestamp || Date.now(),
+                    updatedTimestamp: Date.now(),
+                    isArchive: false
+                });
+
+                const id = await repo.add(JSON.parse(JSON.stringify(newProduct)));
+                results.push({ id, uniqueId: newProduct.uniqueId, name: newProduct.name });
+            }
+
+            return results;
+        },
+
         updateProduct: async (id, productData, workerPermission = null) => {
             if (workerPermission && workerPermission.disableUpdate) {
                 throw new Error("You don't have permission to update this product.");
