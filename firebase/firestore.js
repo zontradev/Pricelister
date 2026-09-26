@@ -4,9 +4,11 @@ import {
     collection, addDoc, updateDoc, deleteDoc, query, where, getDocs, onSnapshot, increment,
     enableMultiTabIndexedDbPersistence
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getAuth } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { CONFIG } from '../config.js';
 
 const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
 
 // Enable local cache (offline persistence) for buttery smooth reloads
 enableMultiTabIndexedDbPersistence(db).catch((err) => {
@@ -262,6 +264,77 @@ export const firestoreService = {
         } catch (e) {
             console.warn("Error fetching workspace members:", e);
             return [];
+        }
+    },
+
+    updateMetricsCounter: async (workspaceDocUid, type, isAdding, itemCreatorId = null, count = 1) => {
+        if (!workspaceDocUid) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+        
+        try {
+            const userEmail = currentUser.email ? currentUser.email.toLowerCase() : '';
+            const isWorker = workspaceDocUid !== currentUser.uid;
+
+            const field = (() => {
+                switch (type) {
+                    case 'product': return isWorker ? 'productAdded' : 'adminProductCount';
+                    case 'invoice': return isWorker ? 'invoiceAdded' : 'adminInvoiceCount';
+                    case 'category': return isWorker ? 'categoryAdded' : 'adminCategoryCount';
+                    case 'client': return isWorker ? 'clientAdded' : 'adminClientCount';
+                    case 'business': return isWorker ? 'businessAdded' : 'adminBusinessCount';
+                    case 'customer': return isWorker ? 'clientAdded' : 'adminClientCount';
+                    default: return null;
+                }
+            })();
+            if (!field) return;
+
+            const targetRef = isWorker
+                ? doc(db, `Workspaces/${workspaceDocUid}/Members`, userEmail)
+                : doc(db, 'Workspaces', workspaceDocUid);
+
+            const updates = {};
+            const qty = Number(count) || 1;
+            if (isAdding) {
+                updates[field] = increment(qty);
+            } else {
+                const delField = isWorker ? 'totalDeleted' : 'adminTotalDeleted';
+                updates[delField] = increment(qty);
+                // Decrement creation field if user created it or creator matches
+                updates[field] = increment(-qty);
+            }
+
+            await updateDoc(targetRef, updates).catch(async (err) => {
+                if (err.code === 'not-found') {
+                    await setDoc(targetRef, updates, { merge: true });
+                } else {
+                    console.warn("Could not update metrics counter:", err);
+                }
+            });
+        } catch (e) {
+            console.warn("Metrics counter update error:", e);
+        }
+    },
+
+    listenMemberMetrics: (workspaceDocUid, email, onUpdate) => {
+        if (!workspaceDocUid) return () => {};
+        const currentUser = auth.currentUser;
+        const isWorker = currentUser ? (workspaceDocUid !== currentUser.uid) : false;
+        
+        if (isWorker && email) {
+            const memberRef = doc(db, `Workspaces/${workspaceDocUid}/Members`, email.toLowerCase());
+            return onSnapshot(memberRef, (snap) => {
+                if (snap.exists()) {
+                    onUpdate(snap.data(), false);
+                }
+            }, (err) => console.warn("Member metrics listen error:", err));
+        } else {
+            const wsRef = doc(db, 'Workspaces', workspaceDocUid);
+            return onSnapshot(wsRef, (snap) => {
+                if (snap.exists()) {
+                    onUpdate(snap.data(), true);
+                }
+            }, (err) => console.warn("Workspace metrics listen error:", err));
         }
     }
 };

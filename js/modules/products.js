@@ -38,18 +38,7 @@ export const renderProducts = async (container, workspaceId) => {
             </div>
         </div>
 
-        <!-- PRODUCTS NAVIGATION TABS -->
-        <div class="tabs" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;">
-            <button class="tab-btn active-tab" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:700; cursor:pointer; color:var(--primary); border-bottom:2px solid var(--primary);">
-                All Products
-            </button>
-            <button class="tab-btn" onclick="window.location.hash='#/market-inserter'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
-                Market Inserter (Grid)
-            </button>
-            <button class="tab-btn" onclick="window.location.hash='#/categories'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
-                Categories
-            </button>
-        </div>
+
         
         <!-- CUSTOM CATEGORY MODAL -->
         <div id="quick-category-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
@@ -659,13 +648,11 @@ export const renderProducts = async (container, workspaceId) => {
         }
     });
 
-    // Market Inserter Handler
+    // Market Inserter Handler -> Navigate to dedicated route section
     const btnMarketInserter = container.querySelector('#btn-market-inserter');
     if (btnMarketInserter) {
         btnMarketInserter.addEventListener('click', () => {
-            openMarketInserterModal(workspaceId, () => {
-                loadData();
-            });
+            window.location.hash = '#/market-inserter';
         });
     }
 

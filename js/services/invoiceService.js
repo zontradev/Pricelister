@@ -1,4 +1,4 @@
-import { createRepository } from '../../firebase/firestore.js';
+import { createRepository, firestoreService } from '../../firebase/firestore.js';
 import { generateUniqueId } from '../utils/idGenerator.js';
 import { Invoice, InvoiceItem } from '../../DataModel.js';
 import { validateInvoice } from '../schemas/invoiceSchema.js';
@@ -85,6 +85,7 @@ export const getInvoiceService = (workspaceId) => {
 
             const repo = newInvoice.isBusinessInvoice ? businessInvoiceRepo : customerInvoiceRepo;
             const id = await repo.add(JSON.parse(JSON.stringify(newInvoice)));
+            await firestoreService.updateMetricsCounter(workspaceId, 'invoice', true, creatorId, 1);
             
             // VENDING MODE: Check if enabled, then deduct inventory quantities
             let shouldDeduct = enableVendingParam;
@@ -226,7 +227,13 @@ export const getInvoiceService = (workspaceId) => {
 
         deleteInvoice: async (id, isBusiness = false) => {
             const repo = isBusiness ? businessInvoiceRepo : customerInvoiceRepo;
+            let itemCreatorId = null;
+            try {
+                const inv = await repo.getById(id);
+                itemCreatorId = inv?.creatorId || null;
+            } catch(e) {}
             await repo.delete(id);
+            await firestoreService.updateMetricsCounter(workspaceId, 'invoice', false, itemCreatorId, 1);
         },
 
         updateInvoiceStatus: async (id, status, isBusiness = false) => {

@@ -3,12 +3,21 @@ import { firestoreService } from '../../firebase/firestore.js';
 import { getProductService } from '../services/productService.js';
 import { getInvoiceService } from '../services/invoiceService.js';
 import { getPeopleService } from '../services/peopleService.js';
+import { getCategoryService } from '../services/categoryService.js';
 import { getSettingsService } from '../services/settingsService.js';
 import { showAlert } from '../alert-handler.js';
 import { getRoleBadgeHtml, openAccountSwitcherModal } from '../auth-handler.js';
 import { openExportModal } from './importExportModal.js';
 
 export const renderProfile = async (container, workspaceId) => {
+    // Clean up any previously attached active realtime listeners on this container
+    if (container._profileUnsubs && Array.isArray(container._profileUnsubs)) {
+        container._profileUnsubs.forEach(unsub => {
+            try { if (typeof unsub === 'function') unsub(); } catch(e) {}
+        });
+        container._profileUnsubs = [];
+    }
+
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
         container.innerHTML = `<div class="card" style="padding:2rem; text-align:center;">Please log in to view your profile.</div>`;
@@ -18,6 +27,7 @@ export const renderProfile = async (container, workspaceId) => {
     const productService = getProductService(workspaceId);
     const invoiceService = getInvoiceService(workspaceId);
     const peopleService = getPeopleService(workspaceId);
+    const categoryService = getCategoryService(workspaceId);
     const settingsService = getSettingsService(workspaceId);
 
     // Initial Skeleton Loading State
@@ -55,23 +65,25 @@ export const renderProfile = async (container, workspaceId) => {
     `;
 
     try {
-        // Fetch workspace details and stats in parallel for fast loading
-        const [wsData, products, custInvoices, busInvoices, businesses, customers, isVending] = await Promise.all([
+        // Fetch initial workspace details
+        const [wsData, initialProducts, initialCustInvoices, initialBusInvoices, initialBusinesses, initialCustomers, initialClients, initialCategories, isVending] = await Promise.all([
             firestoreService.checkWorkspaceExists(currentUser.uid, currentUser.email).catch(() => null),
             productService.getAllActiveProducts().catch(() => []),
             invoiceService.getAllInvoices(false).catch(() => []),
             invoiceService.getAllInvoices(true).catch(() => []),
             peopleService.getAllBusinesses().catch(() => []),
             peopleService.getAllCustomers().catch(() => []),
+            peopleService.getAllClients().catch(() => []),
+            categoryService.getAllCategories().catch(() => []),
             settingsService.isVendingEnabled().catch(() => false)
         ]);
 
+        const adminUid = wsData?.id || workspaceId;
         const displayName = currentUser.displayName || currentUser.email.split('@')[0];
         const email = currentUser.email;
         const photoURL = currentUser.photoURL;
         const role = wsData?.role || (wsData?.id === currentUser.uid ? 'CREATOR_ADMIN' : 'WORKER');
         const workspaceName = wsData?.name || wsData?.businessName || 'My Workspace';
-        const totalInvoices = custInvoices.length + busInvoices.length;
         const initial = displayName.charAt(0).toUpperCase();
 
         const isAdmin = role === 'CREATOR_ADMIN' || role === 'ADMIN' || role === 'CREATOR' || wsData?.id === currentUser.uid;
@@ -82,7 +94,6 @@ export const renderProfile = async (container, workspaceId) => {
         let myMember = null;
         if (!isAdmin) {
             try {
-                const adminUid = wsData?.id || workspaceId;
                 const members = await firestoreService.getWorkspaceMembers(adminUid);
                 myMember = members.find(m => m.email?.toLowerCase() === email.toLowerCase());
             } catch (err) {
@@ -101,40 +112,56 @@ export const renderProfile = async (container, workspaceId) => {
             || wsData?.uniqueId 
             || (workspaceId.length === 14 ? workspaceId : 'N/A');
 
-        // 3. Calculate Personal Contributions & Deletions
-        let productCount = 0;
-        let invoiceCount = 0;
-        let categoryCount = 0;
-        let clientCount = 0;
-        let businessCount = 0;
-        let totalDeleted = 0;
-        let joinedTimestamp = Date.now();
+        // All possible identity aliases for the current user to detect items created by her/him
+        const userIds = [
+            currentUser.uid,
+            currentUser.email,
+            displayUserId,
+            myMember?.appWorkerId,
+            myMember?.workerUid,
+            myMember?.uniqueId,
+            myMember?.id,
+            wsData?.adminId,
+            wsData?.workspaceId
+        ].filter(Boolean).map(s => String(s).trim().toLowerCase());
 
-        if (isAdmin && wsData) {
-            productCount = Number(wsData.adminProductCount ?? products.length);
-            invoiceCount = Number(wsData.adminInvoiceCount ?? totalInvoices);
-            categoryCount = Number(wsData.adminCategoryCount ?? 0);
-            clientCount = Number(wsData.adminClientCount ?? businesses.length);
-            businessCount = Number(wsData.adminBusinessCount ?? businesses.length);
-            totalDeleted = Number(wsData.adminTotalDeleted ?? wsData.adminTotalDeletedCount ?? 0);
-            joinedTimestamp = wsData.createdAt;
-        } else if (myMember) {
-            productCount = Number(myMember.productAdded ?? 0);
-            invoiceCount = Number(myMember.invoiceAdded ?? 0);
-            categoryCount = Number(myMember.categoryAdded ?? 0);
-            clientCount = Number(myMember.clientAdded ?? 0);
-            businessCount = Number(myMember.businessAdded ?? 0);
-            totalDeleted = Number(myMember.totalDeleted ?? 0);
-            joinedTimestamp = myMember.joinedAt || myMember.timestamp || Date.now();
-        }
+        // Helper: Check if an item was created by the current user
+        const isUserItem = (item) => {
+            if (!item) return false;
+            const cId = String(item.creatorId || item.workerId || item.appWorkerId || item.creator || '').trim().toLowerCase();
+            if (!cId) {
+                // If item has no creatorId and user is admin/creator of the workspace, treat as admin's
+                return isAdmin;
+            }
+            return userIds.includes(cId) || (isAdmin && (cId === 'admin' || cId === 'creator' || cId === 'unknown'));
+        };
 
+        let joinedTimestamp = isAdmin ? (wsData?.createdAt || Date.now()) : (myMember?.joinedAt || myMember?.timestamp || Date.now());
         const joinedDateFormatted = (() => {
-            if (!joinedTimestamp) return 'N/A';
+            if (!joinedTimestamp) return 'Active Member';
             const d = typeof joinedTimestamp === 'number' 
                 ? new Date(joinedTimestamp) 
                 : (joinedTimestamp.toDate ? joinedTimestamp.toDate() : new Date());
             return isNaN(d.getTime()) ? 'Active Member' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
         })();
+
+        // Live Real-Time State Stores
+        let liveProducts = initialProducts || [];
+        let liveCustInvoices = initialCustInvoices || [];
+        let liveBusInvoices = initialBusInvoices || [];
+        let liveCategories = initialCategories || [];
+        let liveCustomers = initialCustomers || [];
+        let liveBusinesses = initialBusinesses || [];
+        let liveClients = initialClients || [];
+        let docMetrics = isAdmin ? (wsData || {}) : (myMember || {});
+
+        // Initial initial footprint numbers
+        const initPCount = liveProducts.filter(isUserItem).length;
+        const initInvCount = (liveCustInvoices.concat(liveBusInvoices)).filter(isUserItem).length;
+        const initCatCount = liveCategories.filter(isUserItem).length;
+        const initClientCount = liveClients.filter(isUserItem).length;
+        const initBusCount = liveBusinesses.filter(isUserItem).length;
+        const initDelCount = Number(isAdmin ? (docMetrics?.adminTotalDeleted ?? docMetrics?.adminTotalDeletedCount ?? 0) : (docMetrics?.totalDeleted ?? 0));
 
         container.innerHTML = `
             <div class="module-header" style="margin-bottom: 2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
@@ -185,11 +212,11 @@ export const renderProfile = async (container, workspaceId) => {
                                 <strong style="color:var(--text-primary);">${email}</strong>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="color:var(--text-secondary);">User ID (appWorkerId)</span>
+                                <span style="color:var(--text-secondary);">User ID</span>
                                 <code style="font-family:monospace; font-size:0.85rem; font-weight:700; color:var(--text-primary); background:rgba(0,0,0,0.05); padding:0.15rem 0.5rem; border-radius:4px;">${displayUserId}</code>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="color:var(--text-secondary);">Workspace ID</span>
+                                <span style="color:var(--text-secondary);">Connected Workspace</span>
                                 <code style="font-family:monospace; font-size:0.85rem; font-weight:700; color:var(--primary); background:rgba(16,185,129,0.08); padding:0.15rem 0.5rem; border-radius:4px;">${displayWorkspaceId}</code>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -233,19 +260,19 @@ export const renderProfile = async (container, workspaceId) => {
                             <!-- Quick Metric Grid -->
                             <div style="margin-top:0.75rem; display:grid; grid-template-columns: repeat(2, 1fr); gap:0.75rem;">
                                 <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
-                                    <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary);">${products.length}</div>
+                                    <div id="prof-overview-products" style="font-size:1.35rem; font-weight:800; color:var(--text-primary);">${liveProducts.length}</div>
                                     <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Active Products</div>
                                 </div>
                                 <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
-                                    <div style="font-size:1.35rem; font-weight:800; color:var(--primary);">${totalInvoices}</div>
+                                    <div id="prof-overview-invoices" style="font-size:1.35rem; font-weight:800; color:var(--primary);">${liveCustInvoices.length + liveBusInvoices.length}</div>
                                     <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Total Invoices</div>
                                 </div>
                                 <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
-                                    <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary);">${businesses.length}</div>
+                                    <div id="prof-overview-businesses" style="font-size:1.35rem; font-weight:800; color:var(--text-primary);">${liveBusinesses.length}</div>
                                     <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Businesses</div>
                                 </div>
                                 <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
-                                    <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary);">${customers.length}</div>
+                                    <div id="prof-overview-customers" style="font-size:1.35rem; font-weight:800; color:var(--text-primary);">${liveCustomers.length + liveClients.length}</div>
                                     <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Customers</div>
                                 </div>
                             </div>
@@ -261,7 +288,7 @@ export const renderProfile = async (container, workspaceId) => {
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-color); padding-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
                     <div>
                         <div style="font-size:0.75rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">
-                            ACTIVITY & CREATION DASHBOARD
+                            ACTIVITY & CREATION DASHBOARD (LIVE)
                         </div>
                         <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
@@ -277,23 +304,23 @@ export const renderProfile = async (container, workspaceId) => {
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
                     <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
                         <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Products Created</span>
-                        <strong style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${productCount}</strong>
+                        <strong id="prof-metric-products" style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${initPCount}</strong>
                     </div>
                     <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
                         <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Invoices Issued</span>
-                        <strong style="font-size:1.75rem; font-weight:800; color:var(--primary);">${invoiceCount}</strong>
+                        <strong id="prof-metric-invoices" style="font-size:1.75rem; font-weight:800; color:var(--primary);">${initInvCount}</strong>
                     </div>
                     <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
                         <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Categories Created</span>
-                        <strong style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${categoryCount}</strong>
+                        <strong id="prof-metric-categories" style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${initCatCount}</strong>
                     </div>
                     <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
                         <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Clients Added</span>
-                        <strong style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${clientCount}</strong>
+                        <strong id="prof-metric-clients" style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${initClientCount}</strong>
                     </div>
                     <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
                         <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Businesses Added</span>
-                        <strong style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${businessCount}</strong>
+                        <strong id="prof-metric-businesses" style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${initBusCount}</strong>
                     </div>
                 </div>
 
@@ -308,8 +335,8 @@ export const renderProfile = async (container, workspaceId) => {
                             <span style="color:#ef4444; font-size:0.8rem;">Recorded item removals & audit deletions</span>
                         </div>
                     </div>
-                    <div style="font-size:1.6rem; font-weight:900; color:#b91c1c; font-family:monospace; background:white; padding:0.25rem 0.85rem; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">
-                        ${String(totalDeleted).padStart(2, '0')}
+                    <div id="prof-metric-deletions" style="font-size:1.6rem; font-weight:900; color:#b91c1c; font-family:monospace; background:white; padding:0.25rem 0.85rem; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">
+                        ${String(initDelCount).padStart(2, '0')}
                     </div>
                 </div>
             </div>
@@ -329,7 +356,167 @@ export const renderProfile = async (container, workspaceId) => {
             </div>
         `;
 
-        // Event Listeners
+        // -------------------------------------------------------------
+        // LIVE REALTIME FOOTPRINT CALCULATOR & DOM UPDATER
+        // -------------------------------------------------------------
+        const updateLiveFootprint = () => {
+            // 1. Live creations by matching creatorId
+            const pCreated = liveProducts.filter(isUserItem).length;
+            const invCreated = (liveCustInvoices.concat(liveBusInvoices)).filter(isUserItem).length;
+            const catCreated = liveCategories.filter(isUserItem).length;
+            const clientCreated = liveClients.filter(isUserItem).length;
+            const busCreated = liveBusinesses.filter(isUserItem).length;
+            
+            // 2. Persistent Firestore counters from member / workspace doc
+            const storedP = Number(isAdmin ? docMetrics?.adminProductCount : docMetrics?.productAdded) || 0;
+            const storedInv = Number(isAdmin ? docMetrics?.adminInvoiceCount : docMetrics?.invoiceAdded) || 0;
+            const storedCat = Number(isAdmin ? docMetrics?.adminCategoryCount : docMetrics?.categoryAdded) || 0;
+            const storedClient = Number(isAdmin ? docMetrics?.adminClientCount : docMetrics?.clientAdded) || 0;
+            const storedBus = Number(isAdmin ? docMetrics?.adminBusinessCount : docMetrics?.businessAdded) || 0;
+            const storedDel = Number(isAdmin ? (docMetrics?.adminTotalDeleted ?? docMetrics?.adminTotalDeletedCount) : docMetrics?.totalDeleted) || 0;
+
+            const finalP = Math.max(pCreated, storedP);
+            const finalInv = Math.max(invCreated, storedInv);
+            const finalCat = Math.max(catCreated, storedCat);
+            const finalClient = Math.max(clientCreated, storedClient);
+            const finalBus = Math.max(busCreated, storedBus);
+            const finalDel = storedDel;
+
+            // Update DOM counters smoothly
+            const elP = container.querySelector('#prof-metric-products');
+            if (elP) elP.textContent = finalP;
+
+            const elInv = container.querySelector('#prof-metric-invoices');
+            if (elInv) elInv.textContent = finalInv;
+
+            const elCat = container.querySelector('#prof-metric-categories');
+            if (elCat) elCat.textContent = finalCat;
+
+            const elClient = container.querySelector('#prof-metric-clients');
+            if (elClient) elClient.textContent = finalClient;
+
+            const elBus = container.querySelector('#prof-metric-businesses');
+            if (elBus) elBus.textContent = finalBus;
+
+            const elDel = container.querySelector('#prof-metric-deletions');
+            if (elDel) elDel.textContent = String(finalDel).padStart(2, '0');
+
+            // Update overview summary cards
+            const elTotP = container.querySelector('#prof-overview-products');
+            if (elTotP) elTotP.textContent = liveProducts.length;
+
+            const elTotInv = container.querySelector('#prof-overview-invoices');
+            if (elTotInv) elTotInv.textContent = liveCustInvoices.length + liveBusInvoices.length;
+
+            const elTotBus = container.querySelector('#prof-overview-businesses');
+            if (elTotBus) elTotBus.textContent = liveBusinesses.length;
+
+            const elTotCust = container.querySelector('#prof-overview-customers');
+            if (elTotCust) elTotCust.textContent = liveCustomers.length + liveClients.length;
+        };
+
+        // -------------------------------------------------------------
+        // SETUP REALTIME LISTENERS (Products, Invoices, People, Deletions)
+        // -------------------------------------------------------------
+        const unsubs = [];
+
+        // 1. Listen to Products
+        try {
+            const unsubProd = productService.listenProducts((allProds) => {
+                liveProducts = allProds || [];
+                updateLiveFootprint();
+            });
+            if (typeof unsubProd === 'function') unsubs.push(unsubProd);
+        } catch (e) {
+            console.warn("Product listener error:", e);
+        }
+
+        // 2. Listen to Customer Invoices
+        try {
+            const unsubCustInv = invoiceService.listenInvoices(false, (invs) => {
+                liveCustInvoices = invs || [];
+                updateLiveFootprint();
+            });
+            if (typeof unsubCustInv === 'function') unsubs.push(unsubCustInv);
+        } catch (e) {
+            console.warn("Cust Invoice listener error:", e);
+        }
+
+        // 3. Listen to Business Invoices
+        try {
+            const unsubBusInv = invoiceService.listenInvoices(true, (invs) => {
+                liveBusInvoices = invs || [];
+                updateLiveFootprint();
+            });
+            if (typeof unsubBusInv === 'function') unsubs.push(unsubBusInv);
+        } catch (e) {
+            console.warn("Bus Invoice listener error:", e);
+        }
+
+        // 4. Listen to Categories
+        try {
+            const unsubCat = categoryService.listenCategories((cats) => {
+                liveCategories = cats || [];
+                updateLiveFootprint();
+            });
+            if (typeof unsubCat === 'function') unsubs.push(unsubCat);
+        } catch (e) {
+            console.warn("Category listener error:", e);
+        }
+
+        // 5. Listen to Peoples (Customers, Businesses, Clients)
+        try {
+            const unsubCust = peopleService.listenCustomers((custs) => {
+                liveCustomers = custs || [];
+                updateLiveFootprint();
+            });
+            if (typeof unsubCust === 'function') unsubs.push(unsubCust);
+        } catch (e) {
+            console.warn("Customer listener error:", e);
+        }
+
+        try {
+            const unsubBus = peopleService.listenBusinesses((buses) => {
+                liveBusinesses = buses || [];
+                updateLiveFootprint();
+            });
+            if (typeof unsubBus === 'function') unsubs.push(unsubBus);
+        } catch (e) {
+            console.warn("Business listener error:", e);
+        }
+
+        try {
+            const unsubClients = peopleService.listenClients((cls) => {
+                liveClients = cls || [];
+                updateLiveFootprint();
+            });
+            if (typeof unsubClients === 'function') unsubs.push(unsubClients);
+        } catch (e) {
+            console.warn("Client listener error:", e);
+        }
+
+        // 6. Listen to Member / Workspace Doc for Metrics Counters (Additions & Deletions)
+        try {
+            const unsubMetrics = firestoreService.listenMemberMetrics(adminUid, email, (data) => {
+                if (data) {
+                    docMetrics = data;
+                    updateLiveFootprint();
+                }
+            });
+            if (typeof unsubMetrics === 'function') unsubs.push(unsubMetrics);
+        } catch (e) {
+            console.warn("Metrics listener error:", e);
+        }
+
+        // Store active unsubscriptions on the container
+        container._profileUnsubs = unsubs;
+
+        // Run initial live calculation
+        updateLiveFootprint();
+
+        // -------------------------------------------------------------
+        // STATIC BUTTON EVENT LISTENERS
+        // -------------------------------------------------------------
         container.querySelector('#btn-profile-switch-acc')?.addEventListener('click', () => {
             openAccountSwitcherModal(currentUser);
         });
@@ -341,7 +528,12 @@ export const renderProfile = async (container, workspaceId) => {
         }
 
         container.querySelector('#btn-profile-export-fast')?.addEventListener('click', () => {
-            openExportModal(workspaceId, { products, categories: [], invoices: [...custInvoices, ...busInvoices], workspaceInfo: wsData });
+            openExportModal(workspaceId, { 
+                products: liveProducts, 
+                categories: liveCategories, 
+                invoices: [...liveCustInvoices, ...liveBusInvoices], 
+                workspaceInfo: wsData 
+            });
         });
 
         container.querySelector('#btn-profile-logout')?.addEventListener('click', async () => {

@@ -5,10 +5,11 @@ import { showAlert } from '../alert-handler.js';
 import { generateUniqueId } from '../utils/idGenerator.js';
 
 /**
- * Market Inserter - Bulk Product Spreadsheet Grid Inserter
- * Supports up to 250 simultaneous products, image picking, variations, and duplicate protection.
+ * Market Inserter Module (Dedicated In-Page Section)
+ * Fast spreadsheet grid inserting up to 250 products at once with live duplicate detection,
+ * instant image picking, variations, and batch progress tracking.
  */
-export const openMarketInserterModal = async (workspaceId, onComplete = null) => {
+export const renderMarketInserter = async (container, workspaceId) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
         showAlert.error('You must be logged in to insert products.');
@@ -31,19 +32,6 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
     } catch (e) {
         console.warn("Could not pre-fetch data for Market Inserter:", e);
     }
-
-    // Modal overlay container
-    const existingOverlay = document.getElementById('market-inserter-modal-overlay');
-    if (existingOverlay) existingOverlay.remove();
-
-    const overlay = document.createElement('div');
-    overlay.id = 'market-inserter-modal-overlay';
-    overlay.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(15, 23, 42, 0.82); backdrop-filter: blur(5px);
-        z-index: 99999; display: flex; align-items: center; justify-content: center;
-        padding: 1rem; animation: fadeIn 0.2s ease;
-    `;
 
     // Row model state store
     const MAX_ROWS = 250;
@@ -73,147 +61,139 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
         rowDataList.push(createBlankRow());
     }
 
-    overlay.innerHTML = `
-        <div class="card" style="background: var(--surface-0, #ffffff); width: 98vw; max-width: 1560px; height: 94vh; display: flex; flex-direction: column; border-radius: 16px; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.4); overflow: hidden; border: 1px solid var(--border-color);">
+    container.innerHTML = `
+        <div class="market-inserter-page" style="display: flex; flex-direction: column; gap: 1.25rem;">
             
-            <!-- 1. Header Toolbar -->
-            <div style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); background: var(--surface-50, #f8fafc); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-                <div style="display:flex; align-items:center; gap:0.75rem;">
-                    <div style="width:40px; height:40px; border-radius:10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); display:flex; align-items:center; justify-content:center; color: white; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
-                    </div>
-                    <div>
-                        <div style="display:flex; align-items:center; gap:0.5rem;">
-                            <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--text-primary); letter-spacing:-0.01em;">Market Inserter</h3>
-                            <span id="mi-badge-status" class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-                                Grid Ready
-                            </span>
-                        </div>
-                        <p style="margin:0.15rem 0 0 0; font-size:0.8rem; color:var(--text-secondary);">Insert up to 250 products simultaneously with live duplicate checking & instant images</p>
-                    </div>
+            <!-- 1. Header Toolbar Section -->
+            <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 0;">
+                <div>
+                    <h2 style="margin: 0 0 0.25rem 0;">Market Inserter</h2>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
+                        Fast spreadsheet grid — insert up to 250 products at once with live duplicate protection & instant image pickers
+                    </p>
                 </div>
 
-                <!-- Action buttons -->
-                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                    <div style="display:flex; align-items:center; gap:0.3rem; background:var(--surface-0); padding:0.25rem 0.5rem; border-radius:8px; border:1px solid var(--border-color); font-size:0.8rem; font-weight:600;">
+                <!-- Quick Action Buttons -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.35rem; background: var(--surface-50); padding: 0.35rem 0.65rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600;">
                         <span>Rows:</span>
-                        <span id="mi-row-counter" style="color:var(--primary); font-weight:700;">10 / 250</span>
+                        <span id="mi-row-counter" style="color: var(--primary); font-weight: 700;">10 / 250</span>
                     </div>
 
                     <!-- Add Row buttons -->
-                    <button id="mi-btn-add-1" class="btn btn-secondary" style="font-size:0.78rem; padding:0.4rem 0.7rem; font-weight:600;">+ 1 Row</button>
-                    <button id="mi-btn-add-5" class="btn btn-secondary" style="font-size:0.78rem; padding:0.4rem 0.7rem; font-weight:600;">+ 5 Rows</button>
-                    <button id="mi-btn-add-10" class="btn btn-secondary" style="font-size:0.78rem; padding:0.4rem 0.7rem; font-weight:600;">+ 10 Rows</button>
-                    <button id="mi-btn-add-50" class="btn btn-secondary" style="font-size:0.78rem; padding:0.4rem 0.7rem; font-weight:600;">+ 50 Rows</button>
+                    <button id="mi-btn-add-1" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem; font-weight: 600;">+ 1 Row</button>
+                    <button id="mi-btn-add-5" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem; font-weight: 600;">+ 5 Rows</button>
+                    <button id="mi-btn-add-10" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem; font-weight: 600;">+ 10 Rows</button>
+                    <button id="mi-btn-add-50" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem; font-weight: 600;">+ 50 Rows</button>
 
-                    <div style="height:24px; width:1px; background:var(--border-color); margin:0 0.25rem;"></div>
+                    <div style="height: 24px; width: 1px; background: var(--border-color); margin: 0 0.25rem;"></div>
 
                     <!-- Bulk category applicator -->
-                    <div style="display:flex; align-items:center; gap:0.3rem;">
-                        <select id="mi-bulk-cat-select" class="form-control" style="font-size:0.78rem; padding:0.35rem 0.6rem; max-width:140px;">
-                            <option value="">Apply Category to All...</option>
+                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                        <select id="mi-bulk-cat-select" class="form-control" style="font-size: 0.8rem; padding: 0.4rem 0.65rem; max-width: 150px;">
+                            <option value="">Category for All...</option>
                             ${categories.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('')}
                         </select>
-                        <button id="mi-btn-apply-cat" class="btn btn-secondary" style="font-size:0.78rem; padding:0.4rem 0.6rem;" title="Apply selected category to all rows">Apply</button>
+                        <button id="mi-btn-apply-cat" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.7rem;" title="Apply selected category to all rows">Apply</button>
                     </div>
 
-                    <button id="mi-btn-clear-empty" class="btn btn-secondary" style="font-size:0.78rem; padding:0.4rem 0.7rem;" title="Remove rows that have no product name">Clear Empty</button>
-                    
-                    <button id="mi-btn-close" class="icon-btn" style="border:none; background:transparent; cursor:pointer; color:var(--text-secondary); margin-left:0.5rem;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
+                    <button id="mi-btn-clear-empty" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem;" title="Remove rows that have no product name">Clear Empty</button>
                 </div>
             </div>
 
-            <!-- 2. Grid Table Area -->
-            <div id="mi-grid-container" style="flex: 1; overflow: auto; background: var(--surface-0); position: relative;">
-                <table id="mi-grid-table" style="width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1350px; font-size: 0.85rem;">
-                    <thead>
-                        <tr style="position: sticky; top: 0; z-index: 10; background: var(--surface-100, #f1f5f9); color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 2px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                            <th style="width: 42px; padding: 0.6rem 0.4rem; text-align: center; border-bottom: 1px solid var(--border-color);">#</th>
-                            <th style="width: 72px; padding: 0.6rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Image</th>
-                            <th style="min-width: 180px; padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color);">Product Name *</th>
-                            <th style="width: 150px; padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Category *</th>
-                            <th style="width: 100px; padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Size / Weight</th>
-                            <th style="width: 85px; padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Stock (Qty)</th>
-                            <th style="width: 95px; padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Base Cost</th>
-                            <th style="width: 95px; padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Wholesale</th>
-                            <th style="width: 105px; padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color); color: var(--primary);">Sale Price *</th>
-                            <th style="width: 90px; padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">MRP</th>
-                            <th style="width: 120px; padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">UPC / Barcode</th>
-                            <th style="width: 115px; padding: 0.6rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Variations</th>
-                            <th style="width: 110px; padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Mfg Date</th>
-                            <th style="width: 110px; padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Exp Date</th>
-                            <th style="min-width: 140px; padding: 0.6rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Note</th>
-                            <th style="width: 70px; padding: 0.6rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="mi-tbody">
-                        <!-- Dynamic Grid Rows Rendered Here -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- 3. Footer Actions & Progress UI -->
-            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); background: var(--surface-50, #f8fafc); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                <div style="display:flex; align-items:center; gap:1rem;">
-                    <div id="mi-summary-text" style="font-size: 0.85rem; color: var(--text-secondary);">
-                        <strong id="mi-valid-count" style="color:var(--text-primary);">0</strong> products ready to insert
-                    </div>
-                    <div id="mi-duplicate-warning-pill" style="display:none; align-items:center; gap:0.35rem; font-size:0.75rem; color:#d97706; background:rgba(245, 158, 11, 0.12); padding:0.25rem 0.6rem; border-radius:6px; font-weight:600; border:1px solid rgba(245, 158, 11, 0.25);">
-                        <span>⚠️ <strong id="mi-dup-count">0</strong> potential duplicates</span>
-                    </div>
+            <!-- 2. Grid Table Card (In-Page Section) -->
+            <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; position: relative;">
+                
+                <div id="mi-grid-container" style="max-height: calc(100vh - 290px); min-height: 480px; overflow: auto; background: var(--surface-0);">
+                    <table id="mi-grid-table" style="width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1400px; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="position: sticky; top: 0; z-index: 10; background: var(--surface-100, #f1f5f9); color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 2px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                                <th style="width: 44px; padding: 0.65rem 0.4rem; text-align: center; border-bottom: 1px solid var(--border-color);">#</th>
+                                <th style="width: 76px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Image</th>
+                                <th style="min-width: 190px; padding: 0.65rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color);">Product Name *</th>
+                                <th style="width: 155px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Category *</th>
+                                <th style="width: 105px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Size / Weight</th>
+                                <th style="width: 90px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Stock (Qty)</th>
+                                <th style="width: 100px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Base Cost</th>
+                                <th style="width: 100px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Wholesale</th>
+                                <th style="width: 110px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color); color: var(--primary);">Sale Price *</th>
+                                <th style="width: 95px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">MRP</th>
+                                <th style="width: 130px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">UPC / Barcode</th>
+                                <th style="width: 120px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Variations</th>
+                                <th style="width: 115px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Mfg Date</th>
+                                <th style="width: 115px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Exp Date</th>
+                                <th style="min-width: 140px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Note</th>
+                                <th style="width: 75px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mi-tbody">
+                            <!-- Dynamic Grid Rows Rendered Here -->
+                        </tbody>
+                    </table>
                 </div>
 
-                <div style="display: flex; gap: 0.75rem; align-items: center;">
-                    <button id="mi-btn-cancel" class="btn btn-secondary" style="font-size: 0.85rem;">Cancel</button>
-                    <button id="mi-btn-submit" class="btn btn-primary" style="font-size: 0.9rem; font-weight: 700; padding: 0.6rem 1.75rem; display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        <span id="mi-btn-submit-label">Insert Products</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 4. Real-time Batch Progress Overlay (Hidden initially) -->
-            <div id="mi-progress-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center;">
-                <div style="background: var(--surface-0); padding: 2.5rem 2rem; border-radius: 16px; width: 100%; max-width: 520px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 1px solid var(--border-color);">
-                    <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto;">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
-                    </div>
-                    <h3 id="mi-progress-title" style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">Inserting Products...</h3>
-                    <p id="mi-progress-desc" style="margin: 0 0 1.5rem 0; font-size: 0.85rem; color: var(--text-secondary);">Uploading image & saving: <strong id="mi-progress-item-name">Loading...</strong></p>
-                    
-                    <!-- Progress Bar -->
-                    <div style="width: 100%; height: 10px; background: var(--surface-100, #e2e8f0); border-radius: 9999px; overflow: hidden; margin-bottom: 0.75rem;">
-                        <div id="mi-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.2s ease;"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">
-                        <span id="mi-progress-count">0 of 0</span>
-                        <span id="mi-progress-percent">0%</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. Variations Sub-Modal (Hidden initially) -->
-            <div id="mi-var-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:100000; align-items:center; justify-content:center; padding:1.5rem;">
-                <div class="card" style="background:var(--surface-0); width:100%; max-width:540px; border-radius:14px; padding:1.5rem; border:1px solid var(--border-color); box-shadow:0 20px 40px rgba(0,0,0,0.25);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
-                        <div>
-                            <h4 style="margin:0; font-size:1.1rem; color:var(--text-primary);">Manage Product Variations</h4>
-                            <p id="mi-var-target-name" style="margin:0.2rem 0 0 0; font-size:0.8rem; color:var(--text-secondary);">Row variations</p>
+                <!-- 3. Bottom Actions & Summary Bar -->
+                <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); background: var(--surface-50, #f8fafc); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div id="mi-summary-text" style="font-size: 0.88rem; color: var(--text-secondary);">
+                            <strong id="mi-valid-count" style="color: var(--text-primary); font-size: 1rem;">0</strong> products ready to insert
                         </div>
-                        <button id="mi-var-close-x" class="icon-btn" style="border:none; background:transparent; cursor:pointer;">✕</button>
+                        <div id="mi-duplicate-warning-pill" style="display: none; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: #d97706; background: rgba(245, 158, 11, 0.12); padding: 0.3rem 0.65rem; border-radius: 6px; font-weight: 600; border: 1px solid rgba(245, 158, 11, 0.25);">
+                            <span>⚠️ <strong id="mi-dup-count">0</strong> potential duplicates</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        <button id="mi-btn-cancel-to-products" class="btn btn-secondary" style="font-size: 0.88rem; padding: 0.6rem 1.25rem;">Back to Products</button>
+                        <button id="mi-btn-submit" class="btn btn-primary" style="font-size: 0.92rem; font-weight: 700; padding: 0.65rem 2rem; display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <span id="mi-btn-submit-label">Insert Products</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. Real-time Batch Progress Overlay (Embedded in card) -->
+                <div id="mi-progress-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.88); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center;">
+                    <div style="background: var(--surface-0); padding: 2.5rem 2rem; border-radius: 16px; width: 100%; max-width: 520px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 1px solid var(--border-color);">
+                        <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+                        </div>
+                        <h3 id="mi-progress-title" style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">Inserting Products...</h3>
+                        <p id="mi-progress-desc" style="margin: 0 0 1.5rem 0; font-size: 0.85rem; color: var(--text-secondary);">Uploading image & saving: <strong id="mi-progress-item-name">Loading...</strong></p>
+                        
+                        <!-- Progress Bar -->
+                        <div style="width: 100%; height: 10px; background: var(--surface-100, #e2e8f0); border-radius: 9999px; overflow: hidden; margin-bottom: 0.75rem;">
+                            <div id="mi-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.2s ease;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">
+                            <span id="mi-progress-count">0 of 0</span>
+                            <span id="mi-progress-percent">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 5. Variations Sub-Modal -->
+            <div id="mi-var-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 100000; align-items: center; justify-content: center; padding: 1.5rem;">
+                <div class="card" style="background: var(--surface-0); width: 100%; max-width: 540px; border-radius: 14px; padding: 1.5rem; border: 1px solid var(--border-color); box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                        <div>
+                            <h4 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);">Manage Product Variations</h4>
+                            <p id="mi-var-target-name" style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: var(--text-secondary);">Row variations</p>
+                        </div>
+                        <button id="mi-var-close-x" class="icon-btn" style="border: none; background: transparent; cursor: pointer;">✕</button>
                     </div>
                     
-                    <div id="mi-var-list" style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem;">
+                    <div id="mi-var-list" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem;">
                         <!-- Variation Rows -->
                     </div>
 
-                    <button id="mi-var-add-row" class="btn btn-secondary" style="width:100%; font-size:0.82rem; margin-bottom:1.25rem;">+ Add Variation Option</button>
+                    <button id="mi-var-add-row" class="btn btn-secondary" style="width: 100%; font-size: 0.82rem; margin-bottom: 1.25rem;">+ Add Variation Option</button>
 
-                    <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
-                        <button id="mi-var-cancel" class="btn btn-secondary" style="font-size:0.85rem;">Cancel</button>
-                        <button id="mi-var-save" class="btn btn-primary" style="font-size:0.85rem; font-weight:700;">Save Variations</button>
+                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button id="mi-var-cancel" class="btn btn-secondary" style="font-size: 0.85rem;">Cancel</button>
+                        <button id="mi-var-save" class="btn btn-primary" style="font-size: 0.85rem; font-weight: 700;">Save Variations</button>
                     </div>
                 </div>
             </div>
@@ -221,14 +201,12 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
         </div>
     `;
 
-    document.body.appendChild(overlay);
-
-    const tbody = overlay.querySelector('#mi-tbody');
-    const rowCounter = overlay.querySelector('#mi-row-counter');
-    const validCountEl = overlay.querySelector('#mi-valid-count');
-    const dupPill = overlay.querySelector('#mi-duplicate-warning-pill');
-    const dupCountEl = overlay.querySelector('#mi-dup-count');
-    const btnSubmitLabel = overlay.querySelector('#mi-btn-submit-label');
+    const tbody = container.querySelector('#mi-tbody');
+    const rowCounter = container.querySelector('#mi-row-counter');
+    const validCountEl = container.querySelector('#mi-valid-count');
+    const dupPill = container.querySelector('#mi-duplicate-warning-pill');
+    const dupCountEl = container.querySelector('#mi-dup-count');
+    const btnSubmitLabel = container.querySelector('#mi-btn-submit-label');
 
     // Duplicate detection helper
     const checkDuplicates = () => {
@@ -236,7 +214,6 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
         let dupCount = 0;
         let validCount = 0;
 
-        // Group rows by trimmed lower name
         rowDataList.forEach((r, idx) => {
             const cleanName = (r.name || '').trim().toLowerCase();
             if (cleanName) {
@@ -248,7 +225,6 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
             }
         });
 
-        // Check catalog duplicates + table duplicates
         rowDataList.forEach((r, idx) => {
             const rowEl = tbody.querySelector(`tr[data-index="${idx}"]`);
             if (!rowEl) return;
@@ -520,18 +496,17 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
             rowDataList.push(createBlankRow());
         }
         renderRows();
-        // Scroll to bottom
-        const container = overlay.querySelector('#mi-grid-container');
-        if (container) container.scrollTop = container.scrollHeight;
+        const gridCont = container.querySelector('#mi-grid-container');
+        if (gridCont) gridCont.scrollTop = gridCont.scrollHeight;
     };
 
-    overlay.querySelector('#mi-btn-add-1').addEventListener('click', () => addRows(1));
-    overlay.querySelector('#mi-btn-add-5').addEventListener('click', () => addRows(5));
-    overlay.querySelector('#mi-btn-add-10').addEventListener('click', () => addRows(10));
-    overlay.querySelector('#mi-btn-add-50').addEventListener('click', () => addRows(50));
+    container.querySelector('#mi-btn-add-1').addEventListener('click', () => addRows(1));
+    container.querySelector('#mi-btn-add-5').addEventListener('click', () => addRows(5));
+    container.querySelector('#mi-btn-add-10').addEventListener('click', () => addRows(10));
+    container.querySelector('#mi-btn-add-50').addEventListener('click', () => addRows(50));
 
     // Clear Empty Rows
-    overlay.querySelector('#mi-btn-clear-empty').addEventListener('click', () => {
+    container.querySelector('#mi-btn-clear-empty').addEventListener('click', () => {
         const filtered = rowDataList.filter(r => (r.name || '').trim() !== '');
         if (filtered.length === 0) {
             rowDataList = [createBlankRow()];
@@ -543,8 +518,8 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
     });
 
     // Bulk Apply Category
-    overlay.querySelector('#mi-btn-apply-cat').addEventListener('click', () => {
-        const catSelect = overlay.querySelector('#mi-bulk-cat-select');
+    container.querySelector('#mi-btn-apply-cat').addEventListener('click', () => {
+        const catSelect = container.querySelector('#mi-bulk-cat-select');
         const chosenCat = catSelect.value;
         if (!chosenCat) {
             showAlert.error('Please select a category first.');
@@ -557,12 +532,17 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
         showAlert.success('Category applied to all rows');
     });
 
+    // Back to Products Button
+    container.querySelector('#mi-btn-cancel-to-products').addEventListener('click', () => {
+        window.location.hash = '#/products';
+    });
+
     // Variations Sub-Modal Logic
     let activeVarRowIndex = null;
     let tempVars = [];
-    const varModal = overlay.querySelector('#mi-var-modal');
-    const varListEl = overlay.querySelector('#mi-var-list');
-    const varTargetNameEl = overlay.querySelector('#mi-var-target-name');
+    const varModal = container.querySelector('#mi-var-modal');
+    const varListEl = container.querySelector('#mi-var-list');
+    const varTargetNameEl = container.querySelector('#mi-var-target-name');
 
     const renderVarList = () => {
         if (tempVars.length === 0) {
@@ -615,14 +595,13 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
         varModal.style.display = 'flex';
     };
 
-    overlay.querySelector('#mi-var-add-row').addEventListener('click', () => {
+    container.querySelector('#mi-var-add-row').addEventListener('click', () => {
         tempVars.push({ sizeFlavor: '', upcCode: '' });
         renderVarList();
     });
 
-    overlay.querySelector('#mi-var-save').addEventListener('click', () => {
+    container.querySelector('#mi-var-save').addEventListener('click', () => {
         if (activeVarRowIndex !== null && rowDataList[activeVarRowIndex]) {
-            // Filter out empty rows
             const cleaned = tempVars.filter(v => (v.sizeFlavor || '').trim() !== '' || (v.upcCode || '').trim() !== '');
             rowDataList[activeVarRowIndex].variations = cleaned;
             renderRows();
@@ -631,27 +610,21 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
     });
 
     const closeVarModal = () => { varModal.style.display = 'none'; };
-    overlay.querySelector('#mi-var-close-x').addEventListener('click', closeVarModal);
-    overlay.querySelector('#mi-var-cancel').addEventListener('click', closeVarModal);
-
-    // Close Market Inserter
-    const closeModal = () => overlay.remove();
-    overlay.querySelector('#mi-btn-close').addEventListener('click', closeModal);
-    overlay.querySelector('#mi-btn-cancel').addEventListener('click', closeModal);
+    container.querySelector('#mi-var-close-x').addEventListener('click', closeVarModal);
+    container.querySelector('#mi-var-cancel').addEventListener('click', closeVarModal);
 
     // Initial render
     renderRows();
 
     // 4. Submit Batch Insertion
-    const btnSubmit = overlay.querySelector('#mi-btn-submit');
-    const progressOverlay = overlay.querySelector('#mi-progress-overlay');
-    const progressBarFill = overlay.querySelector('#mi-progress-bar-fill');
-    const progressCount = overlay.querySelector('#mi-progress-count');
-    const progressPercent = overlay.querySelector('#mi-progress-percent');
-    const progressItemName = overlay.querySelector('#mi-progress-item-name');
+    const btnSubmit = container.querySelector('#mi-btn-submit');
+    const progressOverlay = container.querySelector('#mi-progress-overlay');
+    const progressBarFill = container.querySelector('#mi-progress-bar-fill');
+    const progressCount = container.querySelector('#mi-progress-count');
+    const progressPercent = container.querySelector('#mi-progress-percent');
+    const progressItemName = container.querySelector('#mi-progress-item-name');
 
     btnSubmit.addEventListener('click', async () => {
-        // 1. Filter out rows that have names
         const validProducts = rowDataList.filter(r => (r.name || '').trim() !== '');
 
         if (validProducts.length === 0) {
@@ -659,7 +632,7 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
             return;
         }
 
-        // Validate that each product has a valid category and salePrice
+        // Validate categories
         for (let i = 0; i < validProducts.length; i++) {
             const p = validProducts[i];
             if (!p.category) {
@@ -704,53 +677,11 @@ export const openMarketInserterModal = async (workspaceId, onComplete = null) =>
             );
 
             showAlert.success(`Successfully inserted ${validProducts.length} products to your catalog!`);
-            closeModal();
-            if (onComplete) onComplete();
+            window.location.hash = '#/products';
 
         } catch (err) {
             progressOverlay.style.display = 'none';
             showAlert.error(err.message || 'Failed to complete batch insertion');
         }
-    });
-};
-
-/**
- * Dedicated Page Route View: renderMarketInserter
- * Mounted when user navigates to '#/market-inserter'
- */
-export const renderMarketInserter = async (container, workspaceId) => {
-    container.innerHTML = `
-        <div style="margin-bottom: 1.5rem;">
-            <!-- Sub-Navigation Tabs for Products Section -->
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem;">
-                <div>
-                    <h2 style="margin:0 0 0.25rem 0;">Products</h2>
-                    <p style="margin:0; font-size:0.85rem; color:var(--text-secondary);">Manage product catalog, rapid grid market inserter, and categories</p>
-                </div>
-            </div>
-
-            <div class="tabs" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;">
-                <button class="tab-btn" onclick="window.location.hash='#/products'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
-                    All Products
-                </button>
-                <button class="tab-btn active-tab" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:700; cursor:pointer; color:var(--primary); border-bottom:2px solid var(--primary);">
-                    Market Inserter (Grid)
-                </button>
-                <button class="tab-btn" onclick="window.location.hash='#/categories'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
-                    Categories
-                </button>
-            </div>
-        </div>
-
-        <div id="mi-page-mount-point" style="width:100%; min-height:600px;">
-            <!-- Grid embedded here -->
-        </div>
-    `;
-
-    const mountPoint = container.querySelector('#mi-page-mount-point');
-    
-    // Automatically initialize the Market Inserter view inside the container
-    openMarketInserterModal(workspaceId, () => {
-        window.location.hash = '#/products';
     });
 };

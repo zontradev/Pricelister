@@ -1,4 +1,4 @@
-import { createRepository } from '../../firebase/firestore.js';
+import { createRepository, firestoreService } from '../../firebase/firestore.js';
 import { generateUniqueId } from '../utils/idGenerator.js';
 import { Product } from '../../DataModel.js';
 import { validateProduct } from '../schemas/productSchema.js';
@@ -11,6 +11,12 @@ export const getProductService = (workspaceId) => {
         getAllActiveProducts: async () => {
             const all = await repo.getAll();
             return all.filter(p => !p.isArchive);
+        },
+
+        listenProducts: (callback) => {
+            return repo.listenAll((all) => {
+                callback(all.filter(p => !p.isArchive));
+            });
         },
 
         getAllArchivedProducts: async () => {
@@ -36,7 +42,9 @@ export const getProductService = (workspaceId) => {
             });
 
             // Convert class instance to plain object for Firebase
-            return await repo.add(JSON.parse(JSON.stringify(newProduct)));
+            const id = await repo.add(JSON.parse(JSON.stringify(newProduct)));
+            await firestoreService.updateMetricsCounter(workspaceId, 'product', true, creatorId, 1);
+            return id;
         },
 
         bulkAddProducts: async (productsList, creatorId, workerPermission = null, onProgress = null) => {
@@ -88,6 +96,10 @@ export const getProductService = (workspaceId) => {
 
                 const id = await repo.add(JSON.parse(JSON.stringify(newProduct)));
                 results.push({ id, uniqueId: newProduct.uniqueId, name: newProduct.name });
+            }
+
+            if (results.length > 0) {
+                await firestoreService.updateMetricsCounter(workspaceId, 'product', true, creatorId, results.length);
             }
 
             return results;
@@ -143,7 +155,9 @@ export const getProductService = (workspaceId) => {
                 isArchive: false
             });
 
-            return await repo.add(JSON.parse(JSON.stringify(duplicate)));
+            const id = await repo.add(JSON.parse(JSON.stringify(duplicate)));
+            await firestoreService.updateMetricsCounter(workspaceId, 'product', true, creatorId, 1);
+            return id;
         },
 
         deleteProduct: async (id, workerPermission = null) => {
@@ -151,14 +165,17 @@ export const getProductService = (workspaceId) => {
                 throw new Error("You don't have permission to delete products.");
             }
 
+            let itemCreatorId = null;
             try {
                 const prod = await repo.getById(id);
+                itemCreatorId = prod?.creatorId || null;
                 if (prod && prod.imageUri) {
                     await storageService.deleteImage(prod.imageUri).catch(() => {});
                 }
             } catch(e) {}
 
             await repo.delete(id);
+            await firestoreService.updateMetricsCounter(workspaceId, 'product', false, itemCreatorId, 1);
         },
 
         archiveProduct: async (id, workerPermission = null) => {
@@ -166,11 +183,18 @@ export const getProductService = (workspaceId) => {
                 throw new Error("You don't have permission to delete/archive products.");
             }
 
+            let itemCreatorId = null;
+            try {
+                const prod = await repo.getById(id);
+                itemCreatorId = prod?.creatorId || null;
+            } catch(e) {}
+
             // Prefer archive over hard delete
             await repo.update(id, {
                 isArchive: true,
                 updatedTimestamp: Date.now()
             });
+            await firestoreService.updateMetricsCounter(workspaceId, 'product', false, itemCreatorId, 1);
         },
         
         restoreProduct: async (id, workerPermission = null) => {

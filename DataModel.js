@@ -162,6 +162,7 @@ export class BusinessProfile {
         this.address = data.address || "";
         this.phone = data.phone || "";
         this.email = data.email || "";
+        this.creatorId = data.creatorId || "";
         this.timestamp = data.timestamp || Date.now();
         this.updatedTimestamp = data.updatedTimestamp || Date.now();
     }
@@ -176,6 +177,7 @@ export class ClientProfile {
         this.phone = data.phone || "";
         this.address = data.address || "";
         this.email = data.email || "";
+        this.creatorId = data.creatorId || "";
         this.timestamp = data.timestamp || Date.now();
     }
 }
@@ -189,6 +191,7 @@ export class CustomerProfile {
         this.phone = data.phone || "";
         this.address = data.address || "";
         this.email = data.email || "";
+        this.creatorId = data.creatorId || "";
         this.timestamp = data.timestamp || Date.now();
     }
 }

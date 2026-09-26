@@ -26,18 +26,7 @@ export const renderCategories = async (container, workspaceId) => {
             </button>
         </div>
 
-        <!-- PRODUCTS NAVIGATION TABS -->
-        <div class="tabs" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;">
-            <button class="tab-btn" onclick="window.location.hash='#/products'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
-                All Products
-            </button>
-            <button class="tab-btn" onclick="window.location.hash='#/market-inserter'" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:600; cursor:pointer; color:var(--text-secondary);">
-                Market Inserter (Grid)
-            </button>
-            <button class="tab-btn active-tab" style="background:transparent; border:none; padding:0.75rem 1.25rem; font-size:0.95rem; font-weight:700; cursor:pointer; color:var(--primary); border-bottom:2px solid var(--primary);">
-                Categories
-            </button>
-        </div>
+
         
         <!-- Category Create / Edit Card -->
         <div id="category-form-container" class="card" style="display:none; margin-bottom: 2rem; padding: 1.75rem; border-radius:var(--radius-card); box-shadow:var(--shadow-float);">

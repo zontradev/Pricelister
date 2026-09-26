@@ -1,4 +1,4 @@
-import { createRepository } from '../../firebase/firestore.js';
+import { createRepository, firestoreService } from '../../firebase/firestore.js';
 import { generateUniqueId } from '../utils/idGenerator.js';
 import { Category } from '../../DataModel.js';
 import { validateCategory } from '../schemas/categorySchema.js';
@@ -28,6 +28,7 @@ export const getCategoryService = (workspaceId) => {
             });
 
             const id = await repo.add(JSON.parse(JSON.stringify(newCategory)));
+            await firestoreService.updateMetricsCounter(workspaceId, 'category', true, creatorId, 1);
             return { id, ...newCategory };
         },
 
@@ -78,6 +79,7 @@ export const getCategoryService = (workspaceId) => {
             }
 
             await repo.delete(id);
+            await firestoreService.updateMetricsCounter(workspaceId, 'category', false, cat?.creatorId, 1);
         }
     };
 };

@@ -1,4 +1,4 @@
-import { createRepository } from '../../firebase/firestore.js';
+import { createRepository, firestoreService } from '../../firebase/firestore.js';
 import { generateUniqueId } from '../utils/idGenerator.js';
 import { CustomerProfile, BusinessProfile, ClientProfile } from '../../DataModel.js';
 import { validateCustomer } from '../schemas/customerSchema.js';
@@ -24,10 +24,13 @@ export const getPeopleService = (workspaceId) => {
             validateCustomer(data);
             const customer = new CustomerProfile({
                 ...data,
+                creatorId: creatorId,
                 uniqueId: generateUniqueId(),
                 timestamp: Date.now()
             });
-            return await clientRepo.add(JSON.parse(JSON.stringify(customer)));
+            const id = await clientRepo.add(JSON.parse(JSON.stringify(customer)));
+            await firestoreService.updateMetricsCounter(workspaceId, 'customer', true, creatorId, 1);
+            return id;
         },
         updateCustomer: async (id, data, workerPermission = null) => {
             if (workerPermission && workerPermission.disableUpdate) throw new Error("Permission denied.");
@@ -59,6 +62,7 @@ export const getPeopleService = (workspaceId) => {
             }
 
             await clientRepo.delete(id);
+            await firestoreService.updateMetricsCounter(workspaceId, 'customer', false, cust?.creatorId, 1);
         },
 
         // --- BUSINESSES ---
@@ -72,10 +76,13 @@ export const getPeopleService = (workspaceId) => {
             validateBusiness(data);
             const business = new BusinessProfile({
                 ...data,
+                creatorId: creatorId,
                 uniqueId: generateUniqueId(),
                 timestamp: Date.now()
             });
-            return await businessRepo.add(JSON.parse(JSON.stringify(business)));
+            const id = await businessRepo.add(JSON.parse(JSON.stringify(business)));
+            await firestoreService.updateMetricsCounter(workspaceId, 'business', true, creatorId, 1);
+            return id;
         },
         updateBusiness: async (id, data, workerPermission = null) => {
             if (workerPermission && workerPermission.disableUpdate) throw new Error("Permission denied.");
@@ -105,6 +112,7 @@ export const getPeopleService = (workspaceId) => {
             }
 
             await businessRepo.delete(id);
+            await firestoreService.updateMetricsCounter(workspaceId, 'business', false, bus?.creatorId, 1);
         },
 
         // --- CLIENTS ---
@@ -121,11 +129,14 @@ export const getPeopleService = (workspaceId) => {
             validateClient(data);
             const client = new ClientProfile({
                 ...data,
+                creatorId: creatorId,
                 uniqueId: generateUniqueId(),
                 isClient: true, // Preserve specific source mapping distinction
                 timestamp: Date.now()
             });
-            return await clientRepo.add(JSON.parse(JSON.stringify(client)));
+            const id = await clientRepo.add(JSON.parse(JSON.stringify(client)));
+            await firestoreService.updateMetricsCounter(workspaceId, 'client', true, creatorId, 1);
+            return id;
         },
         updateClient: async (id, data, workerPermission = null) => {
             if (workerPermission && workerPermission.disableUpdate) throw new Error("Permission denied.");
@@ -158,6 +169,7 @@ export const getPeopleService = (workspaceId) => {
             }
 
             await clientRepo.delete(id);
+            await firestoreService.updateMetricsCounter(workspaceId, 'client', false, cl?.creatorId, 1);
         }
     };
 };

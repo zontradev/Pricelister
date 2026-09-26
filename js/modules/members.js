@@ -1,7 +1,11 @@
 import { firestoreService } from '../../firebase/firestore.js';
 import { authService } from '../../firebase/auth.js';
 import { getRoleBadgeHtml } from '../auth-handler.js';
-import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getProductService } from '../services/productService.js';
+import { getInvoiceService } from '../services/invoiceService.js';
+import { getCategoryService } from '../services/categoryService.js';
+import { getPeopleService } from '../services/peopleService.js';
+import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 
 const db = getFirestore(firebaseApp);
@@ -26,26 +30,57 @@ export const renderMembers = async (container, workspaceId) => {
     `;
 
     try {
-        // 1. Fetch Workspace Document
-        const wsInfo = await firestoreService.checkWorkspaceExists(currentUser.uid, currentUser.email);
+        // 1. Fetch Workspace Document & Catalog Data in parallel
+        const productService = getProductService(workspaceId);
+        const invoiceService = getInvoiceService(workspaceId);
+        const categoryService = getCategoryService(workspaceId);
+        const peopleService = getPeopleService(workspaceId);
+
+        const [wsInfo, products, custInvoices, busInvoices, categories, clients, businesses, rawMembers] = await Promise.all([
+            firestoreService.checkWorkspaceExists(currentUser.uid, currentUser.email).catch(() => null),
+            productService.getAllActiveProducts().catch(() => []),
+            invoiceService.getAllInvoices(false).catch(() => []),
+            invoiceService.getAllInvoices(true).catch(() => []),
+            categoryService.getAllCategories().catch(() => []),
+            peopleService.getAllClients().catch(() => []),
+            peopleService.getAllBusinesses().catch(() => []),
+            firestoreService.getWorkspaceMembers(workspaceId).catch(() => [])
+        ]);
+
         if (!wsInfo) {
             container.innerHTML = `<div class="card" style="padding:2rem; text-align:center;">No workspace information available.</div>`;
             return;
         }
 
         const adminUid = wsInfo.id || workspaceId;
-        
-        // 2. Fetch Members subcollection
-        let rawMembers = [];
-        try {
-            rawMembers = await firestoreService.getWorkspaceMembers(adminUid);
-        } catch (e) {
-            console.warn("Could not fetch members collection:", e);
-        }
+        const allInvoices = (custInvoices || []).concat(busInvoices || []);
+
+        // Helper: Check if an item matches a member's creator ID
+        const countMemberItems = (items, memberIds, isMainAdmin = false) => {
+            return (items || []).filter(item => {
+                if (!item) return false;
+                const cId = String(item.creatorId || item.workerId || item.appWorkerId || item.creator || '').trim().toLowerCase();
+                if (!cId) return isMainAdmin;
+                return memberIds.includes(cId) || (isMainAdmin && (cId === 'admin' || cId === 'creator' || cId === 'unknown'));
+            }).length;
+        };
 
         // 3. Separate Admin, Co-Admins, and Workers
         const adminEmail = (wsInfo.adminEmail || '').toLowerCase();
+        const adminIds = [
+            wsInfo.adminId, 
+            adminUid, 
+            wsInfo.workspaceId, 
+            currentUser.uid, 
+            adminEmail
+        ].filter(Boolean).map(s => String(s).trim().toLowerCase());
         
+        const adminPCount = countMemberItems(products, adminIds, true);
+        const adminInvCount = countMemberItems(allInvoices, adminIds, true);
+        const adminCatCount = countMemberItems(categories, adminIds, true);
+        const adminClientCount = countMemberItems(clients, adminIds, true);
+        const adminBusCount = countMemberItems(businesses, adminIds, true);
+
         const adminData = {
             name: wsInfo.adminName || 'Founder',
             email: wsInfo.adminEmail || 'admin@workspace.com',
@@ -53,23 +88,47 @@ export const renderMembers = async (container, workspaceId) => {
             role: 'CREATOR_ADMIN',
             isPending: false,
             joinedAt: wsInfo.createdAt,
-            productCount: Number(wsInfo.adminProductCount ?? 0),
-            invoiceCount: Number(wsInfo.adminInvoiceCount ?? 0),
-            categoryCount: Number(wsInfo.adminCategoryCount ?? 0),
-            clientCount: Number(wsInfo.adminClientCount ?? 0),
-            businessCount: Number(wsInfo.adminBusinessCount ?? 0),
+            productCount: Math.max(adminPCount, Number(wsInfo.adminProductCount ?? 0)),
+            invoiceCount: Math.max(adminInvCount, Number(wsInfo.adminInvoiceCount ?? 0)),
+            categoryCount: Math.max(adminCatCount, Number(wsInfo.adminCategoryCount ?? 0)),
+            clientCount: Math.max(adminClientCount, Number(wsInfo.adminClientCount ?? 0)),
+            businessCount: Math.max(adminBusCount, Number(wsInfo.adminBusinessCount ?? 0)),
             totalDeleted: Number(wsInfo.adminTotalDeleted ?? wsDataFallback(wsInfo.adminTotalDeletedCount, 0))
+        };
+
+        const mapMemberDataWithLiveCounts = (m) => {
+            const mData = mapMemberData(m);
+            const mIds = [
+                m.email, 
+                m.workerUid, 
+                m.appWorkerId, 
+                m.uniqueId, 
+                m.id
+            ].filter(Boolean).map(s => String(s).trim().toLowerCase());
+
+            const pCount = countMemberItems(products, mIds, false);
+            const invCount = countMemberItems(allInvoices, mIds, false);
+            const catCount = countMemberItems(categories, mIds, false);
+            const clCount = countMemberItems(clients, mIds, false);
+            const bCount = countMemberItems(businesses, mIds, false);
+
+            mData.productCount = Math.max(pCount, mData.productCount);
+            mData.invoiceCount = Math.max(invCount, mData.invoiceCount);
+            mData.categoryCount = Math.max(catCount, mData.categoryCount);
+            mData.clientCount = Math.max(clCount, mData.clientCount);
+            mData.businessCount = Math.max(bCount, mData.businessCount);
+            return mData;
         };
 
         const coAdmins = rawMembers.filter(m => {
             const rUpper = (m.role || '').toUpperCase();
             return (rUpper === 'CO_ADMIN' || rUpper === 'CO-ADMIN') && (m.email || '').toLowerCase() !== adminEmail;
-        }).map(m => mapMemberData(m));
+        }).map(m => mapMemberDataWithLiveCounts(m));
 
         const workers = rawMembers.filter(m => {
             const rUpper = (m.role || '').toUpperCase();
             return (rUpper !== 'CO_ADMIN' && rUpper !== 'CO-ADMIN' && rUpper !== 'CREATOR_ADMIN' && rUpper !== 'ADMIN') && (m.email || '').toLowerCase() !== adminEmail;
-        }).map(m => mapMemberData(m));
+        }).map(m => mapMemberDataWithLiveCounts(m));
 
         // Aggregate Totals across all members
         const allMemberList = [adminData, ...coAdmins, ...workers];
