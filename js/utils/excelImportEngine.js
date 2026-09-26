@@ -77,60 +77,175 @@ export const parseExcelFile = async (file) => {
 };
 
 /**
- * Finds the header row and returns mapped column indices
+ * Finds the header row and returns mapped column indices with smart data inspection
  */
 const detectHeaderMapping = (rawRows) => {
-    // Scan the first 5 rows to locate where the header line is
     let bestRowIdx = 0;
     let maxMatchCount = 0;
-    let bestMapping = {};
 
-    for (let r = 0; r < Math.min(rawRows.length, 5); r++) {
+    // 1. First pass: Locate the row with the most header-like text
+    for (let r = 0; r < Math.min(rawRows.length, 6); r++) {
         const row = rawRows[r];
         if (!Array.isArray(row)) continue;
 
-        const mapping = {};
         let matches = 0;
-
-        row.forEach((cellVal, colIdx) => {
+        row.forEach((cellVal) => {
             if (cellVal == null) return;
             const str = String(cellVal).trim().toLowerCase();
             if (!str) return;
 
-            // Test against aliases
-            for (const [canonicalField, aliases] of Object.entries(COLUMN_ALIASES)) {
-                if (!mapping[canonicalField] && aliases.some(alias => str === alias || str.includes(alias))) {
-                    mapping[canonicalField] = colIdx;
+            // Check if matches variation
+            if (/^var(?:iation)?\s*\d+/i.test(str)) {
+                matches++;
+                return;
+            }
+
+            for (const [, aliases] of Object.entries(COLUMN_ALIASES)) {
+                if (aliases.some(alias => str === alias || (alias.length > 4 && str.includes(alias)))) {
                     matches++;
                     break;
                 }
-            }
-
-            // Check for Variation columns: "Var 1 Name", "Var 1 UPC", etc.
-            const varNameMatch = str.match(/var(?:iation)?\s*(\d+)\s*(?:name|flavor|size)/i);
-            if (varNameMatch) {
-                const varNum = parseInt(varNameMatch[1], 10);
-                mapping[`var_${varNum}_name`] = colIdx;
-                matches++;
-            }
-            const varUpcMatch = str.match(/var(?:iation)?\s*(\d+)\s*(?:upc|code|barcode)/i);
-            if (varUpcMatch) {
-                const varNum = parseInt(varUpcMatch[1], 10);
-                mapping[`var_${varNum}_upc`] = colIdx;
-                matches++;
             }
         });
 
         if (matches > maxMatchCount) {
             maxMatchCount = matches;
             bestRowIdx = r;
-            bestMapping = mapping;
         }
+    }
+
+    const headerRow = rawRows[bestRowIdx] || [];
+    const dataRows = rawRows.slice(bestRowIdx + 1);
+
+    const mapping = {};
+    const nameCandidates = [];
+    const salePriceCandidates = [];
+    const categoryCandidates = [];
+
+    // Helper to count non-empty data cells in a column
+    const countColumnData = (colIdx) => {
+        let count = 0;
+        for (let i = 0; i < Math.min(dataRows.length, 50); i++) {
+            const val = dataRows[i] ? dataRows[i][colIdx] : null;
+            if (val !== null && val !== undefined && String(val).trim() !== '') {
+                count++;
+            }
+        }
+        return count;
+    };
+
+    headerRow.forEach((cellVal, colIdx) => {
+        if (cellVal == null) return;
+        const str = String(cellVal).trim().toLowerCase();
+        if (!str) return;
+
+        // 1. Check for Variation columns FIRST (Strict regex so they never steal "name" or "upc")
+        const varNameMatch = str.match(/^var(?:iation)?\s*(\d+)\s*(?:name|flavor|size)?$/i) 
+            || str.match(/^var(?:iation)?\s*(\d+)\s*name$/i)
+            || str.match(/^var(?:iation)?\s*(\d+)\s*flavor$/i)
+            || str.match(/^var(?:iation)?\s*(\d+)\s*size$/i);
+
+        if (varNameMatch) {
+            const varNum = parseInt(varNameMatch[1], 10);
+            mapping[`var_${varNum}_name`] = colIdx;
+            return; // Skip standard alias matching
+        }
+
+        const varUpcMatch = str.match(/^var(?:iation)?\s*(\d+)\s*(?:upc|barcode|code)$/i);
+        if (varUpcMatch) {
+            const varNum = parseInt(varUpcMatch[1], 10);
+            mapping[`var_${varNum}_upc`] = colIdx;
+            return; // Skip standard alias matching
+        }
+
+        // 2. Collect candidates for Product Name (Prioritize 'product name' over generic 'name')
+        if (str === 'product name' || str === 'product_name' || str === 'item name' || str === 'item_name') {
+            nameCandidates.push({ colIdx, priority: 10, str });
+            return;
+        } else if (str === 'name' || str === 'product' || str === 'item' || str === 'title' || str === 'description of goods') {
+            nameCandidates.push({ colIdx, priority: 5, str });
+            return;
+        }
+
+        // 3. Collect candidates for Category
+        if (str === 'category' || str === 'category name' || str === 'group' || str === 'type' || str === 'dept') {
+            categoryCandidates.push({ colIdx, priority: str === 'category' ? 10 : 5, str });
+            return;
+        }
+
+        // 4. Collect candidates for Sale Price
+        if (str === 'sale price' || str === 'saleprice' || str === 'sale_price' || str === 'selling price' || str === 'retail price') {
+            salePriceCandidates.push({ colIdx, priority: 10, str });
+            return;
+        } else if (str === 'price' || str === 'rate' || str === 'amount') {
+            salePriceCandidates.push({ colIdx, priority: 5, str });
+            return;
+        }
+
+        // 5. Match other standard fields
+        for (const [canonicalField, aliases] of Object.entries(COLUMN_ALIASES)) {
+            if (canonicalField === 'name' || canonicalField === 'category' || canonicalField === 'salePrice') continue;
+            if (mapping[canonicalField] === undefined && aliases.some(alias => str === alias || (alias.length > 4 && str.includes(alias)))) {
+                mapping[canonicalField] = colIdx;
+                break;
+            }
+        }
+    });
+
+    // Smart Disambiguation for Product Name:
+    // If col 1 is 'Product Name' and col 2 is 'Name', check if col 1 has data. If col 1 has no data but col 2 does, choose col 2!
+    if (nameCandidates.length > 0) {
+        let bestNameCandidate = null;
+        let highestScore = -1;
+
+        nameCandidates.forEach(cand => {
+            const dataCount = countColumnData(cand.colIdx);
+            // Combined score = priority * 10 + data presence weight
+            const score = (dataCount > 0 ? 100 : 0) + (dataCount * 2) + cand.priority;
+            if (score > highestScore) {
+                highestScore = score;
+                bestNameCandidate = cand;
+            }
+        });
+
+        if (bestNameCandidate) {
+            mapping.name = bestNameCandidate.colIdx;
+        }
+    }
+
+    // Smart Disambiguation for Category:
+    if (categoryCandidates.length > 0) {
+        let bestCatCandidate = null;
+        let highestScore = -1;
+        categoryCandidates.forEach(cand => {
+            const dataCount = countColumnData(cand.colIdx);
+            const score = (dataCount > 0 ? 100 : 0) + (dataCount * 2) + cand.priority;
+            if (score > highestScore) {
+                highestScore = score;
+                bestCatCandidate = cand;
+            }
+        });
+        if (bestCatCandidate) mapping.category = bestCatCandidate.colIdx;
+    }
+
+    // Smart Disambiguation for Sale Price:
+    if (salePriceCandidates.length > 0) {
+        let bestSaleCandidate = null;
+        let highestScore = -1;
+        salePriceCandidates.forEach(cand => {
+            const dataCount = countColumnData(cand.colIdx);
+            const score = (dataCount > 0 ? 100 : 0) + (dataCount * 2) + cand.priority;
+            if (score > highestScore) {
+                highestScore = score;
+                bestSaleCandidate = cand;
+            }
+        });
+        if (bestSaleCandidate) mapping.salePrice = bestSaleCandidate.colIdx;
     }
 
     return {
         headerRowIndex: bestRowIdx,
-        columnMap: bestMapping,
+        columnMap: mapping,
         confidence: maxMatchCount
     };
 };

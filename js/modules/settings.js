@@ -6,7 +6,7 @@ import { getSettingsService } from '../services/settingsService.js';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
-import { downloadSampleExcelTemplate } from '../utils/exportEngine.js';
+import { downloadHeadersOnlyTemplate, downloadExampleDataTemplate } from '../utils/exportEngine.js';
 
 const db = getFirestore(firebaseApp);
 
@@ -212,10 +212,16 @@ export const renderSettings = async (container, workspaceId) => {
                             </h3>
                             <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Import spreadsheets with auto-category grouping, generate custom Excel & PDF reports, or download full backups.</p>
                         </div>
-                        <button id="btn-settings-sample-template" class="btn btn-secondary" style="font-size:0.85rem; display:flex; align-items:center; gap:0.4rem;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            Sample Excel Template
-                        </button>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button id="btn-settings-headers-template" class="btn btn-secondary" style="font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;" title="Download blank Excel sheet with column headers only">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Headers Only
+                            </button>
+                            <button id="btn-settings-sample-template" class="btn btn-secondary" style="font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;" title="Download Excel template with sample grocery items">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Example File
+                            </button>
+                        </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
@@ -225,7 +231,7 @@ export const renderSettings = async (container, workspaceId) => {
                                 <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Batch add products with automatic column detection, category clustering, and custom color assignment.</p>
                             </div>
                             <button id="btn-settings-import-excel" class="btn btn-primary" style="font-size: 0.85rem; font-weight: 600; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 Launch Import Tool
                             </button>
                         </div>
@@ -236,7 +242,7 @@ export const renderSettings = async (container, workspaceId) => {
                                 <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Export customizable Excel spreadsheets, printable PDF price lists with catalogs, or full JSON backups.</p>
                             </div>
                             <button id="btn-settings-export-data" class="btn btn-secondary" style="font-size: 0.85rem; font-weight: 600; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                 Launch Exporter
                             </button>
                         </div>
@@ -311,9 +317,14 @@ export const renderSettings = async (container, workspaceId) => {
         }
 
         // Data Management Button Handlers
+        const btnHeaders = contentArea.querySelector('#btn-settings-headers-template');
+        if (btnHeaders) {
+            btnHeaders.addEventListener('click', () => downloadHeadersOnlyTemplate());
+        }
+
         const btnSample = contentArea.querySelector('#btn-settings-sample-template');
         if (btnSample) {
-            btnSample.addEventListener('click', () => downloadSampleExcelTemplate());
+            btnSample.addEventListener('click', () => downloadExampleDataTemplate());
         }
 
         const btnImport = contentArea.querySelector('#btn-settings-import-excel');

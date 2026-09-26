@@ -49,12 +49,34 @@ export const getCategoryService = (workspaceId) => {
         },
 
         deleteCategory: async (id, workerPermission = null) => {
-             if (workerPermission && workerPermission.disableDelete) {
+            if (workerPermission && workerPermission.disableDelete) {
                 throw new Error("You don't have permission to delete categories.");
             }
             
-            // Note: In real app, we should check if products are using this category before delete, 
-            // or warn the user. For now, just delete.
+            // Check if any active products are using this category
+            const productRepo = createRepository('Products', workspaceId);
+            const [allProducts, cat] = await Promise.all([
+                productRepo.getAll().catch(() => []),
+                repo.getById(id).catch(() => null)
+            ]);
+
+            const uId = cat?.uniqueId || id;
+            const catName = (cat?.name || '').trim().toLowerCase();
+
+            const connectedProds = (allProducts || []).filter(p => 
+                !p.isArchive && (
+                    p.category === uId || 
+                    p.category === id || 
+                    (p.category && p.category.trim().toLowerCase() === catName) ||
+                    (p.categoryName && p.categoryName.trim().toLowerCase() === catName)
+                )
+            );
+
+            if (connectedProds.length > 0) {
+                const count = connectedProds.length;
+                throw new Error(`Can't Delete category. The Category is used by ${count} product${count > 1 ? 's' : ''}. You have to Delete those products or rename this category.`);
+            }
+
             await repo.delete(id);
         }
     };

@@ -92,6 +92,21 @@ export const getProductService = (workspaceId) => {
             return await repo.add(JSON.parse(JSON.stringify(duplicate)));
         },
 
+        deleteProduct: async (id, workerPermission = null) => {
+            if (workerPermission && workerPermission.disableDelete) {
+                throw new Error("You don't have permission to delete products.");
+            }
+
+            try {
+                const prod = await repo.getById(id);
+                if (prod && prod.imageUri) {
+                    await storageService.deleteImage(prod.imageUri).catch(() => {});
+                }
+            } catch(e) {}
+
+            await repo.delete(id);
+        },
+
         archiveProduct: async (id, workerPermission = null) => {
             if (workerPermission && workerPermission.disableDelete) {
                 throw new Error("You don't have permission to delete/archive products.");

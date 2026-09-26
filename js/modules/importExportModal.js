@@ -6,6 +6,8 @@
 
 import { parseExcelFile, analyzeAndValidateRows, executeBatchImport } from '../utils/excelImportEngine.js';
 import { 
+    downloadHeadersOnlyTemplate,
+    downloadExampleDataTemplate,
     downloadSampleExcelTemplate, 
     exportProductsExcel, 
     exportProductsPdf, 
@@ -57,7 +59,7 @@ export const openExcelImportModal = async (workspaceId, onImportSuccess) => {
         <div class="card" style="background: var(--surface-0, #ffffff); width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid var(--border-color);">
             
             <!-- Modal Header -->
-            <div style="padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--surface-50, #f8fafc);">
+            <div style="padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--surface-50, #f8fafc); flex-wrap:wrap; gap:0.75rem;">
                 <div style="display:flex; align-items:center; gap:0.75rem;">
                     <div style="width:36px; height:36px; border-radius:10px; background: rgba(16, 185, 129, 0.15); display:flex; align-items:center; justify-content:center; color: var(--primary);">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
@@ -67,10 +69,14 @@ export const openExcelImportModal = async (workspaceId, onImportSuccess) => {
                         <p style="margin:0.15rem 0 0 0; font-size:0.8rem; color:var(--text-secondary);">Batch insert products with automatic category clustering & color codes</p>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <button id="btn-modal-sample-template" class="btn btn-secondary" style="font-size:0.82rem; padding:0.4rem 0.8rem; display:flex; align-items:center; gap:0.35rem;" title="Download sample format">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Download Sample Template
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                    <button id="btn-modal-headers-template" class="btn btn-secondary" style="font-size:0.78rem; padding:0.35rem 0.75rem; display:flex; align-items:center; gap:0.3rem;" title="Download blank template with column headers only">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Headers Only
+                    </button>
+                    <button id="btn-modal-sample-template" class="btn btn-secondary" style="font-size:0.78rem; padding:0.35rem 0.75rem; display:flex; align-items:center; gap:0.3rem;" title="Download complete example template with sample rows">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Example File
                     </button>
                     <button id="btn-modal-close-import" class="icon-btn" style="border:none; background:transparent; cursor:pointer; color:var(--text-secondary);">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -85,7 +91,7 @@ export const openExcelImportModal = async (workspaceId, onImportSuccess) => {
                 <div id="import-dropzone" style="border: 2px dashed var(--primary, #10b981); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; background: rgba(16, 185, 129, 0.03); cursor: pointer; transition: all 0.2s ease;">
                     <input type="file" id="import-file-input" accept=".xlsx, .xls, .csv" style="display: none;">
                     <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(16, 185, 129, 0.12); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto;">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     </div>
                     <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">Click or Drag & Drop your Excel / CSV file here</h4>
                     <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: var(--text-secondary);">Supports .xlsx, .xls, and .csv spreadsheets with auto-detected headers</p>
@@ -221,10 +227,18 @@ export const openExcelImportModal = async (workspaceId, onImportSuccess) => {
     let currentAnalysisResult = null;
     let currentFilter = 'all'; // 'all', 'valid', 'skipped'
 
+    const btnHeadersTemplate = modalOverlay.querySelector('#btn-modal-headers-template');
+    const btnSample = modalOverlay.querySelector('#btn-modal-sample-template');
+
     const closeModal = () => modalOverlay.remove();
     btnClose.addEventListener('click', closeModal);
     btnCancel.addEventListener('click', closeModal);
-    btnSample.addEventListener('click', () => downloadSampleExcelTemplate());
+    if (btnHeadersTemplate) {
+        btnHeadersTemplate.addEventListener('click', () => downloadHeadersOnlyTemplate());
+    }
+    if (btnSample) {
+        btnSample.addEventListener('click', () => downloadExampleDataTemplate());
+    }
 
     // Drag & Drop Handling
     dropzone.addEventListener('click', () => fileInput.click());
@@ -499,7 +513,7 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
             <div style="padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--surface-50, #f8fafc);">
                 <div style="display:flex; align-items:center; gap:0.75rem;">
                     <div style="width:36px; height:36px; border-radius:10px; background: rgba(59, 130, 246, 0.15); display:flex; align-items:center; justify-content:center; color: #2563eb;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     </div>
                     <div>
                         <h3 style="margin:0; font-size:1.15rem; font-weight:700; color:var(--text-primary);">Export Workspace Data</h3>
@@ -516,24 +530,30 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
                 
                 <!-- Format Choice Cards -->
                 <div style="margin-bottom: 1.5rem;">
-                    <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; margin-bottom: 0.6rem; display: block;">
-                        1. Choose Export Format
-                    </label>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
-                        <div id="card-format-excel" class="export-format-card active" style="border: 2px solid var(--primary); background: rgba(16, 185, 129, 0.06); border-radius: 12px; padding: 1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease;">
-                            <div style="font-size: 1.6rem; margin-bottom: 0.25rem;">📊</div>
-                            <strong style="display: block; font-size: 0.9rem; color: var(--text-primary);">Excel (.XLSX)</strong>
-                            <span style="font-size: 0.72rem; color: var(--text-secondary);">Full spreadsheet workbook</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.6rem;">
+                        <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; margin: 0; display: block;">
+                            1. Choose Export Format (Select 1)
+                        </label>
+                        <span id="export-selected-badge" style="font-size: 0.75rem; font-weight: 600; color: var(--primary); background: rgba(16, 185, 129, 0.1); padding: 0.15rem 0.5rem; border-radius: 9999px;">Excel Selected</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;" id="export-format-group">
+                        <div id="card-format-excel" class="export-format-card active" style="border: 2px solid var(--primary); background: rgba(16, 185, 129, 0.08); border-radius: 12px; padding: 1.1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);">
+                            <div class="format-check-pill" style="position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;">✓</div>
+                            <div style="font-size: 1.75rem; margin-bottom: 0.35rem;">📊</div>
+                            <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.2rem;">Excel (.XLSX)</strong>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">Spreadsheet workbook</span>
                         </div>
-                        <div id="card-format-pdf" class="export-format-card" style="border: 1px solid var(--border-color); background: var(--surface-50); border-radius: 12px; padding: 1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease;">
-                            <div style="font-size: 1.6rem; margin-bottom: 0.25rem;">📄</div>
-                            <strong style="display: block; font-size: 0.9rem; color: var(--text-primary);">Printable PDF</strong>
-                            <span style="font-size: 0.72rem; color: var(--text-secondary);">Clean price list & catalog</span>
+                        <div id="card-format-pdf" class="export-format-card" style="border: 1px solid var(--border-color); background: var(--surface-50); border-radius: 12px; padding: 1.1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; opacity: 0.75;">
+                            <div class="format-check-pill" style="position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-color); display: none; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;"></div>
+                            <div style="font-size: 1.75rem; margin-bottom: 0.35rem;">📄</div>
+                            <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.2rem;">Printable PDF</strong>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">Price list & catalog</span>
                         </div>
-                        <div id="card-format-backup" class="export-format-card" style="border: 1px solid var(--border-color); background: var(--surface-50); border-radius: 12px; padding: 1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease;">
-                            <div style="font-size: 1.6rem; margin-bottom: 0.25rem;">💾</div>
-                            <strong style="display: block; font-size: 0.9rem; color: var(--text-primary);">Full Backup</strong>
-                            <span style="font-size: 0.72rem; color: var(--text-secondary);">JSON package of all data</span>
+                        <div id="card-format-backup" class="export-format-card" style="border: 1px solid var(--border-color); background: var(--surface-50); border-radius: 12px; padding: 1.1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; opacity: 0.75;">
+                            <div class="format-check-pill" style="position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-color); display: none; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;"></div>
+                            <div style="font-size: 1.75rem; margin-bottom: 0.35rem;">💾</div>
+                            <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.2rem;">Full Backup (JSON)</strong>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">Full database (max 100MB)</span>
                         </div>
                     </div>
                 </div>
@@ -614,7 +634,7 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
                 <div style="display: flex; gap: 0.75rem;">
                     <button id="btn-export-cancel" class="btn btn-secondary" style="font-size: 0.85rem;">Cancel</button>
                     <button id="btn-export-download" class="btn btn-primary" style="font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.5rem; display: flex; align-items: center; gap: 0.4rem;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                         Download Excel (.xlsx)
                     </button>
                 </div>
@@ -625,38 +645,67 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
 
     document.body.appendChild(modalOverlay);
 
-    // Format selection handling
+    // Format selection handling (MUTUALLY EXCLUSIVE, ONLY 1 HIGHLIGHTED AT A TIME)
     let selectedFormat = 'excel'; // 'excel', 'pdf', 'backup'
     const cardExcel = modalOverlay.querySelector('#card-format-excel');
     const cardPdf = modalOverlay.querySelector('#card-format-pdf');
     const cardBackup = modalOverlay.querySelector('#card-format-backup');
+    const selectedBadge = modalOverlay.querySelector('#export-selected-badge');
     const columnsSection = modalOverlay.querySelector('#export-columns-section');
+    const filterSection = modalOverlay.querySelector('#export-filter-section');
     const btnDownload = modalOverlay.querySelector('#btn-export-download');
     const catFilter = modalOverlay.querySelector('#export-cat-filter');
     const stockFilter = modalOverlay.querySelector('#export-stock-filter');
 
     const updateFormatSelection = (fmt) => {
         selectedFormat = fmt;
-        [cardExcel, cardPdf, cardBackup].forEach(c => {
-            c.style.borderColor = 'var(--border-color)';
-            c.style.background = 'var(--surface-50)';
+        const allCards = [
+            { id: 'excel', el: cardExcel, label: 'Excel (.XLSX)', badge: 'Excel Selected' },
+            { id: 'pdf', el: cardPdf, label: 'Printable PDF', badge: 'PDF Selected' },
+            { id: 'backup', el: cardBackup, label: 'Full Backup (JSON)', badge: 'Backup (JSON) Selected' }
+        ];
+
+        allCards.forEach(item => {
+            const isMatch = (item.id === fmt);
+            const pill = item.el.querySelector('.format-check-pill');
+            if (isMatch) {
+                item.el.classList.add('active');
+                item.el.style.border = '2px solid var(--primary)';
+                item.el.style.background = 'rgba(16, 185, 129, 0.08)';
+                item.el.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.15)';
+                item.el.style.opacity = '1';
+                if (pill) {
+                    pill.style.display = 'flex';
+                    pill.style.background = 'var(--primary)';
+                    pill.style.border = 'none';
+                    pill.textContent = '✓';
+                }
+                if (selectedBadge) selectedBadge.textContent = item.badge;
+            } else {
+                item.el.classList.remove('active');
+                item.el.style.border = '1px solid var(--border-color)';
+                item.el.style.background = 'var(--surface-50)';
+                item.el.style.boxShadow = 'none';
+                item.el.style.opacity = '0.7';
+                if (pill) {
+                    pill.style.display = 'none';
+                    pill.textContent = '';
+                }
+            }
         });
 
         if (fmt === 'excel') {
-            cardExcel.style.borderColor = 'var(--primary)';
-            cardExcel.style.background = 'rgba(16, 185, 129, 0.06)';
             columnsSection.style.display = 'block';
-            btnDownload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Download Excel (.xlsx)`;
+            filterSection.style.display = 'block';
+            btnDownload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Download Excel (.xlsx)`;
         } else if (fmt === 'pdf') {
-            cardPdf.style.borderColor = 'var(--primary)';
-            cardPdf.style.background = 'rgba(16, 185, 129, 0.06)';
             columnsSection.style.display = 'block';
-            btnDownload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Download Printable PDF`;
+            filterSection.style.display = 'block';
+            btnDownload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Download Printable PDF`;
         } else if (fmt === 'backup') {
-            cardBackup.style.borderColor = 'var(--primary)';
-            cardBackup.style.background = 'rgba(16, 185, 129, 0.06)';
             columnsSection.style.display = 'none';
-            btnDownload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Download Full Backup (JSON)`;
+            filterSection.style.display = 'none';
+            btnDownload.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Download Full Backup (JSON)`;
         }
     };
 
@@ -701,24 +750,36 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
         };
 
         if (selectedFormat === 'excel') {
-            exportProductsExcel(filteredProducts, categories, options);
-            showAlert(`Exported ${filteredProducts.length} products to Excel!`, 'success');
-            closeModal();
+            try {
+                exportProductsExcel(filteredProducts, categories, options);
+                showAlert(`Exported ${filteredProducts.length} products to Excel!`, 'success');
+                closeModal();
+            } catch (err) {
+                showAlert(err.message || 'Failed to export Excel file', 'error');
+            }
         } else if (selectedFormat === 'pdf') {
-            exportProductsPdf(filteredProducts, categories, options, workspaceInfo);
-            showAlert(`Generated PDF for ${filteredProducts.length} products!`, 'success');
-            closeModal();
+            try {
+                exportProductsPdf(filteredProducts, categories, options, workspaceInfo);
+                showAlert(`Generated PDF for ${filteredProducts.length} products!`, 'success');
+                closeModal();
+            } catch (err) {
+                showAlert(err.message || 'Failed to generate PDF', 'error');
+            }
         } else if (selectedFormat === 'backup') {
-            exportWorkspaceBackupJson({
-                workspaceData: workspaceInfo,
-                products,
-                categories,
-                invoices,
-                businesses,
-                customers
-            });
-            showAlert(`Full workspace backup exported successfully!`, 'success');
-            closeModal();
+            try {
+                exportWorkspaceBackupJson({
+                    workspaceData: workspaceInfo,
+                    products,
+                    categories,
+                    invoices,
+                    businesses,
+                    customers
+                });
+                showAlert(`Full workspace backup exported successfully!`, 'success');
+                closeModal();
+            } catch (err) {
+                showAlert(err.message || 'Backup failed: File exceeds limit or cannot be processed', 'error');
+            }
         }
     });
 };

@@ -19,11 +19,11 @@ export const renderProducts = async (container, workspaceId) => {
             </div>
             <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
                 <button id="btn-import-excel" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     Import Excel
                 </button>
                 <button id="btn-export-products" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     Export
                 </button>
                 <button id="btn-add-product" class="btn btn-primary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
@@ -160,16 +160,18 @@ export const renderProducts = async (container, workspaceId) => {
                 </div>
 
                 <div class="form-section">
-                    <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">SECTION 5 — VARIATIONS</h4>
-                    <div style="display:flex; gap:1rem;">
-                        <div style="flex:2;">
-                            <label>Variations (e.g. Size, Flavor, UPC)</label>
-                            <input type="text" id="prd-variations" class="form-control" placeholder="e.g. Red, Blue, Green" style="width:100%; padding:0.5rem;">
-                        </div>
-                        <div style="flex:1;">
-                            <label>Color</label>
-                            <input type="color" id="prd-color" class="form-control" style="height:38px;">
-                        </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
+                        <h4 style="margin:0;">SECTION 5 — VARIATIONS (SIZE/FLAVOR & UPC)</h4>
+                        <button type="button" id="btn-add-variation-row" class="btn btn-secondary" style="font-size:0.8rem; padding:0.35rem 0.75rem; display:flex; align-items:center; gap:4px; font-weight:600;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            + Add Variation
+                        </button>
+                    </div>
+                    <div id="prd-variations-list" style="display:flex; flex-direction:column; gap:0.6rem;">
+                        <!-- Dynamic variation rows inserted here -->
+                    </div>
+                    <div id="prd-no-variations-msg" style="color:var(--text-muted); font-size:0.85rem; font-style:italic; padding:0.5rem 0;">
+                        No variations added. Click "+ Add Variation" to create size/flavor and UPC code options.
                     </div>
                 </div>
 
@@ -364,13 +366,22 @@ export const renderProducts = async (container, workspaceId) => {
                     container.querySelector('#prd-mfg-date').value = prd.mfgDate || '';
                     container.querySelector('#prd-exp-date').value = prd.expDate || '';
                     
-                    // Variations is an object/array in backend, we'll stringify for simple text input for now
-                    let varStr = '';
-                    if (prd.variations) {
-                        varStr = typeof prd.variations === 'string' ? prd.variations : JSON.stringify(prd.variations);
+                    // Populate Variations
+                    clearVariations();
+                    if (Array.isArray(prd.variations)) {
+                        prd.variations.forEach(v => {
+                            if (v && (v.sizeFlavor || v.upcCode)) {
+                                addVariationRow(v.sizeFlavor || '', v.upcCode || '');
+                            }
+                        });
+                    } else if (typeof prd.variations === 'string' && prd.variations.trim().startsWith('[')) {
+                        try {
+                            const parsed = JSON.parse(prd.variations);
+                            if (Array.isArray(parsed)) {
+                                parsed.forEach(v => addVariationRow(v.sizeFlavor || '', v.upcCode || ''));
+                            }
+                        } catch(e) {}
                     }
-                    container.querySelector('#prd-variations').value = varStr;
-                    container.querySelector('#prd-color').value = prd.color || '#000000';
                     
                     container.querySelector('#prd-form-title').textContent = 'Edit Product';
                     formContainer.style.display = 'block';
@@ -415,11 +426,60 @@ export const renderProducts = async (container, workspaceId) => {
         });
     };
 
+    // Variations Dynamic Row Helper
+    const varListEl = container.querySelector('#prd-variations-list');
+    const varEmptyMsg = container.querySelector('#prd-no-variations-msg');
+    const btnAddVar = container.querySelector('#btn-add-variation-row');
+
+    const checkVariationsEmpty = () => {
+        if (!varListEl || !varEmptyMsg) return;
+        if (varListEl.children.length === 0) {
+            varEmptyMsg.style.display = 'block';
+        } else {
+            varEmptyMsg.style.display = 'none';
+        }
+    };
+
+    const clearVariations = () => {
+        if (varListEl) varListEl.innerHTML = '';
+        checkVariationsEmpty();
+    };
+
+    const addVariationRow = (sizeFlavor = '', upcCode = '') => {
+        if (!varListEl) return;
+        const row = document.createElement('div');
+        row.className = 'prd-variation-item-row';
+        row.style.cssText = 'display:flex; gap:0.75rem; align-items:center; background:var(--surface-50); padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);';
+        row.innerHTML = `
+            <div style="flex:2;">
+                <input type="text" class="form-control var-size-input" placeholder="Size / Flavor / Variant (e.g. 500g, Strawberry)" value="${sizeFlavor || ''}" style="width:100%; padding:0.45rem; font-size:0.85rem;">
+            </div>
+            <div style="flex:2;">
+                <input type="text" class="form-control var-upc-input" placeholder="UPC / Barcode (Optional)" value="${upcCode || ''}" style="width:100%; padding:0.45rem; font-size:0.85rem;">
+            </div>
+            <button type="button" class="btn-remove-var" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:4px 8px; font-size:1.3rem; line-height:1;" title="Remove variation">&times;</button>
+        `;
+
+        row.querySelector('.btn-remove-var').addEventListener('click', () => {
+            row.remove();
+            checkVariationsEmpty();
+        });
+
+        varListEl.appendChild(row);
+        checkVariationsEmpty();
+    };
+
+    if (btnAddVar) {
+        btnAddVar.addEventListener('click', () => {
+            addVariationRow('', '');
+        });
+    }
+
     // UI Toggles
     container.querySelector('#btn-add-product').addEventListener('click', () => {
         form.reset();
+        clearVariations();
         container.querySelector('#prd-id').value = '';
-        container.querySelector('#prd-color').value = '#000000';
         container.querySelector('#prd-image-preview').style.display = 'none';
         container.querySelector('#prd-form-title').textContent = 'New Product';
         formContainer.style.display = 'block';
@@ -530,13 +590,24 @@ export const renderProducts = async (container, workspaceId) => {
         btn.disabled = true;
         
         const id = container.querySelector('#prd-id').value;
+
+        // Collect dynamic variation items
+        const collectedVariations = [];
+        container.querySelectorAll('.prd-variation-item-row').forEach(row => {
+            const size = row.querySelector('.var-size-input')?.value.trim() || '';
+            const upc = row.querySelector('.var-upc-input')?.value.trim() || '';
+            if (size || upc) {
+                collectedVariations.push({ sizeFlavor: size, upcCode: upc });
+            }
+        });
+
         const data = {
             imageUri: container.querySelector('#prd-image').value,
-            name: container.querySelector('#prd-name').value,
-            sizeWeight: container.querySelector('#prd-size').value,
+            name: container.querySelector('#prd-name').value.trim(),
+            sizeWeight: container.querySelector('#prd-size').value.trim(),
             category: container.querySelector('#prd-category').value,
-            upcCode: container.querySelector('#prd-upc').value,
-            note: container.querySelector('#prd-note').value,
+            upcCode: container.querySelector('#prd-upc').value.trim(),
+            note: container.querySelector('#prd-note').value.trim(),
             
             quantity: parseInt(container.querySelector('#prd-qty').value || 0, 10),
             
@@ -548,8 +619,7 @@ export const renderProducts = async (container, workspaceId) => {
             mfgDate: container.querySelector('#prd-mfg-date').value,
             expDate: container.querySelector('#prd-exp-date').value,
             
-            variations: container.querySelector('#prd-variations').value,
-            color: container.querySelector('#prd-color').value
+            variations: collectedVariations
         };
         
         try {

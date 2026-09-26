@@ -164,7 +164,15 @@ export const renderCategories = async (container, workspaceId) => {
         tbody.innerHTML = filtered.map(cat => {
             // Count products in this category
             const uId = cat.uniqueId || cat.id;
-            const prodCount = allProducts.filter(p => p.category === uId || p.category === cat.id || p.category === cat.name).length;
+            const catName = (cat.name || '').trim().toLowerCase();
+            const prodCount = allProducts.filter(p => 
+                !p.isArchive && (
+                    p.category === uId || 
+                    p.category === cat.id || 
+                    (p.category && p.category.trim().toLowerCase() === catName) ||
+                    (p.categoryName && p.categoryName.trim().toLowerCase() === catName)
+                )
+            ).length;
             const createdStr = cat.timestamp ? new Date(cat.timestamp).toLocaleDateString() : '-';
 
             return `
@@ -215,14 +223,22 @@ export const renderCategories = async (container, workspaceId) => {
                 const id = e.target.getAttribute('data-id');
                 const cat = allCategories.find(c => c.id === id);
                 const uId = cat?.uniqueId || id;
-                const connectedProds = allProducts.filter(p => p.category === uId || p.category === id || p.category === cat?.name);
+                const catName = (cat?.name || '').trim().toLowerCase();
+                const connectedProds = allProducts.filter(p => 
+                    !p.isArchive && (
+                        p.category === uId || 
+                        p.category === id || 
+                        (p.category && p.category.trim().toLowerCase() === catName) ||
+                        (p.categoryName && p.categoryName.trim().toLowerCase() === catName)
+                    )
+                );
 
-                let warnMsg = `Delete category "${cat?.name || 'this category'}"?`;
                 if (connectedProds.length > 0) {
-                    warnMsg = `Warning: ${connectedProds.length} product(s) are in this category. Delete category "${cat?.name}"?`;
+                    showAlert.error(`Can't Delete category. The Category is used by ${connectedProds.length} product${connectedProds.length > 1 ? 's' : ''}. You have to Delete those products or rename this category.`);
+                    return;
                 }
 
-                if (await showAlert.confirm(warnMsg)) {
+                if (await showAlert.confirm(`Delete category "${cat?.name || 'this category'}" permanently?`)) {
                     try {
                         await categoryService.deleteCategory(id);
                         showAlert.success('Category deleted successfully');

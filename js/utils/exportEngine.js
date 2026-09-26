@@ -28,33 +28,90 @@ const resolveCategoryName = (categoryVal, categories = []) => {
 };
 
 /**
- * 1. GENERATE & DOWNLOAD SAMPLE EXCEL TEMPLATE
- * Pre-formatted with valid columns, sample items, and locked guidance.
+ * Standard Product Template Headers
  */
-export const downloadSampleExcelTemplate = () => {
+const STANDARD_TEMPLATE_HEADERS = [
+    "Product Name*", 
+    "Category*", 
+    "Size/Weight", 
+    "Quantity", 
+    "Cost", 
+    "Base Price", 
+    "MRP", 
+    "Sale Price*", 
+    "UPC Code", 
+    "Mfg Date", 
+    "Exp Date", 
+    "Description",
+    "Var 1 Name",
+    "Var 1 UPC",
+    "Var 2 Name",
+    "Var 2 UPC"
+];
+
+const STANDARD_TEMPLATE_COL_WIDTHS = [
+    { wch: 26 }, // Name
+    { wch: 16 }, // Category
+    { wch: 14 }, // Size/Weight
+    { wch: 10 }, // Quantity
+    { wch: 10 }, // Cost
+    { wch: 12 }, // Base Price
+    { wch: 10 }, // MRP
+    { wch: 12 }, // Sale Price
+    { wch: 16 }, // UPC
+    { wch: 12 }, // Mfg
+    { wch: 12 }, // Exp
+    { wch: 30 }, // Description
+    { wch: 14 }, // Var 1 Name
+    { wch: 16 }, // Var 1 UPC
+    { wch: 14 }, // Var 2 Name
+    { wch: 16 }  // Var 2 UPC
+];
+
+const STANDARD_INSTRUCTIONS = [
+    ["PRICELISTER - EXCEL IMPORT INSTRUCTIONS & RULES"],
+    [""],
+    ["1. Row 1 contains the column headers. Do not change the first row order or names."],
+    ["2. Required columns are: Product Name*, Category*, and Sale Price* (all marked with *)."],
+    ["3. Variations have 2 fields: 'Var 1 Name' (Size/Flavor) and 'Var 1 UPC' (UPC Code). No color field needed."],
+    ["4. If a Category does not exist on your workspace, PriceLister will automatically create it with a unique color code."],
+    ["5. PriceLister automatically combines category case variations (e.g. 'fruit', 'Fruit', 'FRUIT') into one unified category."],
+    ["6. Any row missing a Name, Category, or positive Sale Price will be safely skipped."],
+    ["7. Numeric prices can have decimals or integers (e.g. 110 or 110.50)."]
+];
+
+/**
+ * 1A. DOWNLOAD HEADERS-ONLY EXCEL TEMPLATE (Clean blank template)
+ */
+export const downloadHeadersOnlyTemplate = () => {
     if (!window.XLSX) {
         alert("Excel engine (SheetJS) is loading. Please try again in a moment.");
         return;
     }
 
-    const headers = [
-        "Product Name*", 
-        "Category*", 
-        "Size/Weight", 
-        "Quantity", 
-        "Cost", 
-        "Base Price", 
-        "MRP", 
-        "Sale Price*", 
-        "UPC Code", 
-        "Mfg Date", 
-        "Exp Date", 
-        "Description",
-        "Var 1 Name",
-        "Var 1 UPC",
-        "Var 2 Name",
-        "Var 2 UPC"
-    ];
+    const ws = window.XLSX.utils.aoa_to_sheet([STANDARD_TEMPLATE_HEADERS]);
+    ws['!cols'] = STANDARD_TEMPLATE_COL_WIDTHS;
+
+    const wsInstructions = window.XLSX.utils.aoa_to_sheet(STANDARD_INSTRUCTIONS);
+    wsInstructions['!cols'] = [{ wch: 85 }];
+
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, "Products");
+    window.XLSX.utils.book_append_sheet(wb, wsInstructions, "Instructions");
+
+    const excelBuffer = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    triggerFileDownload(blob, "PriceLister_Template_Headers_Only.xlsx");
+};
+
+/**
+ * 1B. DOWNLOAD EXAMPLE DATA EXCEL TEMPLATE (Pre-populated sample)
+ */
+export const downloadExampleDataTemplate = () => {
+    if (!window.XLSX) {
+        alert("Excel engine (SheetJS) is loading. Please try again in a moment.");
+        return;
+    }
 
     const sampleData = [
         [
@@ -149,41 +206,11 @@ export const downloadSampleExcelTemplate = () => {
         ]
     ];
 
-    const ws = window.XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+    const ws = window.XLSX.utils.aoa_to_sheet([STANDARD_TEMPLATE_HEADERS, ...sampleData]);
+    ws['!cols'] = STANDARD_TEMPLATE_COL_WIDTHS;
 
-    // Set column widths
-    ws['!cols'] = [
-        { wch: 26 }, // Name
-        { wch: 16 }, // Category
-        { wch: 14 }, // Size/Weight
-        { wch: 10 }, // Quantity
-        { wch: 10 }, // Cost
-        { wch: 12 }, // Base Price
-        { wch: 10 }, // MRP
-        { wch: 12 }, // Sale Price
-        { wch: 16 }, // UPC
-        { wch: 12 }, // Mfg
-        { wch: 12 }, // Exp
-        { wch: 30 }, // Description
-        { wch: 14 }, // Var 1 Name
-        { wch: 16 }, // Var 1 UPC
-        { wch: 14 }, // Var 2 Name
-        { wch: 16 }  // Var 2 UPC
-    ];
-
-    // Instructions sheet
-    const instructions = [
-        ["PRICELISTER - EXCEL IMPORT INSTRUCTIONS & RULES"],
-        [""],
-        ["1. Row 1 contains the column headers. Do not change the first row order or names."],
-        ["2. Required columns are: Product Name*, Category*, and Sale Price* (all marked with *)."],
-        ["3. If a Category does not exist on your workspace, PriceLister will automatically create it with a unique color code."],
-        ["4. PriceLister automatically combines category case variations (e.g. 'fruit', 'Fruit', 'FRUIT') into one unified category."],
-        ["5. Any row missing a Name, Category, or positive Sale Price will be safely skipped."],
-        ["6. Numeric prices can have decimals or integers (e.g. 110 or 110.50)."]
-    ];
-    const wsInstructions = window.XLSX.utils.aoa_to_sheet(instructions);
-    wsInstructions['!cols'] = [{ wch: 80 }];
+    const wsInstructions = window.XLSX.utils.aoa_to_sheet(STANDARD_INSTRUCTIONS);
+    wsInstructions['!cols'] = [{ wch: 85 }];
 
     const wb = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(wb, ws, "Products");
@@ -191,7 +218,18 @@ export const downloadSampleExcelTemplate = () => {
 
     const excelBuffer = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    triggerFileDownload(blob, "PriceLister_Product_Template.xlsx");
+    triggerFileDownload(blob, "PriceLister_Template_With_Examples.xlsx");
+};
+
+/**
+ * 1C. Standard download helper
+ */
+export const downloadSampleExcelTemplate = (withExamples = true) => {
+    if (withExamples) {
+        downloadExampleDataTemplate();
+    } else {
+        downloadHeadersOnlyTemplate();
+    }
 };
 
 /**
@@ -486,6 +524,7 @@ export const exportInvoicesExcel = (invoices = [], userOptions = {}) => {
 
 /**
  * 5. EXPORT FULL WORKSPACE BACKUP JSON
+ * Guarded with 100MB - 150MB browser memory ceiling
  */
 export const exportWorkspaceBackupJson = ({ workspaceData, products, categories, invoices, businesses, customers }) => {
     const backupPackage = {
@@ -509,8 +548,26 @@ export const exportWorkspaceBackupJson = ({ workspaceData, products, categories,
         }
     };
 
-    const jsonStr = JSON.stringify(backupPackage, null, 2);
+    let jsonStr;
+    try {
+        jsonStr = JSON.stringify(backupPackage, null, 2);
+    } catch (e) {
+        throw new Error("Data payload is too large to serialize into JSON. Please export in smaller batches using Excel export.");
+    }
+
     const blob = new Blob([jsonStr], { type: 'application/json' });
+    const sizeInBytes = blob.size;
+    const sizeInMB = sizeInBytes / (1024 * 1024);
+
+    // JSON will not support if data is over 100MB / 150MB
+    const MAX_JSON_LIMIT_MB = 100;
+    const HARD_CEILING_LIMIT_MB = 150;
+
+    if (sizeInMB > MAX_JSON_LIMIT_MB) {
+        throw new Error(`JSON export limit exceeded: Backup data is ${sizeInMB.toFixed(1)} MB (Max safe JSON limit is ${MAX_JSON_LIMIT_MB}MB - ${HARD_CEILING_LIMIT_MB}MB). JSON export is not supported for datasets exceeding this size. Please use Excel export or filter your catalog.`);
+    }
+
     const dateStr = new Date().toISOString().split('T')[0];
     triggerFileDownload(blob, `PriceLister_WorkspaceBackup_${dateStr}.json`);
+    return { sizeInMB, counts: backupPackage.counts };
 };

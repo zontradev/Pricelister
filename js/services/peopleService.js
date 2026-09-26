@@ -36,6 +36,28 @@ export const getPeopleService = (workspaceId) => {
         },
         deleteCustomer: async (id, workerPermission = null) => {
             if (workerPermission && workerPermission.disableDelete) throw new Error("Permission denied.");
+            
+            const invoiceRepo = createRepository('Invoices', workspaceId);
+            const [allInvoices, cust] = await Promise.all([
+                invoiceRepo.getAll().catch(() => []),
+                clientRepo.getById(id).catch(() => null)
+            ]);
+
+            const uId = cust?.uniqueId || id;
+            const name = (cust?.name || '').trim().toLowerCase();
+            const phone = (cust?.phone || '').trim();
+
+            const connectedInvs = (allInvoices || []).filter(inv =>
+                (inv.customerId && (inv.customerId === uId || inv.customerId === id)) ||
+                (inv.customerName && inv.customerName.trim().toLowerCase() === name) ||
+                (phone && inv.customerNumber && inv.customerNumber.trim() === phone)
+            );
+
+            if (connectedInvs.length > 0) {
+                const count = connectedInvs.length;
+                throw new Error(`Can't Delete customer. The Customer is used by ${count} invoice${count > 1 ? 's' : ''}. You have to Delete those invoices or edit this customer.`);
+            }
+
             await clientRepo.delete(id);
         },
 
@@ -62,6 +84,26 @@ export const getPeopleService = (workspaceId) => {
         },
         deleteBusiness: async (id, workerPermission = null) => {
             if (workerPermission && workerPermission.disableDelete) throw new Error("Permission denied.");
+
+            const invoiceRepo = createRepository('Invoices', workspaceId);
+            const [allInvoices, bus] = await Promise.all([
+                invoiceRepo.getAll().catch(() => []),
+                businessRepo.getById(id).catch(() => null)
+            ]);
+
+            const uId = bus?.uniqueId || id;
+            const name = (bus?.name || '').trim().toLowerCase();
+
+            const connectedInvs = (allInvoices || []).filter(inv =>
+                (inv.businessId && (inv.businessId === uId || inv.businessId === id)) ||
+                (inv.businessName && inv.businessName.trim().toLowerCase() === name)
+            );
+
+            if (connectedInvs.length > 0) {
+                const count = connectedInvs.length;
+                throw new Error(`Can't Delete business. The Business is used by ${count} invoice${count > 1 ? 's' : ''}. You have to Delete those invoices or edit this business.`);
+            }
+
             await businessRepo.delete(id);
         },
 
@@ -91,6 +133,30 @@ export const getPeopleService = (workspaceId) => {
         },
         deleteClient: async (id, workerPermission = null) => {
             if (workerPermission && workerPermission.disableDelete) throw new Error("Permission denied.");
+
+            const invoiceRepo = createRepository('Invoices', workspaceId);
+            const [allInvoices, cl] = await Promise.all([
+                invoiceRepo.getAll().catch(() => []),
+                clientRepo.getById(id).catch(() => null)
+            ]);
+
+            const uId = cl?.uniqueId || id;
+            const name = (cl?.name || '').trim().toLowerCase();
+            const phone = (cl?.phone || '').trim();
+            const email = (cl?.email || '').trim().toLowerCase();
+
+            const connectedInvs = (allInvoices || []).filter(inv =>
+                (inv.clientId && (inv.clientId === uId || inv.clientId === id)) ||
+                (inv.clientName && inv.clientName.trim().toLowerCase() === name) ||
+                (phone && inv.clientPhone && inv.clientPhone.trim() === phone) ||
+                (email && inv.clientEmail && inv.clientEmail.trim().toLowerCase() === email)
+            );
+
+            if (connectedInvs.length > 0) {
+                const count = connectedInvs.length;
+                throw new Error(`Can't Delete client. The Client is used by ${count} invoice${count > 1 ? 's' : ''}. You have to Delete those invoices or edit this client.`);
+            }
+
             await clientRepo.delete(id);
         }
     };

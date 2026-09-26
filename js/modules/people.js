@@ -222,13 +222,23 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         container.querySelectorAll('.del-person').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
-                if (await showAlert.confirm('Delete this entry?')) {
+                const person = dataList.find(x => x.id === id);
+                const usedCount = getInvoiceCountForPerson(person);
+                const typeName = currentTab === 'businesses' ? 'business' : (currentTab === 'clients' ? 'client' : 'customer');
+                const typeCap = typeName.charAt(0).toUpperCase() + typeName.slice(1);
+
+                if (usedCount > 0) {
+                    showAlert.error(`Can't Delete ${typeName}. The ${typeCap} is used by ${usedCount} invoice${usedCount > 1 ? 's' : ''}. You have to Delete those invoices or edit this ${typeName}.`);
+                    return;
+                }
+
+                if (await showAlert.confirm(`Delete ${typeName} "${person?.name || 'this entry'}" permanently?`)) {
                     try {
                         if (currentTab === 'customers') await peopleService.deleteCustomer(id);
                         else if (currentTab === 'businesses') await peopleService.deleteBusiness(id);
                         else if (currentTab === 'clients') await peopleService.deleteClient(id);
                         
-                        showAlert.success('Deleted');
+                        showAlert.success(`${typeCap} deleted successfully`);
                         // Real-time listener handles the UI update
                     } catch (err) {
                         showAlert.error(err.message);
