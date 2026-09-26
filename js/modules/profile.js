@@ -357,8 +357,31 @@ export const renderProfile = async (container, workspaceId) => {
         `;
 
         // -------------------------------------------------------------
-        // LIVE REALTIME FOOTPRINT CALCULATOR & DOM UPDATER
+        // LIVE REALTIME FOOTPRINT CALCULATOR & 0 -> X NUMBER ANIMATOR
         // -------------------------------------------------------------
+        const prevNumbers = new Map();
+        const animateCount = (el, target, padZero = 0, duration = 800) => {
+            if (!el) return;
+            const targetVal = Number(target) || 0;
+            const startVal = prevNumbers.has(el) ? prevNumbers.get(el) : 0;
+            prevNumbers.set(el, targetVal);
+
+            const startTime = performance.now();
+            const update = (now) => {
+                const progress = Math.min((now - startTime) / duration, 1);
+                // Smooth cubic ease out
+                const ease = 1 - Math.pow(1 - progress, 3);
+                const cur = Math.round(startVal + (targetVal - startVal) * ease);
+                el.textContent = padZero > 0 ? String(cur).padStart(padZero, '0') : cur.toLocaleString();
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                } else {
+                    el.textContent = padZero > 0 ? String(targetVal).padStart(padZero, '0') : targetVal.toLocaleString();
+                }
+            };
+            requestAnimationFrame(update);
+        };
+
         const updateLiveFootprint = () => {
             // 1. Live creations by matching creatorId
             const pCreated = liveProducts.filter(isUserItem).length;
@@ -382,37 +405,19 @@ export const renderProfile = async (container, workspaceId) => {
             const finalBus = Math.max(busCreated, storedBus);
             const finalDel = storedDel;
 
-            // Update DOM counters smoothly
-            const elP = container.querySelector('#prof-metric-products');
-            if (elP) elP.textContent = finalP;
+            // Update DOM counters with 0 -> X animation
+            animateCount(container.querySelector('#prof-metric-products'), finalP);
+            animateCount(container.querySelector('#prof-metric-invoices'), finalInv);
+            animateCount(container.querySelector('#prof-metric-categories'), finalCat);
+            animateCount(container.querySelector('#prof-metric-clients'), finalClient);
+            animateCount(container.querySelector('#prof-metric-businesses'), finalBus);
+            animateCount(container.querySelector('#prof-metric-deletions'), finalDel, 2);
 
-            const elInv = container.querySelector('#prof-metric-invoices');
-            if (elInv) elInv.textContent = finalInv;
-
-            const elCat = container.querySelector('#prof-metric-categories');
-            if (elCat) elCat.textContent = finalCat;
-
-            const elClient = container.querySelector('#prof-metric-clients');
-            if (elClient) elClient.textContent = finalClient;
-
-            const elBus = container.querySelector('#prof-metric-businesses');
-            if (elBus) elBus.textContent = finalBus;
-
-            const elDel = container.querySelector('#prof-metric-deletions');
-            if (elDel) elDel.textContent = String(finalDel).padStart(2, '0');
-
-            // Update overview summary cards
-            const elTotP = container.querySelector('#prof-overview-products');
-            if (elTotP) elTotP.textContent = liveProducts.length;
-
-            const elTotInv = container.querySelector('#prof-overview-invoices');
-            if (elTotInv) elTotInv.textContent = liveCustInvoices.length + liveBusInvoices.length;
-
-            const elTotBus = container.querySelector('#prof-overview-businesses');
-            if (elTotBus) elTotBus.textContent = liveBusinesses.length;
-
-            const elTotCust = container.querySelector('#prof-overview-customers');
-            if (elTotCust) elTotCust.textContent = liveCustomers.length + liveClients.length;
+            // Update overview summary cards with 0 -> X animation
+            animateCount(container.querySelector('#prof-overview-products'), liveProducts.length);
+            animateCount(container.querySelector('#prof-overview-invoices'), liveCustInvoices.length + liveBusInvoices.length);
+            animateCount(container.querySelector('#prof-overview-businesses'), liveBusinesses.length);
+            animateCount(container.querySelector('#prof-overview-customers'), liveCustomers.length + liveClients.length);
         };
 
         // -------------------------------------------------------------
