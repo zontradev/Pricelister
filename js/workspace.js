@@ -1,5 +1,6 @@
 import { getProductService } from './services/productService.js';
 import { getInvoiceService } from './services/invoiceService.js';
+import { calculateInvoiceTotal } from './utils/invoiceCalculator.js';
 
 export const initWorkspace = () => {
     const sidebar = document.getElementById('sidebar');
@@ -48,62 +49,175 @@ export const toggleContextPanel = (title, contentHTML) => {
 // Render function for the Overview Dashboard
 export const renderOverview = async (container, workspaceId) => {
     container.innerHTML = `
-        <div class="module-header" style="margin-bottom: 2rem;">
+        <div class="module-header" style="margin-bottom: 2rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
             <div>
-                <h2 style="font-size: 1.75rem; color: var(--text-primary); margin-bottom: 0.25rem;">Workspace Overview</h2>
-                <p style="color: var(--text-secondary);">Here is what is happening in your business today.</p>
+                <h2 style="font-size: 1.85rem; color: var(--text-primary); margin-bottom: 0.35rem; font-weight: 700; letter-spacing: -0.02em;">Workspace Overview</h2>
+                <p style="color: var(--text-secondary); margin: 0; font-size: 0.95rem;">Real-time revenue metrics, collection health, and recent operations.</p>
             </div>
             <div class="module-actions" style="display: flex; gap: 0.75rem;">
-                <button class="btn btn-secondary" onclick="window.location.hash='#/products'">Manage Products</button>
-                <button class="btn btn-primary" onclick="window.location.hash='#/invoices/customer'">New Invoice</button>
+                <button class="btn btn-secondary" onclick="window.location.hash='#/products'">📦 Manage Products</button>
+                <button class="btn btn-primary" onclick="window.location.hash='#/invoices/customer'">+ Create Invoice</button>
+            </div>
+        </div>
+
+        <!-- REVENUE LINE MEASUREMENT COMPONENT -->
+        <div class="revenue-measure-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <h3 style="font-size: 1.1rem; color: var(--text-primary); margin: 0; font-weight: 600;">Revenue Flow & Collection Health</h3>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem;">Live measurement of paid cashflow versus outstanding pending receivables</div>
+                </div>
+                <div id="revenue-measure-stats" style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
+                    <span style="color: #059669;">Received: $0.00 (0%)</span> &bull; <span style="color: #ea580c;">Pending: $0.00 (0%)</span>
+                </div>
+            </div>
+
+            <div class="revenue-bar-wrap">
+                <div class="revenue-segmented-bar">
+                    <div id="bar-received" class="segment-received" style="width: 0%;"></div>
+                    <div id="bar-pending" class="segment-pending" style="width: 0%;"></div>
+                </div>
+                <div class="revenue-bar-legend">
+                    <div style="display: flex; gap: 1.25rem; font-size: 0.82rem;">
+                        <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                            Received Revenue: <strong id="legend-received-amt" style="color: var(--text-primary);">$0.00</strong>
+                        </span>
+                        <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+                            Pending Invoices: <strong id="legend-pending-amt" style="color: var(--text-primary);">$0.00</strong>
+                        </span>
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted);">
+                        Total Invoiced: <strong id="legend-total-sales" style="color: var(--text-primary);">$0.00</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRIMARY FINANCIAL METRICS (ELEVATED CARDS) -->
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <!-- Total Sales -->
+            <div class="card stat-card" style="padding: 1.6rem; border-radius: var(--radius-card); background: rgba(255, 255, 255, 0.88); border-left: 4px solid var(--primary);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="font-size: 0.8rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; font-weight: 600;">Total Sales</h3>
+                        <div class="stat-value" id="dash-total-sales" style="font-size: 2rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em;">$0.00</div>
+                    </div>
+                    <div style="font-size: 1.5rem; background: rgba(225, 29, 72, 0.08); padding: 0.5rem; border-radius: 12px;">📈</div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Gross invoiced across all sales</div>
+            </div>
+
+            <!-- Revenue Received -->
+            <div class="card stat-card" style="padding: 1.6rem; border-radius: var(--radius-card); background: rgba(255, 255, 255, 0.88); border-left: 4px solid #10b981;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="font-size: 0.8rem; color: #059669; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; font-weight: 600;">Revenue Received</h3>
+                        <div class="stat-value" id="dash-revenue-received" style="font-size: 2rem; font-weight: 700; color: #059669; letter-spacing: -0.02em;">$0.00</div>
+                    </div>
+                    <div style="font-size: 1.5rem; background: rgba(16, 185, 129, 0.08); padding: 0.5rem; border-radius: 12px;">💰</div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Collected from paid invoices</div>
+            </div>
+
+            <!-- Revenue Pending -->
+            <div class="card stat-card" style="padding: 1.6rem; border-radius: var(--radius-card); background: rgba(255, 255, 255, 0.88); border-left: 4px solid #f59e0b;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="font-size: 0.8rem; color: #d97706; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; font-weight: 600;">Pending Invoices</h3>
+                        <div class="stat-value" id="dash-revenue-pending" style="font-size: 2rem; font-weight: 700; color: #d97706; letter-spacing: -0.02em;">$0.00</div>
+                    </div>
+                    <div style="font-size: 1.5rem; background: rgba(245, 158, 11, 0.08); padding: 0.5rem; border-radius: 12px;">⏳</div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Awaiting customer/client payment</div>
+            </div>
+
+            <!-- Total Profit -->
+            <div class="card stat-card" style="padding: 1.6rem; border-radius: var(--radius-card); background: rgba(255, 255, 255, 0.88); border-left: 4px solid #8b5cf6;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="font-size: 0.8rem; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; font-weight: 600;">Total Profit</h3>
+                        <div class="stat-value" id="dash-total-profit" style="font-size: 2rem; font-weight: 700; color: #7c3aed; letter-spacing: -0.02em;">$0.00</div>
+                    </div>
+                    <div style="font-size: 1.5rem; background: rgba(139, 92, 246, 0.08); padding: 0.5rem; border-radius: 12px;">💎</div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Net profit from paid sales</div>
+            </div>
+        </div>
+
+        <!-- SECONDARY COUNTERS -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div class="card" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem;">
+                <div style="font-size: 1.75rem; background: rgba(225, 29, 72, 0.08); padding: 0.5rem; border-radius: 10px;">📦</div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Active Products</div>
+                    <div id="dash-products" style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">...</div>
+                </div>
+            </div>
+            <div class="card" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem;">
+                <div style="font-size: 1.75rem; background: rgba(16, 185, 129, 0.1); padding: 0.5rem; border-radius: 10px;">🧾</div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Customer Invoices</div>
+                    <div id="dash-cust-inv" style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">...</div>
+                </div>
+            </div>
+            <div class="card" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem;">
+                <div style="font-size: 1.75rem; background: rgba(245, 158, 11, 0.1); padding: 0.5rem; border-radius: 10px;">🏢</div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Business Invoices</div>
+                    <div id="dash-bus-inv" style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">...</div>
+                </div>
             </div>
         </div>
         
-        <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-            <div class="card stat-card" style="padding: 1.5rem; border-radius: var(--radius-lg); border-left: 4px solid var(--primary); background: linear-gradient(to right, rgba(59,130,246,0.05), transparent);">
-                <h3 style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Total Products</h3>
-                <div class="stat-value" id="dash-products" style="font-size: 2.25rem; font-weight: 700; color: var(--text-primary);">...</div>
-            </div>
-            <div class="card stat-card" style="padding: 1.5rem; border-radius: var(--radius-lg); border-left: 4px solid #10b981; background: linear-gradient(to right, rgba(16,185,129,0.05), transparent);">
-                <h3 style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Customer Invoices</h3>
-                <div class="stat-value" id="dash-cust-inv" style="font-size: 2.25rem; font-weight: 700; color: var(--text-primary);">...</div>
-            </div>
-            <div class="card stat-card" style="padding: 1.5rem; border-radius: var(--radius-lg); border-left: 4px solid #f59e0b; background: linear-gradient(to right, rgba(245,158,11,0.05), transparent);">
-                <h3 style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Business Invoices</h3>
-                <div class="stat-value" id="dash-bus-inv" style="font-size: 2.25rem; font-weight: 700; color: var(--text-primary);">...</div>
-            </div>
-            <div class="card stat-card" style="padding: 1.5rem; border-radius: var(--radius-lg); border-left: 4px solid #8b5cf6; background: linear-gradient(to right, rgba(139,92,246,0.05), transparent);">
-                <h3 style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Total Revenue</h3>
-                <div class="stat-value" id="dash-revenue" style="font-size: 2.25rem; font-weight: 700; color: var(--text-primary);">...</div>
-            </div>
-        </div>
-        
-        <div class="dashboard-bottom" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-            <div class="card mt-20" style="padding: 1.5rem; border-radius: var(--radius-lg); flex-grow: 1;">
-                <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Recent Activity</h3>
-                <div class="table-container" style="margin-top: 1rem;">
+        <!-- RECENT ACTIVITY & QUICK ACTIONS -->
+        <div class="dashboard-bottom" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.75rem;">
+            <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; color: var(--text-primary); font-size: 1.15rem; font-weight: 600;">Recent Invoices & Activity</h3>
+                    <button class="btn btn-sm btn-secondary" onclick="window.location.hash='#/invoices/customer'" style="font-size: 0.78rem;">View All &rarr;</button>
+                </div>
+                <div class="table-container" style="margin-top: 0.75rem;">
                     <table style="width:100%; border-collapse: collapse; text-align:left;">
                         <thead>
-                            <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.9rem;">
-                                <th style="padding:1rem;">Type</th>
-                                <th style="padding:1rem;">ID</th>
-                                <th style="padding:1rem;">Date</th>
-                                <th style="padding:1rem;">Status</th>
+                            <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.85rem; background: rgba(248, 250, 252, 0.7);">
+                                <th style="padding:0.75rem 1rem;">Type</th>
+                                <th style="padding:0.75rem 1rem;">ID</th>
+                                <th style="padding:0.75rem 1rem;">Date</th>
+                                <th style="padding:0.75rem 1rem;">Total</th>
+                                <th style="padding:0.75rem 1rem;">Status</th>
                             </tr>
                         </thead>
                         <tbody id="dash-activity">
-                            <tr><td colspan="4" style="padding:1rem; text-align:center; color: var(--text-muted);">Loading...</td></tr>
+                            <tr><td colspan="5" style="padding:1.5rem; text-align:center; color: var(--text-muted);">
+                                <div class="skeleton-shimmer" style="width: 100%; height: 20px; margin-bottom: 0.5rem;"></div>
+                                <div class="skeleton-shimmer" style="width: 80%; height: 20px;"></div>
+                            </td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            <div class="card mt-20" style="padding: 1.5rem; border-radius: var(--radius-lg); max-width: 400px; width: 100%;">
-                <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Quick Actions</h3>
-                <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-                    <button class="btn btn-outline" style="justify-content: flex-start; padding: 0.85rem 1rem;" onclick="window.location.hash='#/products'">📦 Manage Products</button>
-                    <button class="btn btn-outline" style="justify-content: flex-start; padding: 0.85rem 1rem;" onclick="window.location.hash='#/customers'">👥 Add Customer</button>
-                    <button class="btn btn-outline" style="justify-content: flex-start; padding: 0.85rem 1rem;" onclick="window.location.hash='#/invoices/customer'">🧾 Create Invoice</button>
-                    <button class="btn btn-outline" style="justify-content: flex-start; padding: 0.85rem 1rem;" onclick="window.location.hash='#/workers'">⚙️ Manage Workers</button>
+
+            <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); max-width: 420px; width: 100%;">
+                <h3 style="margin-bottom: 0.5rem; color: var(--text-primary); font-size: 1.15rem; font-weight: 600;">Workspace Operations</h3>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">Quick shortcuts to manage your workspace features.</p>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/products'">
+                        <span style="font-size: 1.1rem;">📦</span> Manage Products Inventory
+                    </button>
+                    <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/customers'">
+                        <span style="font-size: 1.1rem;">👥</span> Customers Directory
+                    </button>
+                    <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/invoices/customer'">
+                        <span style="font-size: 1.1rem;">🧾</span> Customer Invoices
+                    </button>
+                    <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/invoices/business'">
+                        <span style="font-size: 1.1rem;">🏢</span> Business B2B Invoices
+                    </button>
+                    <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/workers'">
+                        <span style="font-size: 1.1rem;">⚙️</span> Members & Permissions
+                    </button>
                 </div>
             </div>
         </div>
@@ -124,32 +238,104 @@ export const renderOverview = async (container, workspaceId) => {
 
         const allInvoices = [...custInvoices, ...busInvoices];
         
-        // Calculate Revenue (only from PAID invoices)
-        const totalRevenue = allInvoices
-            .filter(inv => inv.status === 'PAID')
-            .reduce((sum, inv) => sum + (inv.totalPrice || 0), 0);
+        // Calculations
+        let totalSales = 0;
+        let revenueReceived = 0;
+        let revenuePending = 0;
+        let totalProfit = 0;
 
-        // Sort for recent activity
-        const recent = allInvoices.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+        allInvoices.forEach(inv => {
+            const isPaid = (inv.status || '').toUpperCase() === 'PAID';
+            const price = Number(inv.totalPrice) || 0;
+            totalSales += price;
 
-        // Update UI
-        document.getElementById('dash-products').textContent = products.length;
-        document.getElementById('dash-cust-inv').textContent = custInvoices.length;
-        document.getElementById('dash-bus-inv').textContent = busInvoices.length;
-        document.getElementById('dash-revenue').textContent = '$' + totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (isPaid) {
+                revenueReceived += price;
 
-        const activityTbody = document.getElementById('dash-activity');
-        if (recent.length === 0) {
-            activityTbody.innerHTML = `<tr><td colspan="4" style="padding:1rem; text-align:center; color: var(--text-muted);">No recent activity.</td></tr>`;
-        } else {
-            activityTbody.innerHTML = recent.map(inv => `
-                <tr style="border-bottom: 1px solid var(--border-color);">
-                    <td style="padding:1rem;">${inv.isBusinessInvoice ? 'Business Invoice' : 'Customer Invoice'}</td>
-                    <td style="padding:1rem;"><strong>${inv.uniqueId}</strong></td>
-                    <td style="padding:1rem;">${new Date(inv.timestamp).toLocaleDateString()}</td>
-                    <td style="padding:1rem;"><span class="badge" style="background:${inv.status === 'PAID' ? '#4CAF50' : '#f44336'};">${inv.status}</span></td>
-                </tr>
-            `).join('');
+                // Calculate Net Profit
+                if (inv.items && Array.isArray(inv.items)) {
+                    const calc = calculateInvoiceTotal(
+                        inv.items, 
+                        inv.discountPercent || 0, 
+                        inv.additionalCut || 0, 
+                        inv.taxPercent || 0, 
+                        inv.shippingCost || 0
+                    );
+                    totalProfit += (calc.totalProfit || 0);
+                }
+            } else {
+                revenuePending += price;
+            }
+        });
+
+        // Compute Percentages for Revenue Line Measurement
+        const paidPercent = totalSales > 0 ? ((revenueReceived / totalSales) * 100) : 0;
+        const pendingPercent = totalSales > 0 ? ((revenuePending / totalSales) * 100) : 0;
+
+        // Update Line Measurement UI
+        const barReceivedEl = container.querySelector('#bar-received');
+        const barPendingEl = container.querySelector('#bar-pending');
+        const measureStatsEl = container.querySelector('#revenue-measure-stats');
+        const legendReceivedEl = container.querySelector('#legend-received-amt');
+        const legendPendingEl = container.querySelector('#legend-pending-amt');
+        const legendTotalSalesEl = container.querySelector('#legend-total-sales');
+
+        if (barReceivedEl) barReceivedEl.style.width = paidPercent.toFixed(1) + '%';
+        if (barPendingEl) barPendingEl.style.width = pendingPercent.toFixed(1) + '%';
+        
+        const formatCurr = (n) => '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        if (measureStatsEl) {
+            measureStatsEl.innerHTML = `
+                <span style="color: #059669;">Received: ${formatCurr(revenueReceived)} (${paidPercent.toFixed(1)}%)</span>
+                &nbsp;&bull;&nbsp;
+                <span style="color: #ea580c;">Pending: ${formatCurr(revenuePending)} (${pendingPercent.toFixed(1)}%)</span>
+            `;
+        }
+
+        if (legendReceivedEl) legendReceivedEl.textContent = formatCurr(revenueReceived);
+        if (legendPendingEl) legendPendingEl.textContent = formatCurr(revenuePending);
+        if (legendTotalSalesEl) legendTotalSalesEl.textContent = formatCurr(totalSales);
+
+        // Update Metrics Cards
+        const elTotalSales = container.querySelector('#dash-total-sales');
+        const elRevReceived = container.querySelector('#dash-revenue-received');
+        const elRevPending = container.querySelector('#dash-revenue-pending');
+        const elTotalProfit = container.querySelector('#dash-total-profit');
+        const elProducts = container.querySelector('#dash-products');
+        const elCustInv = container.querySelector('#dash-cust-inv');
+        const elBusInv = container.querySelector('#dash-bus-inv');
+
+        if (elTotalSales) elTotalSales.textContent = formatCurr(totalSales);
+        if (elRevReceived) elRevReceived.textContent = formatCurr(revenueReceived);
+        if (elRevPending) elRevPending.textContent = formatCurr(revenuePending);
+        if (elTotalProfit) elTotalProfit.textContent = formatCurr(totalProfit);
+        if (elProducts) elProducts.textContent = products.length;
+        if (elCustInv) elCustInv.textContent = custInvoices.length;
+        if (elBusInv) elBusInv.textContent = busInvoices.length;
+
+        // Recent Activity Table
+        const recent = allInvoices.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 6);
+        const activityTbody = container.querySelector('#dash-activity');
+        
+        if (activityTbody) {
+            if (recent.length === 0) {
+                activityTbody.innerHTML = `<tr><td colspan="5" style="padding:2rem 1rem; text-align:center; color: var(--text-muted);">No invoices recorded yet.</td></tr>`;
+            } else {
+                activityTbody.innerHTML = recent.map(inv => {
+                    const isPaid = (inv.status || '').toUpperCase() === 'PAID';
+                    const badgeClass = isPaid ? 'badge-paid' : 'badge-unpaid';
+                    return `
+                        <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.15s ease;">
+                            <td style="padding:0.85rem 1rem; font-size:0.85rem; color:var(--text-secondary);">${inv.isBusinessInvoice ? '🏢 Business' : '🧾 Customer'}</td>
+                            <td style="padding:0.85rem 1rem;"><code style="font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.04); padding: 0.2rem 0.4rem; border-radius: 4px;">${inv.uniqueId}</code></td>
+                            <td style="padding:0.85rem 1rem; font-size: 0.85rem; color: var(--text-secondary);">${new Date(inv.timestamp).toLocaleDateString()}</td>
+                            <td style="padding:0.85rem 1rem; font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">$${Number(inv.totalPrice || 0).toFixed(2)}</td>
+                            <td style="padding:0.85rem 1rem;"><span class="${badgeClass}">${inv.status || 'UNPAID'}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
         }
 
     } catch (e) {

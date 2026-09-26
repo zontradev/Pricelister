@@ -33,7 +33,9 @@
 
 .sidebar-header h2 {
     font-size: 1.25rem;
+    font-weight: 700;
     color: var(--primary);
+    letter-spacing: -0.01em;
     margin: 0;
 }
 
@@ -76,9 +78,10 @@
 }
 
 .nav-item.active {
-    background-color: var(--surface-50);
+    background-color: var(--primary-subtle, rgba(225, 29, 72, 0.08));
     color: var(--primary);
     border-left-color: var(--primary);
+    font-weight: 600;
 }
 
 .sidebar-footer {
@@ -97,13 +100,14 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background-color: var(--primary);
+    background: linear-gradient(135deg, #ff3366, #e11d48);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
     margin-right: 0.75rem;
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.35);
 }
 
 .user-details {

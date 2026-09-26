@@ -3,6 +3,8 @@ import { generateUniqueId } from '../utils/idGenerator.js';
 import { Invoice, InvoiceItem } from '../../DataModel.js';
 import { validateInvoice } from '../schemas/invoiceSchema.js';
 import { calculateInvoiceTotal } from '../utils/invoiceCalculator.js';
+import { getProductService } from './productService.js';
+import { getSettingsService } from './settingsService.js';
 
 export const getInvoiceService = (workspaceId) => {
     const customerInvoiceRepo = createRepository('Invoices', workspaceId);
@@ -29,14 +31,30 @@ export const getInvoiceService = (workspaceId) => {
             return await repo.getById(id);
         },
 
-        createInvoice: async (invoiceData, items, creatorId) => {
-            // First construct the invoice object to validate
+        createInvoice: async (invoiceData, items, creatorId, enableVendingParam = null) => {
+            const isBus = Boolean(invoiceData.isBusinessInvoice);
+            
+            // Format invoice number according to specification:
+            // Customer: INV-<Timestamp>
+            // Business: BusInv-000000 to BusInv-999999 (editable)
+            let finalInvNumber = (invoiceData.invoiceNumber || invoiceData.busInvNumber || '').trim();
+            if (!finalInvNumber) {
+                if (isBus) {
+                    finalInvNumber = "BusInv-" + String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+                } else {
+                    finalInvNumber = "INV-" + Date.now();
+                }
+            }
+
+            // Construct invoice model
             const newInvoice = new Invoice({
                 ...invoiceData,
-                uniqueId: generateUniqueId(),
-                items: items, // Will be structured and calculated below
+                invoiceNumber: finalInvNumber,
+                busInvNumber: isBus ? finalInvNumber : (invoiceData.busInvNumber || ""),
+                uniqueId: finalInvNumber,
+                items: items,
                 creatorId: creatorId,
-                timestamp: Date.now()
+                timestamp: invoiceData.timestamp || Date.now()
             });
 
             // Ensure items are properly instantiated InvoiceItem models
@@ -54,10 +72,7 @@ export const getInvoiceService = (workspaceId) => {
                 newInvoice.shippingCost
             );
 
-            // Also ensure each item's totalPrice/profit is set inside the item object
-            // (The calculator calculates totals, but we need to ensure the item properties are populated)
             newInvoice.items.forEach(item => {
-                const itemCalc = calculateInvoiceTotal([{...item}], 0, 0); // single item calculation helper equivalent
                 item.totalPrice = item.quantity * item.unitPrice;
                 item.itemProfit = item.totalPrice - (item.quantity * item.unitCost);
             });
@@ -67,6 +82,26 @@ export const getInvoiceService = (workspaceId) => {
 
             const repo = newInvoice.isBusinessInvoice ? businessInvoiceRepo : customerInvoiceRepo;
             const id = await repo.add(JSON.parse(JSON.stringify(newInvoice)));
+            
+            // VENDING MODE: Check if enabled, then deduct inventory quantities
+            let shouldDeduct = enableVendingParam;
+            if (shouldDeduct === null || shouldDeduct === undefined) {
+                try {
+                    const settingsService = getSettingsService(workspaceId);
+                    shouldDeduct = await settingsService.isVendingEnabled();
+                } catch(e) {
+                    console.warn("Could not check vending status:", e);
+                }
+            }
+
+            if (shouldDeduct) {
+                const prodService = getProductService(workspaceId);
+                for (const item of newInvoice.items) {
+                    if (item.productId) {
+                        await prodService.deductProductQuantity(item.productId, item.quantity);
+                    }
+                }
+            }
             
             // Post-creation triggers
             

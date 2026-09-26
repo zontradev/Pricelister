@@ -47,9 +47,9 @@ export const renderCategories = async (container, workspaceId) => {
         </div>
     `;
 
-    const formContainer = document.getElementById('category-form-container');
-    const form = document.getElementById('category-form');
-    const tbody = document.getElementById('category-list-body');
+    const formContainer = container.querySelector('#category-form-container');
+    const form = container.querySelector('#category-form');
+    const tbody = container.querySelector('#category-list-body');
     
     let unsubscribe = null;
     
@@ -76,22 +76,22 @@ export const renderCategories = async (container, workspaceId) => {
             `).join('');
             
             // Attach event listeners
-            document.querySelectorAll('.edit-cat').forEach(btn => {
+            container.querySelectorAll('.edit-cat').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.target.getAttribute('data-id');
                     const cat = categories.find(c => c.id === id);
                     if (cat) {
-                        document.getElementById('cat-id').value = cat.id;
-                        document.getElementById('cat-unique-id').value = cat.uniqueId;
-                        document.getElementById('cat-name').value = cat.name;
-                        document.getElementById('cat-color').value = cat.color;
-                        document.getElementById('cat-form-title').textContent = 'Edit Category';
+                        container.querySelector('#cat-id').value = cat.id;
+                        container.querySelector('#cat-unique-id').value = cat.uniqueId;
+                        container.querySelector('#cat-name').value = cat.name;
+                        container.querySelector('#cat-color').value = cat.color;
+                        container.querySelector('#cat-form-title').textContent = 'Edit Category';
                         formContainer.style.display = 'block';
                     }
                 });
             });
             
-            document.querySelectorAll('.del-cat').forEach(btn => {
+            container.querySelectorAll('.del-cat').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     if (await showAlert.confirm('Delete this category?')) {
                         const id = e.target.getAttribute('data-id');
@@ -113,14 +113,14 @@ export const renderCategories = async (container, workspaceId) => {
     };
     
     // UI Toggles
-    document.getElementById('btn-add-category').addEventListener('click', () => {
+    container.querySelector('#btn-add-category').addEventListener('click', () => {
         form.reset();
-        document.getElementById('cat-id').value = '';
-        document.getElementById('cat-form-title').textContent = 'New Category';
+        container.querySelector('#cat-id').value = '';
+        container.querySelector('#cat-form-title').textContent = 'New Category';
         formContainer.style.display = 'block';
     });
 
-    document.getElementById('cat-cancel-btn').addEventListener('click', () => {
+    container.querySelector('#cat-cancel-btn').addEventListener('click', () => {
         formContainer.style.display = 'none';
         form.reset();
     });
@@ -128,14 +128,14 @@ export const renderCategories = async (container, workspaceId) => {
     // Form Submit
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btn = document.getElementById('cat-submit-btn');
+        const btn = container.querySelector('#cat-submit-btn');
         btn.disabled = true;
         
-        const id = document.getElementById('cat-id').value;
+        const id = container.querySelector('#cat-id').value;
         const data = {
-            name: document.getElementById('cat-name').value,
-            color: document.getElementById('cat-color').value,
-            uniqueId: document.getElementById('cat-unique-id').value
+            name: container.querySelector('#cat-name').value,
+            color: container.querySelector('#cat-color').value,
+            uniqueId: container.querySelector('#cat-unique-id').value
         };
         
         try {
@@ -157,3 +157,4 @@ export const renderCategories = async (container, workspaceId) => {
 
     loadCategories();
 };
+

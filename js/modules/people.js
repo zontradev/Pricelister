@@ -78,18 +78,18 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         </div>
     `;
 
-    const formContainer = document.getElementById('person-form-container');
-    const form = document.getElementById('person-form');
-    const tbody = document.getElementById('people-list-body');
-    const title = document.getElementById('person-form-title');
+    const formContainer = container.querySelector('#person-form-container');
+    const form = container.querySelector('#person-form');
+    const tbody = container.querySelector('#people-list-body');
+    const title = container.querySelector('#person-form-title');
 
     let unsubscribe = null;
 
     // Tab Switching logic (only attached if tabs exist)
     if (!isBusinessMode) {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
+        container.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.tab-btn').forEach(b => {
+                container.querySelectorAll('.tab-btn').forEach(b => {
                     b.style.borderBottom = 'none';
                     b.classList.remove('active-tab');
                 });
@@ -145,16 +145,16 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     };
     
     const attachListEvents = () => {
-        document.querySelectorAll('.edit-person').forEach(btn => {
+        container.querySelectorAll('.edit-person').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.getAttribute('data-id');
                 const p = dataList.find(x => x.id === id);
                 if (p) {
-                    document.getElementById('person-id').value = p.id;
-                    document.getElementById('person-name').value = p.name;
-                    document.getElementById('person-phone').value = p.phone;
-                    document.getElementById('person-email').value = p.email;
-                    document.getElementById('person-address').value = p.address;
+                    container.querySelector('#person-id').value = p.id;
+                    container.querySelector('#person-name').value = p.name;
+                    container.querySelector('#person-phone').value = p.phone;
+                    container.querySelector('#person-email').value = p.email;
+                    container.querySelector('#person-address').value = p.address;
                     
                     title.textContent = `Edit ${currentTab.slice(0, -1)}`;
                     formContainer.style.display = 'block';
@@ -163,7 +163,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         });
 
-        document.querySelectorAll('.del-person').forEach(btn => {
+        container.querySelectorAll('.del-person').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
                 if (await showAlert.confirm('Delete this entry?')) {
@@ -183,14 +183,14 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     };
 
     // UI Toggles
-    document.getElementById('btn-add-person').addEventListener('click', () => {
+    container.querySelector('#btn-add-person').addEventListener('click', () => {
         form.reset();
-        document.getElementById('person-id').value = '';
+        container.querySelector('#person-id').value = '';
         title.textContent = `New ${currentTab.slice(0, -1)}`;
         formContainer.style.display = 'block';
     });
 
-    document.getElementById('person-cancel-btn').addEventListener('click', () => {
+    container.querySelector('#person-cancel-btn').addEventListener('click', () => {
         formContainer.style.display = 'none';
         form.reset();
     });
@@ -198,15 +198,15 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     // Form Submit
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btn = document.getElementById('person-submit-btn');
+        const btn = container.querySelector('#person-submit-btn');
         btn.disabled = true;
         
-        const id = document.getElementById('person-id').value;
+        const id = container.querySelector('#person-id').value;
         const data = {
-            name: document.getElementById('person-name').value,
-            phone: document.getElementById('person-phone').value,
-            email: document.getElementById('person-email').value,
-            address: document.getElementById('person-address').value
+            name: container.querySelector('#person-name').value,
+            phone: container.querySelector('#person-phone').value,
+            email: container.querySelector('#person-email').value,
+            address: container.querySelector('#person-address').value
         };
         
         try {
@@ -232,3 +232,4 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
     loadData();
 };
+

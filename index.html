@@ -31,7 +31,7 @@
 
         /* Header nav active state */
         .nav-links a.active {
-            color: var(--primary, #3b82f6);
+            color: var(--primary, #e11d48);
             font-weight: 600;
         }
 
@@ -121,13 +121,14 @@
         }
         .pricing-card:hover { box-shadow: 0 12px 24px -8px rgba(0,0,0,0.08); transform: translateY(-2px); }
         .pricing-card.featured {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 1px #3b82f6, 0 12px 24px -8px rgba(59,130,246,0.15);
+            border-color: var(--primary, #e11d48);
+            box-shadow: 0 0 0 1px var(--primary, #e11d48), 0 12px 24px -8px rgba(225, 29, 72, 0.2);
         }
         .pricing-badge {
             position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-            background: #3b82f6; color: white; font-size: 0.75rem; font-weight: 600;
+            background: linear-gradient(135deg, #ff3366, #e11d48); color: white; font-size: 0.75rem; font-weight: 600;
             padding: 0.25rem 0.85rem; border-radius: 999px;
+            box-shadow: 0 2px 8px rgba(225, 29, 72, 0.35);
         }
         .pricing-price { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.5rem; }
         .pricing-price .amount { font-size: 2.5rem; font-weight: 700; color: #0f172a; }
@@ -147,8 +148,8 @@
             border-radius: 10px; font-size: 1rem;
         }
         .input-with-btn input:focus {
-            outline: none; border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+            outline: none; border-color: var(--primary, #e11d48);
+            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
         }
         .find-state { text-align: center; padding: 2rem 1rem 1rem; }
         .find-result { margin-top: 1.75rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; }
@@ -641,7 +642,7 @@
                             </div>
 
                             <h4 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Your Member Profile</h4>
-                            <div class="result-details" style="background: rgba(59, 130, 246, 0.05); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid rgba(59, 130, 246, 0.2);">
+                            <div class="result-details" style="background: rgba(225, 29, 72, 0.04); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid rgba(225, 29, 72, 0.18);">
                                 <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
                                     <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member Name</span>
                                     <span class="value" id="result-worker-name" style="color: var(--text-primary); font-weight: 600;">—</span>
@@ -838,7 +839,7 @@
                     </div>
                     <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
                         <span style="color:#64748b;">Access Role</span>
-                        <span id="launcher-user-role" class="badge" style="background:#e0e7ff;color:#4338ca;">CREATOR_ADMIN</span>
+                        <span id="launcher-user-role" class="badge" style="background:rgba(225, 29, 72, 0.12);color:#e11d48;">CREATOR_ADMIN</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
                         <span style="color:#64748b;">Since Joined</span>

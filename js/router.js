@@ -33,20 +33,20 @@ const routes = {
     '/settings': { render: (c, w) => renderSettings(c, w), title: 'Settings / General' }
 };
 
-export const initRouter = async () => {
+export const initRouter = async (workspaceIdParam = null) => {
     // Resolve current workspace ID once for the router
     const user = authService.getCurrentUser();
     if (!user) return; // Prevent routing if not logged in
     
-    let currentWorkspaceId = null;
-    try {
-        const ws = await firestoreService.checkWorkspaceExists(user.uid);
-        if (ws) currentWorkspaceId = ws.id;
-    } catch (e) {
-        console.error("Failed to load workspace for router", e);
+    let currentWorkspaceId = workspaceIdParam;
+    if (!currentWorkspaceId) {
+        try {
+            const ws = await firestoreService.checkWorkspaceExists(user.uid, user.email);
+            if (ws) currentWorkspaceId = ws.id;
+        } catch (e) {
+            console.error("Failed to load workspace for router", e);
+        }
     }
-
-    const routeCache = {};
 
     const handleRoute = async () => {
         if (!currentWorkspaceId) return; // Wait for workspace
@@ -61,32 +61,14 @@ export const initRouter = async () => {
             const breadcrumbs = document.getElementById('breadcrumbs');
             if (breadcrumbs) breadcrumbs.textContent = route.title;
 
-            // Render content using DOM Cache
+            // Render fresh view to prevent stale cache, stock counts, and vending mode state
             const mainContainer = document.getElementById('workspace-container');
             if (mainContainer) {
-                // Hide all currently cached route views
-                Array.from(mainContainer.children).forEach(child => {
-                    child.style.display = 'none';
-                });
-                
-                if (routeCache[path]) {
-                    // Show cached container instantly
-                    routeCache[path].style.display = 'block';
-                } else {
-                    // Create new container for this route and render
-                    const routeContainer = document.createElement('div');
-                    routeContainer.className = 'route-view';
-                    
-                    // Show local loading state if not the very first load
-                    if (document.getElementById('app-shell').style.display !== 'none') {
-                        routeContainer.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Loading data...</div>';
-                    }
-                    
-                    mainContainer.appendChild(routeContainer);
-                    routeCache[path] = routeContainer;
-                    
-                    await route.render(routeContainer, currentWorkspaceId);
-                }
+                mainContainer.innerHTML = '';
+                const routeContainer = document.createElement('div');
+                routeContainer.className = 'route-view';
+                mainContainer.appendChild(routeContainer);
+                await route.render(routeContainer, currentWorkspaceId);
             }
             
             // Hide the full-page loader and show app shell once the FIRST render is fully complete

@@ -273,7 +273,7 @@ export function initFindWorkspace() {
                 resWorkerRole.textContent = memberProfile.role || 'Worker';
                 const rUpper = (memberProfile.role || '').toUpperCase();
                 if (rUpper.includes('ADMIN')) {
-                    resWorkerRole.style.background = '#4338ca';
+                    resWorkerRole.style.background = '#be123c';
                 } else if (rUpper.includes('CO')) {
                     resWorkerRole.style.background = '#9c27b0';
                 } else {

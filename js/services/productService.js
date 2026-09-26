@@ -113,6 +113,24 @@ export const getProductService = (workspaceId) => {
                 isArchive: false,
                 updatedTimestamp: Date.now()
             });
+        },
+
+        deductProductQuantity: async (id, quantityToDeduct) => {
+            try {
+                const prod = await repo.getById(id);
+                if (prod) {
+                    const currentQty = Number(prod.quantity) || 0;
+                    const newQty = Math.max(0, currentQty - quantityToDeduct);
+                    await repo.update(id, {
+                        quantity: newQty,
+                        updatedTimestamp: Date.now()
+                    });
+                    return newQty;
+                }
+            } catch (err) {
+                console.error("Failed to deduct product quantity in vending mode:", err);
+            }
+            return null;
         }
     };
 };

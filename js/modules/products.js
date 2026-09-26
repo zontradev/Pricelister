@@ -202,21 +202,21 @@ export const renderProducts = async (container, workspaceId) => {
         </div>
     `;
 
-    const formContainer = document.getElementById('product-form-container');
-    const form = document.getElementById('product-form');
-    const tbody = document.getElementById('product-list-body');
-    const catSelect = document.getElementById('prd-category');
+    const formContainer = container.querySelector('#product-form-container');
+    const form = container.querySelector('#product-form');
+    const tbody = container.querySelector('#product-list-body');
+    const catSelect = container.querySelector('#prd-category');
     
     // Attach filter event listeners
-    document.getElementById('filter-sort').addEventListener('change', () => renderProductList());
-    document.getElementById('filter-category').addEventListener('change', () => renderProductList());
+    container.querySelector('#filter-sort').addEventListener('change', () => renderProductList());
+    container.querySelector('#filter-category').addEventListener('change', () => renderProductList());
     
     let categoriesList = [];
     let activeProducts = [];
 
     const renderProductList = () => {
-        const sortVal = document.getElementById('filter-sort').value;
-        const catVal = document.getElementById('filter-category').value;
+        const sortVal = container.querySelector('#filter-sort').value;
+        const catVal = container.querySelector('#filter-category').value;
         
         let filtered = activeProducts.slice();
 
@@ -247,7 +247,7 @@ export const renderProducts = async (container, workspaceId) => {
             }
         });
 
-        document.getElementById('product-count').textContent = `${filtered.length} Products`;
+        container.querySelector('#product-count').textContent = `${filtered.length} Products`;
 
         if (filtered.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6" style="padding:1rem; text-align:center; color: var(--text-muted);">No products found.</td></tr>`;
@@ -288,7 +288,7 @@ export const renderProducts = async (container, workspaceId) => {
             catSelect.innerHTML = '<option value="">Select Category</option>' + 
                 categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
                 
-            document.getElementById('filter-category').innerHTML = '<option value="all">All Categories</option>' + 
+            container.querySelector('#filter-category').innerHTML = '<option value="all">All Categories</option>' + 
                 categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
             // Load products
@@ -303,14 +303,14 @@ export const renderProducts = async (container, workspaceId) => {
 
     const attachListEvents = () => {
         // Edit
-        document.querySelectorAll('.edit-prd').forEach(btn => {
+        container.querySelectorAll('.edit-prd').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.getAttribute('data-id');
                 const prd = activeProducts.find(p => p.id === id);
                 if (prd) {
-                    document.getElementById('prd-id').value = prd.id;
-                    document.getElementById('prd-image').value = prd.imageUri || '';
-                    const preview = document.getElementById('prd-image-preview');
+                    container.querySelector('#prd-id').value = prd.id;
+                    container.querySelector('#prd-image').value = prd.imageUri || '';
+                    const preview = container.querySelector('#prd-image-preview');
                     if (prd.imageUri) {
                         preview.src = prd.imageUri;
                         preview.style.display = 'block';
@@ -318,40 +318,40 @@ export const renderProducts = async (container, workspaceId) => {
                         preview.style.display = 'none';
                     }
                     
-                    document.getElementById('prd-name').value = prd.name || '';
-                    document.getElementById('prd-size').value = prd.sizeWeight || '';
-                    document.getElementById('prd-category').value = prd.category || '';
-                    document.getElementById('prd-upc').value = prd.upcCode || '';
-                    document.getElementById('prd-note').value = prd.note || '';
+                    container.querySelector('#prd-name').value = prd.name || '';
+                    container.querySelector('#prd-size').value = prd.sizeWeight || '';
+                    container.querySelector('#prd-category').value = prd.category || '';
+                    container.querySelector('#prd-upc').value = prd.upcCode || '';
+                    container.querySelector('#prd-note').value = prd.note || '';
                     
-                    document.getElementById('prd-qty').value = prd.quantity || 0;
+                    container.querySelector('#prd-qty').value = prd.quantity || 0;
                     
-                    document.getElementById('prd-cost-price').value = prd.price || '';
-                    document.getElementById('prd-sale-price').value = prd.salePrice || '';
-                    document.getElementById('prd-base-price').value = prd.basePrice || '';
-                    document.getElementById('prd-mrp').value = prd.mrp || '';
+                    container.querySelector('#prd-cost-price').value = prd.price || '';
+                    container.querySelector('#prd-sale-price').value = prd.salePrice || '';
+                    container.querySelector('#prd-base-price').value = prd.basePrice || '';
+                    container.querySelector('#prd-mrp').value = prd.mrp || '';
                     
-                    document.getElementById('prd-mfg-date').value = prd.mfgDate || '';
-                    document.getElementById('prd-exp-date').value = prd.expDate || '';
+                    container.querySelector('#prd-mfg-date').value = prd.mfgDate || '';
+                    container.querySelector('#prd-exp-date').value = prd.expDate || '';
                     
                     // Variations is an object/array in backend, we'll stringify for simple text input for now
                     let varStr = '';
                     if (prd.variations) {
                         varStr = typeof prd.variations === 'string' ? prd.variations : JSON.stringify(prd.variations);
                     }
-                    document.getElementById('prd-variations').value = varStr;
-                    document.getElementById('prd-color').value = prd.color || '#000000';
+                    container.querySelector('#prd-variations').value = varStr;
+                    container.querySelector('#prd-color').value = prd.color || '#000000';
                     
-                    document.getElementById('prd-form-title').textContent = 'Edit Product';
+                    container.querySelector('#prd-form-title').textContent = 'Edit Product';
                     formContainer.style.display = 'block';
-                    document.getElementById('product-list-container').style.display = 'none';
+                    container.querySelector('#product-list-container').style.display = 'none';
                     formContainer.scrollIntoView({ behavior: 'smooth' });
                 }
             });
         });
 
         // Duplicate
-        document.querySelectorAll('.dup-prd').forEach(btn => {
+        container.querySelectorAll('.dup-prd').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
                 const prd = activeProducts.find(p => p.id === id);
@@ -368,7 +368,7 @@ export const renderProducts = async (container, workspaceId) => {
         });
 
         // Archive
-        document.querySelectorAll('.arch-prd').forEach(btn => {
+        container.querySelectorAll('.arch-prd').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
                 if (await showAlert.confirm('Archive this product? It will not appear in the active list but remains available for existing invoices.')) {
@@ -385,18 +385,18 @@ export const renderProducts = async (container, workspaceId) => {
     };
 
     // UI Toggles
-    document.getElementById('btn-add-product').addEventListener('click', () => {
+    container.querySelector('#btn-add-product').addEventListener('click', () => {
         form.reset();
-        document.getElementById('prd-id').value = '';
-        document.getElementById('prd-color').value = '#000000';
-        document.getElementById('prd-image-preview').style.display = 'none';
-        document.getElementById('prd-form-title').textContent = 'New Product';
+        container.querySelector('#prd-id').value = '';
+        container.querySelector('#prd-color').value = '#000000';
+        container.querySelector('#prd-image-preview').style.display = 'none';
+        container.querySelector('#prd-form-title').textContent = 'New Product';
         formContainer.style.display = 'block';
-        document.getElementById('product-list-container').style.display = 'none';
+        container.querySelector('#product-list-container').style.display = 'none';
     });
     
     // Image Upload Handler
-    document.getElementById('prd-image-file').addEventListener('change', async (e) => {
+    container.querySelector('#prd-image-file').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
             try {
@@ -406,14 +406,14 @@ export const renderProducts = async (container, workspaceId) => {
                 
                 const url = await storageService.uploadImage(file);
                 
-                document.getElementById('prd-image').value = url;
-                const preview = document.getElementById('prd-image-preview');
+                container.querySelector('#prd-image').value = url;
+                const preview = container.querySelector('#prd-image-preview');
                 preview.src = url;
                 preview.style.display = 'block';
                 
                 btnLabel.innerHTML = 'Upload from Desktop<input type="file" id="prd-image-file" accept="image/*" style="display:none;">';
                 // reattach listener since we rewrote innerHTML
-                document.getElementById('prd-image-file').addEventListener('change', arguments.callee);
+                container.querySelector('#prd-image-file').addEventListener('change', arguments.callee);
                 
             } catch (error) {
                 showAlert.error('Image upload failed');
@@ -422,8 +422,8 @@ export const renderProducts = async (container, workspaceId) => {
     });
 
     // Image URL Preview update
-    document.getElementById('prd-image').addEventListener('input', (e) => {
-        const preview = document.getElementById('prd-image-preview');
+    container.querySelector('#prd-image').addEventListener('input', (e) => {
+        const preview = container.querySelector('#prd-image-preview');
         if (e.target.value) {
             preview.src = e.target.value;
             preview.style.display = 'block';
@@ -433,12 +433,12 @@ export const renderProducts = async (container, workspaceId) => {
     });
     
     // Quick Add Category Modal Logic
-    const catModal = document.getElementById('quick-category-modal');
-    const catNameInput = document.getElementById('quick-cat-name');
-    const catColorInput = document.getElementById('quick-cat-color');
-    const btnQuickCat = document.getElementById('btn-quick-cat');
-    const btnSaveCat = document.getElementById('quick-cat-save-btn');
-    const btnCancelCat = document.getElementById('quick-cat-cancel-btn');
+    const catModal = container.querySelector('#quick-category-modal');
+    const catNameInput = container.querySelector('#quick-cat-name');
+    const catColorInput = container.querySelector('#quick-cat-color');
+    const btnQuickCat = container.querySelector('#btn-quick-cat');
+    const btnSaveCat = container.querySelector('#quick-cat-save-btn');
+    const btnCancelCat = container.querySelector('#quick-cat-cancel-btn');
 
     btnQuickCat.addEventListener('click', () => {
         catNameInput.value = '';
@@ -486,39 +486,39 @@ export const renderProducts = async (container, workspaceId) => {
         }
     });
 
-    document.getElementById('prd-cancel-btn').addEventListener('click', () => {
+    container.querySelector('#prd-cancel-btn').addEventListener('click', () => {
         formContainer.style.display = 'none';
-        document.getElementById('product-list-container').style.display = 'block';
+        container.querySelector('#product-list-container').style.display = 'block';
         form.reset();
     });
 
     // Form Submit
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btn = document.getElementById('prd-submit-btn');
+        const btn = container.querySelector('#prd-submit-btn');
         btn.disabled = true;
         
-        const id = document.getElementById('prd-id').value;
+        const id = container.querySelector('#prd-id').value;
         const data = {
-            imageUri: document.getElementById('prd-image').value,
-            name: document.getElementById('prd-name').value,
-            sizeWeight: document.getElementById('prd-size').value,
-            category: document.getElementById('prd-category').value,
-            upcCode: document.getElementById('prd-upc').value,
-            note: document.getElementById('prd-note').value,
+            imageUri: container.querySelector('#prd-image').value,
+            name: container.querySelector('#prd-name').value,
+            sizeWeight: container.querySelector('#prd-size').value,
+            category: container.querySelector('#prd-category').value,
+            upcCode: container.querySelector('#prd-upc').value,
+            note: container.querySelector('#prd-note').value,
             
-            quantity: parseInt(document.getElementById('prd-qty').value || 0, 10),
+            quantity: parseInt(container.querySelector('#prd-qty').value || 0, 10),
             
-            price: document.getElementById('prd-cost-price').value ? parseFloat(document.getElementById('prd-cost-price').value) : 0,
-            salePrice: parseFloat(document.getElementById('prd-sale-price').value),
-            basePrice: document.getElementById('prd-base-price').value ? parseFloat(document.getElementById('prd-base-price').value) : 0,
-            mrp: document.getElementById('prd-mrp').value ? parseFloat(document.getElementById('prd-mrp').value) : 0,
+            price: container.querySelector('#prd-cost-price').value ? parseFloat(container.querySelector('#prd-cost-price').value) : 0,
+            salePrice: parseFloat(container.querySelector('#prd-sale-price').value),
+            basePrice: container.querySelector('#prd-base-price').value ? parseFloat(container.querySelector('#prd-base-price').value) : 0,
+            mrp: container.querySelector('#prd-mrp').value ? parseFloat(container.querySelector('#prd-mrp').value) : 0,
             
-            mfgDate: document.getElementById('prd-mfg-date').value,
-            expDate: document.getElementById('prd-exp-date').value,
+            mfgDate: container.querySelector('#prd-mfg-date').value,
+            expDate: container.querySelector('#prd-exp-date').value,
             
-            variations: document.getElementById('prd-variations').value,
-            color: document.getElementById('prd-color').value
+            variations: container.querySelector('#prd-variations').value,
+            color: container.querySelector('#prd-color').value
         };
         
         try {
@@ -531,7 +531,7 @@ export const renderProducts = async (container, workspaceId) => {
                 showAlert.success('Product added');
             }
             formContainer.style.display = 'none';
-            document.getElementById('product-list-container').style.display = 'block';
+            container.querySelector('#product-list-container').style.display = 'block';
             loadData();
         } catch (error) {
             showAlert.error(error.message);
@@ -542,3 +542,4 @@ export const renderProducts = async (container, workspaceId) => {
 
     loadData();
 };
+

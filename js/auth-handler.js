@@ -12,8 +12,8 @@ const formatRoleBadge = (role, element) => {
     const raw = (role || 'WORKER').toUpperCase();
     if (raw === 'CREATOR_ADMIN' || raw === 'ADMIN') {
         element.textContent = 'Admin';
-        element.style.background = '#e0e7ff';
-        element.style.color = '#4338ca';
+        element.style.background = 'rgba(225, 29, 72, 0.12)';
+        element.style.color = '#e11d48';
     } else if (raw === 'CO_ADMIN' || raw === 'CO-ADMIN') {
         element.textContent = 'Co-admin';
         element.style.background = '#fae8ff';
@@ -176,8 +176,16 @@ export const initAuthHandler = (pageType) => {
                     formatRoleBadge(workspace.role, document.getElementById('user-role'));
                     document.getElementById('user-avatar').textContent = user.email.charAt(0).toUpperCase();
 
+                    const roleUpper = (workspace.role || 'WORKER').toUpperCase();
+                    const isWorker = roleUpper === 'WORKER';
+                    const settingsNavLink = document.querySelector('a[data-route="settings"]');
+                    if (settingsNavLink && isWorker) {
+                        settingsNavLink.title = "Settings (Admins only)";
+                        settingsNavLink.innerHTML = 'Settings <span style="font-size:0.75rem; opacity:0.6;">🔒</span>';
+                    }
+
                     if (!routerInitialized) {
-                        initRouter();
+                        initRouter(workspace.id);
                         routerInitialized = true;
                     }
                 } catch (error) {
