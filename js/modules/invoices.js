@@ -447,6 +447,29 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const pickerCloseBtn = container.querySelector('#picker-close-btn');
     const pickerAddToInvBtn = container.querySelector('#picker-add-to-inv-btn');
     const pickerBtnSelectAll = container.querySelector('#picker-btn-select-all');
+    // Helper: Category Name & ID Resolution
+    function getCategoryName(catVal) {
+        if (!catVal) return '';
+        const found = allCategories.find(c => c.uniqueId === catVal || c.id === catVal || c.name === catVal);
+        if (found && found.name) return found.name;
+        if (/^[A-Za-z0-9_-]{7,}$/.test(catVal)) {
+            return 'Other';
+        }
+        return catVal;
+    }
+
+    function getCategoryUniqueId(catVal) {
+        if (!catVal) return '';
+        const found = allCategories.find(c => c.uniqueId === catVal || c.id === catVal || c.name === catVal);
+        return found ? (found.uniqueId || found.id || found.name) : catVal;
+    }
+
+    // Helper: Generate Random Business Invoice ID
+    function generateRandomBusInvId() {
+        const random6Digits = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+        return `BusInv-${random6Digits}`;
+    }
+
     // State for Smart Button / Dirty Checking
     let initialInvoiceFormSnapshot = null;
 
@@ -501,24 +524,24 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Switch View Helper
     const showEditorView = (isEdit = false, invoice = null) => {
-        listView.style.display = 'none';
-        editorView.style.display = 'block';
+        if (listView) listView.style.display = 'none';
+        if (editorView) editorView.style.display = 'block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         if (isEdit && invoice) {
             editingInvoiceId = invoice.id;
             editingInvoiceUniqueId = invoice.uniqueId || generateUniqueId();
             const displayInvNum = invoice.invoiceNumber || invoice.busInvNumber || invoice.uniqueId;
-            formTitle.textContent = `Edit ${typeLabel} (${displayInvNum})`;
-            btnSubmit.textContent = 'Update Invoice';
+            if (formTitle) formTitle.textContent = `Edit ${typeLabel} (${displayInvNum})`;
+            if (btnSubmit) btnSubmit.textContent = 'Update Invoice';
             populateFormForEdit(invoice);
             initialInvoiceFormSnapshot = getInvoiceFormSnapshot();
             checkInvoiceDirty();
         } else {
             editingInvoiceId = null;
             editingInvoiceUniqueId = generateUniqueId();
-            formTitle.textContent = `New ${typeLabel}`;
-            btnSubmit.textContent = 'Save Invoice';
+            if (formTitle) formTitle.textContent = `New ${typeLabel}`;
+            if (btnSubmit) btnSubmit.textContent = 'Save Invoice';
             resetForm();
             initialInvoiceFormSnapshot = null;
             checkInvoiceDirty();
@@ -526,8 +549,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     };
 
     const showListView = () => {
-        editorView.style.display = 'none';
-        listView.style.display = 'block';
+        if (editorView) editorView.style.display = 'none';
+        if (listView) listView.style.display = 'block';
         editingInvoiceId = null;
         editingInvoiceUniqueId = null;
     };
@@ -540,8 +563,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         showListView();
     };
 
-    btnBackToList.addEventListener('click', handleCloseEditor);
-    btnCancel.addEventListener('click', handleCloseEditor);
+    if (btnBackToList) btnBackToList.addEventListener('click', handleCloseEditor);
+    if (btnCancel) btnCancel.addEventListener('click', handleCloseEditor);
 
     // Populate Form for Editing
     const populateFormForEdit = (inv) => {
@@ -682,23 +705,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         } else {
             previewEl.style.display = 'none';
         }
-    };
-
-    // Category Helpers
-    const getCategoryName = (catVal) => {
-        if (!catVal) return '';
-        const found = allCategories.find(c => c.uniqueId === catVal || c.id === catVal || c.name === catVal);
-        if (found && found.name) return found.name;
-        if (/^[A-Za-z0-9_-]{7,}$/.test(catVal)) {
-            return 'Other';
-        }
-        return catVal;
-    };
-
-    const getCategoryUniqueId = (catVal) => {
-        if (!catVal) return '';
-        const found = allCategories.find(c => c.uniqueId === catVal || c.id === catVal || c.name === catVal);
-        return found ? (found.uniqueId || found.id || found.name) : catVal;
     };
 
     const getVisibleProducts = () => {
@@ -1044,12 +1050,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             showAlert.success(`Added ${addedCount} products to the invoice!`);
         });
     }
-
-    // Helper: Generate Random Business Invoice ID
-    const generateRandomBusInvId = () => {
-        const random6Digits = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-        return `BusInv-${random6Digits}`;
-    };
 
     const btnRegenBusId = container.querySelector('#btn-regen-bus-id');
     if (btnRegenBusId) {
@@ -1630,9 +1630,12 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     }
 
     // FORM OPEN EVENT
-    container.querySelector('#btn-add-invoice').addEventListener('click', () => {
-        showEditorView(false);
-    });
+    const btnAddInv = container.querySelector('#btn-add-invoice');
+    if (btnAddInv) {
+        btnAddInv.addEventListener('click', () => {
+            showEditorView(false);
+        });
+    }
 
     // Single item add fallback
     container.querySelector('#inv-btn-add-item')?.addEventListener('click', () => {
@@ -1706,115 +1709,117 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     });
 
     // SAVE / UPDATE INVOICE HANDLER
-    btnSubmit.addEventListener('click', async () => {
-        try {
-            if (invoiceItems.length === 0) {
-                throw new Error("Please add at least one product to the invoice.");
-            }
-
-            btnSubmit.disabled = true;
-            btnSubmit.textContent = editingInvoiceId ? "Updating..." : "Saving...";
-
-            // Status Title Case ("Paid", "Unpaid", "Draft")
-            let rawStatus = (container.querySelector('#inv-status')?.value || 'Paid').trim();
-            if (rawStatus.toUpperCase() === 'PAID') rawStatus = 'Paid';
-            else if (rawStatus.toUpperCase() === 'UNPAID') rawStatus = 'Unpaid';
-            else rawStatus = 'Draft';
-
-            const invoiceData = {
-                isBusinessInvoice,
-                discountPercent: parseFloat(container.querySelector('#inv-discount')?.value || 0),
-                additionalCut: parseFloat(container.querySelector('#inv-add-cut')?.value || 0),
-                taxPercent: parseFloat(container.querySelector('#inv-tax')?.value || 0),
-                shippingCost: parseFloat(container.querySelector('#inv-shipping')?.value || 0),
-                status: rawStatus,
-                note: container.querySelector('#inv-note')?.value || '',
-                timestamp: Date.now()
-            };
-
-            // Shared Issuer Data
-            const bSelect = container.querySelector('#inv-business');
-            if (!bSelect.value) throw new Error("Please select the issuing Business.");
-            
-            const bus = allBusinesses.find(b => b.id === bSelect.value);
-            if (bus) {
-                invoiceData.businessId = bus.uniqueId || bus.id;
-                invoiceData.businessName = bus.name || '';
-                invoiceData.businessAddress = bus.address || '';
-                invoiceData.businessPhone = bus.phone || '';
-                invoiceData.businessEmail = bus.email || '';
-            }
-
-            if (isBusinessInvoice) {
-                // 5 mandatory items: Business*, Client*, Title*, Invoice Number*, At least one item*
-                const cSelect = container.querySelector('#inv-client');
-                if (!cSelect || !cSelect.value) {
-                    throw new Error("Client (Billed To) is required for Business Invoices.");
+    if (btnSubmit) {
+        btnSubmit.addEventListener('click', async () => {
+            try {
+                if (invoiceItems.length === 0) {
+                    throw new Error("Please add at least one product to the invoice.");
                 }
 
-                const cli = allClients.find(c => c.id === cSelect.value);
-                if (!cli) {
-                    throw new Error("Please select a valid Client.");
-                }
+                btnSubmit.disabled = true;
+                btnSubmit.textContent = editingInvoiceId ? "Updating..." : "Saving...";
 
-                invoiceData.clientId = cli.uniqueId || cli.id;
-                invoiceData.clientAddress = cli.address || '';
-                invoiceData.clientPhone = cli.phone || '';
-                invoiceData.clientEmail = cli.email || '';
-                invoiceData.customerName = cli.name || '';
-                invoiceData.customerNumber = cli.phone || '';
+                // Status Title Case ("Paid", "Unpaid", "Draft")
+                let rawStatus = (container.querySelector('#inv-status')?.value || 'Paid').trim();
+                if (rawStatus.toUpperCase() === 'PAID') rawStatus = 'Paid';
+                else if (rawStatus.toUpperCase() === 'UNPAID') rawStatus = 'Unpaid';
+                else rawStatus = 'Draft';
 
-                const invTitle = (container.querySelector('#inv-title')?.value || '').trim();
-                if (!invTitle) throw new Error("Invoice Title is required.");
-                invoiceData.title = invTitle;
+                const invoiceData = {
+                    isBusinessInvoice,
+                    discountPercent: parseFloat(container.querySelector('#inv-discount')?.value || 0),
+                    additionalCut: parseFloat(container.querySelector('#inv-add-cut')?.value || 0),
+                    taxPercent: parseFloat(container.querySelector('#inv-tax')?.value || 0),
+                    shippingCost: parseFloat(container.querySelector('#inv-shipping')?.value || 0),
+                    status: rawStatus,
+                    note: container.querySelector('#inv-note')?.value || '',
+                    timestamp: Date.now()
+                };
+
+                // Shared Issuer Data
+                const bSelect = container.querySelector('#inv-business');
+                if (!bSelect || !bSelect.value) throw new Error("Please select the issuing Business.");
                 
-                const busInvNum = (container.querySelector('#inv-bus-number')?.value || '').trim();
-                if (!busInvNum) throw new Error("Business Invoice Number is required.");
-                invoiceData.busInvNumber = busInvNum;
-                invoiceData.invoiceNumber = busInvNum;
+                const bus = allBusinesses.find(b => b.id === bSelect.value);
+                if (bus) {
+                    invoiceData.businessId = bus.uniqueId || bus.id;
+                    invoiceData.businessName = bus.name || '';
+                    invoiceData.businessAddress = bus.address || '';
+                    invoiceData.businessPhone = bus.phone || '';
+                    invoiceData.businessEmail = bus.email || '';
+                }
 
-            } else {
-                // 3 mandatory items: Business*, Customer Name*, At least one item*
-                const cSelect = container.querySelector('#inv-customer');
-                if (cSelect && cSelect.value) {
-                    const cust = allCustomers.find(c => c.id === cSelect.value);
-                    if (cust) {
-                        invoiceData.customerId = cust.uniqueId || cust.id;
+                if (isBusinessInvoice) {
+                    // 5 mandatory items: Business*, Client*, Title*, Invoice Number*, At least one item*
+                    const cSelect = container.querySelector('#inv-client');
+                    if (!cSelect || !cSelect.value) {
+                        throw new Error("Client (Billed To) is required for Business Invoices.");
                     }
+
+                    const cli = allClients.find(c => c.id === cSelect.value);
+                    if (!cli) {
+                        throw new Error("Please select a valid Client.");
+                    }
+
+                    invoiceData.clientId = cli.uniqueId || cli.id;
+                    invoiceData.clientAddress = cli.address || '';
+                    invoiceData.clientPhone = cli.phone || '';
+                    invoiceData.clientEmail = cli.email || '';
+                    invoiceData.customerName = cli.name || '';
+                    invoiceData.customerNumber = cli.phone || '';
+
+                    const invTitle = (container.querySelector('#inv-title')?.value || '').trim();
+                    if (!invTitle) throw new Error("Invoice Title is required.");
+                    invoiceData.title = invTitle;
+                    
+                    const busInvNum = (container.querySelector('#inv-bus-number')?.value || '').trim();
+                    if (!busInvNum) throw new Error("Business Invoice Number is required.");
+                    invoiceData.busInvNumber = busInvNum;
+                    invoiceData.invoiceNumber = busInvNum;
+
+                } else {
+                    // 3 mandatory items: Business*, Customer Name*, At least one item*
+                    const cSelect = container.querySelector('#inv-customer');
+                    if (cSelect && cSelect.value) {
+                        const cust = allCustomers.find(c => c.id === cSelect.value);
+                        if (cust) {
+                            invoiceData.customerId = cust.uniqueId || cust.id;
+                        }
+                    }
+
+                    const cName = container.querySelector('#inv-customer-name')?.value.trim();
+                    if (!cName) throw new Error("Customer Name is required.");
+                    
+                    invoiceData.customerName = cName;
+                    invoiceData.customerNumber = container.querySelector('#inv-customer-phone')?.value.trim() || '';
+                    
+                    const custInvNum = container.querySelector('#inv-cust-number')?.value.trim();
+                    invoiceData.invoiceNumber = custInvNum || `INV-${Date.now()}`;
                 }
 
-                const cName = container.querySelector('#inv-customer-name')?.value.trim();
-                if (!cName) throw new Error("Customer Name is required.");
-                
-                invoiceData.customerName = cName;
-                invoiceData.customerNumber = container.querySelector('#inv-customer-phone')?.value.trim() || '';
-                
-                const custInvNum = container.querySelector('#inv-cust-number')?.value.trim();
-                invoiceData.invoiceNumber = custInvNum || `INV-${Date.now()}`;
+                if (editingInvoiceId) {
+                    // Preserving document uniqueId
+                    invoiceData.uniqueId = editingInvoiceUniqueId;
+                    await invoiceService.updateInvoice(editingInvoiceId, invoiceData, invoiceItems, isVendingActive);
+                    showAlert.success(`Invoice ${invoiceData.invoiceNumber} updated successfully!`);
+                } else {
+                    // Correct 13-character base64 uniqueId
+                    invoiceData.uniqueId = editingInvoiceUniqueId || generateUniqueId();
+                    await invoiceService.createInvoice(invoiceData, invoiceItems, currentUser?.uid || '', isVendingActive);
+                    showAlert.success(`Invoice ${invoiceData.invoiceNumber} created successfully! ${isVendingActive ? '(Stock deducted in Vending Mode)' : ''}`);
+                }
+
+                showListView();
+                await loadData();
+
+            } catch (err) {
+                showAlert.error(err.message || "Failed to save invoice.");
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = editingInvoiceId ? "Update Invoice" : "Save Invoice";
             }
-
-            if (editingInvoiceId) {
-                // Preserving document uniqueId
-                invoiceData.uniqueId = editingInvoiceUniqueId;
-                await invoiceService.updateInvoice(editingInvoiceId, invoiceData, invoiceItems, isVendingActive);
-                showAlert.success(`Invoice ${invoiceData.invoiceNumber} updated successfully!`);
-            } else {
-                // Correct 13-character base64 uniqueId
-                invoiceData.uniqueId = editingInvoiceUniqueId || generateUniqueId();
-                await invoiceService.createInvoice(invoiceData, invoiceItems, currentUser?.uid || '', isVendingActive);
-                showAlert.success(`Invoice ${invoiceData.invoiceNumber} created successfully! ${isVendingActive ? '(Stock deducted in Vending Mode)' : ''}`);
-            }
-
-            showListView();
-            await loadData();
-
-        } catch (err) {
-            showAlert.error(err.message || "Failed to save invoice.");
-        } finally {
-            btnSubmit.disabled = false;
-            btnSubmit.textContent = editingInvoiceId ? "Update Invoice" : "Save Invoice";
-        }
-    });
+        });
+    }
 
     // Export Invoices Excel Click Handler
     const btnExportInv = container.querySelector('#btn-export-invoices-excel');
