@@ -556,7 +556,7 @@
                             <div class="form-group">
                                 <label for="workspace-id-input">Workspace ID</label>
                                 <input type="text" id="workspace-id-input" name="workspaceId"
-                                    placeholder="e.g. ZZE..........." required minlength="6" maxlength="40"
+                                    placeholder="e.g. ZZEAXCV8....." required minlength="6" maxlength="40"
                                     spellcheck="false" autocomplete="off" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 1rem;">
                             </div>
                             
@@ -988,72 +988,8 @@
                 googleBtn.disabled = loading;
             };
 
-            // ---------- Find Workspace ----------
-            const findForm = document.getElementById('find-workspace-form');
-            const findBtn = document.getElementById('find-workspace-btn');
-            const input = document.getElementById('workspace-id-input');
-            const states = {
-                loading: document.getElementById('find-loading'),
-                notFound: document.getElementById('find-not-found'),
-                error: document.getElementById('find-error'),
-                result: document.getElementById('find-result')
-            };
-
-            function hideAllFindStates() {
-                Object.values(states).forEach(el => el.style.display = 'none');
-            }
-            function setFindLoading(loading) {
-                findBtn.classList.toggle('is-loading', loading);
-                findBtn.disabled = loading;
-                input.disabled = loading;
-            }
-
-            findForm?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const workspaceId = input.value.trim();
-                if (!workspaceId || workspaceId.length < 6) {
-                    input.focus();
-                    return;
-                }
-
-                hideAllFindStates();
-                setFindLoading(true);
-                states.loading.style.display = 'block';
-
-                try {
-                    // TODO: replace with real Supabase / Firebase call
-                    await new Promise(r => setTimeout(r, 800));
-
-                    if (workspaceId.toLowerCase().includes('notfound')) {
-                        hideAllFindStates();
-                        states.notFound.style.display = 'block';
-                        return;
-                    }
-
-                    // Example successful payload
-                    const data = {
-                        name: 'Acme Trading Co.',
-                        id: workspaceId,
-                        adminEmail: 'admin@acmetrading.com',
-                        totalWorkers: 7
-                    };
-
-                    document.getElementById('result-ws-name').textContent = data.name;
-                    document.getElementById('result-ws-id').textContent = data.id;
-                    document.getElementById('result-admin-email').textContent = data.adminEmail;
-                    document.getElementById('result-workers').textContent = data.totalWorkers;
-
-                    hideAllFindStates();
-                    states.result.style.display = 'block';
-                } catch (err) {
-                    hideAllFindStates();
-                    document.getElementById('find-error-message').textContent =
-                        err.message || 'Unable to search right now. Please try again later.';
-                    states.error.style.display = 'block';
-                } finally {
-                    setFindLoading(false);
-                }
-            });
+            // ---------- Find Workspace UI state helper (moved logic to js/find-workspace.js) ----------
+            // (Removed to prevent conflicts)
         });
     </script>
 </body>
