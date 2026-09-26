@@ -540,33 +540,34 @@ export const renderOverview = async (container, workspaceId) => {
 
     if (!workspaceId) return;
 
+    const formatCurr = (val) => '$' + Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatNum = (val) => Number(val || 0).toLocaleString();
+
     let cachedProducts = [];
     let cachedCustInvoices = [];
     let cachedBusInvoices = [];
 
     const previousNumbers = new Map();
 
-    const animateNumber = (element, targetValue, isCurrency = true, duration = 750) => {
+    // 0 -> X Count-Up Number Animation with cubic-bezier smooth easing
+    const animateNumber = (element, targetValue, isCurrency = true, duration = 850) => {
         if (!element) return;
         const target = Number(targetValue) || 0;
-        const startVal = previousNumbers.get(element) ?? 0;
+        const startVal = previousNumbers.has(element) ? previousNumbers.get(element) : 0;
         previousNumbers.set(element, target);
-
-        if (startVal === target) {
-            element.textContent = isCurrency ? formatCurr(target) : formatNum(target);
-            return;
-        }
 
         const startTime = performance.now();
 
         const update = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            // Ease out cubic
+            // Ease out cubic: fast rise from 0, smooth settling to X
             const ease = 1 - Math.pow(1 - progress, 3);
             const currentVal = startVal + (target - startVal) * ease;
 
-            element.textContent = isCurrency ? formatCurr(currentVal) : formatNum(Math.round(currentVal));
+            element.textContent = isCurrency 
+                ? formatCurr(currentVal) 
+                : formatNum(Math.round(currentVal));
 
             if (progress < 1) {
                 requestAnimationFrame(update);
