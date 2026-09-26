@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceLister – Business Workspace</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/modern-ui.css">
+    <link rel="stylesheet" href="css/landing.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="config.js"></script>
+
+    <style>
+        /* ===== Multi-view system ===== */
+        .view {
+            display: none;
+            animation: fadeIn 0.25s ease;
+        }
+        .view.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header nav active state */
+        .nav-links a.active {
+            color: var(--primary, #3b82f6);
+            font-weight: 600;
+        }
+
+        /* ===== Login Modal (kept from previous) ===== */
+        #login-modal-container {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        #login-modal-container.is-open { display: flex; opacity: 1; }
+        #login-modal-container.is-closing { opacity: 0; }
+
+        .login-dialog {
+            background: #fff;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05);
+            padding: 2.25rem 2rem 2rem;
+            position: relative;
+            transform: scale(0.96) translateY(8px);
+            opacity: 0;
+            transition: transform 0.22s cubic-bezier(0.16,1,0.3,1), opacity 0.22s ease;
+        }
+        #login-modal-container.is-open .login-dialog {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+        #login-modal-container.is-closing .login-dialog {
+            transform: scale(0.96) translateY(8px);
+            opacity: 0;
+        }
+        .login-close-btn {
+            position: absolute; top: 1rem; right: 1rem;
+            width: 36px; height: 36px; border: none; background: transparent;
+            border-radius: 8px; color: #64748b; font-size: 1.5rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .login-close-btn:hover { background: #f1f5f9; color: #0f172a; }
+        .login-logo {
+            width: 72px; height: 72px; margin: 0 auto 1.25rem;
+            border-radius: 14px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .login-logo img { width: 100%; height: 100%; object-fit: contain; }
+        .login-title { font-size: 1.375rem; font-weight: 700; color: #0f172a; margin: 0 0 0.35rem; }
+        .login-subtitle { color: #64748b; font-size: 0.95rem; margin: 0 0 1.75rem; }
+
+        .btn-google {
+            width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+            padding: 0.8rem 1rem; font-size: 1rem; font-weight: 500; color: #3c4043;
+            background: #fff; border: 1px solid #dadce0; border-radius: 10px; cursor: pointer;
+            box-shadow: 0 1px 2px rgba(60,64,67,0.25); position: relative;
+        }
+        .btn-google:hover:not(:disabled) { background: #f8f9fa; }
+        .btn-google:disabled { opacity: 0.7; cursor: not-allowed; }
+        .btn-google .spinner-sm {
+            width: 18px; height: 18px; border: 2px solid #dadce0; border-top-color: #3c4043;
+            border-radius: 50%; animation: spin 0.7s linear infinite; display: none; position: absolute;
+        }
+        .btn-google.is-loading .google-icon,
+        .btn-google.is-loading .btn-text { visibility: hidden; }
+        .btn-google.is-loading .spinner-sm { display: block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        body.modal-open { overflow: hidden; }
+
+        /* ===== Pricing cards ===== */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.75rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .pricing-card {
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+            padding: 2rem 1.75rem; position: relative; display: flex; flex-direction: column;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .pricing-card:hover { box-shadow: 0 12px 24px -8px rgba(0,0,0,0.08); transform: translateY(-2px); }
+        .pricing-card.featured {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6, 0 12px 24px -8px rgba(59,130,246,0.15);
+        }
+        .pricing-badge {
+            position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            background: #3b82f6; color: white; font-size: 0.75rem; font-weight: 600;
+            padding: 0.25rem 0.85rem; border-radius: 999px;
+        }
+        .pricing-price { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.5rem; }
+        .pricing-price .amount { font-size: 2.5rem; font-weight: 700; color: #0f172a; }
+        .pricing-price .period { color: #64748b; font-size: 0.95rem; }
+        .pricing-features { list-style: none; padding: 0; margin: 0 0 1.75rem; flex: 1; }
+        .pricing-features li { padding: 0.45rem 0; font-size: 0.95rem; color: #334155; }
+        .pricing-features li::before { content: "✓ "; color: #22c55e; font-weight: 700; }
+
+        /* ===== Find Workspace ===== */
+        .find-workspace-card {
+            max-width: 520px; margin: 0 auto; background: #fff;
+            border: 1px solid #e2e8f0; border-radius: 16px; padding: 2rem;
+        }
+        .input-with-btn { display: flex; gap: 0.75rem; }
+        .input-with-btn input {
+            flex: 1; padding: 0.75rem 1rem; border: 1px solid #cbd5e1;
+            border-radius: 10px; font-size: 1rem;
+        }
+        .input-with-btn input:focus {
+            outline: none; border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+        .find-state { text-align: center; padding: 2rem 1rem 1rem; }
+        .find-result { margin-top: 1.75rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; }
+        .result-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+        .result-avatar {
+            width: 52px; height: 52px; border-radius: 12px; overflow: hidden;
+            background: #f8fafc; border: 1px solid #e2e8f0;
+        }
+        .result-avatar img { width: 100%; height: 100%; object-fit: contain; }
+        .result-details {
+            display: flex; flex-direction: column; gap: 0.75rem;
+            background: #f8fafc; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem;
+        }
+        .detail-row { display: flex; justify-content: space-between; font-size: 0.95rem; }
+        .detail-row .label { color: #64748b; }
+        .detail-row .value { font-weight: 500; color: #0f172a; }
+
+        /* ===== Content helpers ===== */
+        .content-wide { max-width: 900px; margin: 0 auto; }
+        .content-block { margin-bottom: 2.5rem; }
+        .content-block h3 { margin-bottom: 0.75rem; color: #0f172a; }
+        .content-block p, .content-block li { color: #475569; line-height: 1.65; }
+        .feature-list { display: grid; gap: 1rem; margin-top: 1.5rem; }
+        .feature-item {
+            display: flex; gap: 1rem; padding: 1.25rem;
+            background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;
+        }
+        .feature-item .icon { font-size: 1.5rem; flex-shrink: 0; }
+        .legal-full { max-width: 760px; margin: 0 auto; line-height: 1.7; color: #334155; }
+        .legal-full h3 { margin-top: 2rem; margin-bottom: 0.75rem; color: #0f172a; }
+        .legal-full ul { padding-left: 1.25rem; margin: 0.75rem 0; }
+
+        @media (max-width: 640px) {
+            .input-with-btn { flex-direction: column; }
+            .nav-links { gap: 0.75rem; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body class="landing-body app-loading">
+    <div id="alert-container"></div>
+
+    <!-- Full Screen Loader -->
+    <div id="app-loader" class="full-loader">
+        <div class="spinner"></div>
+        <p id="loader-text">Loading...</p>
+        <div id="loader-error" style="color:#ff4d4f;max-width:400px;margin-top:1rem;font-size:0.9rem;word-break:break-all;display:none;"></div>
+    </div>
+
+    <script>
+        window.addEventListener('error', function(e) {
+            const el = document.getElementById('loader-error');
+            if (el) {
+                el.style.display = 'block';
+                el.innerHTML = '<strong>Script Error:</strong> ' + (e.message || 'Unknown');
+                const s = document.querySelector('.spinner');
+                if (s) s.style.display = 'none';
+            }
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            const el = document.getElementById('loader-error');
+            if (el) {
+                el.style.display = 'block';
+                el.innerHTML = '<strong>Promise Error:</strong> ' + (e.reason?.message || 'Unknown');
+                const s = document.querySelector('.spinner');
+                if (s) s.style.display = 'none';
+            }
+        });
+    </script>
+
+    <!-- ===================== MAIN APP ===================== -->
+    <div id="auth-container" style="display:none;">
+
+        <!-- HEADER -->
+        <header class="landing-header">
+            <div class="brand" style="display:flex;align-items:center;gap:0.75rem;">
+                <img src="pricelister_org.png" alt="PriceLister" style="height:36px;width:auto;border-radius:6px;">
+                <div>
+                    <div class="brand-name" style="margin-bottom:2px;">PriceLister</div>
+                    <div class="brand-tagline">Business Workspace</div>
+                </div>
+            </div>
+
+            <nav class="nav-links">
+                <a href="#home" data-view="home" class="nav-link active">Home</a>
+                <a href="#explore" data-view="explore" class="nav-link">Explore</a>
+                <a href="#pricing" data-view="pricing" class="nav-link">Pricing</a>
+                <a href="#find" data-view="find" class="nav-link">Find Workspace</a>
+            </nav>
+
+            <div class="header-actions">
+                <button class="btn btn-primary open-login-modal" type="button">Enter</button>
+            </div>
+        </header>
+
+        <!-- ===================== VIEWS ===================== -->
+        <main>
+
+            <!-- ========== HOME ========== -->
+            <section id="view-home" class="view active">
+                <div class="hero-section">
+                    <div class="hero-content">
+                        <h1>Manage Your Products.<br>Create Professional Price Lists.<br>Run Your Business Smarter.</h1>
+                        <p>PriceLister is a secure cloud workspace built for retailers, distributors and growing businesses that need one place to manage products, prices, customers, stock and invoices.</p>
+                        <div class="hero-actions">
+                            <button class="btn btn-primary open-login-modal" type="button" style="font-size:1.1rem;padding:0.75rem 1.5rem;">Enter Workspace</button>
+                            <a href="#explore" data-view="explore" class="btn btn-secondary nav-link" style="font-size:1.1rem;padding:0.75rem 1.5rem;">Explore Features</a>
+                        </div>
+                    </div>
+                    <div class="hero-preview">
+                        <div class="preview-mockup">
+                            <div class="mockup-header">
+                                <div class="mockup-dot"></div><div class="mockup-dot"></div><div class="mockup-dot"></div>
+                            </div>
+                            <div class="mockup-body">
+                                <div class="mockup-row"></div>
+                                <div class="mockup-row medium"></div>
+                                <div class="mockup-row short"></div><br>
+                                <div class="mockup-row"></div>
+                                <div class="mockup-row"></div>
+                                <div class="mockup-row medium"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Built for real business operations</h2>
+                        <p>From a single shop to multi-location distribution, PriceLister keeps your commercial data organised and accessible.</p>
+                    </div>
+
+                    <div class="content-wide">
+                        <div class="content-block">
+                            <h3>What is PriceLister?</h3>
+                            <p>PriceLister is a multi-tenant business workspace. Every company gets its own isolated environment (a Workspace) with products, price lists, customers, invoices, stock levels and role-based team access. Data is stored securely in the cloud and synchronised in real time across devices.</p>
+                        </div>
+
+                        <div class="content-block">
+                            <h3>Who is it for?</h3>
+                            <ul>
+                                <li>Retail shops and chains that need consistent pricing across locations</li>
+                                <li>Distributors and wholesalers managing large catalogues and B2B invoices</li>
+                                <li>Growing teams that need clear roles (Creator Admin, Co-Admin, Worker)</li>
+                                <li>Businesses that want professional price lists and invoices without complex ERP systems</li>
+                            </ul>
+                        </div>
+
+                        <div class="content-block">
+                            <h3>Core capabilities</h3>
+                            <div class="feature-list">
+                                <div class="feature-item">
+                                    <div class="icon">📦</div>
+                                    <div>
+                                        <strong>Product Catalogue</strong>
+                                        <p>Name, size/weight, UPC, category, images, variations, cost, sale price, MRP and stock – all in one place.</p>
+                                    </div>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="icon">📋</div>
+                                    <div>
+                                        <strong>Smart Price Lists</strong>
+                                        <p>Generate clean, professional price lists for customers or internal use with consistent formatting.</p>
+                                    </div>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="icon">🧾</div>
+                                    <div>
+                                        <strong>Customer & Business Invoices</strong>
+                                        <p>Create retail invoices and B2B invoices with bulk pricing, tax handling and printable output.</p>
+                                    </div>
+                                </div>
+                                <div class="feature-item">
+                                    <div class="icon">🔐</div>
+                                    <div>
+                                        <strong>Role-Based Access</strong>
+                                        <p>Creator Admins control everything. Co-Admins manage day-to-day operations. Workers have restricted, task-focused access.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="content-block">
+                            <h3>How it works</h3>
+                            <ol style="padding-left:1.25rem;color:#475569;line-height:1.8;">
+                                <li>Sign in securely with your Google account</li>
+                                <li>Create a new Workspace or accept an invitation</li>
+                                <li>Add products, categories, customers and business details</li>
+                                <li>Invite team members with the correct roles</li>
+                                <li>Generate price lists and invoices from the same live data</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== EXPLORE ========== -->
+            <section id="view-explore" class="view">
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Explore PriceLister</h2>
+                        <p>Deep dive into the modules that power your daily operations.</p>
+                    </div>
+
+                    <div class="content-wide">
+                        <div class="content-block">
+                            <h3>1. Product Management</h3>
+                            <p>Maintain a complete product master. Every product can include:</p>
+                            <ul>
+                                <li>Product name and internal code</li>
+                                <li>Size / weight / unit of measure</li>
+                                <li>Category and sub-category</li>
+                                <li>UPC / barcode</li>
+                                <li>Cost price, sale price, base price, MRP</li>
+                                <li>Stock quantity and reorder level</li>
+                                <li>Product images and variation options</li>
+                            </ul>
+                            <p>Changes are instantly reflected in price lists and invoices.</p>
+                        </div>
+
+                        <div class="content-block">
+                            <h3>2. Price Lists</h3>
+                            <p>Create professional price lists filtered by category, customer group or date. Export or print clean layouts suitable for wholesale customers or store displays.</p>
+                        </div>
+
+                        <div class="content-block">
+                            <h3>3. Customer Management</h3>
+                            <p>Keep a structured customer database with contact details, purchase history and notes. Link invoices and price lists to specific customers for faster order processing.</p>
+                        </div>
+
+                        <div class="content-block">
+                            <h3>4. Invoicing</h3>
+                            <p>Two invoice modes:</p>
+                            <ul>
+                                <li><strong>Customer Invoices</strong> – retail / end-customer focused</li>
+                                <li><strong>Business Invoices</strong> – B2B with bulk pricing and company details</li>
+                            </ul>
+                            <p>Both pull live product data so pricing stays accurate.</p>
+                        </div>
+
+                        <div class="content-block">
+                            <h3>5. Stock & Inventory</h3>
+                            <p>Track quantity on hand, receive stock adjustments, and set low-stock warnings so you never run out of high-velocity items.</p>
+                        </div>
+
+                        <div class="content-block">
+                            <h3>6. Team & Permissions</h3>
+                            <p>Three built-in roles:</p>
+                            <ul>
+                                <li><strong>Creator Admin</strong> – full control, billing, delete workspace</li>
+                                <li><strong>Co-Admin</strong> – manage products, invoices, workers</li>
+                                <li><strong>Worker</strong> – limited view and create rights defined by the admin</li>
+                            </ul>
+                        </div>
+
+                        <div class="content-block">
+                            <h3>Demo Product Table</h3>
+                            <div class="demo-table-wrapper">
+                                <div class="demo-badge">DEMO DATA</div>
+                                <div class="table-container p-4">
+                                    <table style="width:100%;border-collapse:collapse;">
+                                        <thead>
+                                            <tr>
+                                                <th>PRODUCT</th>
+                                                <th>SIZE / WEIGHT</th>
+                                                <th>CATEGORY</th>
+                                                <th>PRICE</th>
+                                                <th>STOCK</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Baby Diaper — Medium</strong><br><small class="text-muted">UPC: 123456789</small></td>
+                                                <td>Medium</td>
+                                                <td><span class="badge">Baby Care</span></td>
+                                                <td>$12.99</td>
+                                                <td>140</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Baby Diaper — Large</strong><br><small class="text-muted">987654321</small></td>
+                                                <td>Large</td>
+                                                <td><span class="badge">Baby Care</span></td>
+                                                <td>$14.99</td>
+                                                <td>85</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Baby Wipes</strong><br><small class="text-muted">UPC: 456123789</small></td>
+                                                <td>72 ct</td>
+                                                <td><span class="badge">Baby Care</span></td>
+                                                <td>$3.99</td>
+                                                <td>300</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="text-center mt-20">
+                                        <small class="text-muted">Demo data — for preview only</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== PRICING ========== -->
+            <section id="view-pricing" class="view">
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Simple, transparent pricing</h2>
+                        <p>Choose the plan that matches your team size and storage needs. Upgrade or downgrade at any time.</p>
+                    </div>
+
+                    <div class="pricing-grid">
+                        <!-- Small -->
+                        <div class="pricing-card">
+                            <div class="pricing-badge">Most Popular</div>
+                            <h3>Small Business</h3>
+                            <div class="pricing-price">
+                                <span class="amount">$5</span>
+                                <span class="period">/month</span>
+                            </div>
+                            <p class="pricing-desc">Perfect for solo founders and small teams</p>
+                            <ul class="pricing-features">
+                                <li>Up to <strong>3 Workers</strong></li>
+                                <li>Price Lister <strong>Pro</strong> access</li>
+                                <li><strong>15 GB</strong> secure storage</li>
+                                <li>Product & Price List management</li>
+                                <li>Customer & Invoice tools</li>
+                                <li>Role-based permissions</li>
+                                <li>Email support</li>
+                            </ul>
+                            <button class="btn btn-primary btn-block open-login-modal" type="button">Get Started</button>
+                        </div>
+
+                        <!-- Large -->
+                        <div class="pricing-card featured">
+                            <div class="pricing-badge">Recommended</div>
+                            <h3>Large Business</h3>
+                            <div class="pricing-price">
+                                <span class="amount">$39</span>
+                                <span class="period">/month</span>
+                            </div>
+                            <p class="pricing-desc">For growing teams and multiple locations</p>
+                            <ul class="pricing-features">
+                                <li>Up to <strong>12 Workers</strong></li>
+                                <li>Price Lister <strong>Pro</strong> access</li>
+                                <li><strong>150 GB</strong> storage (+ expandable)</li>
+                                <li>Everything in Small Business</li>
+                                <li>Advanced stock management</li>
+                                <li>Business-to-business invoices</li>
+                                <li>Priority support</li>
+                            </ul>
+                            <button class="btn btn-primary btn-block open-login-modal" type="button">Get Started</button>
+                        </div>
+
+                        <!-- Market -->
+                        <div class="pricing-card">
+                            <h3>Market Plan</h3>
+                            <div class="pricing-price">
+                                <span class="amount">$99</span>
+                                <span class="period">/month</span>
+                            </div>
+                            <p class="pricing-desc">For marketplaces, distributors & large operations</p>
+                            <ul class="pricing-features">
+                                <li>Up to <strong>50+ Workers</strong></li>
+                                <li>Price Lister <strong>Pro</strong> + Market tools</li>
+                                <li>High-capacity / custom storage</li>
+                                <li>Corporate bandwidth & performance</li>
+                                <li>Everything in Large Business</li>
+                                <li>Dedicated success manager</li>
+                                <li>Custom integrations & SLA</li>
+                            </ul>
+                            <button class="btn btn-primary btn-block open-login-modal" type="button">Contact Sales</button>
+                        </div>
+                    </div>
+
+                    <div class="content-wide" style="margin-top:3rem;">
+                        <div class="content-block">
+                            <h3>What’s included in every plan</h3>
+                            <ul>
+                                <li>Secure Google OAuth sign-in</li>
+                                <li>Real-time cloud synchronisation</li>
+                                <li>Role-based permissions</li>
+                                <li>Product, price list, customer and invoice modules</li>
+                                <li>Data export capability</li>
+                            </ul>
+                        </div>
+                        <div class="content-block">
+                            <h3>Billing notes</h3>
+                            <p>All plans are billed monthly. You can cancel or change plans at any time. Storage expansion beyond the included quota is available on Large and Market plans. Market Plan pricing can be customised for high-volume usage.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== FIND WORKSPACE ========== -->
+            <section id="view-find" class="view">
+                <div class="section bg-light">
+                    <div class="section-header">
+                        <h2>Find a Workspace</h2>
+                        <p>Enter a Workspace ID to view basic public information. No private data is ever revealed.</p>
+                    </div>
+
+                    <div class="find-workspace-card">
+                        <form id="find-workspace-form" class="find-form" autocomplete="off">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label for="workspace-id-input">Workspace ID</label>
+                                <div class="input-with-btn">
+                                    <input type="text" id="workspace-id-input" name="workspaceId"
+                                        placeholder="e.g. ws_8f3k2m9p1x" required minlength="6" maxlength="40"
+                                        spellcheck="false" autocomplete="off">
+                                    <button type="submit" class="btn btn-primary" id="find-workspace-btn">
+                                        <span class="btn-text">Find</span>
+                                        <span class="spinner-sm" style="display:none;"></span>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="form-hint" style="font-size:0.8rem;color:#94a3b8;margin-top:0.75rem;">
+                                Only public workspace information is shown.
+                            </p>
+                        </form>
+
+                        <div id="find-loading" class="find-state" style="display:none;">
+                            <div class="spinner" style="width:32px;height:32px;margin:0 auto 1rem;"></div>
+                            <p>Searching workspace...</p>
+                        </div>
+
+                        <div id="find-not-found" class="find-state" style="display:none;">
+                            <div style="font-size:2rem;margin-bottom:0.75rem;">🔍</div>
+                            <h3>Workspace not found</h3>
+                            <p>No workspace matches this ID. Please double-check and try again.</p>
+                        </div>
+
+                        <div id="find-error" class="find-state" style="display:none;">
+                            <div style="font-size:2rem;margin-bottom:0.75rem;">⚠️</div>
+                            <h3>Something went wrong</h3>
+                            <p id="find-error-message">Unable to search right now. Please try again later.</p>
+                        </div>
+
+                        <div id="find-result" class="find-result" style="display:none;">
+                            <div class="result-header">
+                                <div class="result-avatar">
+                                    <img src="pricelister_org.png" alt="Workspace">
+                                </div>
+                                <div>
+                                    <h3 id="result-ws-name">—</h3>
+                                    <div class="result-id">ID: <code id="result-ws-id">—</code></div>
+                                </div>
+                            </div>
+                            <div class="result-details">
+                                <div class="detail-row">
+                                    <span class="label">Admin Email</span>
+                                    <span class="value" id="result-admin-email">—</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Total Workers</span>
+                                    <span class="value" id="result-workers">—</span>
+                                </div>
+                            </div>
+                            <p style="font-size:0.8rem;color:#94a3b8;margin:0;">
+                                This is public information only. To join this workspace you need an invitation from the admin.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== PRIVACY ========== -->
+            <section id="view-privacy" class="view">
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Privacy Policy</h2>
+                        <p>Last updated: September 2026</p>
+                    </div>
+                    <div class="legal-full">
+                        <p>At PriceLister we respect your privacy and are committed to protecting your personal data. This policy explains how we collect, use and safeguard information when you use our service.</p>
+
+                        <h3>1. Data we collect</h3>
+                        <p>We collect only what is necessary to operate the service:</p>
+                        <ul>
+                            <li><strong>Identity data</strong> – name associated with your Google account</li>
+                            <li><strong>Contact data</strong> – email address</li>
+                            <li><strong>Workspace data</strong> – products, prices, customers, invoices and settings you create</li>
+                            <li><strong>Technical data</strong> – IP address, browser type, device information for security and performance</li>
+                            <li><strong>Usage data</strong> – how features are used (aggregated and anonymised where possible)</li>
+                        </ul>
+
+                        <h3>2. How we use your data</h3>
+                        <p>We use your data to:</p>
+                        <ul>
+                            <li>Provide and maintain the PriceLister service</li>
+                            <li>Authenticate you via Google OAuth (we never see or store your Google password)</li>
+                            <li>Enable collaboration inside your Workspace</li>
+                            <li>Improve performance, security and user experience</li>
+                            <li>Comply with legal obligations</li>
+                        </ul>
+
+                        <h3>3. Data security & isolation</h3>
+                        <p>Each Workspace is logically isolated. Data is encrypted in transit (TLS) and at rest. Access is controlled by role-based permissions. We never sell your data to third parties.</p>
+
+                        <h3>4. Your rights</h3>
+                        <p>You may request export or deletion of your Workspace data at any time. Contact support or use the in-app tools available to Creator Admins.</p>
+
+                        <h3>5. Contact</h3>
+                        <p>For privacy-related questions please contact us through the support channels listed in the application.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== TERMS ========== -->
+            <section id="view-terms" class="view">
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Terms of Service</h2>
+                        <p>Last updated: September 2026</p>
+                    </div>
+                    <div class="legal-full">
+                        <p>Please read these Terms carefully before using PriceLister. By creating an account or using the service you agree to these Terms.</p>
+
+                        <h3>1. The Service</h3>
+                        <p>PriceLister is a multi-tenant business workspace that allows you to manage products, price lists, customers, invoices and related commercial data.</p>
+
+                        <h3>2. Accounts & Workspaces</h3>
+                        <p>You must provide accurate information when creating an account. You are responsible for all activity that occurs under your account and under Workspaces you own or administer. Creator Admins can invite Workers and assign roles.</p>
+
+                        <h3>3. Your data</h3>
+                        <p>You retain full ownership of all data you upload or create. You grant us a limited licence to host, process and display that data solely to provide the service to you and your authorised team members.</p>
+
+                        <h3>4. Acceptable use</h3>
+                        <p>You agree not to use the service for illegal activities, to infringe third-party rights, or to attempt to gain unauthorised access to other Workspaces or systems.</p>
+
+                        <h3>5. Subscriptions & billing</h3>
+                        <p>Paid plans are billed monthly in advance. You may cancel or change plans at any time. Fees already paid are non-refundable except where required by law.</p>
+
+                        <h3>6. Termination</h3>
+                        <p>We may suspend or terminate accounts that violate these Terms. You may delete your Workspace at any time; after deletion data is permanently removed according to our retention schedule.</p>
+
+                        <h3>7. Limitation of liability</h3>
+                        <p>To the maximum extent permitted by law, PriceLister is provided “as is”. We are not liable for indirect, incidental or consequential damages arising from use of the service.</p>
+
+                        <h3>8. Changes</h3>
+                        <p>We may update these Terms from time to time. Continued use after changes constitutes acceptance of the revised Terms.</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="landing-footer">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+                        <img src="pricelister_org.png" alt="PriceLister" style="height:28px;width:auto;border-radius:4px;filter:grayscale(100%) brightness(200%);">
+                        <h3 style="margin:0;">PriceLister</h3>
+                    </div>
+                    <p style="color:var(--surface-400);">Professional business management workspace.</p>
+                </div>
+                <div class="footer-col">
+                    <h3>Application</h3>
+                    <a href="#home" data-view="home" class="nav-link">Home</a>
+                    <a href="#explore" data-view="explore" class="nav-link">Explore</a>
+                    <a href="#pricing" data-view="pricing" class="nav-link">Pricing</a>
+                    <a href="#find" data-view="find" class="nav-link">Find Workspace</a>
+                </div>
+                <div class="footer-col">
+                    <h3>Support</h3>
+                    <a href="#">Help</a>
+                    <a href="#">Contact</a>
+                </div>
+                <div class="footer-col">
+                    <h3>Legal</h3>
+                    <a href="#privacy" data-view="privacy" class="nav-link">Privacy Policy</a>
+                    <a href="#terms" data-view="terms" class="nav-link">Terms of Service</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; <span id="current-year"></span> PriceLister. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ===== LOGIN MODAL ===== -->
+    <div id="login-modal-container" role="dialog" aria-modal="true" aria-labelledby="login-dialog-title" aria-describedby="login-dialog-desc">
+        <div class="login-dialog" role="document">
+            <button type="button" class="login-close-btn" id="close-login-modal" aria-label="Close login dialog">&times;</button>
+            <div class="text-center">
+                <div class="login-logo">
+                    <img src="pricelister_org.png" alt="PriceLister">
+                </div>
+                <h2 id="login-dialog-title" class="login-title">Welcome to PriceLister</h2>
+                <p id="login-dialog-desc" class="login-subtitle">Sign in to access your secure business workspace.</p>
+            </div>
+            <button type="button" id="modal-google-login-btn" class="btn-google">
+                <svg class="google-icon" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+                <span class="btn-text">Continue with Google</span>
+                <span class="spinner-sm" aria-hidden="true"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- WORKSPACE LAUNCHER -->
+    <div id="workspace-launcher-container" style="display:none;padding:2rem;">
+        <div class="setup-container card" style="max-width:480px;margin:4rem auto;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.05);">
+            <div class="text-center mb-4">
+                <h1 style="color:var(--text-primary);font-weight:700;">Workspace Found</h1>
+                <p style="color:var(--text-secondary);">Ready to manage your business.</p>
+            </div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:2rem;">
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid #e2e8f0;">
+                    <div style="width:48px;height:48px;border-radius:10px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);background:white;">
+                        <img src="pricelister_org.png" alt="Workspace" style="width:100%;height:100%;object-fit:contain;">
+                    </div>
+                    <div>
+                        <h2 id="launcher-workspace-name" style="margin:0;font-size:1.25rem;color:#0f172a;">Loading...</h2>
+                        <div style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;font-family:monospace;">ID: <span id="launcher-workspace-id">...</span></div>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
+                        <span style="color:#64748b;">User Account</span>
+                        <div style="display:flex;align-items:center;gap:0.5rem;color:#334155;font-weight:500;">
+                            <div style="width:20px;height:20px;border-radius:50%;background:#cbd5e1;display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;" id="launcher-avatar">?</div>
+                            <span id="launcher-account-email">user@example.com</span>
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
+                        <span style="color:#64748b;">Access Role</span>
+                        <span id="launcher-user-role" class="badge" style="background:#e0e7ff;color:#4338ca;">CREATOR_ADMIN</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.9rem;">
+                        <span style="color:#64748b;">Since Joined</span>
+                        <span id="launcher-joined-date" style="color:#334155;font-weight:500;">...</span>
+                    </div>
+                </div>
+            </div>
+            <button onclick="window.location.href='app.html'" class="btn btn-primary btn-block mb-4" style="font-size:1.15rem;padding:0.85rem;border-radius:8px;">
+                Enter Workspace →
+            </button>
+            <button id="launcher-change-account-btn" class="btn btn-block" style="background:transparent;color:var(--text-secondary);border:1px solid #e2e8f0;font-weight:500;">
+                Change Account
+            </button>
+        </div>
+    </div>
+
+    <!-- WORKSPACE SETUP -->
+    <div id="workspace-setup-container" style="display:none;">
+        <div class="setup-container card">
+            <div class="text-center mb-4">
+                <h1 style="color:var(--primary);">Welcome!</h1>
+                <p>Let's set up your workspace or join an existing one.</p>
+            </div>
+            <div id="pending-invites-section" style="display:none;margin-bottom:2rem;">
+                <h3 style="font-size:1.1rem;color:#334155;border-bottom:1px solid var(--border-color);padding-bottom:0.5rem;margin-bottom:1rem;">Pending Invitations</h3>
+                <div id="pending-invites-list" style="display:flex;flex-direction:column;gap:1rem;"></div>
+                <div style="display:flex;align-items:center;margin:1.5rem 0;">
+                    <div style="flex-grow:1;height:1px;background:#e0e0e0;"></div>
+                    <span style="padding:0 1rem;color:var(--text-muted);font-size:0.85rem;">OR CREATE NEW</span>
+                    <div style="flex-grow:1;height:1px;background:#e0e0e0;"></div>
+                </div>
+            </div>
+            <form id="workspace-setup-form">
+                <div class="form-group">
+                    <label for="ws-name">Business / Workspace Name</label>
+                    <input type="text" id="ws-name" required placeholder="My Business">
+                </div>
+                <div class="form-group">
+                    <label for="ws-phone">Business Phone</label>
+                    <input type="text" id="ws-phone" required placeholder="Phone Number">
+                </div>
+                <div class="form-group">
+                    <label for="ws-address">Business Address</label>
+                    <textarea id="ws-address" required placeholder="Full Address"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="ws-email">Business Email</label>
+                    <input type="email" id="ws-email" required placeholder="contact@business.com">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block mt-20">Create Workspace</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===================== SCRIPTS ===================== -->
+    <script type="module">
+        import { initAuthHandler } from './js/auth-handler.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+            initAuthHandler('index');
+
+            // ---------- Multi-view router ----------
+            const views = {
+                home: document.getElementById('view-home'),
+                explore: document.getElementById('view-explore'),
+                pricing: document.getElementById('view-pricing'),
+                find: document.getElementById('view-find'),
+                privacy: document.getElementById('view-privacy'),
+                terms: document.getElementById('view-terms')
+            };
+
+            function showView(name) {
+                if (!views[name]) name = 'home';
+                Object.values(views).forEach(v => v.classList.remove('active'));
+                views[name].classList.add('active');
+
+                // Update nav active state
+                document.querySelectorAll('.nav-link').forEach(a => {
+                    a.classList.toggle('active', a.dataset.view === name);
+                });
+
+                // Scroll to top of main content
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // Update URL hash without jumping
+                history.replaceState(null, '', '#' + name);
+            }
+
+            // Click handlers for all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const view = link.dataset.view;
+                    if (view) showView(view);
+                });
+            });
+
+            // Handle initial hash or default to home
+            const initial = (location.hash || '#home').slice(1);
+            showView(initial);
+
+            // Handle browser back/forward
+            window.addEventListener('hashchange', () => {
+                const name = (location.hash || '#home').slice(1);
+                showView(name);
+            });
+
+            // ---------- Login Modal ----------
+            const modal = document.getElementById('login-modal-container');
+            const dialog = modal.querySelector('.login-dialog');
+            const closeBtn = document.getElementById('close-login-modal');
+            const googleBtn = document.getElementById('modal-google-login-btn');
+            let previouslyFocused = null;
+            let isOpen = false;
+
+            function openModal() {
+                if (isOpen) return;
+                isOpen = true;
+                previouslyFocused = document.activeElement;
+                modal.classList.remove('is-closing');
+                modal.style.display = 'flex';
+                void modal.offsetWidth;
+                modal.classList.add('is-open');
+                document.body.classList.add('modal-open');
+                setTimeout(() => googleBtn.focus(), 50);
+            }
+            function closeModal() {
+                if (!isOpen) return;
+                isOpen = false;
+                modal.classList.add('is-closing');
+                modal.classList.remove('is-open');
+                document.body.classList.remove('modal-open');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    modal.classList.remove('is-closing');
+                    if (previouslyFocused) previouslyFocused.focus();
+                }, 220);
+            }
+
+            document.querySelectorAll('.open-login-modal').forEach(btn => {
+                btn.addEventListener('click', openModal);
+            });
+            closeBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && isOpen) { e.preventDefault(); closeModal(); }
+            });
+
+            // Focus trap
+            dialog.addEventListener('keydown', e => {
+                if (e.key !== 'Tab') return;
+                const focusable = dialog.querySelectorAll('button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (e.shiftKey) {
+                    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+                } else {
+                    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+                }
+            });
+
+            window.openLoginModal = openModal;
+            window.closeLoginModal = closeModal;
+            window.setGoogleLoginLoading = (loading) => {
+                googleBtn.classList.toggle('is-loading', loading);
+                googleBtn.disabled = loading;
+            };
+
+            // ---------- Find Workspace ----------
+            const findForm = document.getElementById('find-workspace-form');
+            const findBtn = document.getElementById('find-workspace-btn');
+            const input = document.getElementById('workspace-id-input');
+            const states = {
+                loading: document.getElementById('find-loading'),
+                notFound: document.getElementById('find-not-found'),
+                error: document.getElementById('find-error'),
+                result: document.getElementById('find-result')
+            };
+
+            function hideAllFindStates() {
+                Object.values(states).forEach(el => el.style.display = 'none');
+            }
+            function setFindLoading(loading) {
+                findBtn.classList.toggle('is-loading', loading);
+                findBtn.disabled = loading;
+                input.disabled = loading;
+            }
+
+            findForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const workspaceId = input.value.trim();
+                if (!workspaceId || workspaceId.length < 6) {
+                    input.focus();
+                    return;
+                }
+
+                hideAllFindStates();
+                setFindLoading(true);
+                states.loading.style.display = 'block';
+
+                try {
+                    // TODO: replace with real Supabase / Firebase call
+                    await new Promise(r => setTimeout(r, 800));
+
+                    if (workspaceId.toLowerCase().includes('notfound')) {
+                        hideAllFindStates();
+                        states.notFound.style.display = 'block';
+                        return;
+                    }
+
+                    // Example successful payload
+                    const data = {
+                        name: 'Acme Trading Co.',
+                        id: workspaceId,
+                        adminEmail: 'admin@acmetrading.com',
+                        totalWorkers: 7
+                    };
+
+                    document.getElementById('result-ws-name').textContent = data.name;
+                    document.getElementById('result-ws-id').textContent = data.id;
+                    document.getElementById('result-admin-email').textContent = data.adminEmail;
+                    document.getElementById('result-workers').textContent = data.totalWorkers;
+
+                    hideAllFindStates();
+                    states.result.style.display = 'block';
+                } catch (err) {
+                    hideAllFindStates();
+                    document.getElementById('find-error-message').textContent =
+                        err.message || 'Unable to search right now. Please try again later.';
+                    states.error.style.display = 'block';
+                } finally {
+                    setFindLoading(false);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
