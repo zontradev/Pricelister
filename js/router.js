@@ -47,7 +47,15 @@ export const hasUnsavedChanges = () => {
             if (prdSubmitBtn && !prdSubmitBtn.disabled) return true;
         }
 
-        // 3. Category Form: Form open with unsaved changes
+        // 3. Invoice Editor: Editor open with unsaved modifications or items
+        const invEditor = document.getElementById('invoice-editor-view');
+        if (invEditor && invEditor.style.display !== 'none') {
+            if (typeof invEditor._isDirty === 'function') {
+                if (invEditor._isDirty()) return true;
+            }
+        }
+
+        // 4. Category Form: Form open with unsaved changes
         const catFormContainer = document.getElementById('category-form-container');
         const catSubmitBtn = document.getElementById('cat-submit-btn');
         if (catFormContainer && catFormContainer.style.display !== 'none') {
