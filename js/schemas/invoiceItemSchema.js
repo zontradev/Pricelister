@@ -6,10 +6,8 @@ export const validateInvoiceItem = (data) => {
     const errors = [];
 
     // Required fields
-    if (!data.productId || typeof data.productId !== 'string') {
-        // Note: Android source used Integer, but web port uses string UUIDs. 
-        // This is a documented web compatibility migration.
-        errors.push('Product ID is required and must be a valid string.');
+    if (data.productId === undefined || data.productId === null || (typeof data.productId !== 'string' && typeof data.productId !== 'number')) {
+        errors.push('Product ID is required.');
     }
     
     if (data.productName === undefined || data.productName === null || typeof data.productName !== 'string') {

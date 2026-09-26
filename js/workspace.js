@@ -8,24 +8,61 @@ export const initWorkspace = () => {
     const shell = document.getElementById('app-shell');
     const closeContextBtn = document.getElementById('close-context');
     const contextPanel = document.getElementById('context-panel');
-    
     const openSidebarBtn = document.getElementById('open-sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
     
+    const isMobile = () => window.innerWidth <= 768;
+
+    // Set initial responsive state on load
+    if (isMobile() && shell) {
+        shell.classList.add('sidebar-collapsed');
+    }
+
+    const openMenu = () => {
+        if (!shell) return;
+        shell.classList.remove('sidebar-collapsed');
+    };
+
+    const closeMenu = () => {
+        if (!shell) return;
+        shell.classList.add('sidebar-collapsed');
+    };
+
     // Toggle sidebar (Hide)
     if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-            shell.classList.add('sidebar-collapsed');
-            if (openSidebarBtn) openSidebarBtn.style.display = 'block';
-        });
+        toggleBtn.addEventListener('click', closeMenu);
     }
 
     // Toggle sidebar (Show)
     if (openSidebarBtn) {
-        openSidebarBtn.addEventListener('click', () => {
-            shell.classList.remove('sidebar-collapsed');
-            openSidebarBtn.style.display = 'none';
-        });
+        openSidebarBtn.addEventListener('click', openMenu);
     }
+
+    // Backdrop click closes drawer on mobile
+    if (backdrop) {
+        backdrop.addEventListener('click', closeMenu);
+    }
+
+    // Auto-close drawer on mobile when clicking navigation links
+    document.querySelectorAll('.sidebar .nav-item').forEach(link => {
+        link.addEventListener('click', () => {
+            if (isMobile()) {
+                closeMenu();
+            }
+        });
+    });
+
+    // Close on Escape key
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (isMobile() && shell && !shell.classList.contains('sidebar-collapsed')) {
+                closeMenu();
+            }
+            if (contextPanel && contextPanel.classList.contains('open')) {
+                contextPanel.classList.remove('open');
+            }
+        }
+    });
 
     // Close context panel
     if (closeContextBtn) {
@@ -55,7 +92,7 @@ export const renderOverview = async (container, workspaceId) => {
                 <p style="color: var(--text-secondary); margin: 0; font-size: 0.95rem;">Real-time revenue metrics, collection health, and recent operations.</p>
             </div>
             <div class="module-actions" style="display: flex; gap: 0.75rem;">
-                <button class="btn btn-secondary" onclick="window.location.hash='#/products'">📦 Manage Products</button>
+                <button class="btn btn-secondary" onclick="window.location.hash='#/products'">Manage Products</button>
                 <button class="btn btn-primary" onclick="window.location.hash='#/invoices/customer'">+ Create Invoice</button>
             </div>
         </div>
@@ -104,7 +141,7 @@ export const renderOverview = async (container, workspaceId) => {
                         <h3 style="font-size: 0.8rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; font-weight: 600;">Total Sales</h3>
                         <div class="stat-value" id="dash-total-sales" style="font-size: 2rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em;">$0.00</div>
                     </div>
-                    <div style="font-size: 1.5rem; background: rgba(225, 29, 72, 0.08); padding: 0.5rem; border-radius: 12px;">📈</div>
+                    <div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background: rgba(225, 29, 72, 0.08); border-radius: 10px; color:var(--primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></div>
                 </div>
                 <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Gross invoiced across all sales</div>
             </div>
@@ -116,7 +153,7 @@ export const renderOverview = async (container, workspaceId) => {
                         <h3 style="font-size: 0.8rem; color: #059669; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; font-weight: 600;">Revenue Received</h3>
                         <div class="stat-value" id="dash-revenue-received" style="font-size: 2rem; font-weight: 700; color: #059669; letter-spacing: -0.02em;">$0.00</div>
                     </div>
-                    <div style="font-size: 1.5rem; background: rgba(16, 185, 129, 0.08); padding: 0.5rem; border-radius: 12px;">💰</div>
+                    <div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background: rgba(16, 185, 129, 0.08); border-radius: 10px; color:#059669;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
                 </div>
                 <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Collected from paid invoices</div>
             </div>
@@ -128,7 +165,7 @@ export const renderOverview = async (container, workspaceId) => {
                         <h3 style="font-size: 0.8rem; color: #d97706; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; font-weight: 600;">Pending Invoices</h3>
                         <div class="stat-value" id="dash-revenue-pending" style="font-size: 2rem; font-weight: 700; color: #d97706; letter-spacing: -0.02em;">$0.00</div>
                     </div>
-                    <div style="font-size: 1.5rem; background: rgba(245, 158, 11, 0.08); padding: 0.5rem; border-radius: 12px;">⏳</div>
+                    <div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background: rgba(245, 158, 11, 0.08); border-radius: 10px; color:#d97706;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
                 </div>
                 <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Awaiting customer/client payment</div>
             </div>
@@ -140,7 +177,7 @@ export const renderOverview = async (container, workspaceId) => {
                         <h3 style="font-size: 0.8rem; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; font-weight: 600;">Total Profit</h3>
                         <div class="stat-value" id="dash-total-profit" style="font-size: 2rem; font-weight: 700; color: #7c3aed; letter-spacing: -0.02em;">$0.00</div>
                     </div>
-                    <div style="font-size: 1.5rem; background: rgba(139, 92, 246, 0.08); padding: 0.5rem; border-radius: 12px;">💎</div>
+                    <div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background: rgba(139, 92, 246, 0.08); border-radius: 10px; color:#7c3aed;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
                 </div>
                 <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Net profit from paid sales</div>
             </div>
@@ -149,21 +186,21 @@ export const renderOverview = async (container, workspaceId) => {
         <!-- SECONDARY COUNTERS -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
             <div class="card" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem;">
-                <div style="font-size: 1.75rem; background: rgba(225, 29, 72, 0.08); padding: 0.5rem; border-radius: 10px;">📦</div>
+                <div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background: rgba(225, 29, 72, 0.08); border-radius: 10px; color:var(--primary);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
                 <div>
                     <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Active Products</div>
                     <div id="dash-products" style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">...</div>
                 </div>
             </div>
             <div class="card" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem;">
-                <div style="font-size: 1.75rem; background: rgba(16, 185, 129, 0.1); padding: 0.5rem; border-radius: 10px;">🧾</div>
+                <div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background: rgba(16, 185, 129, 0.1); border-radius: 10px; color:#059669;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></div>
                 <div>
                     <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Customer Invoices</div>
                     <div id="dash-cust-inv" style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">...</div>
                 </div>
             </div>
             <div class="card" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem;">
-                <div style="font-size: 1.75rem; background: rgba(245, 158, 11, 0.1); padding: 0.5rem; border-radius: 10px;">🏢</div>
+                <div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background: rgba(245, 158, 11, 0.1); border-radius: 10px; color:#d97706;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="22" x2="9" y2="22.01"></line><line x1="15" y1="22" x2="15" y2="22.01"></line><line x1="9" y1="6" x2="9" y2="6.01"></line><line x1="15" y1="6" x2="15" y2="6.01"></line><line x1="9" y1="10" x2="9" y2="10.01"></line><line x1="15" y1="10" x2="15" y2="10.01"></line><line x1="9" y1="14" x2="9" y2="14.01"></line><line x1="15" y1="14" x2="15" y2="14.01"></line></svg></div>
                 <div>
                     <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Business Invoices</div>
                     <div id="dash-bus-inv" style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary);">...</div>
@@ -204,19 +241,19 @@ export const renderOverview = async (container, workspaceId) => {
                 <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">Quick shortcuts to manage your workspace features.</p>
                 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                     <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/products'">
-                        <span style="font-size: 1.1rem;">📦</span> Manage Products Inventory
+                        Manage Products Inventory
                     </button>
                     <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/customers'">
-                        <span style="font-size: 1.1rem;">👥</span> Customers Directory
+                        Customers Directory
                     </button>
                     <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/invoices/customer'">
-                        <span style="font-size: 1.1rem;">🧾</span> Customer Invoices
+                        Customer Invoices
                     </button>
                     <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/invoices/business'">
-                        <span style="font-size: 1.1rem;">🏢</span> Business B2B Invoices
+                        Business B2B Invoices
                     </button>
                     <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem 1.1rem; border-radius: var(--radius-btn);" onclick="window.location.hash='#/workers'">
-                        <span style="font-size: 1.1rem;">⚙️</span> Members & Permissions
+                        Members & Permissions
                     </button>
                 </div>
             </div>
@@ -327,7 +364,7 @@ export const renderOverview = async (container, workspaceId) => {
                     const badgeClass = isPaid ? 'badge-paid' : 'badge-unpaid';
                     return `
                         <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.15s ease;">
-                            <td style="padding:0.85rem 1rem; font-size:0.85rem; color:var(--text-secondary);">${inv.isBusinessInvoice ? '🏢 Business' : '🧾 Customer'}</td>
+                            <td style="padding:0.85rem 1rem; font-size:0.85rem; color:var(--text-secondary); font-weight:500;">${inv.isBusinessInvoice ? 'Business' : 'Customer'}</td>
                             <td style="padding:0.85rem 1rem;"><code style="font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.04); padding: 0.2rem 0.4rem; border-radius: 4px;">${inv.uniqueId}</code></td>
                             <td style="padding:0.85rem 1rem; font-size: 0.85rem; color: var(--text-secondary);">${new Date(inv.timestamp).toLocaleDateString()}</td>
                             <td style="padding:0.85rem 1rem; font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">$${Number(inv.totalPrice || 0).toFixed(2)}</td>

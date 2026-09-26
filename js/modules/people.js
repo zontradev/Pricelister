@@ -1,13 +1,16 @@
 import { getPeopleService } from '../services/peopleService.js';
+import { getInvoiceService } from '../services/invoiceService.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 
 export const renderPeople = async (container, workspaceId, defaultTab = 'customers') => {
     const peopleService = getPeopleService(workspaceId);
+    const invoiceService = getInvoiceService(workspaceId);
     const currentUser = authService.getCurrentUser();
     
     let currentTab = defaultTab;
     let dataList = [];
+    let allInvoices = [];
     
     const isBusinessMode = defaultTab === 'businesses';
     
@@ -84,8 +87,37 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     const title = container.querySelector('#person-form-title');
 
     let unsubscribe = null;
+    let invUnsub1 = null;
+    let invUnsub2 = null;
 
-    // Tab Switching logic (only attached if tabs exist)
+    // Helper to calculate invoice usage count via uniqueId
+    const getInvoiceCountForPerson = (person) => {
+        if (!person) return 0;
+        const uId = person.uniqueId || person.id;
+        const name = (person.name || '').trim().toLowerCase();
+        const phone = (person.phone || '').trim();
+
+        if (currentTab === 'businesses') {
+            return allInvoices.filter(inv => 
+                (inv.businessId && (inv.businessId === uId || inv.businessId === person.id)) ||
+                (inv.businessName && inv.businessName.trim().toLowerCase() === name)
+            ).length;
+        } else if (currentTab === 'clients') {
+            return allInvoices.filter(inv => 
+                (inv.clientId && (inv.clientId === uId || inv.clientId === person.id)) ||
+                (inv.clientEmail && inv.clientEmail === person.email) ||
+                (inv.clientPhone && inv.clientPhone === phone)
+            ).length;
+        } else {
+            return allInvoices.filter(inv => 
+                (inv.customerId && (inv.customerId === uId || inv.customerId === person.id)) ||
+                (inv.customerName && inv.customerName.trim().toLowerCase() === name) ||
+                (inv.customerNumber && inv.customerNumber === phone)
+            ).length;
+        }
+    };
+
+    // Tab Switching logic
     if (!isBusinessMode) {
         container.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -102,10 +134,21 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         });
     }
 
-    const loadData = () => {
+    const loadData = async () => {
         if (unsubscribe) {
             unsubscribe();
             unsubscribe = null;
+        }
+
+        // Fetch all invoices to compute exact connected count
+        try {
+            const [custInvs, busInvs] = await Promise.all([
+                invoiceService.getAllInvoices(false).catch(() => []),
+                invoiceService.getAllInvoices(true).catch(() => [])
+            ]);
+            allInvoices = [...custInvs, ...busInvs];
+        } catch (e) {
+            console.warn("Could not fetch invoices for usage count:", e);
         }
         
         const renderList = (data) => {
@@ -115,23 +158,28 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 return;
             }
             
-            tbody.innerHTML = dataList.map(person => `
+            tbody.innerHTML = dataList.map(person => {
+                const count = Math.max(getInvoiceCountForPerson(person), person.invoiceCount || 0);
+                return `
                 <tr style="border-bottom: 1px solid var(--border-color);">
                     <td style="padding:1rem;">
                         <strong>${person.name}</strong><br>
-                        <small class="text-muted">${person.uniqueId}</small>
+                        <small class="text-muted" style="font-family: monospace; font-size: 0.78rem;">${person.uniqueId || person.id}</small>
                     </td>
                     <td style="padding:1rem;">${person.phone || '-'}<br>${person.email || '-'}</td>
                     <td style="padding:1rem;">${person.address || '-'}</td>
                     <td style="padding:1rem;">
-                        <span class="badge" style="background:var(--primary); color: white;">${person.invoiceCount || 0} Invoices</span>
+                        <span class="badge" style="background: ${count > 0 ? 'var(--primary)' : 'rgba(100,116,139,0.2)'}; color: ${count > 0 ? 'white' : 'var(--text-secondary)'}; font-weight: 600; font-size: 0.8rem; padding: 0.3rem 0.65rem; border-radius: 6px;">
+                            ${count} ${count === 1 ? 'Invoice' : 'Invoices'}
+                        </span>
                     </td>
                     <td style="padding:1rem;">
                         <button class="btn btn-sm btn-secondary edit-person" data-id="${person.id}">Edit</button>
                         <button class="btn btn-sm btn-outline del-person" data-id="${person.id}">Delete</button>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
             attachListEvents();
         };
 

@@ -221,7 +221,10 @@ export const renderProducts = async (container, workspaceId) => {
         let filtered = activeProducts.slice();
 
         if (catVal !== 'all') {
-            filtered = filtered.filter(p => p.category === catVal);
+            filtered = filtered.filter(p => {
+                const uId = categoriesList.find(c => c.uniqueId === p.category || c.id === p.category || c.name === p.category)?.uniqueId || p.category;
+                return uId === catVal || p.category === catVal;
+            });
         }
 
         filtered.sort((a, b) => {
@@ -255,7 +258,7 @@ export const renderProducts = async (container, workspaceId) => {
         }
         
         tbody.innerHTML = filtered.map(prd => {
-            const catName = categoriesList.find(c => c.id === prd.category)?.name || 'Unknown';
+            const catName = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category)?.name || prd.category || 'Unknown';
             return `
                 <tr style="border-bottom: 1px solid var(--border-color);">
                     <td style="padding:1rem;">
@@ -286,10 +289,10 @@ export const renderProducts = async (container, workspaceId) => {
             // Load categories for mapping and dropdown
             categoriesList = await categoryService.getAllCategories();
             catSelect.innerHTML = '<option value="">Select Category</option>' + 
-                categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
                 
             container.querySelector('#filter-category').innerHTML = '<option value="all">All Categories</option>' + 
-                categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
 
             // Load products
             activeProducts = await productService.getAllActiveProducts();
@@ -320,7 +323,8 @@ export const renderProducts = async (container, workspaceId) => {
                     
                     container.querySelector('#prd-name').value = prd.name || '';
                     container.querySelector('#prd-size').value = prd.sizeWeight || '';
-                    container.querySelector('#prd-category').value = prd.category || '';
+                    const matchedCat = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category);
+                    container.querySelector('#prd-category').value = matchedCat ? (matchedCat.uniqueId || matchedCat.id) : (prd.category || '');
                     container.querySelector('#prd-upc').value = prd.upcCode || '';
                     container.querySelector('#prd-note').value = prd.note || '';
                     
@@ -471,11 +475,11 @@ export const renderProducts = async (container, workspaceId) => {
             // Reload categories to update dropdown
             categoriesList = await categoryService.getAllCategories();
             catSelect.innerHTML = '<option value="">Select Category</option>' + 
-                categoriesList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
             
             // Auto-select the newly created category (case-insensitive find)
             const newCat = categoriesList.find(c => c.name.toLowerCase() === catName.trim().toLowerCase());
-            if (newCat) catSelect.value = newCat.id;
+            if (newCat) catSelect.value = newCat.uniqueId || newCat.id;
             
             catModal.style.display = 'none';
         } catch (err) {

@@ -2,27 +2,35 @@ import { getInvoiceService } from '../services/invoiceService.js';
 import { getProductService } from '../services/productService.js';
 import { getPeopleService } from '../services/peopleService.js';
 import { getSettingsService } from '../services/settingsService.js';
+import { getCategoryService } from '../services/categoryService.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 import { calculateInvoiceTotal } from '../utils/invoiceCalculator.js';
 import { toggleContextPanel } from '../workspace.js';
+import { generateUniqueId } from '../../DataModel.js';
 
 export const renderInvoices = async (container, workspaceId, isBusinessInvoice) => {
     const invoiceService = getInvoiceService(workspaceId);
     const productService = getProductService(workspaceId);
     const peopleService = getPeopleService(workspaceId);
     const settingsService = getSettingsService(workspaceId);
+    const categoryService = getCategoryService(workspaceId);
     const currentUser = authService.getCurrentUser();
     
     const typeLabel = isBusinessInvoice ? 'Business Invoice' : 'Customer Invoice';
     
     let allProducts = [];
+    let allCategories = [];
     let allBusinesses = [];
     let allClients = [];
     let allCustomers = [];
     let invoiceItems = [];
     let rawInvoices = [];
     let isVendingActive = false;
+
+    // State for Editing
+    let editingInvoiceId = null;
+    let editingInvoiceUniqueId = null;
 
     // Advanced Product Picker State
     let pickerSelections = {}; // productId -> quantity
@@ -36,288 +44,378 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     let activeSort = 'NEWEST';
     let searchQuery = '';
 
+    // Quick Add Entity State
+    let quickAddTargetType = null; // 'business' | 'client' | 'customer'
+
     container.innerHTML = `
-        <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-            <div>
-                <h2 style="margin: 0 0 0.35rem 0;">${typeLabel}s</h2>
-                <div id="inv-vending-badge" style="display: inline-block;"></div>
-            </div>
-            <button id="btn-add-invoice" class="btn btn-primary">+ Create ${typeLabel}</button>
-        </div>
-        
-        <!-- INVOICE FORM -->
-        <div id="invoice-form-container" class="card" style="display:none; margin-bottom: 2rem; padding: 1.75rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
-                <h3 id="inv-form-title" style="margin:0; font-size: 1.35rem; color: var(--text-primary);">New ${typeLabel}</h3>
-                <span id="form-vending-indicator" style="font-size: 0.8rem; font-weight: 600;"></span>
+        <!-- ================= INVOICE LIST VIEW ================= -->
+        <div id="invoice-list-view">
+            <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h2 style="margin: 0 0 0.35rem 0;">${typeLabel}s</h2>
+                    <div id="inv-vending-badge" style="display: inline-block;"></div>
+                </div>
+                <button id="btn-add-invoice" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                    + Create ${typeLabel}
+                </button>
             </div>
 
-            <form id="invoice-form" style="display:flex; flex-direction:column; gap:1.5rem;">
-                
-                <!-- Shared Issuer Section -->
-                <div class="form-section">
-                    <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em;">SECTION 1 — ISSUER (YOUR BUSINESS)</h4>
-                    <div style="display:flex; gap:1rem; align-items:flex-end;">
-                        <div style="flex:1;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Business *</label>
-                            <select id="inv-business" class="form-control" style="width:100%; padding:0.55rem;" required>
-                                <option value="">Loading...</option>
-                            </select>
-                        </div>
+            <!-- FILTER & SEARCH TOOLBAR -->
+            <div class="filter-toolbar">
+                <div class="filter-group-left">
+                    <!-- Status Pills -->
+                    <div class="filter-pills" id="inv-status-pills">
+                        <button type="button" class="filter-pill active" data-status="ALL">All <span class="pill-count" id="count-all">0</span></button>
+                        <button type="button" class="filter-pill pill-paid" data-status="PAID">Paid <span class="pill-count" id="count-paid">0</span></button>
+                        <button type="button" class="filter-pill pill-unpaid" data-status="UNPAID">Unpaid <span class="pill-count" id="count-unpaid">0</span></button>
                     </div>
+
+                    <!-- Date Filter Dropdown -->
+                    <select id="inv-filter-date" class="form-control" style="width: auto; padding: 0.4rem 0.85rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px;">
+                        <option value="ALL">All Dates</option>
+                        <option value="TODAY">Today</option>
+                        <option value="THIS_WEEK">This Week</option>
+                        <option value="THIS_MONTH">This Month</option>
+                        <option value="CUSTOM">Custom Date...</option>
+                    </select>
+                    
+                    <input type="date" id="inv-custom-date" style="display:none; width: auto; padding: 0.35rem 0.75rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px;" class="form-control">
+
+                    <!-- Sort Dropdown -->
+                    <select id="inv-sort-by" class="form-control" style="width: auto; padding: 0.4rem 0.85rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px;">
+                        <option value="NEWEST">Newest First</option>
+                        <option value="OLDEST">Oldest First</option>
+                        <option value="REVENUE_DESC">Highest Revenue</option>
+                        <option value="REVENUE_ASC">Lowest Revenue</option>
+                    </select>
                 </div>
 
-                ${isBusinessInvoice ? `
-                <div class="form-section">
-                    <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em;">SECTION 2 — BILLED TO (CLIENT BUSINESS)</h4>
-                    <div style="display:flex; gap:1rem; align-items:flex-end;">
-                        <div style="flex:1;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Client</label>
-                            <select id="inv-client" class="form-control" style="width:100%; padding:0.55rem;">
-                                <option value="">None</option>
-                            </select>
-                        </div>
+                <div class="filter-group-right">
+                    <div class="search-input-wrap">
+                        <span class="search-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+                        <input type="text" id="inv-search-input" placeholder="Search by name, ID, uniqueId...">
                     </div>
                 </div>
-
-                <div class="form-section">
-                    <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em;">SECTION 3 — BUSINESS INVOICE INFO</h4>
-                    <div style="display:flex; gap:1rem; flex-wrap: wrap;">
-                        <div style="flex:1; min-width: 220px;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Title</label>
-                            <input type="text" id="inv-title" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. Commercial Supply Order">
-                        </div>
-                        <div style="flex:1; min-width: 220px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin: 0;">Business Invoice Number</label>
-                                <button type="button" id="btn-regen-bus-id" class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.72rem;">🎲 Re-roll</button>
-                            </div>
-                            <input type="text" id="inv-bus-number" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; color: var(--primary);" placeholder="BusInv-000000">
-                            <small class="text-muted" style="font-size:0.75rem; margin-top: 0.25rem; display: block;">Auto-generated random ID (BusInv-000000 to BusInv-999999). Fully editable.</small>
-                        </div>
-                    </div>
-                </div>
-                ` : `
-                <div class="form-section">
-                    <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em;">SECTION 2 — INVOICE IDENTIFICATION & CUSTOMER</h4>
-                    <div style="display:flex; gap:1rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                        <div style="flex:1; min-width: 220px;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Invoice Number</label>
-                            <input type="text" id="inv-cust-number" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; background: var(--surface-50); color: var(--primary);" readonly>
-                            <small class="text-muted" style="font-size:0.75rem; margin-top: 0.25rem; display: block;">Auto-generated timestamp invoice number (INV-Timestamp).</small>
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap: wrap;">
-                        <div style="flex:1; min-width: 180px;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Customer</label>
-                            <select id="inv-customer" class="form-control" style="width:100%; padding:0.55rem;">
-                                <option value="">Walk-in / None</option>
-                            </select>
-                        </div>
-                        <div style="flex:1; min-width: 180px;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Or Customer Name *</label>
-                            <input type="text" id="inv-customer-name" required class="form-control" style="width:100%; padding:0.55rem;">
-                        </div>
-                        <div style="flex:1; min-width: 180px;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Customer Phone</label>
-                            <input type="text" id="inv-customer-phone" class="form-control" style="width:100%; padding:0.55rem;">
-                        </div>
-                    </div>
-                </div>
-                `}
-
-                <!-- PRODUCT PICKER & ITEMS SECTION -->
-                <div class="form-section">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                        <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em;">SECTION ${isBusinessInvoice ? '4' : '3'} — PRODUCTS SELECTION</h4>
-                        <button type="button" id="btn-toggle-picker" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
-                            <span>📦</span> <span id="picker-toggle-text">Open Advanced Product Picker</span>
-                        </button>
-                    </div>
-
-                    <!-- ADVANCED PRODUCT PICKER CONTAINER -->
-                    <div id="advanced-product-picker" class="product-picker-container" style="display:none; margin-bottom: 1.5rem;">
-                        <div class="picker-search-bar">
-                            <div class="search-input-wrap" style="flex: 1; min-width: 220px;">
-                                <span class="search-icon">🔍</span>
-                                <input type="text" id="picker-search-input" placeholder="Search by name, size, category, UPC..." autocomplete="off">
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <button type="button" id="picker-btn-select-all" class="btn btn-sm btn-secondary" style="font-size: 0.78rem;">Select All Visible</button>
-                                <button type="button" id="picker-btn-clear-sel" class="btn btn-sm btn-secondary" style="font-size: 0.78rem;">Deselect All</button>
-                            </div>
-                        </div>
-
-                        <!-- Category Filter Pills -->
-                        <div id="picker-category-pills" style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
-                            <!-- Injected dynamically -->
-                        </div>
-
-                        <!-- Product Cards Grid -->
-                        <div class="picker-grid" id="picker-grid-container">
-                            <!-- Injected dynamically -->
-                        </div>
-
-                        <!-- Picker Footer Actions -->
-                        <div class="picker-footer">
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                Selected: <strong id="picker-count-disp" style="color: var(--primary);">0</strong> products (<strong id="picker-units-disp">0</strong> units) &bull; Est. Total: <strong id="picker-subtotal-disp" style="color: var(--text-primary);">$0.00</strong>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <button type="button" id="picker-close-btn" class="btn btn-secondary">Hide Picker</button>
-                                <button type="button" id="picker-add-to-inv-btn" class="btn btn-primary">Add Selected to Invoice</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CURRENT INVOICE ITEMS LIST -->
-                    <div id="invoice-items-list" style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
-                        <!-- dynamic items list -->
-                    </div>
-
-                    <!-- Single Dropdown fallback -->
-                    <div style="display:flex; gap:1rem; align-items:flex-end; background: var(--surface-50); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid var(--border-color); flex-wrap: wrap;">
-                        <div style="flex:2; min-width: 200px;">
-                            <label style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Quick Single Add</label>
-                            <select id="inv-add-product-select" class="form-control" style="width:100%; padding:0.5rem;">
-                                <option value="">Loading products...</option>
-                            </select>
-                        </div>
-                        <div style="flex:1; max-width: 120px; min-width: 80px;">
-                            <label style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Qty</label>
-                            <input type="number" id="inv-add-qty" min="1" value="1" class="form-control" style="width:100%; padding:0.5rem;">
-                        </div>
-                        <button type="button" id="inv-btn-add-item" class="btn btn-secondary" style="padding:0.55rem 1.1rem;">+ Add Item</button>
-                    </div>
-                </div>
-
-                <!-- CHARGES / ADJUSTMENTS -->
-                <div class="form-section">
-                    <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em;">SECTION ${isBusinessInvoice ? '5' : '4'} — ${isBusinessInvoice ? 'BUSINESS CHARGES' : 'ADJUSTMENTS'}</h4>
-                    <div style="display:flex; gap:1rem; flex-wrap: wrap;">
-                        <div style="flex:1; min-width: 140px;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Discount %</label>
-                            <input type="number" id="inv-discount" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
-                        </div>
-                        <div style="flex:1; min-width: 140px;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Additional Cut ($)</label>
-                            <input type="number" id="inv-add-cut" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
-                        </div>
-                        ${isBusinessInvoice ? `
-                        <div style="flex:1; min-width: 140px;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Tax %</label>
-                            <input type="number" id="inv-tax" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
-                        </div>
-                        <div style="flex:1; min-width: 140px;">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Shipping Cost ($)</label>
-                            <input type="number" id="inv-shipping" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-
-                <!-- PAYMENT STATUS -->
-                <div class="form-section">
-                    <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em;">SECTION ${isBusinessInvoice ? '6' : '5'} — PAYMENT STATUS</h4>
-                    <div style="display:flex; gap:1rem;">
-                        <div style="flex:1; max-width: 220px;">
-                            <select id="inv-status" class="form-control" style="width:100%; padding:0.55rem; font-weight: 600;">
-                                <option value="UNPAID">Unpaid</option>
-                                <option value="PAID">Paid</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                ${isBusinessInvoice ? `
-                <div class="form-section">
-                    <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em;">SECTION 7 — NOTE</h4>
-                    <div style="display:flex; gap:1rem;">
-                        <div style="flex:1;">
-                            <textarea id="inv-note" class="form-control" style="width:100%; padding:0.55rem; min-height: 70px;" placeholder="Optional invoice instructions or payment terms..."></textarea>
-                        </div>
-                    </div>
-                </div>
-                ` : ''}
-
-                <!-- TOTALS SUMMARY -->
-                <div class="form-section" style="background:var(--surface-50); padding:1.25rem; border-radius:var(--radius-card); border: 1px solid var(--border-color);">
-                    <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em;">TOTALS</h4>
-                    <div id="inv-live-totals" style="font-size:1.05rem; line-height:1.6;">
-                        <!-- live totals -->
-                    </div>
-                </div>
-
-                <div style="display:flex; gap:1rem; margin-top:0.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; justify-content: flex-end;">
-                    <button type="button" class="btn btn-secondary" id="inv-cancel-btn" style="padding: 0.65rem 1.5rem;">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="inv-submit-btn" style="padding: 0.65rem 2rem;">Save Invoice</button>
-                </div>
-            </form>
-        </div>
-
-        <!-- FILTER & SEARCH TOOLBAR -->
-        <div class="filter-toolbar">
-            <div class="filter-group-left">
-                <!-- Status Pills -->
-                <div class="filter-pills" id="inv-status-pills">
-                    <button type="button" class="filter-pill active" data-status="ALL">All <span class="pill-count" id="count-all">0</span></button>
-                    <button type="button" class="filter-pill pill-paid" data-status="PAID">Paid <span class="pill-count" id="count-paid">0</span></button>
-                    <button type="button" class="filter-pill pill-unpaid" data-status="UNPAID">Unpaid <span class="pill-count" id="count-unpaid">0</span></button>
-                </div>
-
-                <!-- Date Filter Dropdown -->
-                <select id="inv-filter-date" class="form-control" style="width: auto; padding: 0.4rem 0.85rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px;">
-                    <option value="ALL">📅 All Dates</option>
-                    <option value="TODAY">Today</option>
-                    <option value="THIS_WEEK">This Week</option>
-                    <option value="THIS_MONTH">This Month</option>
-                    <option value="CUSTOM">Custom Date...</option>
-                </select>
-                
-                <input type="date" id="inv-custom-date" style="display:none; width: auto; padding: 0.35rem 0.75rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px;" class="form-control">
-
-                <!-- Sort Dropdown -->
-                <select id="inv-sort-by" class="form-control" style="width: auto; padding: 0.4rem 0.85rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px;">
-                    <option value="NEWEST">⚡ Newest First</option>
-                    <option value="OLDEST">⏳ Oldest First</option>
-                    <option value="REVENUE_DESC">💰 Highest Revenue</option>
-                    <option value="REVENUE_ASC">📉 Lowest Revenue</option>
-                </select>
             </div>
-
-            <div class="filter-group-right">
-                <div class="search-input-wrap">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="inv-search-input" placeholder="Search by name, ID...">
+            
+            <div class="card" style="padding: 0; overflow: hidden; border-radius: var(--radius-card); box-shadow: var(--shadow-float);">
+                <div class="table-container">
+                    <table style="width:100%; border-collapse: collapse; text-align:left;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted); background: rgba(248, 250, 252, 0.7);">
+                                <th style="padding:1rem 1.25rem;">Invoice #</th>
+                                <th style="padding:1rem;">Date</th>
+                                <th style="padding:1rem;">${isBusinessInvoice ? 'Business (Issuer) & Client' : 'Customer'}</th>
+                                <th style="padding:1rem;">Status</th>
+                                <th style="padding:1rem;">Total</th>
+                                <th style="padding:1rem 1.25rem;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoices-table-body">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-        
-        <div class="card" style="padding: 0; overflow: hidden; border-radius: var(--radius-card); box-shadow: var(--shadow-float);">
-            <div class="table-container">
-                <table style="width:100%; border-collapse: collapse; text-align:left;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted); background: rgba(248, 250, 252, 0.7);">
-                            <th style="padding:1rem 1.25rem;">Invoice #</th>
-                            <th style="padding:1rem;">Date</th>
-                            <th style="padding:1rem;">${isBusinessInvoice ? 'Business' : 'Customer'}</th>
-                            <th style="padding:1rem;">Status</th>
-                            <th style="padding:1rem;">Total</th>
-                            <th style="padding:1rem 1.25rem;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="invoices-table-body">
-                        <!-- Loaded via JS -->
-                    </tbody>
-                </table>
+
+        <!-- ================= INVOICE CREATION / EDIT VIEW ================= -->
+        <div id="invoice-editor-view" style="display:none; margin-bottom: 2.5rem;">
+            
+            <!-- Top Back Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <button type="button" id="btn-back-to-list" class="btn btn-secondary" style="font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 1rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    &larr; Back to Invoices
+                </button>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span id="form-vending-indicator" style="font-size: 0.85rem; font-weight: 600;"></span>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <h3 id="inv-form-title" style="margin:0; font-size: 1.45rem; color: var(--text-primary); font-weight: 700;">New ${typeLabel}</h3>
+                        <p id="inv-form-subtitle" style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">Fill in the details below to generate your invoice.</p>
+                    </div>
+                </div>
+
+                <form id="invoice-form" style="display:flex; flex-direction:column; gap:1.75rem;">
+                    
+                    <!-- SECTION 1: ISSUER (YOUR BUSINESS) -->
+                    <div class="form-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 1 — ISSUER (YOUR BUSINESS)</h4>
+                            <button type="button" id="btn-quick-add-business" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> + New Business
+                            </button>
+                        </div>
+                        <div style="display:flex; gap:1rem; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Business *</label>
+                                <select id="inv-business" class="form-control" style="width:100%; padding:0.55rem;" required>
+                                    <option value="">Loading businesses...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="inv-business-preview" style="display:none; margin-top: 0.5rem; font-size: 0.82rem; color: var(--text-secondary); background: var(--surface-50); padding: 0.5rem 0.75rem; border-radius: 6px;"></div>
+                    </div>
+
+                    <!-- SECTION 2: BILLED TO (CLIENT OR CUSTOMER) -->
+                    ${isBusinessInvoice ? `
+                    <div class="form-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 2 — BILLED TO (CLIENT BUSINESS)</h4>
+                            <button type="button" id="btn-quick-add-client" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> + New Client
+                            </button>
+                        </div>
+                        <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap: wrap;">
+                            <div style="flex:1; min-width: 220px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Client</label>
+                                <select id="inv-client" class="form-control" style="width:100%; padding:0.55rem;">
+                                    <option value="">None / Custom</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="inv-client-preview" style="display:none; margin-top: 0.5rem; font-size: 0.82rem; color: var(--text-secondary); background: var(--surface-50); padding: 0.5rem 0.75rem; border-radius: 6px;"></div>
+                    </div>
+
+                    <!-- SECTION 3: BUSINESS INVOICE INFO -->
+                    <div class="form-section">
+                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 3 — BUSINESS INVOICE INFO</h4>
+                        <div style="display:flex; gap:1rem; flex-wrap: wrap;">
+                            <div style="flex:1; min-width: 220px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Title</label>
+                                <input type="text" id="inv-title" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. Commercial Supply Order" value="Invoice">
+                            </div>
+                            <div style="flex:1; min-width: 220px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                    <label style="font-weight: 500; font-size: 0.85rem; margin: 0;">Business Invoice Number</label>
+                                    <button type="button" id="btn-regen-bus-id" class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; display:inline-flex; align-items:center; gap:4px;">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Re-roll
+                                    </button>
+                                </div>
+                                <input type="text" id="inv-bus-number" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; color: var(--primary);" placeholder="BusInv-000000">
+                            </div>
+                        </div>
+                    </div>
+                    ` : `
+                    <div class="form-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 2 — INVOICE IDENTIFICATION & CUSTOMER</h4>
+                            <button type="button" id="btn-quick-add-customer" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> + New Customer
+                            </button>
+                        </div>
+                        <div style="display:flex; gap:1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <div style="flex:1; min-width: 220px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Invoice Number</label>
+                                <input type="text" id="inv-cust-number" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; background: var(--surface-50); color: var(--primary);" readonly>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap: wrap;">
+                            <div style="flex:1; min-width: 180px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Customer</label>
+                                <select id="inv-customer" class="form-control" style="width:100%; padding:0.55rem;">
+                                    <option value="">Walk-in / None</option>
+                                </select>
+                            </div>
+                            <div style="flex:1; min-width: 180px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Or Customer Name *</label>
+                                <input type="text" id="inv-customer-name" required class="form-control" style="width:100%; padding:0.55rem;" placeholder="Enter customer name">
+                            </div>
+                            <div style="flex:1; min-width: 180px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Customer Phone</label>
+                                <input type="text" id="inv-customer-phone" class="form-control" style="width:100%; padding:0.55rem;" placeholder="Phone number">
+                            </div>
+                        </div>
+                    </div>
+                    `}
+
+                    <!-- SECTION: PRODUCTS SELECTION -->
+                    <div class="form-section">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION ${isBusinessInvoice ? '4' : '3'} — PRODUCTS SELECTION</h4>
+                            <button type="button" id="btn-toggle-picker" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.45rem;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                <span id="picker-toggle-text">Open Advanced Product Picker</span>
+                            </button>
+                        </div>
+
+                        <!-- ADVANCED PRODUCT PICKER CONTAINER -->
+                        <div id="advanced-product-picker" class="product-picker-container" style="display:none; margin-bottom: 1.5rem;">
+                            <div class="picker-search-bar">
+                                <div class="search-input-wrap" style="flex: 1; min-width: 220px;">
+                                    <span class="search-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+                                    <input type="text" id="picker-search-input" placeholder="Search by name, size, category, UPC..." autocomplete="off">
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button type="button" id="picker-btn-select-all" class="btn btn-sm btn-secondary" style="font-size: 0.78rem;">Select All Visible</button>
+                                    <button type="button" id="picker-btn-clear-sel" class="btn btn-sm btn-secondary" style="font-size: 0.78rem;">Deselect All</button>
+                                </div>
+                            </div>
+
+                            <!-- Category Filter Pills -->
+                            <div id="picker-category-pills" style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
+                                <!-- Dynamic category pills -->
+                            </div>
+
+                            <!-- Product Cards Grid -->
+                            <div class="picker-grid" id="picker-grid-container">
+                                <!-- Dynamic product grid -->
+                            </div>
+
+                            <!-- Picker Footer Actions -->
+                            <div class="picker-footer">
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                    Selected: <strong id="picker-count-disp" style="color: var(--primary);">0</strong> products (<strong id="picker-units-disp">0</strong> units) &bull; Est. Total: <strong id="picker-subtotal-disp" style="color: var(--text-primary);">$0.00</strong>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button type="button" id="picker-close-btn" class="btn btn-secondary">Hide Picker</button>
+                                    <button type="button" id="picker-add-to-inv-btn" class="btn btn-primary">Add Selected to Invoice</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CURRENT INVOICE ITEMS LIST -->
+                        <div id="invoice-items-list" style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
+                            <!-- dynamic items list -->
+                        </div>
+
+                        <!-- Single Dropdown fallback -->
+                        <div style="display:flex; gap:1rem; align-items:flex-end; background: var(--surface-50); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid var(--border-color); flex-wrap: wrap;">
+                            <div style="flex:2; min-width: 200px;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Quick Single Add</label>
+                                <select id="inv-add-product-select" class="form-control" style="width:100%; padding:0.5rem;">
+                                    <option value="">Loading products...</option>
+                                </select>
+                            </div>
+                            <div style="flex:1; max-width: 120px; min-width: 80px;">
+                                <label style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Qty</label>
+                                <input type="number" id="inv-add-qty" min="1" value="1" class="form-control" style="width:100%; padding:0.5rem;">
+                            </div>
+                            <button type="button" id="inv-btn-add-item" class="btn btn-secondary" style="padding:0.55rem 1.1rem;">+ Add Item</button>
+                        </div>
+                    </div>
+
+                    <!-- CHARGES / ADJUSTMENTS -->
+                    <div class="form-section">
+                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION ${isBusinessInvoice ? '5' : '4'} — ${isBusinessInvoice ? 'BUSINESS CHARGES' : 'ADJUSTMENTS'}</h4>
+                        <div style="display:flex; gap:1rem; flex-wrap: wrap;">
+                            <div style="flex:1; min-width: 140px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Discount %</label>
+                                <input type="number" id="inv-discount" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
+                            </div>
+                            <div style="flex:1; min-width: 140px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Additional Cut ($)</label>
+                                <input type="number" id="inv-add-cut" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
+                            </div>
+                            ${isBusinessInvoice ? `
+                            <div style="flex:1; min-width: 140px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Tax %</label>
+                                <input type="number" id="inv-tax" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
+                            </div>
+                            <div style="flex:1; min-width: 140px;">
+                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Shipping Cost ($)</label>
+                                <input type="number" id="inv-shipping" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- PAYMENT STATUS -->
+                    <div class="form-section">
+                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION ${isBusinessInvoice ? '6' : '5'} — PAYMENT STATUS</h4>
+                        <div style="display:flex; gap:1rem;">
+                            <div style="flex:1; max-width: 220px;">
+                                <select id="inv-status" class="form-control" style="width:100%; padding:0.55rem; font-weight: 600;">
+                                    <option value="Paid">Paid</option>
+                                    <option value="Unpaid">Unpaid</option>
+                                    <option value="Draft">Draft</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${isBusinessInvoice ? `
+                    <div class="form-section">
+                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 7 — NOTE</h4>
+                        <div style="display:flex; gap:1rem;">
+                            <div style="flex:1;">
+                                <textarea id="inv-note" class="form-control" style="width:100%; padding:0.55rem; min-height: 70px;" placeholder="Optional invoice instructions or payment terms..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- TOTALS SUMMARY -->
+                    <div class="form-section" style="background:var(--surface-50); padding:1.25rem; border-radius:var(--radius-card); border: 1px solid var(--border-color);">
+                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">TOTALS</h4>
+                        <div id="inv-live-totals" style="font-size:1.05rem; line-height:1.6;">
+                            <!-- live totals -->
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:1rem; margin-top:0.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" id="inv-cancel-btn" style="padding: 0.65rem 1.5rem;">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="inv-submit-btn" style="padding: 0.65rem 2rem;">Save Invoice</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================= QUICK ADD MODAL (Business / Client / Customer) ================= -->
+        <div id="quick-add-entity-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1050; align-items:center; justify-content:center;">
+            <div class="card" style="background:var(--bg-card); width:90%; max-width:480px; padding:1.75rem; border-radius:12px; box-shadow:var(--shadow-lg); animation:fadeIn 0.2s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
+                    <h3 id="quick-add-modal-title" style="margin:0; font-size:1.25rem; color:var(--text-primary);">Add Entry</h3>
+                    <button type="button" id="btn-close-quick-add" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+                </div>
+                <form id="quick-add-form" style="display:flex; flex-direction:column; gap:1rem;">
+                    <div>
+                        <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.35rem; display:block;">Name *</label>
+                        <input type="text" id="qa-name" required class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. Acme Corp or John Doe">
+                    </div>
+                    <div>
+                        <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.35rem; display:block;">Phone</label>
+                        <input type="text" id="qa-phone" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. +123456789">
+                    </div>
+                    <div>
+                        <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.35rem; display:block;">Email</label>
+                        <input type="email" id="qa-email" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. contact@example.com">
+                    </div>
+                    <div>
+                        <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.35rem; display:block;">Address</label>
+                        <input type="text" id="qa-address" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. 123 Main St, City">
+                    </div>
+                    <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:0.5rem; border-top:1px solid var(--border-color); padding-top:1rem;">
+                        <button type="button" id="btn-cancel-quick-add" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" id="btn-save-quick-add" class="btn btn-primary">Save & Select</button>
+                    </div>
+                </form>
             </div>
         </div>
     `;
 
-    const formContainer = container.querySelector('#invoice-form-container');
+    // References
+    const listView = container.querySelector('#invoice-list-view');
+    const editorView = container.querySelector('#invoice-editor-view');
     const tbody = container.querySelector('#invoices-table-body');
     const btnSubmit = container.querySelector('#inv-submit-btn');
+    const formTitle = container.querySelector('#inv-form-title');
+    const btnBackToList = container.querySelector('#btn-back-to-list');
+    const btnCancel = container.querySelector('#inv-cancel-btn');
+
+    // Quick Add Modal References
+    const quickAddModal = container.querySelector('#quick-add-entity-modal');
+    const quickAddTitle = container.querySelector('#quick-add-modal-title');
+    const quickAddForm = container.querySelector('#quick-add-form');
+    const btnCloseQuickAdd = container.querySelector('#btn-close-quick-add');
+    const btnCancelQuickAdd = container.querySelector('#btn-cancel-quick-add');
 
     // ADVANCED PRODUCT PICKER LOGIC
     const pickerContainer = container.querySelector('#advanced-product-picker');
@@ -333,6 +431,196 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const pickerAddToInvBtn = container.querySelector('#picker-add-to-inv-btn');
     const pickerBtnSelectAll = container.querySelector('#picker-btn-select-all');
     const pickerBtnClearSel = container.querySelector('#picker-btn-clear-sel');
+
+    // Switch View Helper
+    const showEditorView = (isEdit = false, invoice = null) => {
+        listView.style.display = 'none';
+        editorView.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        if (isEdit && invoice) {
+            editingInvoiceId = invoice.id;
+            editingInvoiceUniqueId = invoice.uniqueId || generateUniqueId();
+            const displayInvNum = invoice.invoiceNumber || invoice.busInvNumber || invoice.uniqueId;
+            formTitle.textContent = `Edit ${typeLabel} (${displayInvNum})`;
+            btnSubmit.textContent = 'Update Invoice';
+            populateFormForEdit(invoice);
+        } else {
+            editingInvoiceId = null;
+            editingInvoiceUniqueId = generateUniqueId();
+            formTitle.textContent = `New ${typeLabel}`;
+            btnSubmit.textContent = 'Save Invoice';
+            resetForm();
+        }
+    };
+
+    const showListView = () => {
+        editorView.style.display = 'none';
+        listView.style.display = 'block';
+        editingInvoiceId = null;
+        editingInvoiceUniqueId = null;
+    };
+
+    btnBackToList.addEventListener('click', showListView);
+    btnCancel.addEventListener('click', showListView);
+
+    // Populate Form for Editing
+    const populateFormForEdit = (inv) => {
+        // Shared Business Issuer
+        const busSelect = container.querySelector('#inv-business');
+        if (busSelect) {
+            // Find by uniqueId or id
+            const matchedBus = allBusinesses.find(b => (b.uniqueId && b.uniqueId === inv.businessId) || b.id === inv.businessId || b.name === inv.businessName);
+            if (matchedBus) {
+                busSelect.value = matchedBus.id;
+            } else if (inv.businessId) {
+                busSelect.value = inv.businessId;
+            }
+            updateBusinessPreview();
+        }
+
+        if (isBusinessInvoice) {
+            // Client select
+            const cliSelect = container.querySelector('#inv-client');
+            if (cliSelect) {
+                const matchedCli = allClients.find(c => (c.uniqueId && c.uniqueId === inv.clientId) || c.id === inv.clientId || c.name === inv.customerName);
+                if (matchedCli) {
+                    cliSelect.value = matchedCli.id;
+                } else if (inv.clientId) {
+                    cliSelect.value = inv.clientId;
+                }
+                updateClientPreview();
+            }
+
+            const titleEl = container.querySelector('#inv-title');
+            if (titleEl) titleEl.value = inv.title || 'Invoice';
+
+            const busInvField = container.querySelector('#inv-bus-number');
+            if (busInvField) busInvField.value = inv.busInvNumber || inv.invoiceNumber || '';
+        } else {
+            // Customer
+            const custSelect = container.querySelector('#inv-customer');
+            if (custSelect) {
+                const matchedCust = allCustomers.find(c => (c.uniqueId && c.uniqueId === inv.customerId) || c.id === inv.customerId || c.name === inv.customerName);
+                if (matchedCust) custSelect.value = matchedCust.id;
+            }
+
+            const custNameEl = container.querySelector('#inv-customer-name');
+            if (custNameEl) custNameEl.value = inv.customerName || '';
+
+            const custPhoneEl = container.querySelector('#inv-customer-phone');
+            if (custPhoneEl) custPhoneEl.value = inv.customerNumber || '';
+
+            const custInvNumEl = container.querySelector('#inv-cust-number');
+            if (custInvNumEl) custInvNumEl.value = inv.invoiceNumber || `INV-${inv.timestamp || Date.now()}`;
+        }
+
+        // Line Items
+        invoiceItems = (inv.items || []).map(item => ({
+            productId: item.productId,
+            productName: item.productName,
+            quantity: Number(item.quantity) || 1,
+            unitPrice: Number(item.unitPrice) || 0,
+            unitCost: Number(item.unitCost) || 0,
+            totalPrice: Number(item.totalPrice) || ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)),
+            itemProfit: Number(item.itemProfit) || 0,
+            sizeWeight: item.sizeWeight || ''
+        }));
+
+        // Adjustments
+        if (container.querySelector('#inv-discount')) container.querySelector('#inv-discount').value = inv.discountPercent || 0;
+        if (container.querySelector('#inv-add-cut')) container.querySelector('#inv-add-cut').value = inv.additionalCut || 0;
+        if (container.querySelector('#inv-tax')) container.querySelector('#inv-tax').value = inv.taxPercent || 0;
+        if (container.querySelector('#inv-shipping')) container.querySelector('#inv-shipping').value = inv.shippingCost || 0;
+        
+        // Status & Note
+        const statusEl = container.querySelector('#inv-status');
+        if (statusEl) {
+            const rawStatus = (inv.status || 'Paid').trim();
+            // Normalize to title case
+            if (rawStatus.toUpperCase() === 'PAID') statusEl.value = 'Paid';
+            else if (rawStatus.toUpperCase() === 'UNPAID') statusEl.value = 'Unpaid';
+            else statusEl.value = 'Draft';
+        }
+
+        const noteEl = container.querySelector('#inv-note');
+        if (noteEl) noteEl.value = inv.note || '';
+
+        renderItemsList();
+        updateLiveTotals();
+    };
+
+    // Reset Form for Creation
+    const resetForm = () => {
+        container.querySelector('#invoice-form').reset();
+        invoiceItems = [];
+        pickerSelections = {};
+        pickerContainer.style.display = 'none';
+        if (pickerToggleText) pickerToggleText.textContent = 'Open Advanced Product Picker';
+
+        if (isBusinessInvoice) {
+            const busInvField = container.querySelector('#inv-bus-number');
+            if (busInvField) busInvField.value = generateRandomBusInvId();
+            const titleEl = container.querySelector('#inv-title');
+            if (titleEl) titleEl.value = 'Invoice';
+        } else {
+            const custInvField = container.querySelector('#inv-cust-number');
+            if (custInvField) custInvField.value = `INV-${Date.now()}`;
+        }
+
+        const statusEl = container.querySelector('#inv-status');
+        if (statusEl) statusEl.value = 'Paid';
+
+        updateBusinessPreview();
+        updateClientPreview();
+        renderItemsList();
+        updateLiveTotals();
+    };
+
+    // Business Preview Helper
+    const updateBusinessPreview = () => {
+        const busSelect = container.querySelector('#inv-business');
+        const previewEl = container.querySelector('#inv-business-preview');
+        if (!previewEl || !busSelect) return;
+        const b = allBusinesses.find(x => x.id === busSelect.value);
+        if (b) {
+            previewEl.style.display = 'block';
+            previewEl.innerHTML = `<strong>${b.name}</strong> &bull; ${b.phone || 'No phone'} &bull; ${b.address || 'No address'}`;
+        } else {
+            previewEl.style.display = 'none';
+        }
+    };
+
+    // Client Preview Helper
+    const updateClientPreview = () => {
+        const cliSelect = container.querySelector('#inv-client');
+        const previewEl = container.querySelector('#inv-client-preview');
+        if (!previewEl || !cliSelect) return;
+        const c = allClients.find(x => x.id === cliSelect.value);
+        if (c) {
+            previewEl.style.display = 'block';
+            previewEl.innerHTML = `<strong>${c.name}</strong> &bull; ${c.phone || 'No phone'} &bull; ${c.email || 'No email'} &bull; ${c.address || 'No address'}`;
+        } else {
+            previewEl.style.display = 'none';
+        }
+    };
+
+    // Category Helpers
+    const getCategoryName = (catVal) => {
+        if (!catVal) return '';
+        const found = allCategories.find(c => c.uniqueId === catVal || c.id === catVal || c.name === catVal);
+        if (found && found.name) return found.name;
+        if (/^[A-Za-z0-9_-]{7,}$/.test(catVal)) {
+            return 'Other';
+        }
+        return catVal;
+    };
+
+    const getCategoryUniqueId = (catVal) => {
+        if (!catVal) return '';
+        const found = allCategories.find(c => c.uniqueId === catVal || c.id === catVal || c.name === catVal);
+        return found ? (found.uniqueId || found.id || found.name) : catVal;
+    };
 
     const updatePickerSummary = () => {
         let totalCount = 0;
@@ -355,12 +643,34 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     const renderPickerCategories = () => {
         if (!pickerCategoryPills) return;
-        const categories = Array.from(new Set(allProducts.map(p => p.category).filter(Boolean)));
+        const categoryMap = new Map();
+
+        allCategories.forEach(c => {
+            const uId = c.uniqueId || c.id || c.name;
+            if (uId && c.name && c.name !== 'Uncategorized') {
+                categoryMap.set(uId, { uniqueId: uId, name: c.name, count: 0 });
+            }
+        });
+
+        allProducts.forEach(p => {
+            if (!p.category) return;
+            const uId = getCategoryUniqueId(p.category);
+            const name = getCategoryName(p.category);
+            if (!categoryMap.has(uId)) {
+                categoryMap.set(uId, { uniqueId: uId, name, count: 0 });
+            }
+            categoryMap.get(uId).count += 1;
+        });
         
+        const allCatsList = Array.from(categoryMap.values());
+        const hasProducts = allCatsList.some(c => c.count > 0);
+        const categories = (hasProducts ? allCatsList.filter(c => c.count > 0) : allCatsList)
+            .sort((a, b) => a.name.localeCompare(b.name));
+
         pickerCategoryPills.innerHTML = `
-            <button type="button" class="filter-pill ${pickerCategoryFilter === 'ALL' ? 'active' : ''}" data-cat="ALL" style="font-size:0.75rem; padding:0.25rem 0.75rem;">All (${allProducts.length})</button>
+            <button type="button" class="filter-pill ${pickerCategoryFilter === 'ALL' ? 'active' : ''}" data-cat-id="ALL" style="font-size:0.75rem; padding:0.25rem 0.75rem;">All (${allProducts.length})</button>
             ${categories.map(c => `
-                <button type="button" class="filter-pill ${pickerCategoryFilter === c ? 'active' : ''}" data-cat="${c}" style="font-size:0.75rem; padding:0.25rem 0.75rem;">${c}</button>
+                <button type="button" class="filter-pill ${pickerCategoryFilter === c.uniqueId ? 'active' : ''}" data-cat-id="${c.uniqueId}" style="font-size:0.75rem; padding:0.25rem 0.75rem;">${c.name} (${c.count})</button>
             `).join('')}
         `;
 
@@ -369,7 +679,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 pickerCategoryPills.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
                 const target = e.target.closest('.filter-pill');
                 target.classList.add('active');
-                pickerCategoryFilter = target.getAttribute('data-cat');
+                pickerCategoryFilter = target.getAttribute('data-cat-id');
                 renderPickerGrid();
             });
         });
@@ -379,14 +689,20 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (!pickerGridContainer) return;
 
         let filtered = allProducts.filter(p => {
-            if (pickerCategoryFilter !== 'ALL' && p.category !== pickerCategoryFilter) return false;
+            if (pickerCategoryFilter !== 'ALL') {
+                const prodCatUniqueId = getCategoryUniqueId(p.category);
+                if (prodCatUniqueId !== pickerCategoryFilter && p.category !== pickerCategoryFilter) {
+                    return false;
+                }
+            }
             if (pickerSearchQuery) {
                 const q = pickerSearchQuery.toLowerCase();
                 const name = (p.name || '').toLowerCase();
-                const cat = (p.category || '').toLowerCase();
+                const catName = getCategoryName(p.category).toLowerCase();
+                const catRaw = (p.category || '').toLowerCase();
                 const upc = (p.upcCode || '').toLowerCase();
                 const size = (p.sizeWeight || '').toLowerCase();
-                return name.includes(q) || cat.includes(q) || upc.includes(q) || size.includes(q);
+                return name.includes(q) || catName.includes(q) || catRaw.includes(q) || upc.includes(q) || size.includes(q);
             }
             return true;
         });
@@ -394,8 +710,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (filtered.length === 0) {
             pickerGridContainer.innerHTML = `
                 <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
-                    <div style="font-weight: 500;">No products match your search.</div>
+                    <div style="font-weight: 500; font-size: 0.95rem;">No products match your search or category filter.</div>
                 </div>
             `;
             return;
@@ -405,16 +720,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const isSelected = pickerSelections[p.id] !== undefined;
             const currentQty = pickerSelections[p.id] || 1;
             const stockQty = Number(p.quantity || 0);
-            const isOutOfStock = stockQty <= 0;
             const sizeLabel = p.sizeWeight || 'Standard';
+            const categoryDisplayName = getCategoryName(p.category);
 
             const imgHtml = p.imageUri 
                 ? `<img src="${p.imageUri}" class="picker-img" alt="${p.name}" loading="lazy">`
-                : `<div style="font-size: 2rem; color: var(--text-muted); opacity: 0.5;">📦</div>`;
+                : `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted); opacity:0.35;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>`;
 
             return `
                 <div class="picker-card ${isSelected ? 'is-selected' : ''}" data-id="${p.id}" data-stock="${stockQty}">
-                    <div class="picker-card-check">✓</div>
+                    <div class="picker-card-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
                     <div class="picker-img-wrap">
                         ${imgHtml}
                     </div>
@@ -427,7 +742,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 0.25rem;">
                         <span class="picker-price">$${Number(p.salePrice || 0).toFixed(2)}</span>
-                        ${p.category ? `<span style="font-size:0.7rem; color:var(--text-muted);">${p.category}</span>` : ''}
+                        ${categoryDisplayName ? `<span style="font-size:0.72rem; color:var(--text-muted); font-weight:500;">${categoryDisplayName}</span>` : ''}
                     </div>
 
                     ${isSelected ? `
@@ -444,9 +759,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         // Attach events to cards
         pickerGridContainer.querySelectorAll('.picker-card').forEach(card => {
             card.addEventListener('click', (e) => {
-                // If clicked inside stepper, ignore
                 if (e.target.closest('.picker-stepper')) return;
-
                 const id = card.getAttribute('data-id');
                 const stock = parseInt(card.getAttribute('data-stock'), 10) || 0;
 
@@ -464,7 +777,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             });
         });
 
-        // Attach events to stepper buttons
         pickerGridContainer.querySelectorAll('.btn-step-minus').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -522,15 +834,21 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         updatePickerSummary();
     };
 
-    // Toggle advanced picker visibility
     if (btnTogglePicker) {
-        btnTogglePicker.addEventListener('click', () => {
+        btnTogglePicker.addEventListener('click', async () => {
             const isHidden = pickerContainer.style.display === 'none';
             pickerContainer.style.display = isHidden ? 'block' : 'none';
             if (pickerToggleText) {
                 pickerToggleText.textContent = isHidden ? 'Hide Advanced Picker' : 'Open Advanced Product Picker';
             }
             if (isHidden) {
+                if (!allCategories || allCategories.length === 0) {
+                    try {
+                        allCategories = await categoryService.getAllCategories();
+                    } catch (e) {
+                        console.warn("Could not reload categories", e);
+                    }
+                }
                 renderPickerCategories();
                 renderPickerGrid();
                 pickerSearchInput?.focus();
@@ -619,7 +937,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         return `BusInv-${random6Digits}`;
     };
 
-    // Re-roll button for Business Invoice
     const btnRegenBusId = container.querySelector('#btn-regen-bus-id');
     if (btnRegenBusId) {
         btnRegenBusId.addEventListener('click', () => {
@@ -656,7 +973,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     let val = parseInt(e.target.value, 10);
                     if (isNaN(val) || val < 1) val = 1;
 
-                    // If vending active, check against stock
                     if (isVendingActive) {
                         const item = invoiceItems[idx];
                         const prod = allProducts.find(p => p.id === item.productId);
@@ -683,7 +999,27 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
     };
 
-    // Shimmer Skeleton
+    // Calculate live totals
+    const updateLiveTotals = () => {
+        const dPct = parseFloat(container.querySelector('#inv-discount')?.value || 0);
+        const addCut = parseFloat(container.querySelector('#inv-add-cut')?.value || 0);
+        const tPct = parseFloat(container.querySelector('#inv-tax')?.value || 0);
+        const ship = parseFloat(container.querySelector('#inv-shipping')?.value || 0);
+
+        const totals = calculateInvoiceTotal(invoiceItems, dPct, addCut, tPct, ship);
+
+        container.querySelector('#inv-live-totals').innerHTML = `
+            <div>Subtotal: $${totals.subtotal.toFixed(2)}</div>
+            ${dPct > 0 ? `<div style="color:var(--primary);">Discount (${dPct}%): -$${(totals.subtotal * (dPct/100)).toFixed(2)}</div>` : ''}
+            ${addCut > 0 ? `<div style="color:var(--primary);">Additional Cut: -$${addCut.toFixed(2)}</div>` : ''}
+            ${tPct > 0 ? `<div>Tax (${tPct}%): +$${totals.taxAmount.toFixed(2)}</div>` : ''}
+            ${ship > 0 ? `<div>Shipping: +$${ship.toFixed(2)}</div>` : ''}
+            <div style="font-weight:700; font-size:1.25rem; margin-top:0.5rem; color:var(--primary); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">Grand Total: $${totals.grandTotal.toFixed(2)}</div>
+            <div style="font-size:0.85rem; color:var(--text-muted);">Est. Profit: $${totals.totalProfit.toFixed(2)}</div>
+        `;
+    };
+
+    // Skeleton loader
     const renderSkeleton = () => {
         tbody.innerHTML = Array(5).fill(0).map(() => `
             <tr class="skeleton-row" style="border-bottom: 1px solid var(--border-color);">
@@ -699,6 +1035,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Attach row events
     const attachInvoiceItemEvents = (invoices) => {
+        // View Action
         container.querySelectorAll('.view-inv').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.getAttribute('data-id');
@@ -717,7 +1054,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         </div>
                     `).join('');
                     
-                    const toName = isBusinessInvoice ? (inv.businessName || 'Business Client') : (inv.customerName || 'Customer');
+                    const toName = isBusinessInvoice 
+                        ? (inv.customerName || (inv.clientEmail ? `Client (${inv.clientEmail})` : 'Client Business'))
+                        : (inv.customerName || 'Customer');
                     
                     const html = `
                         <div style="padding:0.5rem;">
@@ -725,6 +1064,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 <div>
                                     <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); letter-spacing:0.5px;">Invoice Number</div>
                                     <div style="font-weight:700; font-size:1.15rem; font-family:monospace; color:var(--primary); margin-top:0.25rem;">${displayInvId}</div>
+                                    <div style="font-size:0.75rem; font-family:monospace; color:var(--text-muted); margin-top:0.15rem;">ID: ${inv.uniqueId || '-'}</div>
                                 </div>
                                 <div style="text-align:right;">
                                     <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); letter-spacing:0.5px;">Issued Date</div>
@@ -733,11 +1073,18 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                             </div>
                             
                             <div style="background:var(--bg-card); border: 1px solid var(--border-color); padding:1.25rem; border-radius:8px; margin-bottom:2rem;">
-                                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); margin-bottom:0.5rem; letter-spacing:0.5px;">Billed To</div>
-                                <div style="font-weight:700; font-size:1.1rem; color:var(--text-primary);">${toName}</div>
-                                ${inv.customerNumber ? `<div style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.25rem;">Phone: ${inv.customerNumber}</div>` : ''}
-                                ${inv.clientEmail ? `<div style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.25rem;">Email: ${inv.clientEmail}</div>` : ''}
-                                <div style="display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem 0.75rem; margin-top:1rem; border-radius: 4px; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.5px; background: ${inv.status === 'PAID' ? 'rgba(16,185,129,0.15)' : 'rgba(225,29,72,0.15)'}; color: ${inv.status === 'PAID' ? '#059669' : '#e11d48'}; border: 1px solid ${inv.status === 'PAID' ? 'rgba(16,185,129,0.3)' : 'rgba(225,29,72,0.3)'};">
+                                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); margin-bottom:0.5rem; letter-spacing:0.5px;">Issuer (Business)</div>
+                                <div style="font-weight:700; font-size:1rem; color:var(--text-primary);">${inv.businessName || 'Your Business'}</div>
+                                ${inv.businessAddress ? `<div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.2rem;">${inv.businessAddress}</div>` : ''}
+                                ${inv.businessPhone ? `<div style="font-size:0.85rem; color:var(--text-secondary);">Phone: ${inv.businessPhone}</div>` : ''}
+                                
+                                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); margin-top:1rem; margin-bottom:0.5rem; letter-spacing:0.5px;">Billed To</div>
+                                <div style="font-weight:700; font-size:1.05rem; color:var(--text-primary);">${toName}</div>
+                                ${inv.customerNumber || inv.clientPhone ? `<div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.2rem;">Phone: ${inv.customerNumber || inv.clientPhone}</div>` : ''}
+                                ${inv.clientEmail ? `<div style="font-size:0.85rem; color:var(--text-secondary);">Email: ${inv.clientEmail}</div>` : ''}
+                                ${inv.clientAddress ? `<div style="font-size:0.85rem; color:var(--text-secondary);">Address: ${inv.clientAddress}</div>` : ''}
+                                
+                                <div style="display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem 0.75rem; margin-top:1rem; border-radius: 4px; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.5px; background: ${(inv.status || '').toUpperCase() === 'PAID' ? 'rgba(16,185,129,0.15)' : 'rgba(225,29,72,0.15)'}; color: ${(inv.status || '').toUpperCase() === 'PAID' ? '#059669' : '#e11d48'}; border: 1px solid ${(inv.status || '').toUpperCase() === 'PAID' ? 'rgba(16,185,129,0.3)' : 'rgba(225,29,72,0.3)'};">
                                     STATUS: ${inv.status || 'DRAFT'}
                                 </div>
                             </div>
@@ -758,9 +1105,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 </div>
                             </div>
                             
-                            <div style="margin-top: 2rem;">
+                            <div style="margin-top: 2rem; display:flex; gap:0.5rem;">
                                 <button class="btn btn-primary btn-block" onclick="window.print()" style="padding: 0.75rem; font-size: 1rem; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
-                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2m2 4h6a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2zm8-12V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4h10z"></path></svg>
                                     Print / Save as PDF
                                 </button>
                             </div>
@@ -771,25 +1118,35 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             });
         });
 
+        // Edit Action
         container.querySelectorAll('.edit-inv').forEach(btn => {
-            btn.addEventListener('click', () => {
-                showAlert.info("Invoice editing is coming in the next update. For now, you can archive it and create a new one.");
+            btn.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const inv = invoices.find(i => i.id === id);
+                if (inv) {
+                    showEditorView(true, inv);
+                }
             });
         });
 
-        container.querySelectorAll('.arch-inv').forEach(btn => {
+        // Delete Action
+        container.querySelectorAll('.del-inv').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                if (await showAlert.confirm('Archive invoice?')) {
-                    const id = e.target.getAttribute('data-id');
-                    await invoiceService.archiveInvoice(id, isBusinessInvoice);
-                    showAlert.success("Invoice archived.");
+                const id = e.target.getAttribute('data-id');
+                if (await showAlert.confirm('Are you sure you want to delete this invoice?')) {
+                    try {
+                        await invoiceService.deleteInvoice(id, isBusinessInvoice);
+                        showAlert.success("Invoice deleted successfully.");
+                    } catch (err) {
+                        showAlert.error(err.message || "Failed to delete invoice.");
+                    }
                 }
             });
         });
     };
 
+    // Filter and Render Rows
     const applyFiltersAndRender = () => {
-        // 1. Update count badges
         const countAllEl = container.querySelector('#count-all');
         const countPaidEl = container.querySelector('#count-paid');
         const countUnpaidEl = container.querySelector('#count-unpaid');
@@ -798,15 +1155,15 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (countPaidEl) countPaidEl.textContent = rawInvoices.filter(i => (i.status || '').toUpperCase() === 'PAID').length;
         if (countUnpaidEl) countUnpaidEl.textContent = rawInvoices.filter(i => (i.status || '').toUpperCase() !== 'PAID').length;
 
-        // 2. Filter by status
+        // Filter by status
         let filtered = rawInvoices.filter(inv => {
-            const s = (inv.status || 'DRAFT').toUpperCase();
+            const s = (inv.status || 'Draft').toUpperCase();
             if (activeStatus === 'PAID') return s === 'PAID';
             if (activeStatus === 'UNPAID') return s !== 'PAID';
             return true;
         });
 
-        // 3. Filter by date
+        // Filter by date
         if (activeDateFilter !== 'ALL') {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -832,7 +1189,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             });
         }
 
-        // 4. Filter by search query (including invoiceNumber, busInvNumber, uniqueId)
+        // Filter by search query
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             filtered = filtered.filter(inv => {
@@ -840,13 +1197,14 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 const busNum = (inv.busInvNumber || '').toLowerCase();
                 const uid = (inv.uniqueId || '').toLowerCase();
                 const title = (inv.title || '').toLowerCase();
-                const name = (isBusinessInvoice ? (inv.businessName || '') : (inv.customerName || '')).toLowerCase();
+                const busName = (inv.businessName || '').toLowerCase();
+                const custName = (inv.customerName || '').toLowerCase();
                 const note = (inv.note || '').toLowerCase();
-                return num.includes(q) || busNum.includes(q) || uid.includes(q) || title.includes(q) || name.includes(q) || note.includes(q);
+                return num.includes(q) || busNum.includes(q) || uid.includes(q) || title.includes(q) || busName.includes(q) || custName.includes(q) || note.includes(q);
             });
         }
 
-        // 5. Sort
+        // Sort
         filtered.sort((a, b) => {
             if (activeSort === 'NEWEST') return (b.timestamp || 0) - (a.timestamp || 0);
             if (activeSort === 'OLDEST') return (a.timestamp || 0) - (b.timestamp || 0);
@@ -855,12 +1213,14 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             return 0;
         });
 
-        // 6. Render rows
+        // Render rows
         if (filtered.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="6" style="padding: 3.5rem 1rem; text-align: center;">
-                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem; opacity: 0.7;">🧾</div>
+                        <div style="color: var(--text-muted); opacity: 0.35; margin-bottom: 0.75rem;">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        </div>
                         <div style="font-weight: 600; font-size: 1.05rem; color: var(--text-primary); margin-bottom: 0.25rem;">No invoices match your selection</div>
                         <div style="font-size: 0.85rem; color: var(--text-muted);">Try selecting another status, date range, or clear your search query.</div>
                     </td>
@@ -873,14 +1233,21 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const isPaid = (inv.status || '').toUpperCase() === 'PAID';
             const badgeClass = isPaid ? 'badge-paid' : 'badge-unpaid';
             const statusLabel = isPaid ? 'PAID' : (inv.status || 'UNPAID');
-            const entityName = isBusinessInvoice ? (inv.businessName || 'Business Client') : (inv.customerName || 'Customer');
+            
+            const entityDisplay = isBusinessInvoice 
+                ? `<strong>${inv.businessName || 'Business'}</strong>${inv.customerName || inv.clientEmail ? `<div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">To: ${inv.customerName || inv.clientEmail}</div>` : ''}`
+                : `<strong>${inv.customerName || 'Walk-in Customer'}</strong>${inv.customerNumber ? `<div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">${inv.customerNumber}</div>` : ''}`;
+
             const displayInvNumber = inv.invoiceNumber || inv.busInvNumber || inv.uniqueId;
 
             return `
                 <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.15s ease;">
-                    <td style="padding:1rem 1.25rem;"><code style="font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.04); padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 700; color: var(--text-primary);">${displayInvNumber}</code></td>
+                    <td style="padding:1rem 1.25rem;">
+                        <code style="font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.04); padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 700; color: var(--text-primary);">${displayInvNumber}</code>
+                        ${inv.uniqueId ? `<div style="font-size:0.72rem; font-family:monospace; color:var(--text-muted); margin-top:3px;" title="Document uniqueId">${inv.uniqueId}</div>` : ''}
+                    </td>
                     <td style="padding:1rem; color: var(--text-secondary); font-size: 0.9rem;">${new Date(inv.timestamp).toLocaleDateString()}</td>
-                    <td style="padding:1rem; font-weight: 500; color: var(--text-primary);">${entityName}</td>
+                    <td style="padding:1rem; color: var(--text-primary);">${entityDisplay}</td>
                     <td style="padding:1rem;">
                         <span class="${badgeClass}">${statusLabel}</span>
                     </td>
@@ -888,8 +1255,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <td style="padding:1rem 1.25rem;">
                         <div style="display:flex; gap:0.4rem;">
                             <button class="btn btn-sm btn-secondary view-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">View</button>
-                            <button class="btn btn-sm btn-secondary edit-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">Edit</button>
-                            <button class="btn btn-sm btn-secondary arch-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; color:var(--danger);">Archive</button>
+                            <button class="btn btn-sm btn-secondary edit-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight:600;">Edit</button>
+                            <button class="btn btn-sm btn-outline del-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; color:var(--danger);">Delete</button>
                         </div>
                     </td>
                 </tr>
@@ -898,79 +1265,57 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         attachInvoiceItemEvents(filtered);
     };
-    
-    // Calculate live totals
-    const updateLiveTotals = () => {
-        const dPct = parseFloat(container.querySelector('#inv-discount')?.value || 0);
-        const addCut = parseFloat(container.querySelector('#inv-add-cut')?.value || 0);
-        const tPct = parseFloat(container.querySelector('#inv-tax')?.value || 0);
-        const ship = parseFloat(container.querySelector('#inv-shipping')?.value || 0);
 
-        const totals = calculateInvoiceTotal(invoiceItems, dPct, addCut, tPct, ship);
-
-        container.querySelector('#inv-live-totals').innerHTML = `
-            <div>Subtotal: $${totals.subtotal.toFixed(2)}</div>
-            ${dPct > 0 ? `<div style="color:var(--primary);">Discount (${dPct}%): -$${(totals.subtotal * (dPct/100)).toFixed(2)}</div>` : ''}
-            ${addCut > 0 ? `<div style="color:var(--primary);">Additional Cut: -$${addCut.toFixed(2)}</div>` : ''}
-            ${tPct > 0 ? `<div>Tax (${tPct}%): +$${totals.taxAmount.toFixed(2)}</div>` : ''}
-            ${ship > 0 ? `<div>Shipping: +$${ship.toFixed(2)}</div>` : ''}
-            <div style="font-weight:700; font-size:1.25rem; margin-top:0.5rem; color:var(--primary); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">Grand Total: $${totals.grandTotal.toFixed(2)}</div>
-            <div style="font-size:0.85rem; color:var(--text-muted);">Est. Profit: $${totals.totalProfit.toFixed(2)}</div>
-        `;
-    };
-
+    // Load Data
     const loadData = async () => {
         try {
-            // Load Vending status from Settings Service
+            // Load Categories
+            try {
+                allCategories = await categoryService.getAllCategories();
+            } catch (catErr) {
+                console.warn("Could not load categories:", catErr);
+                allCategories = [];
+            }
+
+            // Load Vending status
             isVendingActive = await settingsService.isVendingEnabled();
             const badgeEl = container.querySelector('#inv-vending-badge');
             const formVendingIndicator = container.querySelector('#form-vending-indicator');
 
             if (badgeEl) {
                 badgeEl.innerHTML = isVendingActive
-                    ? `<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.8rem; font-weight: 600;">⚡ Vending Mode Active (Stock Auto-deducts)</span>`
+                    ? `<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.8rem; font-weight: 600;">Vending Mode Active (Auto-deducts Stock)</span>`
                     : `<span class="badge" style="background: rgba(100, 116, 139, 0.1); color: #64748b; font-size: 0.8rem;">Vending Off (No Stock Deduction)</span>`;
             }
 
             if (formVendingIndicator) {
                 formVendingIndicator.innerHTML = isVendingActive
-                    ? `<span style="color: #059669;">⚡ Vending Mode Active</span>`
+                    ? `<span style="color: #059669; font-weight:600;">Vending Mode Active</span>`
                     : `<span style="color: var(--text-muted);">Vending Mode Off</span>`;
             }
 
-            // Load products for dropdown and advanced picker
+            // Load products
             allProducts = await productService.getAllActiveProducts();
             const prodSelect = container.querySelector('#inv-add-product-select');
-            prodSelect.innerHTML = '<option value="">Select a product...</option>' + 
-                allProducts.map(p => `<option value="${p.id}">${p.name} - $${p.salePrice} (Stock: ${p.quantity})</option>`).join('');
+            if (prodSelect) {
+                prodSelect.innerHTML = '<option value="">Select a product...</option>' + 
+                    allProducts.map(p => {
+                        const catName = getCategoryName(p.category);
+                        const catBadge = catName ? ` [${catName}]` : '';
+                        return `<option value="${p.id}">${p.name}${catBadge} - $${p.salePrice} (Stock: ${p.quantity})</option>`;
+                    }).join('');
+            }
+
+            renderPickerCategories();
 
             // Load businesses
-            allBusinesses = await peopleService.getAllBusinesses();
-            const busSelect = container.querySelector('#inv-business');
-            busSelect.innerHTML = '<option value="">Select Business...</option>' + 
-                allBusinesses.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+            await reloadBusinesses();
 
+            // Load clients or customers
             if (isBusinessInvoice) {
-                allClients = await peopleService.getAllClients();
-                const cliSelect = container.querySelector('#inv-client');
-                cliSelect.innerHTML = '<option value="">None</option>' + 
-                    allClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                await reloadClients();
             } else {
-                allCustomers = await peopleService.getAllCustomers();
-                const custSelect = container.querySelector('#inv-customer');
-                custSelect.innerHTML = '<option value="">Walk-in / None</option>' + 
-                    allCustomers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-
-                custSelect.addEventListener('change', (e) => {
-                    const c = allCustomers.find(x => x.id === e.target.value);
-                    if (c) {
-                        container.querySelector('#inv-customer-name').value = c.name;
-                        container.querySelector('#inv-customer-phone').value = c.phone || '';
-                    } else {
-                        container.querySelector('#inv-customer-name').value = '';
-                        container.querySelector('#inv-customer-phone').value = '';
-                    }
-                });
+                await reloadCustomers();
             }
 
             renderSkeleton();
@@ -992,6 +1337,128 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             showAlert.error("Failed to load invoice data.");
         }
     };
+
+    // Reload Entity Dropdowns
+    const reloadBusinesses = async (selectedId = null) => {
+        allBusinesses = await peopleService.getAllBusinesses();
+        const busSelect = container.querySelector('#inv-business');
+        if (!busSelect) return;
+        busSelect.innerHTML = '<option value="">Select Business (Issuer)...</option>' + 
+            allBusinesses.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+        if (selectedId) {
+            busSelect.value = selectedId;
+        } else if (allBusinesses.length === 1 && !busSelect.value) {
+            busSelect.value = allBusinesses[0].id;
+        }
+        updateBusinessPreview();
+    };
+
+    const reloadClients = async (selectedId = null) => {
+        allClients = await peopleService.getAllClients();
+        const cliSelect = container.querySelector('#inv-client');
+        if (!cliSelect) return;
+        cliSelect.innerHTML = '<option value="">None / Custom</option>' + 
+            allClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        if (selectedId) cliSelect.value = selectedId;
+        updateClientPreview();
+    };
+
+    const reloadCustomers = async (selectedId = null) => {
+        allCustomers = await peopleService.getAllCustomers();
+        const custSelect = container.querySelector('#inv-customer');
+        if (!custSelect) return;
+        custSelect.innerHTML = '<option value="">Walk-in / None</option>' + 
+            allCustomers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        if (selectedId) {
+            custSelect.value = selectedId;
+            const c = allCustomers.find(x => x.id === selectedId);
+            if (c) {
+                container.querySelector('#inv-customer-name').value = c.name;
+                container.querySelector('#inv-customer-phone').value = c.phone || '';
+            }
+        }
+    };
+
+    // Listen to changes on Entity Dropdowns
+    container.querySelector('#inv-business')?.addEventListener('change', updateBusinessPreview);
+    container.querySelector('#inv-client')?.addEventListener('change', updateClientPreview);
+    container.querySelector('#inv-customer')?.addEventListener('change', (e) => {
+        const c = allCustomers.find(x => x.id === e.target.value);
+        if (c) {
+            container.querySelector('#inv-customer-name').value = c.name;
+            container.querySelector('#inv-customer-phone').value = c.phone || '';
+        } else {
+            container.querySelector('#inv-customer-name').value = '';
+            container.querySelector('#inv-customer-phone').value = '';
+        }
+    });
+
+    // QUICK ADD MODAL HANDLERS
+    const openQuickAddModal = (type) => {
+        quickAddTargetType = type;
+        quickAddForm.reset();
+        if (type === 'business') {
+            quickAddTitle.textContent = 'Add New Business (Issuer)';
+        } else if (type === 'client') {
+            quickAddTitle.textContent = 'Add New Client (Billed To)';
+        } else {
+            quickAddTitle.textContent = 'Add New Customer';
+        }
+        quickAddModal.style.display = 'flex';
+        container.querySelector('#qa-name')?.focus();
+    };
+
+    const closeQuickAddModal = () => {
+        quickAddModal.style.display = 'none';
+        quickAddTargetType = null;
+    };
+
+    container.querySelector('#btn-quick-add-business')?.addEventListener('click', () => openQuickAddModal('business'));
+    container.querySelector('#btn-quick-add-client')?.addEventListener('click', () => openQuickAddModal('client'));
+    container.querySelector('#btn-quick-add-customer')?.addEventListener('click', () => openQuickAddModal('customer'));
+
+    btnCloseQuickAdd?.addEventListener('click', closeQuickAddModal);
+    btnCancelQuickAdd?.addEventListener('click', closeQuickAddModal);
+
+    quickAddForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = container.querySelector('#btn-save-quick-add');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        const data = {
+            name: container.querySelector('#qa-name').value.trim(),
+            phone: container.querySelector('#qa-phone').value.trim(),
+            email: container.querySelector('#qa-email').value.trim(),
+            address: container.querySelector('#qa-address').value.trim()
+        };
+
+        try {
+            if (!data.name) throw new Error("Name is required.");
+
+            let newId = null;
+            if (quickAddTargetType === 'business') {
+                newId = await peopleService.addBusiness(data, currentUser?.uid);
+                await reloadBusinesses(newId);
+                showAlert.success(`Business "${data.name}" added and selected.`);
+            } else if (quickAddTargetType === 'client') {
+                newId = await peopleService.addClient(data, currentUser?.uid);
+                await reloadClients(newId);
+                showAlert.success(`Client "${data.name}" added and selected.`);
+            } else if (quickAddTargetType === 'customer') {
+                newId = await peopleService.addCustomer(data, currentUser?.uid);
+                await reloadCustomers(newId);
+                showAlert.success(`Customer "${data.name}" added and selected.`);
+            }
+
+            closeQuickAddModal();
+        } catch (err) {
+            showAlert.error(err.message || "Failed to add entry.");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save & Select';
+        }
+    });
 
     // Filter Toolbar Events
     container.querySelectorAll('#inv-status-pills .filter-pill').forEach(btn => {
@@ -1041,36 +1508,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         });
     }
 
-    // FORM OPEN / CLOSE EVENTS
+    // FORM OPEN EVENT
     container.querySelector('#btn-add-invoice').addEventListener('click', () => {
-        container.querySelector('#invoice-form').reset();
-        invoiceItems = [];
-        pickerSelections = {};
-        pickerContainer.style.display = 'none';
-        if (pickerToggleText) pickerToggleText.textContent = 'Open Advanced Product Picker';
-
-        if (isBusinessInvoice) {
-            // Auto generate random id BusInv-000000 to BusInv-999999 (editable)
-            const busInvField = container.querySelector('#inv-bus-number');
-            if (busInvField) busInvField.value = generateRandomBusInvId();
-        } else {
-            // Customer invoice = timestamp to inv number INV-Timestamp
-            const custInvField = container.querySelector('#inv-cust-number');
-            if (custInvField) custInvField.value = `INV-${Date.now()}`;
-        }
-
-        renderItemsList();
-        updateLiveTotals();
-        formContainer.style.display = 'block';
-        formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showEditorView(false);
     });
 
-    container.querySelector('#inv-cancel-btn').addEventListener('click', () => {
-        formContainer.style.display = 'none';
-    });
-
-    // Single item add
-    container.querySelector('#inv-btn-add-item').addEventListener('click', () => {
+    // Single item add fallback
+    container.querySelector('#inv-btn-add-item')?.addEventListener('click', () => {
         const prodId = container.querySelector('#inv-add-product-select').value;
         const qty = parseInt(container.querySelector('#inv-add-qty').value, 10);
 
@@ -1107,7 +1551,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             renderItemsList();
             updateLiveTotals();
             
-            // reset add row
             container.querySelector('#inv-add-product-select').value = '';
             container.querySelector('#inv-add-qty').value = 1;
         }
@@ -1121,7 +1564,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
     });
 
-    // SAVE INVOICE HANDLER
+    // SAVE / UPDATE INVOICE HANDLER
     btnSubmit.addEventListener('click', async () => {
         try {
             if (invoiceItems.length === 0) {
@@ -1129,7 +1572,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             }
 
             btnSubmit.disabled = true;
-            btnSubmit.textContent = "Saving...";
+            btnSubmit.textContent = editingInvoiceId ? "Updating..." : "Saving...";
+
+            // Status Title Case ("Paid", "Unpaid", "Draft")
+            let rawStatus = (container.querySelector('#inv-status')?.value || 'Paid').trim();
+            if (rawStatus.toUpperCase() === 'PAID') rawStatus = 'Paid';
+            else if (rawStatus.toUpperCase() === 'UNPAID') rawStatus = 'Unpaid';
+            else rawStatus = 'Draft';
 
             const invoiceData = {
                 isBusinessInvoice,
@@ -1137,7 +1586,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 additionalCut: parseFloat(container.querySelector('#inv-add-cut')?.value || 0),
                 taxPercent: parseFloat(container.querySelector('#inv-tax')?.value || 0),
                 shippingCost: parseFloat(container.querySelector('#inv-shipping')?.value || 0),
-                status: container.querySelector('#inv-status').value,
+                status: rawStatus,
                 note: container.querySelector('#inv-note')?.value || '',
                 timestamp: Date.now()
             };
@@ -1147,55 +1596,72 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             if (!bSelect.value) throw new Error("Please select the issuing Business.");
             
             const bus = allBusinesses.find(b => b.id === bSelect.value);
-            invoiceData.businessId = bus.id;
-            invoiceData.businessName = bus.name;
-            invoiceData.businessAddress = bus.address;
-            invoiceData.businessPhone = bus.phone;
-            invoiceData.businessEmail = bus.email;
+            if (bus) {
+                invoiceData.businessId = bus.uniqueId || bus.id;
+                invoiceData.businessName = bus.name || '';
+                invoiceData.businessAddress = bus.address || '';
+                invoiceData.businessPhone = bus.phone || '';
+                invoiceData.businessEmail = bus.email || '';
+            }
 
             if (isBusinessInvoice) {
                 const cSelect = container.querySelector('#inv-client');
-                if (cSelect.value) {
+                if (cSelect && cSelect.value) {
                     const cli = allClients.find(c => c.id === cSelect.value);
-                    invoiceData.clientId = cli.id;
-                    invoiceData.clientAddress = cli.address;
-                    invoiceData.clientPhone = cli.phone;
-                    invoiceData.clientEmail = cli.email;
+                    if (cli) {
+                        invoiceData.clientId = cli.uniqueId || cli.id;
+                        invoiceData.clientAddress = cli.address || '';
+                        invoiceData.clientPhone = cli.phone || '';
+                        invoiceData.clientEmail = cli.email || '';
+                        invoiceData.customerName = cli.name || '';
+                    }
                 }
 
-                invoiceData.title = container.querySelector('#inv-title')?.value || 'Business Invoice';
+                invoiceData.title = container.querySelector('#inv-title')?.value || 'Invoice';
                 
-                // Business Invoice: BusInv-000000 to BusInv-999999 (editable)
                 const busInvNum = container.querySelector('#inv-bus-number')?.value.trim();
                 invoiceData.busInvNumber = busInvNum || generateRandomBusInvId();
                 invoiceData.invoiceNumber = invoiceData.busInvNumber;
 
             } else {
-                const cName = container.querySelector('#inv-customer-name').value.trim();
+                const cSelect = container.querySelector('#inv-customer');
+                if (cSelect && cSelect.value) {
+                    const cust = allCustomers.find(c => c.id === cSelect.value);
+                    if (cust) {
+                        invoiceData.customerId = cust.uniqueId || cust.id;
+                    }
+                }
+
+                const cName = container.querySelector('#inv-customer-name')?.value.trim();
                 if (!cName) throw new Error("Customer Name is required.");
                 
                 invoiceData.customerName = cName;
-                invoiceData.customerNumber = container.querySelector('#inv-customer-phone').value.trim();
+                invoiceData.customerNumber = container.querySelector('#inv-customer-phone')?.value.trim() || '';
                 
-                // Customer Invoice: INV-<Timestamp>
                 const custInvNum = container.querySelector('#inv-cust-number')?.value.trim();
                 invoiceData.invoiceNumber = custInvNum || `INV-${Date.now()}`;
             }
 
-            // Save via service with vending flag
-            await invoiceService.createInvoice(invoiceData, invoiceItems, currentUser.uid, isVendingActive);
+            if (editingInvoiceId) {
+                // Preserving document uniqueId
+                invoiceData.uniqueId = editingInvoiceUniqueId;
+                await invoiceService.updateInvoice(editingInvoiceId, invoiceData, invoiceItems, isVendingActive);
+                showAlert.success(`Invoice ${invoiceData.invoiceNumber} updated successfully!`);
+            } else {
+                // Correct 13-character base64 uniqueId
+                invoiceData.uniqueId = editingInvoiceUniqueId || generateUniqueId();
+                await invoiceService.createInvoice(invoiceData, invoiceItems, currentUser?.uid || '', isVendingActive);
+                showAlert.success(`Invoice ${invoiceData.invoiceNumber} created successfully! ${isVendingActive ? '(Stock deducted in Vending Mode)' : ''}`);
+            }
 
-            showAlert.success(`Invoice ${invoiceData.invoiceNumber} created successfully! ${isVendingActive ? '(Stock deducted in Vending Mode)' : ''}`);
-            formContainer.style.display = 'none';
-
-            // Refresh data and active products inventory
+            showListView();
             await loadData();
 
         } catch (err) {
-            showAlert.error(err.message || "Failed to create invoice.");
+            showAlert.error(err.message || "Failed to save invoice.");
         } finally {
             btnSubmit.disabled = false;
-            btnSubmit.textContent = "Save Invoice";
+            btnSubmit.textContent = editingInvoiceId ? "Update Invoice" : "Save Invoice";
         }
     });
 

@@ -73,7 +73,9 @@ export const renderSettings = async (container, workspaceId) => {
         if (!canAccessSettings) {
             contentArea.innerHTML = `
                 <div class="card" style="padding: 3rem 2rem; text-align: center; max-width: 540px; margin: 2rem auto; border-radius: var(--radius-card); box-shadow: var(--shadow-elevated);">
-                    <div style="font-size: 3rem; margin-bottom: 1.25rem;">🔒</div>
+                    <div style="color: var(--primary); margin-bottom: 1.25rem;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
                     <h3 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 1.4rem;">Access Restricted</h3>
                     <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
                         Workspace Settings and Vending Mode configurations can only be managed by <strong>Admins</strong> and <strong>Co-Admins</strong>.
@@ -110,7 +112,7 @@ export const renderSettings = async (container, workspaceId) => {
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
                         <div style="flex: 1; min-width: 260px;">
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
-                                <span style="font-size: 1.5rem;">⚡</span>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary);"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
                                 <h3 style="margin: 0; font-size: 1.2rem; color: var(--text-primary); font-weight: 700;">Vending Mode (Inventory Automation)</h3>
                             </div>
                             <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin: 0;">
@@ -133,8 +135,8 @@ export const renderSettings = async (container, workspaceId) => {
 
                     <div id="vending-info-banner" style="margin-top: 1.25rem; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.85rem; background: ${currentSettings.enableVending ? 'rgba(16, 185, 129, 0.08)' : 'rgba(241, 245, 249, 0.8)'}; border: 1px solid ${currentSettings.enableVending ? 'rgba(16, 185, 129, 0.25)' : 'var(--border-color)'}; color: ${currentSettings.enableVending ? '#047857' : 'var(--text-secondary)'};">
                         ${currentSettings.enableVending 
-                            ? '✓ <strong>Active Mode:</strong> Products added to customer or business invoices will reduce inventory quantity in real-time on save.' 
-                            : 'ℹ️ <strong>Standard Mode:</strong> Invoices are generated as records only. Product quantities in inventory will remain unaffected.'
+                            ? '<strong>Active Mode:</strong> Products added to customer or business invoices will reduce inventory quantity in real-time on save.' 
+                            : '<strong>Standard Mode:</strong> Invoices are generated as records only. Product quantities in inventory will remain unaffected.'
                         }
                     </div>
                 </div>
@@ -142,7 +144,7 @@ export const renderSettings = async (container, workspaceId) => {
                 <!-- GENERAL WORKSPACE INFO -->
                 <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card);">
                     <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-size: 1.1rem; color: var(--text-primary);">
-                        🏢 General Workspace
+                        General Workspace
                     </h3>
                     
                     <form id="settings-general-form" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -171,7 +173,7 @@ export const renderSettings = async (container, workspaceId) => {
                 <!-- RECEIPT & INVOICE PRINT SETTINGS -->
                 <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card);">
                     <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-size: 1.1rem; color: var(--text-primary);">
-                        🧾 Receipt & Print Details
+                        Receipt & Print Details
                     </h3>
 
                     <form id="settings-receipt-form" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -225,12 +227,12 @@ export const renderSettings = async (container, workspaceId) => {
                     vendingBanner.style.background = 'rgba(16, 185, 129, 0.08)';
                     vendingBanner.style.borderColor = 'rgba(16, 185, 129, 0.25)';
                     vendingBanner.style.color = '#047857';
-                    vendingBanner.innerHTML = '✓ <strong>Active Mode:</strong> Products added to customer or business invoices will reduce inventory quantity in real-time on save.';
+                    vendingBanner.innerHTML = '<strong>Active Mode:</strong> Products added to customer or business invoices will reduce inventory quantity in real-time on save.';
                 } else {
                     vendingBanner.style.background = 'rgba(241, 245, 249, 0.8)';
                     vendingBanner.style.borderColor = 'var(--border-color)';
                     vendingBanner.style.color = 'var(--text-secondary)';
-                    vendingBanner.innerHTML = 'ℹ️ <strong>Standard Mode:</strong> Invoices are generated as records only. Product quantities in inventory will remain unaffected.';
+                    vendingBanner.innerHTML = '<strong>Standard Mode:</strong> Invoices are generated as records only. Product quantities in inventory will remain unaffected.';
                 }
             });
         }

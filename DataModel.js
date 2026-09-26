@@ -31,34 +31,35 @@ export function generateInvoiceUniqueId() {
 
 export class Invoice {
     constructor(data = {}) {
-        this.additionalCut = data.additionalCut || 0.0;
+        this.additionalCut = Number(data.additionalCut) || 0.0;
         this.businessAddress = data.businessAddress || "";
         this.businessEmail = data.businessEmail || "";
         this.businessId = data.businessId || "";
         this.businessName = data.businessName || "";
         this.businessPhone = data.businessPhone || "";
         this.clientId = data.clientId || "";
+        this.customerId = data.customerId || "";
         this.creatorId = data.creatorId || "";
         this.customerName = data.customerName || "";
         this.customerNumber = data.customerNumber || "";
-        this.discountPercent = data.discountPercent || 0.0;
+        this.discountPercent = Number(data.discountPercent) || 0.0;
         this.invoiceNumber = data.invoiceNumber || "";
-        this.isBusinessInvoice = data.isBusinessInvoice !== undefined ? data.isBusinessInvoice : false;
+        this.isBusinessInvoice = data.isBusinessInvoice !== undefined ? Boolean(data.isBusinessInvoice) : false;
         this.items = data.items || []; // Array of InvoiceItem
-        this.status = data.status || "Draft"; // Ensure Title Case like Android ("Paid", "Draft")
+        this.status = data.status || "Paid"; // Ensure Title Case like Android ("Paid", "Unpaid", "Draft")
         this.timestamp = data.timestamp || Date.now();
-        this.totalPrice = data.totalPrice || 0.0;
-        this.totalProfit = data.totalProfit || 0.0;
+        this.totalPrice = Number(data.totalPrice) || 0.0;
+        this.totalProfit = Number(data.totalProfit) || 0.0;
         this.uniqueId = data.uniqueId || generateInvoiceUniqueId();
         
         if (this.isBusinessInvoice) {
-            this.busInvNumber = data.busInvNumber || "";
+            this.busInvNumber = data.busInvNumber || data.invoiceNumber || "";
             this.clientAddress = data.clientAddress || "";
             this.clientEmail = data.clientEmail || "";
             this.clientPhone = data.clientPhone || "";
             this.note = data.note || "";
-            this.shippingCost = data.shippingCost || 0.0;
-            this.taxPercent = data.taxPercent || 0.0;
+            this.shippingCost = Number(data.shippingCost) || 0.0;
+            this.taxPercent = Number(data.taxPercent) || 0.0;
             this.title = data.title || "Invoice";
         }
     }

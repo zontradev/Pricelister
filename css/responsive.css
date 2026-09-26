@@ -1,68 +1,145 @@
-/* Responsive adjustments */
+/* ==========================================================================
+   PRICELISTER - UNIVERSAL BROAD-LEVEL RESPONSIVE DESIGN SYSTEM
+   Supports: Compact Mobile (320px) -> Tablet -> Laptop -> 2K -> 4K / TV (3840px+)
+   ========================================================================== */
 
-@media (max-width: 1024px) {
-    .dashboard-grid {
-        grid-template-columns: repeat(2, 1fr);
+/* --------------------------------------------------------------------------
+   GLOBAL FLUID UTILITIES & SAFE AREAS
+   -------------------------------------------------------------------------- */
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --content-max-width: 1720px;
+}
+
+/* Touch Device Optimization */
+@media (hover: none) and (pointer: coarse) {
+    button, 
+    .btn, 
+    .nav-item, 
+    .filter-pill, 
+    .stepper-btn, 
+    .form-control,
+    select,
+    input {
+        min-height: 44px; /* Apple/Android Recommended Minimum Tap Target */
+    }
+    
+    .picker-card .stepper-btn {
+        min-height: 36px;
+        min-width: 36px;
+    }
+
+    * {
+        -webkit-tap-highlight-color: rgba(225, 29, 72, 0.15);
     }
 }
 
-@media (max-width: 768px) {
-    /* Mobile Sidebar Handling */
-    .sidebar {
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 100%;
-        transform: translateX(0);
-    }
-    
-    .sidebar-collapsed .sidebar {
-        width: 260px; /* retain width */
-        transform: translateX(-100%);
+/* --------------------------------------------------------------------------
+   TIER 1: COMPACT MOBILE (320px - 480px: iPhone SE, Z Flip, Small Androids)
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+    html {
+        font-size: 14px;
     }
 
-    /* By default on mobile, start collapsed (managed by JS typically, but CSS handles visual) */
-    body:not(.sidebar-collapsed) #app-shell::after {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
-        z-index: 90;
+    body {
+        padding-top: var(--safe-top);
+        padding-bottom: var(--safe-bottom);
     }
 
-    .main-content {
-        width: 100%;
+    /* Prevent mobile Safari font auto-zoom on input focus */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    select,
+    textarea {
+        font-size: 16px !important;
     }
 
-    .context-panel {
-        width: 100%;
-        top: 0;
+    /* Topbar */
+    .topbar {
+        height: 56px;
+        padding: 0 0.85rem;
     }
 
-    .dashboard-grid {
-        grid-template-columns: 1fr;
+    .breadcrumbs {
+        font-size: 0.8rem;
+        max-width: 190px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
+    /* Main Workspace Container */
+    .workspace-area {
+        padding: 0.85rem;
+    }
+
+    /* Cards */
+    .card {
+        padding: 1rem;
+        border-radius: 12px;
+    }
+
+    /* Header */
     .module-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .filter-toolbar {
         flex-direction: column;
         align-items: stretch;
         gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .module-header h2 {
+        font-size: 1.45rem;
+    }
+
+    .module-header .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .module-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .module-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Overview Stat Cards */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+    }
+
+    .stat-card {
         padding: 1rem;
     }
 
-    .filter-group-left, .filter-group-right {
+    .stat-value {
+        font-size: 1.65rem;
+    }
+
+    /* Filter & Search Toolbar */
+    .filter-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+        padding: 0.85rem;
+    }
+
+    .filter-group-left, 
+    .filter-group-right {
         width: 100%;
         flex-direction: column;
         align-items: stretch;
+        gap: 0.65rem;
     }
 
     .filter-pills {
@@ -73,6 +150,8 @@
     .filter-pill {
         flex: 1;
         justify-content: center;
+        padding: 0.4rem 0.5rem;
+        font-size: 0.78rem;
     }
 
     .search-input-wrap {
@@ -83,30 +162,634 @@
         width: 100% !important;
     }
 
-    .revenue-bar-legend {
+    /* Forms */
+    .form-section {
+        margin-bottom: 1rem;
+    }
+
+    .form-section div[style*="display:flex"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    /* Advanced Product Picker */
+    .product-picker-container {
+        padding: 0.85rem;
+    }
+
+    .picker-search-bar {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
         gap: 0.5rem;
     }
 
-    .card {
-        padding: 1.25rem;
+    .picker-search-bar > div:last-child {
+        display: flex;
+        width: 100%;
+    }
+
+    .picker-search-bar button {
+        flex: 1;
+        justify-content: center;
     }
 
     .picker-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 0.75rem;
-        max-height: 360px;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.55rem !important;
+        max-height: 380px;
+        padding: 0.35rem;
+    }
+
+    .picker-card {
+        padding: 0.65rem;
+    }
+
+    .picker-img-wrap {
+        height: 85px;
+    }
+
+    .picker-title {
+        font-size: 0.8rem;
+    }
+
+    .picker-price {
+        font-size: 0.85rem;
     }
 
     .picker-footer {
         flex-direction: column;
         align-items: stretch;
+        gap: 0.65rem;
     }
 
     .picker-footer button {
         width: 100%;
         justify-content: center;
     }
+
+    /* Table Container - Mobile Swipe */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -0.85rem;
+        padding: 0 0.85rem;
+        width: calc(100% + 1.7rem);
+    }
+
+    table th, table td {
+        padding: 0.65rem 0.5rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+    /* Landing Page Mobile */
+    .landing-header {
+        padding: 0.85rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .nav-links {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0.35rem;
+        gap: 1rem;
+        scrollbar-width: none;
+    }
+
+    .nav-links::-webkit-scrollbar {
+        display: none;
+    }
+
+    .hero-section {
+        flex-direction: column-reverse;
+        padding: 2.5rem 1rem;
+        gap: 2rem;
+        text-align: center;
+    }
+
+    .hero-content h1 {
+        font-size: 2.15rem;
+        line-height: 1.15;
+    }
+
+    .hero-content p {
+        font-size: 1rem;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .hero-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .section {
+        padding: 3rem 1rem;
+    }
+
+    .section-header h2 {
+        font-size: 1.85rem;
+    }
+
+    .features-grid,
+    .pricing-grid,
+    .steps-grid,
+    .legal-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.25rem;
+    }
+
+    .pricing-card {
+        padding: 1.5rem 1.25rem;
+    }
+
+    /* Modals Mobile Bottom-sheet */
+    .login-dialog,
+    .modal-content,
+    .find-workspace-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 16px !important;
+        margin: 0.5rem auto !important;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
 }
 
+/* --------------------------------------------------------------------------
+   TIER 2: PHABLET & MID MOBILE (481px - 768px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 481px) and (max-width: 768px) {
+    html {
+        font-size: 15px;
+    }
+
+    .workspace-area {
+        padding: 1.25rem;
+    }
+
+    .module-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .picker-grid {
+        grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+        gap: 0.75rem !important;
+        max-height: 400px;
+    }
+
+    .filter-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .filter-group-left, 
+    .filter-group-right {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .hero-section {
+        flex-direction: column-reverse;
+        padding: 3.5rem 1.5rem;
+        gap: 2.5rem;
+        text-align: center;
+    }
+
+    .hero-content h1 {
+        font-size: 2.6rem;
+    }
+
+    .steps-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem;
+    }
+
+    .pricing-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   SHARED MOBILE DRAWER & OFF-CANVAS RULES (max-width: 768px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    /* Mobile Off-canvas Drawer Navigation */
+    .sidebar {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 285px !important;
+        max-width: 82vw !important;
+        height: 100% !important;
+        transform: translateX(0);
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        z-index: 1000 !important;
+        box-shadow: 0 16px 38px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    #app-shell.sidebar-collapsed .sidebar {
+        transform: translateX(-100%) !important;
+        width: 285px !important; /* Retain width so it slides off cleanly */
+    }
+
+    /* Mobile Backdrop Overlay */
+    .sidebar-backdrop {
+        display: block !important;
+        pointer-events: none;
+        opacity: 0;
+    }
+
+    #app-shell:not(.sidebar-collapsed) .sidebar-backdrop {
+        pointer-events: auto !important;
+        opacity: 1 !important;
+    }
+
+    /* Mobile Hamburger Icon */
+    #open-sidebar {
+        display: inline-flex !important;
+    }
+
+    /* Context Panel Drawer on Mobile */
+    .context-panel {
+        width: 100% !important;
+        top: 0;
+        z-index: 1050;
+    }
+
+    .main-content {
+        width: 100% !important;
+    }
+
+    /* Revenue Bar Legend Wrap */
+    .revenue-bar-legend {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   TIER 3: TABLETS (769px - 1024px: iPad, Android Tabs, Small Laptops)
+   -------------------------------------------------------------------------- */
+@media (min-width: 769px) and (max-width: 1024px) {
+    html {
+        font-size: 15.5px;
+    }
+
+    .sidebar {
+        width: 230px;
+    }
+
+    .sidebar-collapsed .sidebar {
+        width: 0;
+    }
+
+    #open-sidebar {
+        display: none;
+    }
+
+    #app-shell.sidebar-collapsed #open-sidebar {
+        display: inline-flex !important;
+    }
+
+    .workspace-area {
+        padding: 1.5rem;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+    }
+
+    .picker-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+        gap: 0.85rem !important;
+        max-height: 440px;
+    }
+
+    .steps-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .pricing-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hero-content h1 {
+        font-size: 2.85rem;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   TIER 4: STANDARD LAPTOPS & DESKTOPS (1025px - 1440px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 1025px) and (max-width: 1440px) {
+    html {
+        font-size: 16px;
+    }
+
+    .sidebar {
+        width: 260px;
+    }
+
+    #open-sidebar {
+        display: none;
+    }
+
+    #app-shell.sidebar-collapsed #open-sidebar {
+        display: inline-flex !important;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    .picker-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+        gap: 1rem !important;
+    }
+
+    .steps-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+
+    .pricing-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   TIER 5: LARGE DESKTOPS & 2K DISPLAYS (1441px - 1920px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 1441px) and (max-width: 1920px) {
+    html {
+        font-size: 16.5px;
+    }
+
+    .workspace-area {
+        padding: 2.25rem;
+        max-width: var(--content-max-width);
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.75rem;
+    }
+
+    .stat-card {
+        padding: 2rem;
+    }
+
+    .stat-value {
+        font-size: 2.35rem;
+    }
+
+    .picker-grid {
+        grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)) !important;
+        gap: 1.25rem !important;
+        max-height: 480px;
+    }
+
+    .card {
+        padding: 2rem;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   TIER 6: ULTRAWIDE, 4K DISPLAYS & SMART TVs (1921px - 3840px+)
+   -------------------------------------------------------------------------- */
+@media (min-width: 1921px) {
+    html {
+        font-size: 18px; /* Fluid font-size scaling for large viewing distance */
+    }
+
+    /* TV & Couch Ergonomic Max-Width Centering */
+    .workspace-area {
+        padding: 3rem;
+        max-width: 1920px;
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    .main-content {
+        align-items: center;
+    }
+
+    .topbar {
+        width: 100%;
+        max-width: 1920px;
+        margin: 0 auto;
+        height: 72px;
+        padding: 0 3rem;
+    }
+
+    .sidebar {
+        width: 320px;
+    }
+
+    .sidebar-header {
+        height: 72px;
+        padding: 1rem 2rem;
+    }
+
+    .sidebar-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .nav-item {
+        padding: 0.75rem 2rem;
+        font-size: 1rem;
+    }
+
+    /* Dashboard Expands Elegantly */
+    .dashboard-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2rem;
+    }
+
+    .stat-card {
+        padding: 2.25rem;
+        border-radius: 20px;
+    }
+
+    .stat-value {
+        font-size: 2.75rem;
+    }
+
+    /* Product Picker Scales Cleanly */
+    .picker-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+        gap: 1.5rem !important;
+        max-height: 560px;
+    }
+
+    .picker-img-wrap {
+        height: 140px;
+    }
+
+    .picker-title {
+        font-size: 1rem;
+    }
+
+    .picker-price {
+        font-size: 1.15rem;
+    }
+
+    /* Cards & Floating Elements */
+    .card {
+        padding: 2.25rem;
+        border-radius: 20px;
+        box-shadow: 0 14px 44px -4px rgba(15, 23, 42, 0.06);
+    }
+
+    /* Landing Page on UltraWide/TV */
+    .landing-header {
+        max-width: 1920px;
+        margin: 0 auto;
+        padding: 1.75rem 4rem;
+    }
+
+    .hero-section {
+        max-width: 1920px;
+        margin: 0 auto;
+        padding: 7rem 4rem;
+    }
+
+    .hero-content h1 {
+        font-size: 4.25rem;
+    }
+
+    .hero-content p {
+        font-size: 1.45rem;
+    }
+
+    .preview-mockup {
+        max-width: 650px;
+    }
+
+    .section {
+        max-width: 1920px;
+        margin: 0 auto;
+        padding: 7rem 4rem;
+    }
+
+    .features-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2.5rem;
+    }
+
+    .pricing-grid {
+        max-width: 1400px;
+        gap: 2.5rem;
+    }
+
+    .footer-grid {
+        max-width: 1920px;
+        margin: 0 auto 3rem auto;
+    }
+
+    /* TV Remote & Keyboard D-Pad High-Visibility Focus Outline */
+    :focus-visible {
+        outline: 3px solid var(--primary) !important;
+        outline-offset: 4px !important;
+        box-shadow: 0 0 16px rgba(225, 29, 72, 0.5) !important;
+    }
+}
+
+/* 4K Ultra-HD Screens (2560px+) */
+@media (min-width: 2560px) {
+    html {
+        font-size: 20px;
+    }
+
+    .workspace-area {
+        max-width: 2200px;
+    }
+
+    .topbar, .landing-header, .hero-section, .section, .footer-grid {
+        max-width: 2200px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   ACCESSIBILITY: PREFERS REDUCED MOTION
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   PRINT OPTIMIZATION (INVOICES & RECEIPTS)
+   -------------------------------------------------------------------------- */
+@media print {
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .sidebar,
+    .topbar,
+    .sidebar-backdrop,
+    .filter-toolbar,
+    .module-header button,
+    #btn-add-invoice,
+    .context-panel {
+        display: none !important;
+    }
+
+    #app-shell,
+    .main-content,
+    .workspace-area {
+        height: auto !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+    }
+
+    table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+    }
+
+    th, td {
+        border: 1px solid #ddd !important;
+        color: #000 !important;
+    }
+}
