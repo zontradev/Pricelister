@@ -17,12 +17,75 @@ import { renderAnalyticsHub } from './modules/analyticsHub.js';
 import { authService } from '../firebase/auth.js';
 import { firestoreService } from '../firebase/firestore.js';
 
+import { showAlert } from './alert-handler.js';
+
 // Placeholders for remaining modules
 const renderPlaceholder = (container, title) => {
     container.innerHTML = `
         <div class="module-header"><h2>${title}</h2></div>
         <div class="empty-state"><p>This module is under construction.</p></div>
     `;
+};
+
+/**
+ * Universal Edit Safety / Unsaved Changes Detector
+ * Detects whether any active view or modal form currently has unsaved modifications.
+ */
+export const hasUnsavedChanges = () => {
+    try {
+        // 1. Settings Module: Save Workspace Settings or Change Currency buttons enabled
+        const btnSaveSettings = document.getElementById('btn-save-settings');
+        const btnChangeCurr = document.getElementById('btn-change-currency');
+        if ((btnSaveSettings && !btnSaveSettings.disabled) || (btnChangeCurr && !btnChangeCurr.disabled)) {
+            return true;
+        }
+
+        // 2. Product Form: Form open with unsaved product edits or new input
+        const prdFormContainer = document.getElementById('product-form-container');
+        const prdSubmitBtn = document.getElementById('prd-submit-btn');
+        if (prdFormContainer && prdFormContainer.style.display !== 'none') {
+            if (prdSubmitBtn && !prdSubmitBtn.disabled) return true;
+            const prdName = document.getElementById('prd-name')?.value?.trim();
+            if (prdName) return true;
+        }
+
+        // 3. Invoice Editor: Editor open with unsaved changes or items
+        const invEditor = document.getElementById('invoice-editor-view');
+        const invSubmitBtn = document.getElementById('inv-submit-btn');
+        if (invEditor && invEditor.style.display !== 'none') {
+            if (invSubmitBtn && !invSubmitBtn.disabled) return true;
+            const custName = document.getElementById('inv-customer-name')?.value?.trim();
+            const busId = document.getElementById('inv-business')?.value;
+            if (custName || busId) return true;
+        }
+
+        // 4. Category Form: Form open with unsaved changes
+        const catFormContainer = document.getElementById('category-form-container');
+        const catSubmitBtn = document.getElementById('cat-submit-btn');
+        if (catFormContainer && catFormContainer.style.display !== 'none') {
+            if (catSubmitBtn && !catSubmitBtn.disabled) return true;
+        }
+
+        // 5. Worker Permissions Manage Form: Form open with modified permissions
+        const workerSaveBtn = document.getElementById('btn-save-manage');
+        const manageWorkerContainer = document.getElementById('manage-worker-container');
+        if (manageWorkerContainer && manageWorkerContainer.style.display !== 'none') {
+            if (workerSaveBtn && !workerSaveBtn.disabled) return true;
+        }
+
+        // 6. Market Inserter: Open grid with pending rows
+        const miRows = document.querySelectorAll('#mi-grid-body tr.mi-grid-row');
+        if (miRows && miRows.length > 0) {
+            const hasData = Array.from(miRows).some(row => {
+                const nameInp = row.querySelector('.mi-inp-name')?.value?.trim();
+                return Boolean(nameInp);
+            });
+            if (hasData) return true;
+        }
+    } catch (e) {
+        console.warn("Edit safety check warning:", e);
+    }
+    return false;
 };
 
 const routes = {
@@ -59,10 +122,31 @@ export const initRouter = async (workspaceIdParam = null) => {
         }
     }
 
+    let currentRenderedHash = window.location.hash || '#/overview';
+    let isRevertingRoute = false;
+
     const handleRoute = async () => {
         if (!currentWorkspaceId) return; // Wait for workspace
+
+        if (isRevertingRoute) {
+            isRevertingRoute = false;
+            return;
+        }
         
         const hash = window.location.hash || '#/overview';
+
+        // Edit Safety Check: Intercept navigation if there are unsaved edits
+        if (hash !== currentRenderedHash && hasUnsavedChanges()) {
+            const allowLeave = await showAlert.confirmUnsavedChanges();
+            if (!allowLeave) {
+                // User chose "Stay & Save Changes" -> cancel navigation and revert hash
+                isRevertingRoute = true;
+                window.location.hash = currentRenderedHash;
+                return;
+            }
+        }
+
+        currentRenderedHash = hash;
         const rawPath = hash.substring(1);
         
         let path = rawPath;
@@ -113,6 +197,30 @@ export const initRouter = async (workspaceIdParam = null) => {
             window.location.hash = '#/overview';
         }
     };
+
+    // Sidebar & Internal Navigation Link Click Interceptor for Instant Edit Safety
+    document.addEventListener('click', async (e) => {
+        const link = e.target.closest('a[href^="#/"]');
+        if (!link) return;
+        const targetHash = link.getAttribute('href');
+        if (targetHash && targetHash !== currentRenderedHash && hasUnsavedChanges()) {
+            e.preventDefault();
+            e.stopPropagation();
+            const allowLeave = await showAlert.confirmUnsavedChanges();
+            if (allowLeave) {
+                currentRenderedHash = targetHash;
+                window.location.hash = targetHash;
+            }
+        }
+    }, true);
+
+    // Browser Refresh / Window Close Edit Safety Guard
+    window.addEventListener('beforeunload', (e) => {
+        if (hasUnsavedChanges()) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
 
     window.addEventListener('hashchange', handleRoute);
     

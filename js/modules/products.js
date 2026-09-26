@@ -401,9 +401,14 @@ export const renderProducts = async (container, workspaceId) => {
                     }
                     
                     container.querySelector('#prd-form-title').textContent = 'Edit Product';
+                    container.querySelector('#prd-submit-btn').textContent = 'Update Product';
                     formContainer.style.display = 'block';
                     container.querySelector('#product-list-container').style.display = 'none';
                     formContainer.scrollIntoView({ behavior: 'smooth' });
+
+                    // Snapshot for dirty checking
+                    initialProductSnapshot = getProductFormSnapshot();
+                    checkProductDirty();
                 }
             });
         });
@@ -443,6 +448,60 @@ export const renderProducts = async (container, workspaceId) => {
         });
     };
 
+    // Product Smart Button State & Snapshot Helper
+    let initialProductSnapshot = null;
+
+    const getProductFormSnapshot = () => {
+        const variations = [];
+        container.querySelectorAll('.prd-variation-item-row').forEach(row => {
+            variations.push({
+                size: row.querySelector('.var-size-input')?.value.trim() || '',
+                upc: row.querySelector('.var-upc-input')?.value.trim() || ''
+            });
+        });
+
+        return JSON.stringify({
+            image: container.querySelector('#prd-image')?.value.trim() || '',
+            name: container.querySelector('#prd-name')?.value.trim() || '',
+            size: container.querySelector('#prd-size')?.value.trim() || '',
+            category: container.querySelector('#prd-category')?.value || '',
+            upc: container.querySelector('#prd-upc')?.value.trim() || '',
+            note: container.querySelector('#prd-note')?.value.trim() || '',
+            qty: parseInt(container.querySelector('#prd-qty')?.value || 0, 10),
+            cost: parseFloat(container.querySelector('#prd-cost-price')?.value || 0),
+            sale: parseFloat(container.querySelector('#prd-sale-price')?.value || 0),
+            base: parseFloat(container.querySelector('#prd-base-price')?.value || 0),
+            mrp: parseFloat(container.querySelector('#prd-mrp')?.value || 0),
+            mfg: container.querySelector('#prd-mfg-date')?.value || '',
+            exp: container.querySelector('#prd-exp-date')?.value || '',
+            variations
+        });
+    };
+
+    const checkProductDirty = () => {
+        const submitBtn = container.querySelector('#prd-submit-btn');
+        if (!submitBtn) return;
+
+        const name = container.querySelector('#prd-name')?.value.trim();
+        const category = container.querySelector('#prd-category')?.value;
+        const salePrice = container.querySelector('#prd-sale-price')?.value;
+        const isEditMode = Boolean(container.querySelector('#prd-id')?.value);
+
+        const hasRequired = Boolean(name && category && salePrice !== '' && !isNaN(parseFloat(salePrice)));
+
+        if (!hasRequired) {
+            submitBtn.disabled = true;
+            return;
+        }
+
+        if (isEditMode && initialProductSnapshot) {
+            const currentSnap = getProductFormSnapshot();
+            submitBtn.disabled = (currentSnap === initialProductSnapshot);
+        } else {
+            submitBtn.disabled = false;
+        }
+    };
+
     // Variations Dynamic Row Helper
     const varListEl = container.querySelector('#prd-variations-list');
     const varEmptyMsg = container.querySelector('#prd-no-variations-msg');
@@ -477,13 +536,19 @@ export const renderProducts = async (container, workspaceId) => {
             <button type="button" class="btn-remove-var" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:4px 8px; font-size:1.3rem; line-height:1;" title="Remove variation">&times;</button>
         `;
 
+        row.querySelectorAll('input').forEach(inp => {
+            inp.addEventListener('input', checkProductDirty);
+        });
+
         row.querySelector('.btn-remove-var').addEventListener('click', () => {
             row.remove();
             checkVariationsEmpty();
+            checkProductDirty();
         });
 
         varListEl.appendChild(row);
         checkVariationsEmpty();
+        checkProductDirty();
     };
 
     if (btnAddVar) {
@@ -492,6 +557,12 @@ export const renderProducts = async (container, workspaceId) => {
         });
     }
 
+    // Attach dirty checking to all product inputs
+    form.querySelectorAll('input, select, textarea').forEach(el => {
+        el.addEventListener('input', checkProductDirty);
+        el.addEventListener('change', checkProductDirty);
+    });
+
     // UI Toggles
     container.querySelector('#btn-add-product').addEventListener('click', () => {
         form.reset();
@@ -499,6 +570,9 @@ export const renderProducts = async (container, workspaceId) => {
         container.querySelector('#prd-id').value = '';
         container.querySelector('#prd-image-preview').style.display = 'none';
         container.querySelector('#prd-form-title').textContent = 'New Product';
+        container.querySelector('#prd-submit-btn').textContent = 'Save Product';
+        initialProductSnapshot = null;
+        checkProductDirty();
         formContainer.style.display = 'block';
         container.querySelector('#product-list-container').style.display = 'none';
     });
@@ -518,6 +592,7 @@ export const renderProducts = async (container, workspaceId) => {
                 const preview = container.querySelector('#prd-image-preview');
                 preview.src = url;
                 preview.style.display = 'block';
+                checkProductDirty();
                 
                 btnLabel.innerHTML = 'Upload from Desktop<input type="file" id="prd-image-file" accept="image/*" style="display:none;">';
                 // reattach listener since we rewrote innerHTML
@@ -538,6 +613,7 @@ export const renderProducts = async (container, workspaceId) => {
         } else {
             preview.style.display = 'none';
         }
+        checkProductDirty();
     });
     
     // Quick Add Category Modal Logic
@@ -551,8 +627,13 @@ export const renderProducts = async (container, workspaceId) => {
     btnQuickCat.addEventListener('click', () => {
         catNameInput.value = '';
         catColorInput.value = '#4a90e2';
+        btnSaveCat.disabled = true;
         catModal.style.display = 'flex';
         catNameInput.focus();
+    });
+
+    catNameInput.addEventListener('input', (e) => {
+        btnSaveCat.disabled = !e.target.value.trim();
     });
 
     btnCancelCat.addEventListener('click', () => {
@@ -594,10 +675,17 @@ export const renderProducts = async (container, workspaceId) => {
         }
     });
 
-    container.querySelector('#prd-cancel-btn').addEventListener('click', () => {
+    container.querySelector('#prd-cancel-btn').addEventListener('click', async () => {
+        const submitBtn = container.querySelector('#prd-submit-btn');
+        if (submitBtn && !submitBtn.disabled) {
+            const leave = await showAlert.confirmUnsavedChanges();
+            if (!leave) return;
+        }
         formContainer.style.display = 'none';
         container.querySelector('#product-list-container').style.display = 'block';
         form.reset();
+        initialProductSnapshot = null;
+        checkProductDirty();
     });
 
     // Form Submit

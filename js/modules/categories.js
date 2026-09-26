@@ -214,8 +214,15 @@ export const renderCategories = async (container, workspaceId) => {
                     container.querySelector('#cat-color').value = cat.color || '#4a90e2';
                     if (colorHexLabel) colorHexLabel.textContent = cat.color || '#4a90e2';
                     container.querySelector('#cat-form-title').textContent = 'Edit Category';
+                    container.querySelector('#cat-submit-btn').textContent = 'Update Category';
                     formContainer.style.display = 'block';
                     formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                    initialCatSnapshot = {
+                        name: (cat.name || '').trim(),
+                        color: cat.color || '#4a90e2'
+                    };
+                    checkCatDirty();
                 }
             });
         });
@@ -250,6 +257,29 @@ export const renderCategories = async (container, workspaceId) => {
                 }
             });
         });
+    };
+
+    // Smart button state for category form
+    let initialCatSnapshot = null;
+
+    const checkCatDirty = () => {
+        const btn = container.querySelector('#cat-submit-btn');
+        if (!btn) return;
+        const nameVal = (container.querySelector('#cat-name')?.value || '').trim();
+        const colorVal = container.querySelector('#cat-color')?.value || '#4a90e2';
+        const isEdit = Boolean(container.querySelector('#cat-id')?.value);
+
+        if (!nameVal) {
+            btn.disabled = true;
+            return;
+        }
+
+        if (isEdit && initialCatSnapshot) {
+            const isDirty = (nameVal !== initialCatSnapshot.name || colorVal !== initialCatSnapshot.color);
+            btn.disabled = !isDirty;
+        } else {
+            btn.disabled = false;
+        }
     };
 
     // Load and listen to categories
@@ -289,6 +319,13 @@ export const renderCategories = async (container, workspaceId) => {
         });
     }
 
+    // Attach dirty checking to category inputs
+    container.querySelector('#cat-name')?.addEventListener('input', checkCatDirty);
+    container.querySelector('#cat-color')?.addEventListener('input', () => {
+        if (colorHexLabel) colorHexLabel.textContent = container.querySelector('#cat-color').value;
+        checkCatDirty();
+    });
+
     // UI Toggles
     container.querySelector('#btn-add-category').addEventListener('click', () => {
         form.reset();
@@ -297,19 +334,27 @@ export const renderCategories = async (container, workspaceId) => {
         container.querySelector('#cat-color').value = '#4a90e2';
         if (colorHexLabel) colorHexLabel.textContent = '#4a90e2';
         container.querySelector('#cat-form-title').textContent = 'New Category';
+        container.querySelector('#cat-submit-btn').textContent = 'Save Category';
+        initialCatSnapshot = null;
+        checkCatDirty();
         formContainer.style.display = 'block';
         formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
-    container.querySelector('#cat-cancel-btn').addEventListener('click', () => {
+    const handleCloseCatForm = async () => {
+        const submitBtn = container.querySelector('#cat-submit-btn');
+        if (submitBtn && !submitBtn.disabled) {
+            const leave = await showAlert.confirmUnsavedChanges();
+            if (!leave) return;
+        }
         formContainer.style.display = 'none';
         form.reset();
-    });
+        initialCatSnapshot = null;
+        checkCatDirty();
+    };
 
-    container.querySelector('#btn-close-cat-form')?.addEventListener('click', () => {
-        formContainer.style.display = 'none';
-        form.reset();
-    });
+    container.querySelector('#cat-cancel-btn').addEventListener('click', handleCloseCatForm);
+    container.querySelector('#btn-close-cat-form')?.addEventListener('click', handleCloseCatForm);
 
     // Form Submit
     form.addEventListener('submit', async (e) => {
@@ -340,8 +385,8 @@ export const renderCategories = async (container, workspaceId) => {
         } catch (error) {
             showAlert.error(error.message || 'Failed to save category');
         } finally {
-            btn.disabled = false;
-            btn.textContent = 'Save Category';
+            btn.textContent = id ? 'Update Category' : 'Save Category';
+            checkCatDirty();
         }
     });
 

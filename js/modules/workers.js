@@ -368,6 +368,14 @@ export const renderWorkers = async (container, workspaceId) => {
                         addContainer.style.display = 'none';
                         manageContainer.style.display = 'block';
                         manageContainer.scrollIntoView({ behavior: 'smooth' });
+
+                        initialManageSnapshot = {
+                            role: (roleSelect ? roleSelect.value : 'WORKER'),
+                            dAdd,
+                            dUpd,
+                            dDel
+                        };
+                        checkManageDirty();
                     });
                 });
 
@@ -409,6 +417,50 @@ export const renderWorkers = async (container, workspaceId) => {
         
     } catch (err) {
         console.error(err);
+    }
+
+    // Smart button state for Manage Worker
+    let initialManageSnapshot = null;
+
+    const checkManageDirty = () => {
+        const btnSave = container.querySelector('#btn-save-manage');
+        if (!btnSave) return;
+        if (!initialManageSnapshot) {
+            btnSave.disabled = true;
+            return;
+        }
+
+        const roleSelect = container.querySelector('#manage-role');
+        const currentRole = roleSelect ? roleSelect.value : 'WORKER';
+        const currentDAdd = Boolean(container.querySelector('#manage-disable-add')?.checked);
+        const currentDUpd = Boolean(container.querySelector('#manage-disable-update')?.checked);
+        const currentDDel = Boolean(container.querySelector('#manage-disable-delete')?.checked);
+
+        const isDirty = (
+            currentRole !== initialManageSnapshot.role ||
+            currentDAdd !== initialManageSnapshot.dAdd ||
+            currentDUpd !== initialManageSnapshot.dUpd ||
+            currentDDel !== initialManageSnapshot.dDel
+        );
+
+        btnSave.disabled = !isDirty;
+    };
+
+    ['#manage-role', '#manage-disable-add', '#manage-disable-update', '#manage-disable-delete'].forEach(sel => {
+        const el = container.querySelector(sel);
+        if (el) {
+            el.addEventListener('change', checkManageDirty);
+        }
+    });
+
+    // Invite form smart button
+    const workerEmailInput = container.querySelector('#worker-email');
+    const btnSubmitWorker = container.querySelector('#btn-submit-worker');
+    if (workerEmailInput && btnSubmitWorker) {
+        btnSubmitWorker.disabled = true;
+        workerEmailInput.addEventListener('input', (e) => {
+            btnSubmitWorker.disabled = !e.target.value.trim();
+        });
     }
 
     // Handle Add Invite

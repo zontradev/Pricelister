@@ -610,7 +610,7 @@
                             </div>
 
                             <h4 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Workspace Overview</h4>
-                            <div id="result-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem; text-align: center;">
+                            <div id="result-stats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem; text-align: center;">
                                 <div style="background: var(--surface-50); padding: 0.6rem 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
                                     <div id="res-stat-products" style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">0</div>
                                     <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Products</div>
@@ -627,48 +627,34 @@
                                     <div id="res-stat-clients" style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">0</div>
                                     <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Clients</div>
                                 </div>
+                                <div style="background: var(--surface-50); padding: 0.6rem 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                                    <div id="res-stat-workers" style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">0</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Workers</div>
+                                </div>
+                                <div style="background: var(--surface-50); padding: 0.6rem 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                                    <div id="res-stat-currency" style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">$</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Currency</div>
+                                </div>
                             </div>
                             
                             <h4 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Admin Details</h4>
                             <div class="result-details" style="background: var(--surface-50); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--border-color);">
                                 <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin Name</span>
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin Account Name</span>
                                     <span class="value" id="result-admin-name" style="color: var(--text-primary); font-weight: 600;">—</span>
                                 </div>
                                 <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin AppWorker ID</span>
+                                    <span class="value" id="result-admin-id" style="color: var(--text-primary); font-family: monospace; font-size: 0.85rem; font-weight:600;">—</span>
+                                </div>
+                                <div class="detail-row" style="display: flex; justify-content: space-between; font-size: 0.9rem;">
                                     <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin Email</span>
                                     <span class="value" id="result-admin-email" style="color: var(--text-primary);">—</span>
                                 </div>
-                                <div class="detail-row" style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin ID</span>
-                                    <span class="value" id="result-admin-id" style="color: var(--text-primary); font-family: monospace; font-size: 0.8rem;">—</span>
-                                </div>
                             </div>
 
-                            <div id="result-worker-section" style="display:none;">
-                                <h4 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Verified Member Profile</h4>
-                                <div class="result-details" style="background: rgba(16, 185, 129, 0.04); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid rgba(16, 185, 129, 0.25);">
-                                    <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member Name</span>
-                                        <span class="value" id="result-worker-name" style="color: var(--text-primary); font-weight: 600;">—</span>
-                                    </div>
-                                    <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member Email</span>
-                                        <span class="value" id="result-worker-email" style="color: var(--text-primary);">—</span>
-                                    </div>
-                                    <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Member ID</span>
-                                        <span class="value" id="result-worker-id" style="color: var(--text-primary); font-family: monospace; font-size: 0.8rem;">—</span>
-                                    </div>
-                                    <div class="detail-row" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Role</span>
-                                        <span class="value badge" id="result-worker-role" style="background: var(--primary); color: white; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">—</span>
-                                    </div>
-                                    <div class="detail-row" style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                                        <span class="label" style="font-weight: 500; color: var(--text-secondary);">Joined At</span>
-                                        <span class="value" id="result-worker-joined" style="color: var(--text-primary);">—</span>
-                                    </div>
-                                </div>
+                            <div id="result-worker-section" style="display:none; margin-bottom: 1rem;">
+                                <!-- Dynamically filled with Worker Verified or Worker Not Found -->
                             </div>
                             
                             <div style="margin-top: 1.5rem; text-align: center;">
@@ -854,11 +840,13 @@
                     </div>
                 </div>
             </div>
-            <button onclick="window.location.href='app.html'" class="btn btn-primary btn-block mb-4" style="font-size:1.1rem;padding:0.85rem;border-radius:8px;font-weight:600;">
-                Enter Workspace →
+            <button onclick="window.location.href='app.html'" class="btn btn-primary btn-block mb-3" style="font-size:1.05rem;padding:0.85rem;border-radius:10px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.5rem;box-shadow:0 4px 14px rgba(225, 29, 72, 0.3);">
+                <span>Enter Workspace</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
             </button>
-            <button id="launcher-change-account-btn" class="btn btn-block" style="background:transparent;color:var(--text-secondary);border:1px solid #e2e8f0;font-weight:500;">
-                ⇄ Change / Switch Account
+            <button id="launcher-change-account-btn" class="btn btn-secondary btn-block" style="display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.65rem 1rem;font-size:0.88rem;font-weight:600;border-radius:8px;border:1px solid #cbd5e1;background:#ffffff;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                <span>Switch / Change Google Account</span>
             </button>
         </div>
     </div>

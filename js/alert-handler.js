@@ -115,5 +115,71 @@ export const showAlert = {
             document.getElementById('alert-confirm-cancel').addEventListener('click', () => { cleanup(); resolve(false); });
             document.getElementById('alert-confirm-ok').addEventListener('click', () => { cleanup(); resolve(true); });
         });
+    },
+    confirmUnsavedChanges: (customMessage = null) => {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.id = 'unsaved-changes-modal-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.65)';
+            overlay.style.backdropFilter = 'blur(6px)';
+            overlay.style.zIndex = '999999';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.2s ease';
+
+            const modal = document.createElement('div');
+            modal.className = 'card';
+            modal.style.background = 'var(--bg-card)';
+            modal.style.padding = '2rem 1.75rem';
+            modal.style.borderRadius = 'var(--radius-lg)';
+            modal.style.maxWidth = '440px';
+            modal.style.width = '92%';
+            modal.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.35)';
+            modal.style.transform = 'scale(0.95)';
+            modal.style.transition = 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            modal.style.textAlign = 'center';
+
+            modal.innerHTML = `
+                <div style="width: 58px; height: 58px; background: rgba(245, 158, 11, 0.12); color: #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto;">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">Unsaved Changes</h3>
+                <p style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: 1.75rem; line-height: 1.55;">
+                    ${customMessage || "You have unsaved edits in progress. If you leave or change tabs now, your changes will be discarded."}
+                </p>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button id="alert-unsaved-leave" class="btn btn-secondary" style="flex: 1; min-width: 140px; padding: 0.75rem 1rem; font-weight: 600; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                        Discard & Leave
+                    </button>
+                    <button id="alert-unsaved-stay" class="btn btn-primary" style="flex: 1; min-width: 140px; padding: 0.75rem 1.25rem; font-weight: 700;">
+                        Stay & Save Changes
+                    </button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                modal.style.transform = 'scale(1)';
+            });
+
+            const cleanup = () => {
+                overlay.style.opacity = '0';
+                modal.style.transform = 'scale(0.95)';
+                setTimeout(() => overlay.remove(), 200);
+            };
+
+            document.getElementById('alert-unsaved-leave').addEventListener('click', () => { cleanup(); resolve(true); });
+            document.getElementById('alert-unsaved-stay').addEventListener('click', () => { cleanup(); resolve(false); });
+        });
     }
 };

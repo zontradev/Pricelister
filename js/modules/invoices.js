@@ -447,7 +447,57 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const pickerCloseBtn = container.querySelector('#picker-close-btn');
     const pickerAddToInvBtn = container.querySelector('#picker-add-to-inv-btn');
     const pickerBtnSelectAll = container.querySelector('#picker-btn-select-all');
-    const pickerBtnClearSel = container.querySelector('#picker-btn-clear-sel');
+    // State for Smart Button / Dirty Checking
+    let initialInvoiceFormSnapshot = null;
+
+    const getInvoiceFormSnapshot = () => {
+        return JSON.stringify({
+            business: container.querySelector('#inv-business')?.value || '',
+            client: container.querySelector('#inv-client')?.value || '',
+            customer: container.querySelector('#inv-customer')?.value || '',
+            custName: (container.querySelector('#inv-customer-name')?.value || '').trim(),
+            custPhone: (container.querySelector('#inv-customer-phone')?.value || '').trim(),
+            title: (container.querySelector('#inv-title')?.value || '').trim(),
+            busInvNumber: (container.querySelector('#inv-bus-number')?.value || '').trim(),
+            custInvNumber: (container.querySelector('#inv-cust-number')?.value || '').trim(),
+            discount: parseFloat(container.querySelector('#inv-discount')?.value || 0),
+            addCut: parseFloat(container.querySelector('#inv-add-cut')?.value || 0),
+            tax: parseFloat(container.querySelector('#inv-tax')?.value || 0),
+            shipping: parseFloat(container.querySelector('#inv-shipping')?.value || 0),
+            status: container.querySelector('#inv-status')?.value || 'Paid',
+            note: (container.querySelector('#inv-note')?.value || '').trim(),
+            items: invoiceItems.map(i => ({ id: i.productId, q: i.quantity, p: i.unitPrice }))
+        });
+    };
+
+    const checkInvoiceDirty = () => {
+        if (!btnSubmit) return;
+        const hasItems = invoiceItems.length > 0;
+        const busSelected = Boolean(container.querySelector('#inv-business')?.value);
+        
+        let validRequired = false;
+        if (isBusinessInvoice) {
+            const clientSelected = Boolean(container.querySelector('#inv-client')?.value);
+            const hasTitle = Boolean((container.querySelector('#inv-title')?.value || '').trim());
+            const hasBusNum = Boolean((container.querySelector('#inv-bus-number')?.value || '').trim());
+            validRequired = hasItems && busSelected && clientSelected && hasTitle && hasBusNum;
+        } else {
+            const hasCustName = Boolean((container.querySelector('#inv-customer-name')?.value || '').trim());
+            validRequired = hasItems && busSelected && hasCustName;
+        }
+
+        if (!validRequired) {
+            btnSubmit.disabled = true;
+            return;
+        }
+
+        if (editingInvoiceId && initialInvoiceFormSnapshot) {
+            const currentSnap = getInvoiceFormSnapshot();
+            btnSubmit.disabled = (currentSnap === initialInvoiceFormSnapshot);
+        } else {
+            btnSubmit.disabled = false;
+        }
+    };
 
     // Switch View Helper
     const showEditorView = (isEdit = false, invoice = null) => {
@@ -462,12 +512,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             formTitle.textContent = `Edit ${typeLabel} (${displayInvNum})`;
             btnSubmit.textContent = 'Update Invoice';
             populateFormForEdit(invoice);
+            initialInvoiceFormSnapshot = getInvoiceFormSnapshot();
+            checkInvoiceDirty();
         } else {
             editingInvoiceId = null;
             editingInvoiceUniqueId = generateUniqueId();
             formTitle.textContent = `New ${typeLabel}`;
             btnSubmit.textContent = 'Save Invoice';
             resetForm();
+            initialInvoiceFormSnapshot = null;
+            checkInvoiceDirty();
         }
     };
 
@@ -478,8 +532,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         editingInvoiceUniqueId = null;
     };
 
-    btnBackToList.addEventListener('click', showListView);
-    btnCancel.addEventListener('click', showListView);
+    const handleCloseEditor = async () => {
+        if (btnSubmit && !btnSubmit.disabled) {
+            const leave = await showAlert.confirmUnsavedChanges();
+            if (!leave) return;
+        }
+        showListView();
+    };
+
+    btnBackToList.addEventListener('click', handleCloseEditor);
+    btnCancel.addEventListener('click', handleCloseEditor);
 
     // Populate Form for Editing
     const populateFormForEdit = (inv) => {
@@ -1037,6 +1099,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     invoiceItems[idx].quantity = val;
                     renderItemsList();
                     updateLiveTotals();
+                    checkInvoiceDirty();
                 });
             });
 
@@ -1046,9 +1109,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     invoiceItems.splice(idx, 1);
                     renderItemsList();
                     updateLiveTotals();
+                    checkInvoiceDirty();
                 });
             });
         }
+        checkInvoiceDirty();
     };
 
     // Calculate live totals
@@ -1069,6 +1134,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             <div style="font-weight:700; font-size:1.25rem; margin-top:0.5rem; color:var(--primary); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">Grand Total: ${formatCurrency(totals.grandTotal)}</div>
             <div style="font-size:0.85rem; color:var(--text-muted);">Est. Profit: ${formatCurrency(totals.totalProfit)}</div>
         `;
+        checkInvoiceDirty();
     };
 
     // Skeleton loader
@@ -1449,6 +1515,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const openQuickAddModal = (type) => {
         quickAddTargetType = type;
         quickAddForm.reset();
+        const submitBtn = container.querySelector('#btn-save-quick-add');
+        if (submitBtn) submitBtn.disabled = true;
+
         if (type === 'business') {
             quickAddTitle.textContent = 'Add New Business (Issuer)';
         } else if (type === 'client') {
@@ -1608,11 +1677,31 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
     });
 
-    // Adjustment input listeners
-    ['inv-discount', 'inv-add-cut', 'inv-tax', 'inv-shipping'].forEach(id => {
+    // Adjustment & field input listeners for smart dirty checking
+    ['inv-discount', 'inv-add-cut', 'inv-tax', 'inv-shipping', 'inv-title', 'inv-bus-number', 'inv-customer-name', 'inv-customer-phone', 'inv-note'].forEach(id => {
         const el = container.querySelector('#' + id);
         if (el) {
-            el.addEventListener('input', updateLiveTotals);
+            el.addEventListener('input', () => {
+                updateLiveTotals();
+                checkInvoiceDirty();
+            });
+        }
+    });
+
+    ['inv-business', 'inv-client', 'inv-customer', 'inv-status'].forEach(id => {
+        const el = container.querySelector('#' + id);
+        if (el) {
+            el.addEventListener('change', () => {
+                checkInvoiceDirty();
+            });
+        }
+    });
+
+    // Quick Add Name Input Listener for Smart Button
+    container.querySelector('#qa-name')?.addEventListener('input', (e) => {
+        const submitBtn = container.querySelector('#btn-save-quick-add');
+        if (submitBtn) {
+            submitBtn.disabled = !e.target.value.trim();
         }
     });
 

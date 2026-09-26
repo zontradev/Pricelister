@@ -179,11 +179,15 @@ export const renderSettings = async (container, workspaceId) => {
                             <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; display: block; color: var(--text-primary);">
                                 Currency Symbol (Max 3 Characters)
                             </label>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <input type="text" id="set-currency" class="form-control" maxlength="3" value="${currentSettings.currencySymbol || '$'}" placeholder="e.g. $" style="font-family: monospace; font-weight: 700; font-size: 1.15rem; width: 110px; text-align: center; letter-spacing: 1px;">
-                                <button type="button" id="btn-find-currency" class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.85rem; padding: 0.65rem 1rem; white-space: nowrap;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <input type="text" id="set-currency" class="form-control" maxlength="3" value="${currentSettings.currencySymbol || '$'}" placeholder="e.g. $" style="font-family: monospace; font-weight: 700; font-size: 1.15rem; width: 100px; text-align: center; letter-spacing: 1px;">
+                                <button type="button" id="btn-find-currency" class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.85rem; padding: 0.65rem 0.9rem; white-space: nowrap;">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                     Find Country / Symbol
+                                </button>
+                                <button type="button" id="btn-change-currency" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.85rem; padding: 0.65rem 1.15rem; white-space: nowrap;" disabled>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                    Change Currency
                                 </button>
                             </div>
                             <small style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.35rem; display: block;">
@@ -331,23 +335,23 @@ export const renderSettings = async (container, workspaceId) => {
 
                 <!-- SAVE ACTIONS -->
                 <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem;">
-                    <button type="button" id="btn-save-settings" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;">
+                    <button type="button" id="btn-save-settings" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;" disabled>
                         Save Workspace Settings
                     </button>
                 </div>
 
-                <!-- DANGER ZONE -->
+                <!-- WORKSPACE MANAGEMENT & DELETION -->
                 ${isAdmin ? `
-                    <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); grid-column: 1 / -1; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.03); margin-top: 1rem;">
+                    <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); grid-column: 1 / -1; border: 1px solid rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.02); margin-top: 1rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 260px;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--danger);"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                                    <h3 style="margin: 0; font-size: 1.15rem; color: var(--danger); font-weight: 700;">Danger Zone — Delete Entire Workspace</h3>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--danger);"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary); font-weight: 700;">Delete Workspace</h3>
                                 </div>
                                 <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5; margin: 0;">
                                     Permanently destroy this workspace and wipe all products, invoices, categories, clients, settings, and cloud media from the server.
-                                    <br><strong style="color:var(--text-primary);">Requirement:</strong> Must have <strong>0 members</strong> connected inside the workspace (except admin).
+                                    <br><strong style="color:var(--text-primary);">Requirement:</strong> Remove all active workers inside Workspace before deleting.
                                 </p>
                             </div>
                             <div>
@@ -363,7 +367,7 @@ export const renderSettings = async (container, workspaceId) => {
                             <div style="flex: 1; min-width: 260px;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--danger);"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                                    <h3 style="margin: 0; font-size: 1.15rem; color: var(--danger); font-weight: 700;">Leave Workspace</h3>
+                                    <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary); font-weight: 700;">Leave Workspace</h3>
                                 </div>
                                 <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5; margin: 0;">
                                     Disconnect your account from this workspace. You will be redirected to create or join a new workspace.
@@ -402,6 +406,7 @@ export const renderSettings = async (container, workspaceId) => {
                     vendingBanner.style.color = 'var(--text-secondary)';
                     vendingBanner.innerHTML = '<strong>Standard Mode:</strong> Invoices are generated as records only. Product quantities in inventory will remain unaffected.';
                 }
+                checkGeneralSettingsDirty();
             });
         }
 
@@ -409,6 +414,23 @@ export const renderSettings = async (container, workspaceId) => {
         const currencyInput = contentArea.querySelector('#set-currency');
         const currencyPreview = contentArea.querySelector('#currency-live-preview');
         const btnFindCurrency = contentArea.querySelector('#btn-find-currency');
+        const btnChangeCurrency = contentArea.querySelector('#btn-change-currency');
+        const btnSave = contentArea.querySelector('#btn-save-settings');
+
+        // State snapshot for dirty checking
+        let savedCurrencyState = (currentSettings.currencySymbol || '$').trim().substring(0, 3) || '$';
+        let savedSettingsSnapshot = {
+            enableVending: Boolean(currentSettings.enableVending),
+            currencySymbol: savedCurrencyState,
+            name: (currentSettings.name || wsData.name || '').trim(),
+            email: (currentSettings.email || wsData.email || '').trim(),
+            phone: (currentSettings.phone || wsData.phone || '').trim(),
+            address: (currentSettings.address || wsData.address || '').trim(),
+            shopName: (currentSettings.shopName || '').trim(),
+            endMessage: (currentSettings.endMessage || '').trim(),
+            customerName: Boolean(currentSettings.customerName),
+            customerNumber: Boolean(currentSettings.customerNumber)
+        };
 
         const updateCurrencyPreview = (val) => {
             const sym = (val || '$').trim().substring(0, 3) || '$';
@@ -417,12 +439,52 @@ export const renderSettings = async (container, workspaceId) => {
             }
         };
 
+        const checkCurrencyButtonState = () => {
+            const currentVal = (currencyInput?.value || '').trim().substring(0, 3);
+            const isDifferent = currentVal.length > 0 && currentVal !== savedCurrencyState;
+            if (btnChangeCurrency) {
+                btnChangeCurrency.disabled = !isDifferent;
+            }
+            checkGeneralSettingsDirty();
+        };
+
+        const checkGeneralSettingsDirty = () => {
+            if (!btnSave) return;
+            const currentVending = Boolean(contentArea.querySelector('#set-vending')?.checked);
+            const currentCur = (currencyInput?.value || '$').trim().substring(0, 3) || '$';
+            const currentName = (contentArea.querySelector('#set-name')?.value || '').trim();
+            const currentEmail = (contentArea.querySelector('#set-email')?.value || '').trim();
+            const currentPhone = (contentArea.querySelector('#set-phone')?.value || '').trim();
+            const currentAddr = (contentArea.querySelector('#set-address')?.value || '').trim();
+            const currentShop = (contentArea.querySelector('#set-shop-name')?.value || '').trim();
+            const currentEndMsg = (contentArea.querySelector('#set-end-msg')?.value || '').trim();
+            const currentCustName = Boolean(contentArea.querySelector('#set-show-cust-name')?.checked);
+            const currentCustNum = Boolean(contentArea.querySelector('#set-show-cust-num')?.checked);
+
+            const isDirty = (
+                currentVending !== savedSettingsSnapshot.enableVending ||
+                currentCur !== savedSettingsSnapshot.currencySymbol ||
+                currentName !== savedSettingsSnapshot.name ||
+                currentEmail !== savedSettingsSnapshot.email ||
+                currentPhone !== savedSettingsSnapshot.phone ||
+                currentAddr !== savedSettingsSnapshot.address ||
+                currentShop !== savedSettingsSnapshot.shopName ||
+                currentEndMsg !== savedSettingsSnapshot.endMessage ||
+                currentCustName !== savedSettingsSnapshot.customerName ||
+                currentCustNum !== savedSettingsSnapshot.customerNumber
+            );
+
+            const isValid = currentName.length > 0 && currentEmail.length > 0;
+            btnSave.disabled = !(isDirty && isValid);
+        };
+
         if (currencyInput) {
             currencyInput.addEventListener('input', (e) => {
                 if (e.target.value.length > 3) {
                     e.target.value = e.target.value.substring(0, 3);
                 }
                 updateCurrencyPreview(e.target.value);
+                checkCurrencyButtonState();
             });
         }
 
@@ -432,7 +494,8 @@ export const renderSettings = async (container, workspaceId) => {
                     const cleanSymbol = selectedSymbol.substring(0, 3);
                     if (currencyInput) currencyInput.value = cleanSymbol;
                     updateCurrencyPreview(cleanSymbol);
-                    showAlert.success(`Currency set to ${name} (${cleanSymbol})`);
+                    checkCurrencyButtonState();
+                    showAlert.success(`Currency selected: ${name} (${cleanSymbol})`);
                 });
             });
         }
@@ -442,11 +505,55 @@ export const renderSettings = async (container, workspaceId) => {
                 const sym = (btn.getAttribute('data-symbol') || '$').substring(0, 3);
                 if (currencyInput) currencyInput.value = sym;
                 updateCurrencyPreview(sym);
+                checkCurrencyButtonState();
             });
         });
 
+        // Dedicated Change Currency button action
+        if (btnChangeCurrency) {
+            btnChangeCurrency.addEventListener('click', async () => {
+                const newCurrency = (currencyInput?.value || '$').trim().substring(0, 3) || '$';
+                btnChangeCurrency.disabled = true;
+                btnChangeCurrency.textContent = 'Updating...';
+
+                try {
+                    await settingsService.saveWorkspaceSettings({
+                        ...savedSettingsSnapshot,
+                        currency: newCurrency,
+                        currencySymbol: newCurrency
+                    });
+
+                    savedCurrencyState = newCurrency;
+                    savedSettingsSnapshot.currencySymbol = newCurrency;
+                    btnChangeCurrency.innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Change Currency
+                    `;
+                    checkCurrencyButtonState();
+                    showAlert.success(`Workspace currency updated successfully to ${newCurrency}`);
+                } catch (err) {
+                    console.error("Change currency error:", err);
+                    showAlert.error("Failed to update currency: " + (err.message || 'Unknown error'));
+                    btnChangeCurrency.disabled = false;
+                    btnChangeCurrency.innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Change Currency
+                    `;
+                }
+            });
+        }
+
+        // Attach dirty checking to all general and receipt inputs
+        ['#set-name', '#set-email', '#set-phone', '#set-address', '#set-shop-name', '#set-end-msg'].forEach(sel => {
+            const el = contentArea.querySelector(sel);
+            if (el) el.addEventListener('input', checkGeneralSettingsDirty);
+        });
+        ['#set-show-cust-name', '#set-show-cust-num'].forEach(sel => {
+            const el = contentArea.querySelector(sel);
+            if (el) el.addEventListener('change', checkGeneralSettingsDirty);
+        });
+
         // Save handler
-        const btnSave = contentArea.querySelector('#btn-save-settings');
         if (btnSave) {
             btnSave.addEventListener('click', async () => {
                 btnSave.disabled = true;
@@ -468,13 +575,21 @@ export const renderSettings = async (container, workspaceId) => {
                     };
 
                     await settingsService.saveWorkspaceSettings(updatedPayload);
+                    
+                    // Update snapshots
+                    savedCurrencyState = updatedPayload.currencySymbol;
+                    savedSettingsSnapshot = { ...updatedPayload };
+                    
+                    checkCurrencyButtonState();
+                    checkGeneralSettingsDirty();
                     showAlert.success("Workspace settings & Currency preferences saved successfully!");
 
                 } catch (err) {
                     console.error("Save settings error:", err);
                     showAlert.error("Failed to save settings: " + (err.message || 'Unknown error'));
-                } finally {
                     btnSave.disabled = false;
+                    btnSave.textContent = 'Save Workspace Settings';
+                } finally {
                     btnSave.textContent = 'Save Workspace Settings';
                 }
             });
@@ -514,7 +629,7 @@ export const renderSettings = async (container, workspaceId) => {
             });
         }
 
-        // Danger Zone: Delete Workspace Handler (Admin Only)
+        // Workspace Deletion: Delete Workspace Handler (Admin Only)
         const btnDeleteWs = contentArea.querySelector('#btn-delete-workspace');
         if (btnDeleteWs) {
             btnDeleteWs.addEventListener('click', async () => {
@@ -530,7 +645,7 @@ export const renderSettings = async (container, workspaceId) => {
                     });
 
                     if (activeOtherMembers.length > 0) {
-                        showAlert.error(`Cannot delete workspace. There are still ${activeOtherMembers.length} active member(s) connected. Please remove all members first from the Workers tab before deleting this workspace.`);
+                        showAlert.error(`Cannot delete workspace. Remove all active workers inside Workspace (${activeOtherMembers.length} active worker(s) remaining) before deleting.`);
                         btnDeleteWs.disabled = false;
                         btnDeleteWs.textContent = 'Delete Entire Workspace';
                         return;
@@ -556,7 +671,7 @@ export const renderSettings = async (container, workspaceId) => {
             });
         }
 
-        // Danger Zone: Leave Workspace Handler (Worker/Co-Admin)
+        // Workspace Deletion: Leave Workspace Handler (Worker/Co-Admin)
         const btnLeaveWs = contentArea.querySelector('#btn-leave-workspace');
         if (btnLeaveWs) {
             btnLeaveWs.addEventListener('click', async () => {
