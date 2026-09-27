@@ -38,76 +38,102 @@ const escapeHtml = (str) => {
  * Initialize Customer Portal
  */
 export const initCustomerPortal = async () => {
-    // 1. Resolve Workspace ID from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    currentWorkspaceId = urlParams.get('ws') || urlParams.get('workspace') || urlParams.get('id');
-
-    if (!currentWorkspaceId) {
-        renderNoWorkspaceState();
-        return;
-    }
-
-    // Save for convenient return
     try {
-        localStorage.setItem('pricelister_last_public_ws', currentWorkspaceId);
-    } catch (e) {}
+        // 1. Resolve Workspace ID from URL or Storage
+        const urlParams = new URLSearchParams(window.location.search);
+        currentWorkspaceId = urlParams.get('ws') || urlParams.get('workspace') || urlParams.get('id');
 
-    // Load Cart from LocalStorage
-    loadCartFromStorage();
+        if (!currentWorkspaceId) {
+            try {
+                currentWorkspaceId = localStorage.getItem('pricelister_last_public_ws') || 
+                                     localStorage.getItem('pricelister_active_workspace_id');
+            } catch (e) {}
+        }
 
-    // 2. Fetch Store Settings & Verification
-    try {
-        await loadStoreSettings();
-    } catch (err) {
-        console.error("Error loading store settings:", err);
-        renderErrorState("Could not connect to this store. Please check the URL or try again later.");
-        return;
+        if (!currentWorkspaceId) {
+            renderNoWorkspaceState();
+            return;
+        }
+
+        // Save for convenient return
+        try {
+            localStorage.setItem('pricelister_last_public_ws', currentWorkspaceId);
+        } catch (e) {}
+
+        // Load Cart from LocalStorage
+        loadCartFromStorage();
+
+        // 2. Fetch Store Settings with Timeout Protection
+        try {
+            await loadStoreSettings();
+        } catch (err) {
+            console.warn("Could not load remote store settings, using fallback:", err);
+        }
+
+        // 3. If Store is explicitly Suspended / Stopped -> Render Temporary Closed
+        if (storeSettings.enabled === false && storeSettings.isPublished === false) {
+            renderTemporaryClosedState();
+            return;
+        }
+
+        // 4. Fetch Products & Categories
+        try {
+            await loadProductsAndCategories();
+        } catch (err) {
+            console.warn("Could not load products:", err);
+            allProducts = [];
+            filteredProducts = [];
+            categoriesList = [];
+        }
+
+        // 5. Render Main Customer Catalog
+        renderCustomerCatalogUI();
+    } catch (fatalErr) {
+        console.error("Customer Portal Init Error:", fatalErr);
+        renderErrorState("Could not load storefront. Please refresh the page or verify the store link.");
     }
-
-    // 3. If Store is Suspended / Stopped -> Render Temporary Closed
-    if (!storeSettings.enabled) {
-        renderTemporaryClosedState();
-        return;
-    }
-
-    // 4. Fetch Products & Categories
-    try {
-        await loadProductsAndCategories();
-    } catch (err) {
-        console.error("Error loading catalog:", err);
-        renderErrorState("Failed to load catalog products.");
-        return;
-    }
-
-    // 5. Render Main Customer Catalog
-    renderCustomerCatalogUI();
 };
 
 /**
- * Load Store & Customer Panel Settings from Firestore
+ * Load Store & Customer Panel Settings from Firestore with Timeout Protection
  */
 const loadStoreSettings = async () => {
-    const subColRef = collection(db, 'Workspaces', currentWorkspaceId, 'CustomerPanel');
-    const panelRef = doc(db, 'CustomerPanelSettings', currentWorkspaceId);
-    const wsRef = doc(db, 'Workspaces', currentWorkspaceId);
-    const receiptRef = doc(db, 'ReceiptData', currentWorkspaceId);
+    // 3.5s timeout promise so page never hangs indefinitely
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 3500));
 
-    const [subColSnap, panelSnap, wsSnap, receiptSnap] = await Promise.all([
-        getDocs(subColRef).catch(() => null),
-        getDoc(panelRef).catch(() => null),
-        getDoc(wsRef).catch(() => null),
-        getDoc(receiptRef).catch(() => null)
-    ]);
+    const fetchPromise = (async () => {
+        try {
+            const subColRef = collection(db, 'Workspaces', currentWorkspaceId, 'CustomerPanel');
+            const panelRef = doc(db, 'CustomerPanelSettings', currentWorkspaceId);
+            const wsRef = doc(db, 'Workspaces', currentWorkspaceId);
+            const receiptRef = doc(db, 'ReceiptData', currentWorkspaceId);
 
-    let subfieldData = null;
-    if (subColSnap && !subColSnap.empty) {
-        subfieldData = subColSnap.docs[0].data();
-    }
+            const [subColSnap, panelSnap, wsSnap, receiptSnap] = await Promise.all([
+                getDocs(subColRef).catch(() => null),
+                getDoc(panelRef).catch(() => null),
+                getDoc(wsRef).catch(() => null),
+                getDoc(receiptRef).catch(() => null)
+            ]);
 
-    const panelData = panelSnap && panelSnap.exists() ? panelSnap.data() : {};
-    const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
-    const receiptData = receiptSnap && receiptSnap.exists() ? receiptSnap.data() : {};
-    const embeddedData = wsData.customerPanel || receiptData.customerPanel || {};
+            let subfieldData = null;
+            if (subColSnap && !subColSnap.empty) {
+                subfieldData = subColSnap.docs[0].data();
+            }
+
+            const panelData = panelSnap && panelSnap.exists() ? panelSnap.data() : {};
+            const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
+            const receiptData = receiptSnap && receiptSnap.exists() ? receiptSnap.data() : {};
+            const embeddedData = wsData.customerPanel || receiptData.customerPanel || {};
+
+            return { subfieldData, panelData, wsData, receiptData, embeddedData };
+        } catch (e) {
+            console.warn("Remote settings fetch warning:", e);
+            return {};
+        }
+    })();
+
+    const remoteResult = await Promise.race([fetchPromise, timeoutPromise]);
+    const { subfieldData = null, panelData = {}, wsData = {}, receiptData = {}, embeddedData = {} } = (remoteResult && typeof remoteResult === 'object') ? remoteResult : {};
 
     // Local storage cache fallback
     let localData = {};
@@ -118,9 +144,15 @@ const loadStoreSettings = async () => {
 
     const merged = { ...localData, ...embeddedData, ...panelData, ...(subfieldData || {}) };
 
-    const isPublished = merged.isPublished !== undefined 
-        ? Boolean(merged.isPublished) 
-        : (merged.enabled !== undefined ? Boolean(merged.enabled) : (receiptData.customerPanelPublished !== undefined ? Boolean(receiptData.customerPanelPublished) : false));
+    // Default to true if not explicitly set to false, or check published fields
+    let isPublished = true;
+    if (merged.isPublished !== undefined) {
+        isPublished = Boolean(merged.isPublished);
+    } else if (merged.enabled !== undefined) {
+        isPublished = Boolean(merged.enabled);
+    } else if (receiptData.customerPanelPublished !== undefined) {
+        isPublished = Boolean(receiptData.customerPanelPublished);
+    }
 
     storeSettings = {
         enabled: isPublished,
@@ -145,25 +177,38 @@ const loadStoreSettings = async () => {
 };
 
 /**
- * Fetch Catalog Products & Extract Categories
+ * Fetch Catalog Products & Extract Categories with Timeout
  */
 const loadProductsAndCategories = async () => {
-    const productsRef = collection(db, `Workspaces/${currentWorkspaceId}/Products`);
-    const querySnapshot = await getDocs(productsRef);
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 4000));
 
-    const items = [];
-    const catMap = new Map();
+    const fetchPromise = (async () => {
+        try {
+            const productsRef = collection(db, `Workspaces/${currentWorkspaceId}/Products`);
+            const querySnapshot = await getDocs(productsRef);
+            const items = [];
+            const catMap = new Map();
 
-    querySnapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        if (!data.isArchive) {
-            const prd = { id: docSnap.id, ...data };
-            items.push(prd);
+            querySnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                if (!data.isArchive) {
+                    const prd = { id: docSnap.id, ...data };
+                    items.push(prd);
 
-            const catName = (prd.category || 'General').trim();
-            catMap.set(catName, (catMap.get(catName) || 0) + 1);
+                    const catName = (prd.category || 'General').trim();
+                    catMap.set(catName, (catMap.get(catName) || 0) + 1);
+                }
+            });
+
+            return { items, catMap };
+        } catch (e) {
+            console.warn("Failed to fetch remote products:", e);
+            return { items: [], catMap: new Map() };
         }
-    });
+    })();
+
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    const { items = [], catMap = new Map() } = (result && typeof result === 'object') ? result : { items: [], catMap: new Map() };
 
     // Apply allowed category filter if admin specified specific categories
     if (storeSettings.categorySelectionMode === 'SPECIFIC' && storeSettings.allowedCategories.length > 0) {

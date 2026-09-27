@@ -34,9 +34,11 @@
     <script type="module">
         import { initCustomerPortal } from './js/customer-portal.js';
 
-        document.addEventListener('DOMContentLoaded', () => {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCustomerPortal);
+        } else {
             initCustomerPortal();
-        });
+        }
     </script>
 </body>
 </html>
