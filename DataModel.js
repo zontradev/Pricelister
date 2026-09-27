@@ -173,6 +173,11 @@ export class BusinessProfile {
         this.invoiceCount = Number(data.invoiceCount) || 0;
         this.name = data.name || "";
         this.phone = data.phone || "";
+        this.imageUrl = data.imageUrl || data.imageUri || "";
+        this.imageUri = data.imageUri || data.imageUrl || "";
+        this.tags = Array.isArray(data.tags) ? data.tags : (data.tags ? String(data.tags).split(',').map(s => s.trim()) : []);
+        this.notes = data.notes || data.note || "";
+        this.status = data.status || "Active";
         this.timestamp = Number(data.timestamp) || Date.now();
         this.uniqueId = data.uniqueId || generateInvoiceUniqueId();
         this.updatedTimestamp = data.updatedTimestamp || Date.now();
@@ -189,6 +194,11 @@ export class ClientProfile {
         this.phone = data.phone || "";
         this.address = data.address || "";
         this.email = data.email || "";
+        this.imageUrl = data.imageUrl || data.imageUri || "";
+        this.imageUri = data.imageUri || data.imageUrl || "";
+        this.tags = Array.isArray(data.tags) ? data.tags : (data.tags ? String(data.tags).split(',').map(s => s.trim()) : []);
+        this.notes = data.notes || data.note || "";
+        this.status = data.status || "Active";
         this.creatorId = data.creatorId || "";
         this.timestamp = data.timestamp || Date.now();
     }
@@ -203,6 +213,11 @@ export class CustomerProfile {
         this.phone = data.phone || "";
         this.address = data.address || "";
         this.email = data.email || "";
+        this.imageUrl = data.imageUrl || data.imageUri || "";
+        this.imageUri = data.imageUri || data.imageUrl || "";
+        this.tags = Array.isArray(data.tags) ? data.tags : (data.tags ? String(data.tags).split(',').map(s => s.trim()) : []);
+        this.notes = data.notes || data.note || "";
+        this.status = data.status || "Active";
         this.creatorId = data.creatorId || "";
         this.timestamp = data.timestamp || Date.now();
     }

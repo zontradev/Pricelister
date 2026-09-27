@@ -1,7 +1,8 @@
 /**
- * PriceLister - Dedicated Invoice Viewer & PDF Template Selection Modal
+ * PriceLister - Dedicated Invoice Viewer, Performance Analytics & PDF Template Selection Modal
  * Provides interactive real-time visual invoice preview, 4 app-themed red PDF templates,
- * flexible branding options (PriceLister, Workspace, Custom, White-label), and 1-click PDF download.
+ * deep financial performance intelligence (COGS, Net Profit, Margin %, Item-by-Item profit distribution),
+ * flexible branding options (PriceLister, Workspace, Custom, White-label), and 1-click PDF download & WhatsApp sharing.
  */
 
 import { generateInvoicePdf, downloadInvoicePdf, printInvoicePdf } from '../utils/invoicePdfEngine.js';
@@ -57,12 +58,16 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                     </span>
                     <div>
-                        <h3 class="iv-modal-title">Invoice Viewer & PDF Export</h3>
+                        <h3 class="iv-modal-title">Invoice Viewer & Performance</h3>
                         <span class="iv-modal-subtitle">Invoice #${escapeHtml(invoice.busInvNumber || invoice.invoiceNumber || invoice.id || 'INV-001')}</span>
                     </div>
                 </div>
 
                 <div style="display:flex; align-items:center; gap:0.6rem;">
+                    <button type="button" id="iv-btn-share-whatsapp" class="btn btn-secondary" style="font-weight:600; padding:0.45rem 0.85rem; font-size:0.85rem; display:flex; align-items:center; gap:0.35rem;" title="Share Invoice via WhatsApp">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                        WhatsApp
+                    </button>
                     <button type="button" id="iv-btn-print-action" class="btn btn-secondary" style="font-weight:600; padding:0.45rem 0.85rem; font-size:0.85rem; display:flex; align-items:center; gap:0.35rem;" title="Print Invoice">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         Print
@@ -78,20 +83,27 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
             <!-- Modal Content (2 Columns) -->
             <div class="iv-modal-grid">
                 
-                <!-- LEFT COLUMN: LIVE VISUAL INVOICE PAPER -->
+                <!-- LEFT COLUMN: LIVE PREVIEWS & FINANCIAL PERFORMANCE -->
                 <div class="iv-preview-column">
                     <div class="iv-preview-toolbar">
                         <div class="iv-view-tabs">
                             <button type="button" class="iv-view-tab active" id="iv-tab-visual">Visual Preview</button>
+                            <button type="button" class="iv-view-tab" id="iv-tab-perf">📊 Invoice Performance</button>
                             <button type="button" class="iv-view-tab" id="iv-tab-pdf">Live Vector PDF</button>
                         </div>
-                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">Matches PDF export 1:1</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">Real-time sync</span>
                     </div>
 
                     <!-- Visual Invoice Paper Sheet Container -->
                     <div class="iv-paper-scroll-wrapper" id="iv-paper-scroll-container">
+                        <!-- Visual Sheet -->
                         <div class="iv-paper-sheet" id="iv-paper-sheet">
                             <!-- Injected live via updateVisualPreview() -->
+                        </div>
+
+                        <!-- Dedicated Financial Performance Container (Hidden by default) -->
+                        <div class="iv-perf-sheet" id="iv-perf-sheet" style="display:none; padding:1.5rem; background:#ffffff; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 4px 20px rgba(0,0,0,0.03);">
+                            <!-- Injected live via updatePerformanceView() -->
                         </div>
 
                         <!-- Embedded PDF Iframe (Hidden by default) -->
@@ -246,8 +258,156 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
     // Attach Event Listeners
     setupViewerEvents(invoice, onEditCallback);
 
-    // Initial Visual Preview Render
+    // Initial Visual Preview & Performance Render
     updateVisualPreview();
+    updatePerformanceView();
+};
+
+/**
+ * Dedicated Invoice Financial Performance & Profitability View
+ */
+const updatePerformanceView = () => {
+    const perfContainer = document.getElementById('iv-perf-sheet');
+    if (!perfContainer || !currentInvoice) return;
+
+    const inv = currentInvoice;
+    const items = Array.isArray(inv.items) ? inv.items : [];
+    
+    let totalRevenue = Number(inv.totalPrice || inv.grandTotal || 0);
+    let subtotal = Number(inv.subtotal || 0);
+    let totalCost = 0;
+    let calculatedProfit = 0;
+    let totalItemQuantity = 0;
+
+    const itemPerformance = items.map(item => {
+        const qty = Number(item.quantity) || 1;
+        const unitPrice = Number(item.unitPrice || item.price || item.sellingPrice || 0);
+        const unitCost = Number(item.unitCost || 0);
+        const lineRev = Number(item.totalPrice) || (qty * unitPrice);
+        const lineCost = qty * unitCost;
+        const lineProfit = (item.itemProfit !== undefined && item.itemProfit !== null)
+            ? Number(item.itemProfit)
+            : (lineRev - lineCost);
+        const marginPct = lineRev > 0 ? ((lineProfit / lineRev) * 100) : 0;
+
+        totalCost += lineCost;
+        calculatedProfit += lineProfit;
+        totalItemQuantity += qty;
+        if (!subtotal) subtotal += lineRev;
+
+        return {
+            name: item.name || item.productName || 'Product',
+            size: item.size || item.sizeWeight || '',
+            qty,
+            unitPrice,
+            unitCost,
+            lineRev,
+            lineCost,
+            lineProfit,
+            marginPct
+        };
+    });
+
+    if (!totalRevenue) totalRevenue = subtotal;
+    const finalProfit = (inv.totalProfit !== undefined && inv.totalProfit !== null) 
+        ? Number(inv.totalProfit) 
+        : calculatedProfit;
+    const marginPct = totalRevenue > 0 ? ((finalProfit / totalRevenue) * 100) : 0;
+
+    let marginClass = 'margin-pill-great';
+    let marginStatus = 'Excellent Margin';
+    if (marginPct < 15) {
+        marginClass = 'margin-pill-low';
+        marginStatus = 'Low Margin';
+    } else if (marginPct < 30) {
+        marginClass = 'margin-pill-warning';
+        marginStatus = 'Moderate Margin';
+    } else if (marginPct < 50) {
+        marginClass = 'margin-pill-good';
+        marginStatus = 'Healthy Margin';
+    }
+
+    perfContainer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.75rem;">
+            <div>
+                <h3 style="margin:0 0 0.15rem 0; font-size:1.25rem; font-weight:800; color:#0f172a;">Invoice Financial Intelligence</h3>
+                <p style="margin:0; font-size:0.8rem; color:#64748b;">Comprehensive profitability, COGS, and line-item margins</p>
+            </div>
+            <span class="margin-pill ${marginClass}">${marginStatus} (${Math.round(marginPct)}%)</span>
+        </div>
+
+        <!-- 4 KPI Metrics Grid -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.75rem; margin-bottom:1.5rem;">
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">
+                <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">Gross Revenue</div>
+                <div style="font-size:1.35rem; font-weight:800; color:#0f172a; margin-top:0.2rem;">${formatCurrency(totalRevenue, currentOptions.currencySymbol)}</div>
+                <div style="font-size:0.75rem; color:#94a3b8;">${totalItemQuantity} total units billed</div>
+            </div>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">
+                <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">Total COGS (Cost)</div>
+                <div style="font-size:1.35rem; font-weight:800; color:#64748b; margin-top:0.2rem;">${formatCurrency(totalCost, currentOptions.currencySymbol)}</div>
+                <div style="font-size:0.75rem; color:#94a3b8;">Procurement cost</div>
+            </div>
+
+            <div style="background:rgba(225,29,72,0.04); border:1px solid rgba(225,29,72,0.2); border-radius:10px; padding:0.85rem;">
+                <div style="font-size:0.72rem; font-weight:700; color:#e11d48; text-transform:uppercase;">Net Gross Profit</div>
+                <div style="font-size:1.35rem; font-weight:800; color:#e11d48; margin-top:0.2rem;">+${formatCurrency(finalProfit, currentOptions.currencySymbol)}</div>
+                <div style="font-size:0.75rem; color:#e11d48; font-weight:600;">${Math.round(marginPct)}% net margin</div>
+            </div>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">
+                <div style="font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase;">Avg Item Price</div>
+                <div style="font-size:1.35rem; font-weight:800; color:#0f172a; margin-top:0.2rem;">${formatCurrency(totalItemQuantity > 0 ? (totalRevenue / totalItemQuantity) : 0, currentOptions.currencySymbol)}</div>
+                <div style="font-size:0.75rem; color:#94a3b8;">Per unit average</div>
+            </div>
+        </div>
+
+        <!-- Profit Distribution Share Bar -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1rem; margin-bottom:1.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; font-size:0.82rem; font-weight:700; color:#0f172a;">
+                <span>Profit Share by Product</span>
+                <span style="color:#059669;">Total: +${formatCurrency(finalProfit, currentOptions.currencySymbol)}</span>
+            </div>
+            <div class="perf-bar-wrap" style="height:10px;">
+                <div class="perf-bar-fill" style="width:100%;"></div>
+            </div>
+        </div>
+
+        <!-- Itemized Margin Table -->
+        <div style="border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.82rem;">
+                <thead>
+                    <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0; color:#64748b; font-weight:700;">
+                        <th style="padding:0.65rem 1rem;">Item Name</th>
+                        <th style="padding:0.65rem; text-align:center;">Qty</th>
+                        <th style="padding:0.65rem; text-align:right;">Unit Cost</th>
+                        <th style="padding:0.65rem; text-align:right;">Sale Price</th>
+                        <th style="padding:0.65rem; text-align:right;">Revenue</th>
+                        <th style="padding:0.65rem 1rem; text-align:right;">Profit (Margin)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemPerformance.map((item, idx) => `
+                        <tr style="border-bottom:1px solid #f1f5f9; background:${idx % 2 === 0 ? '#ffffff' : '#fafafa'};">
+                            <td style="padding:0.65rem 1rem;">
+                                <strong>${escapeHtml(item.name)}</strong>
+                                ${item.size ? `<span style="font-size:0.75rem; color:#94a3b8;"> (${escapeHtml(item.size)})</span>` : ''}
+                            </td>
+                            <td style="padding:0.65rem; text-align:center; font-weight:700;">${item.qty}</td>
+                            <td style="padding:0.65rem; text-align:right; color:#64748b;">${formatCurrency(item.unitCost, currentOptions.currencySymbol)}</td>
+                            <td style="padding:0.65rem; text-align:right; font-weight:600;">${formatCurrency(item.unitPrice, currentOptions.currencySymbol)}</td>
+                            <td style="padding:0.65rem; text-align:right; font-weight:700;">${formatCurrency(item.lineRev, currentOptions.currencySymbol)}</td>
+                            <td style="padding:0.65rem 1rem; text-align:right; font-weight:700; color:#059669;">
+                                +${formatCurrency(item.lineProfit, currentOptions.currencySymbol)}
+                                <span style="font-size:0.72rem; color:#64748b; font-weight:500;">(${Math.round(item.marginPct)}%)</span>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
 };
 
 /**
@@ -356,14 +516,14 @@ const updateVisualPreview = () => {
                 </thead>
                 <tbody>
                     ${items.map((item, idx) => {
-                        const price = Number(item.price || item.sellingPrice || 0);
+                        const price = Number(item.unitPrice || item.price || item.sellingPrice || 0);
                         const qty = item.quantity || 1;
                         return `
                             <tr>
                                 <td style="text-align:center; color:#94a3b8;">${idx + 1}</td>
                                 <td>
                                     <strong>${escapeHtml(item.name || item.productName || 'Product')}</strong>
-                                    ${item.size ? `<span style="font-size:0.75rem; color:#64748b;"> (${escapeHtml(item.size)})</span>` : ''}
+                                    ${item.size || item.sizeWeight ? `<span style="font-size:0.75rem; color:#64748b;"> (${escapeHtml(item.size || item.sizeWeight)})</span>` : ''}
                                 </td>
                                 <td style="text-align:center;">${qty}</td>
                                 <td style="text-align:right;">${formatCurrency(price, currentOptions.currencySymbol)}</td>
@@ -446,11 +606,11 @@ const updateVisualPreview = () => {
                 </thead>
                 <tbody>
                     ${items.map(item => {
-                        const price = Number(item.price || item.sellingPrice || 0);
+                        const price = Number(item.unitPrice || item.price || item.sellingPrice || 0);
                         const qty = item.quantity || 1;
                         return `
                             <tr style="border-bottom:1px solid #f1f5f9;">
-                                <td><strong>${escapeHtml(item.name || 'Product')}</strong> ${item.size ? `<span style="font-size:0.75rem; color:#64748b;">(${escapeHtml(item.size)})</span>` : ''}</td>
+                                <td><strong>${escapeHtml(item.name || item.productName || 'Product')}</strong> ${item.size || item.sizeWeight ? `<span style="font-size:0.75rem; color:#64748b;">(${escapeHtml(item.size || item.sizeWeight)})</span>` : ''}</td>
                                 <td style="text-align:center;">${qty}</td>
                                 <td style="text-align:right;">${formatCurrency(price, currentOptions.currencySymbol)}</td>
                                 <td style="text-align:right; font-weight:700;">${formatCurrency(qty * price, currentOptions.currencySymbol)}</td>
@@ -496,11 +656,11 @@ const updateVisualPreview = () => {
                 </thead>
                 <tbody>
                     ${items.map(item => {
-                        const price = Number(item.price || item.sellingPrice || 0);
+                        const price = Number(item.unitPrice || item.price || item.sellingPrice || 0);
                         const qty = item.quantity || 1;
                         return `
                             <tr>
-                                <td>${escapeHtml(item.name || 'Product')}</td>
+                                <td>${escapeHtml(item.name || item.productName || 'Product')}</td>
                                 <td style="text-align:center;">${qty}</td>
                                 <td style="text-align:right;">${formatCurrency(price, currentOptions.currencySymbol)}</td>
                                 <td style="text-align:right; font-weight:700;">${formatCurrency(qty * price, currentOptions.currencySymbol)}</td>
@@ -553,12 +713,12 @@ const updateVisualPreview = () => {
                 </thead>
                 <tbody>
                     ${items.map((item, idx) => {
-                        const price = Number(item.price || item.sellingPrice || 0);
+                        const price = Number(item.unitPrice || item.price || item.sellingPrice || 0);
                         const qty = item.quantity || 1;
                         return `
                             <tr style="background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
                                 <td style="text-align:center; color:#94a3b8;">${idx + 1}</td>
-                                <td><strong>${escapeHtml(item.name || 'Product')}</strong></td>
+                                <td><strong>${escapeHtml(item.name || item.productName || 'Product')}</strong></td>
                                 <td style="text-align:center;">${qty}</td>
                                 <td style="text-align:right;">${formatCurrency(price, currentOptions.currencySymbol)}</td>
                                 <td style="text-align:right; font-weight:700;">${formatCurrency(qty * price, currentOptions.currencySymbol)}</td>
@@ -595,6 +755,7 @@ const setupViewerEvents = (invoice, onEditCallback) => {
     const btnDownloadTop = document.getElementById('iv-btn-download-pdf');
     const btnDownloadBottom = document.getElementById('iv-btn-download-bottom');
     const btnPrint = document.getElementById('iv-btn-print-action');
+    const btnShareWhatsApp = document.getElementById('iv-btn-share-whatsapp');
     const btnEdit = document.getElementById('iv-btn-edit-invoice');
 
     // Close
@@ -602,6 +763,21 @@ const setupViewerEvents = (invoice, onEditCallback) => {
     if (overlay) {
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) overlay.remove();
+        });
+    }
+
+    // WhatsApp Sharing Handler
+    if (btnShareWhatsApp) {
+        btnShareWhatsApp.addEventListener('click', () => {
+            const clientName = invoice.customerName || invoice.clientName || 'Valued Customer';
+            const invNumber = invoice.busInvNumber || invoice.invoiceNumber || 'INV';
+            const total = formatCurrency(invoice.totalPrice || invoice.grandTotal || 0, currentOptions.currencySymbol);
+            const msg = `Hello ${clientName}, here are the details for your Invoice #${invNumber}. Grand Total: ${total}. Thank you for your business!`;
+            const phone = (invoice.customerNumber || invoice.clientPhone || '').replace(/[^0-9]/g, '');
+            const waUrl = phone 
+                ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+                : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+            window.open(waUrl, '_blank');
         });
     }
 
@@ -690,24 +866,40 @@ const setupViewerEvents = (invoice, onEditCallback) => {
         });
     }
 
-    // View Tabs (Visual vs Live PDF Iframe)
+    // View Tabs (Visual vs Performance vs Live PDF Iframe)
     const tabVisual = document.getElementById('iv-tab-visual');
+    const tabPerf = document.getElementById('iv-tab-perf');
     const tabPdf = document.getElementById('iv-tab-pdf');
     const paperSheet = document.getElementById('iv-paper-sheet');
+    const perfSheet = document.getElementById('iv-perf-sheet');
     const pdfFrame = document.getElementById('iv-pdf-iframe');
 
-    if (tabVisual && tabPdf) {
-        tabVisual.addEventListener('click', () => {
-            tabVisual.classList.add('active');
-            tabPdf.classList.remove('active');
-            if (paperSheet) paperSheet.style.display = 'block';
-            if (pdfFrame) pdfFrame.style.display = 'none';
-        });
+    const switchTab = (activeTabEl) => {
+        [tabVisual, tabPerf, tabPdf].forEach(t => t?.classList.remove('active'));
+        activeTabEl.classList.add('active');
+        if (paperSheet) paperSheet.style.display = 'none';
+        if (perfSheet) perfSheet.style.display = 'none';
+        if (pdfFrame) pdfFrame.style.display = 'none';
+    };
 
+    if (tabVisual) {
+        tabVisual.addEventListener('click', () => {
+            switchTab(tabVisual);
+            if (paperSheet) paperSheet.style.display = 'block';
+        });
+    }
+
+    if (tabPerf) {
+        tabPerf.addEventListener('click', () => {
+            switchTab(tabPerf);
+            updatePerformanceView();
+            if (perfSheet) perfSheet.style.display = 'block';
+        });
+    }
+
+    if (tabPdf) {
         tabPdf.addEventListener('click', async () => {
-            tabPdf.classList.add('active');
-            tabVisual.classList.remove('active');
-            if (paperSheet) paperSheet.style.display = 'none';
+            switchTab(tabPdf);
             if (pdfFrame) {
                 pdfFrame.style.display = 'block';
                 const { dataUri } = await generateInvoicePdf(invoice, currentOptions);

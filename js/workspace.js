@@ -1,9 +1,13 @@
 import { getProductService } from './services/productService.js';
 import { getInvoiceService } from './services/invoiceService.js';
 import { getSettingsService } from './services/settingsService.js';
+import { getCategoryService } from './services/categoryService.js';
+import { getPeopleService } from './services/peopleService.js';
 import { calculateInvoiceTotal } from './utils/invoiceCalculator.js';
 import { formatCurrency, getAppCurrencySymbol, setAppCurrencySymbol } from './utilities.js';
 import { authService } from '../firebase/auth.js';
+import { openInvoiceViewerModal } from './modules/invoiceViewer.js';
+import { showAlert } from './alert-handler.js';
 
 export const initWorkspace = () => {
     const sidebar = document.getElementById('sidebar');
@@ -123,17 +127,12 @@ export const toggleContextPanel = (title, contentHTML) => {
 };
 
 // =========================================================================
-// OVERVIEW DASHBOARD WITH DATE FILTERING & SKELETON LOADING
+// TOTAL ANALYSIS EXPERT DASHBOARD (BUSINESS INTELLIGENCE & METRICS)
 // =========================================================================
 
-// Helpers for date ranges
 const getMonthNameShort = (monthIdx) => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[monthIdx] || '';
-};
-
-const formatDateHuman = (dateObj) => {
-    return `${dateObj.getDate()} ${getMonthNameShort(dateObj.getMonth())} ${dateObj.getFullYear()}`;
 };
 
 const getInvoiceTime = (inv) => {
@@ -156,15 +155,13 @@ const getInvoiceTime = (inv) => {
 
 export const renderOverview = async (container, workspaceId) => {
     const now = new Date();
-    
-    // User info for friendly greeting
     const currentUser = authService?.getCurrentUser();
-    let userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User';
-    // Capitalize first letter
+    let userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Executive';
     userName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
     // Initial Date Filter
     let activeFilter = 'LAST_6_MONTHS'; // 'THIS_MONTH', 'LAST_30_DAYS', 'LAST_6_MONTHS', 'THIS_YEAR', 'ALL_TIME'
+    let activeChartSeries = 'ALL'; // 'ALL', 'REV', 'PROFIT'
     
     const calculateRange = (filterKey) => {
         const cur = new Date();
@@ -174,7 +171,7 @@ export const renderOverview = async (container, workspaceId) => {
             return {
                 start: s.getTime(),
                 end: e.getTime(),
-                label: `1 ${getMonthNameShort(cur.getMonth())} – ${cur.getDate()} ${getMonthNameShort(cur.getMonth())}, ${cur.getFullYear()}`
+                label: `This Month (${getMonthNameShort(cur.getMonth())} ${cur.getFullYear()})`
             };
         } else if (filterKey === 'LAST_30_DAYS') {
             const s = new Date(cur.getTime() - (30 * 24 * 60 * 60 * 1000));
@@ -184,7 +181,7 @@ export const renderOverview = async (container, workspaceId) => {
             return {
                 start: s.getTime(),
                 end: e.getTime(),
-                label: `${getMonthNameShort(s.getMonth())} ${s.getDate()} – ${getMonthNameShort(e.getMonth())} ${e.getDate()}, ${e.getFullYear()}`
+                label: `Last 30 Days`
             };
         } else if (filterKey === 'THIS_YEAR') {
             const s = new Date(cur.getFullYear(), 0, 1, 0, 0, 0, 0);
@@ -192,13 +189,13 @@ export const renderOverview = async (container, workspaceId) => {
             return {
                 start: s.getTime(),
                 end: e.getTime(),
-                label: `Jan 1 – ${getMonthNameShort(cur.getMonth())} ${cur.getDate()}, ${cur.getFullYear()}`
+                label: `Year to Date (${cur.getFullYear()})`
             };
         } else if (filterKey === 'ALL_TIME') {
             return {
                 start: 0,
                 end: Infinity,
-                label: 'All Time Record'
+                label: 'All Time Records'
             };
         } else {
             // Default: Last 6 Months
@@ -207,223 +204,224 @@ export const renderOverview = async (container, workspaceId) => {
             return {
                 start: s.getTime(),
                 end: e.getTime(),
-                label: `${getMonthNameShort(s.getMonth())} 1, ${s.getFullYear()} – ${getMonthNameShort(e.getMonth())} ${e.getDate()}, ${e.getFullYear()}`
+                label: `Last 6 Months`
             };
         }
     };
 
     let currentRange = calculateRange(activeFilter);
 
-    // Initial Dashboard DOM Skeleton
+    // Initial Dashboard Layout
     container.innerHTML = `
-        <div class="dash-container">
+        <div class="dash-container" style="display:flex; flex-direction:column; gap:1.5rem; animation:fadeIn 0.25s ease;">
             
-            <!-- Dashboard Top Header Row -->
-            <div class="dash-header-row">
+            <!-- EXECUTIVE TOP HEADER ROW -->
+            <div class="dash-header-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                 <div class="dash-title-group">
-                    <h1 class="dash-title">Dashboard</h1>
-                    <p class="dash-subtitle">Welcome back, ${userName}. Here's what's happening with your business today.</p>
-                </div>
-                <div class="dash-date-picker-wrap">
-                    <button class="dash-date-btn" id="dash-date-filter-btn" type="button" aria-expanded="false" title="Change Dashboard Date Filter">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        <span id="dash-active-range-label">${currentRange.label}</span>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="dash-date-dropdown" id="dash-date-dropdown">
-                        <button type="button" class="dash-date-opt ${activeFilter === 'LAST_6_MONTHS' ? 'active' : ''}" data-filter="LAST_6_MONTHS">Last 6 Months</button>
-                        <button type="button" class="dash-date-opt ${activeFilter === 'THIS_MONTH' ? 'active' : ''}" data-filter="THIS_MONTH">This Month</button>
-                        <button type="button" class="dash-date-opt ${activeFilter === 'LAST_30_DAYS' ? 'active' : ''}" data-filter="LAST_30_DAYS">Last 30 Days</button>
-                        <button type="button" class="dash-date-opt ${activeFilter === 'THIS_YEAR' ? 'active' : ''}" data-filter="THIS_YEAR">This Year</button>
-                        <button type="button" class="dash-date-opt ${activeFilter === 'ALL_TIME' ? 'active' : ''}" data-filter="ALL_TIME">All Time</button>
+                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                        <h1 class="dash-title" style="margin:0; font-size:1.85rem; font-weight:800; letter-spacing:-0.02em;">Analytics Expert Dashboard</h1>
+                        <span class="badge" style="background:rgba(225,29,72,0.12); color:#e11d48; font-weight:700; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:6px;">LIVE INTELLIGENCE</span>
                     </div>
+                    <p class="dash-subtitle" style="margin:0.25rem 0 0 0; color:var(--text-secondary); font-size:0.88rem;">
+                        Welcome back, <strong>${userName}</strong>. Complete financial health, sales performance, and predictive metrics.
+                    </p>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+                    <!-- Date Filter Button & Dropdown -->
+                    <div class="dash-date-picker-wrap" style="position:relative;">
+                        <button class="dash-date-btn" id="dash-date-filter-btn" type="button" aria-expanded="false" style="display:flex; align-items:center; gap:0.45rem; padding:0.5rem 0.95rem; background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-pill); font-size:0.85rem; font-weight:600; cursor:pointer; box-shadow:var(--shadow-subtle);">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <span id="dash-active-range-label">${currentRange.label}</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="dash-date-dropdown" id="dash-date-dropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#ffffff; border:1px solid var(--border-color); border-radius:10px; box-shadow:var(--shadow-float); z-index:100; min-width:180px; padding:0.4rem;">
+                            <button type="button" class="dash-date-opt ${activeFilter === 'LAST_6_MONTHS' ? 'active' : ''}" data-filter="LAST_6_MONTHS" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">Last 6 Months</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_MONTH' ? 'active' : ''}" data-filter="THIS_MONTH" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">This Month</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'LAST_30_DAYS' ? 'active' : ''}" data-filter="LAST_30_DAYS" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">Last 30 Days</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_YEAR' ? 'active' : ''}" data-filter="THIS_YEAR" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">This Year</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'ALL_TIME' ? 'active' : ''}" data-filter="ALL_TIME" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">All Time Records</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Shortcuts -->
+                    <a href="#/invoices/customer" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; padding:0.5rem 1rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                        New Invoice
+                    </a>
                 </div>
             </div>
 
-            <!-- Top Row: 4 Metric Cards with Sparklines -->
-            <div class="dash-kpi-grid">
+            <!-- 8 EXPERT ANALYTICAL KPI METRIC TILES -->
+            <div class="dash-kpi-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
                 
-                <!-- 1. Total Revenue -->
-                <div class="dash-kpi-card">
-                    <div class="dash-kpi-top">
-                        <div class="dash-kpi-icon-wrap dash-kpi-icon-green">
-                            <span style="font-weight:800; font-size:1.15rem;">${getAppCurrencySymbol() || '$'}</span>
-                        </div>
-                        <div>
-                            <div class="dash-kpi-label">Total Revenue</div>
-                            <div class="dash-kpi-value" id="kpi-revenue">...</div>
-                        </div>
+                <!-- 1. Total Gross Revenue -->
+                <div class="dash-kpi-card" style="background:#ffffff; border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                        <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Gross Revenue</div>
+                        <span style="width:30px; height:30px; border-radius:8px; background:rgba(225,29,72,0.1); color:#e11d48; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.95rem;">${getAppCurrencySymbol() || '$'}</span>
                     </div>
-                    <div class="dash-kpi-meta">
-                        <span class="dash-trend-up">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-                            12.4%
-                        </span>
-                        <span class="dash-trend-sub">vs previous period</span>
+                    <div class="dash-kpi-value" id="kpi-revenue" style="font-size:1.65rem; font-weight:800; color:var(--text-primary); line-height:1.15;">...</div>
+                    <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
+                        <span style="color:#059669; font-weight:700;">▲ Active Trend</span>
+                        <span style="color:var(--text-muted);">&bull; Total billed sales</span>
                     </div>
-                    <!-- Sparkline Wave SVG -->
-                    <svg class="dash-sparkline-svg" viewBox="0 0 240 50" preserveAspectRatio="none">
+                    <!-- Sparkline Wave -->
+                    <svg class="dash-sparkline-svg" viewBox="0 0 240 45" preserveAspectRatio="none" style="width:100%; height:32px; margin-top:0.4rem;">
                         <defs>
-                            <linearGradient id="grad-spark-green" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#10b981" stop-opacity="0.35"/>
+                            <linearGradient id="grad-rev-dash" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#e11d48" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="#e11d48" stop-opacity="0.0"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M0,32 Q30,12 60,26 T120,16 T180,28 T240,10 L240,45 L0,45 Z" fill="url(#grad-rev-dash)"/>
+                        <path d="M0,32 Q30,12 60,26 T120,16 T180,28 T240,10" fill="none" stroke="#e11d48" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+
+                <!-- 2. Total Net Profit & Margin -->
+                <div class="dash-kpi-card" style="background:#ffffff; border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                        <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Net Gross Profit</div>
+                        <span style="width:30px; height:30px; border-radius:8px; background:rgba(16,185,129,0.1); color:#059669; display:flex; align-items:center; justify-content:center;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                        </span>
+                    </div>
+                    <div class="dash-kpi-value" id="kpi-profit" style="font-size:1.65rem; font-weight:800; color:#059669; line-height:1.15;">...</div>
+                    <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
+                        <span id="kpi-margin-pct" style="color:#059669; font-weight:700;">0% Margin</span>
+                        <span style="color:var(--text-muted);">&bull; Revenue minus COGS</span>
+                    </div>
+                    <!-- Sparkline Wave -->
+                    <svg class="dash-sparkline-svg" viewBox="0 0 240 45" preserveAspectRatio="none" style="width:100%; height:32px; margin-top:0.4rem;">
+                        <defs>
+                            <linearGradient id="grad-profit-dash" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
                                 <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
                             </linearGradient>
                         </defs>
-                        <path d="M0,38 Q30,15 60,32 T120,20 T180,35 T240,12 L240,50 L0,50 Z" fill="url(#grad-spark-green)"/>
-                        <path d="M0,38 Q30,15 60,32 T120,20 T180,35 T240,12" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M0,35 Q30,18 60,30 T120,15 T180,24 T240,8 L240,45 L0,45 Z" fill="url(#grad-profit-dash)"/>
+                        <path d="M0,35 Q30,18 60,30 T120,15 T180,24 T240,8" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
                     </svg>
                 </div>
 
-                <!-- 2. Total Orders -->
-                <div class="dash-kpi-card">
-                    <div class="dash-kpi-top">
-                        <div class="dash-kpi-icon-wrap dash-kpi-icon-blue">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                        </div>
-                        <div>
-                            <div class="dash-kpi-label">Total Orders</div>
-                            <div class="dash-kpi-value" id="kpi-orders">...</div>
-                        </div>
-                    </div>
-                    <div class="dash-kpi-meta">
-                        <span class="dash-trend-up">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-                            8.2%
+                <!-- 3. Total Invoices & AOV -->
+                <div class="dash-kpi-card" style="background:#ffffff; border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                        <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Orders & Invoices</div>
+                        <span style="width:30px; height:30px; border-radius:8px; background:rgba(59,130,246,0.1); color:#2563eb; display:flex; align-items:center; justify-content:center;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                         </span>
-                        <span class="dash-trend-sub">vs previous period</span>
                     </div>
-                    <!-- Sparkline Wave SVG -->
-                    <svg class="dash-sparkline-svg" viewBox="0 0 240 50" preserveAspectRatio="none">
+                    <div class="dash-kpi-value" id="kpi-orders" style="font-size:1.65rem; font-weight:800; color:var(--text-primary); line-height:1.15;">...</div>
+                    <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
+                        <span id="kpi-aov-val" style="color:#2563eb; font-weight:700;">AOV: $0</span>
+                        <span style="color:var(--text-muted);">&bull; Avg order value</span>
+                    </div>
+                    <!-- Sparkline Wave -->
+                    <svg class="dash-sparkline-svg" viewBox="0 0 240 45" preserveAspectRatio="none" style="width:100%; height:32px; margin-top:0.4rem;">
                         <defs>
-                            <linearGradient id="grad-spark-blue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/>
+                            <linearGradient id="grad-ord-dash" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/>
                                 <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
                             </linearGradient>
                         </defs>
-                        <path d="M0,35 Q30,22 60,30 T120,18 T180,25 T240,10 L240,50 L0,50 Z" fill="url(#grad-spark-blue)"/>
-                        <path d="M0,35 Q30,22 60,30 T120,18 T180,25 T240,10" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M0,30 Q35,16 70,28 T140,14 T210,22 T240,10 L240,45 L0,45 Z" fill="url(#grad-ord-dash)"/>
+                        <path d="M0,30 Q35,16 70,28 T140,14 T210,22 T240,10" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"/>
                     </svg>
                 </div>
 
-                <!-- 3. Total Products -->
-                <div class="dash-kpi-card">
-                    <div class="dash-kpi-top">
-                        <div class="dash-kpi-icon-wrap dash-kpi-icon-purple">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                        </div>
-                        <div>
-                            <div class="dash-kpi-label">Total Products</div>
-                            <div class="dash-kpi-value" id="kpi-products">...</div>
-                        </div>
-                    </div>
-                    <div class="dash-kpi-meta">
-                        <span class="dash-trend-up">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-                            5.6%
+                <!-- 4. Inventory Valuation (Asset Worth) -->
+                <div class="dash-kpi-card" style="background:#ffffff; border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                        <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Stock Asset Valuation</div>
+                        <span style="width:30px; height:30px; border-radius:8px; background:rgba(139,92,246,0.1); color:#7c3aed; display:flex; align-items:center; justify-content:center;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                         </span>
-                        <span class="dash-trend-sub">vs previous period</span>
                     </div>
-                    <!-- Sparkline Wave SVG -->
-                    <svg class="dash-sparkline-svg" viewBox="0 0 240 50" preserveAspectRatio="none">
+                    <div class="dash-kpi-value" id="kpi-inventory-val" style="font-size:1.65rem; font-weight:800; color:var(--text-primary); line-height:1.15;">...</div>
+                    <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
+                        <span id="kpi-sku-count" style="color:#7c3aed; font-weight:700;">0 SKUs Active</span>
+                        <span style="color:var(--text-muted);">&bull; Total stock cost</span>
+                    </div>
+                    <!-- Sparkline Wave -->
+                    <svg class="dash-sparkline-svg" viewBox="0 0 240 45" preserveAspectRatio="none" style="width:100%; height:32px; margin-top:0.4rem;">
                         <defs>
-                            <linearGradient id="grad-spark-purple" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.35"/>
+                            <linearGradient id="grad-purp-dash" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.25"/>
                                 <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.0"/>
                             </linearGradient>
                         </defs>
-                        <path d="M0,40 Q40,30 80,36 T160,18 T240,15 L240,50 L0,50 Z" fill="url(#grad-spark-purple)"/>
-                        <path d="M0,40 Q40,30 80,36 T160,18 T240,15" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round"/>
-                    </svg>
-                </div>
-
-                <!-- 4. Total Clients -->
-                <div class="dash-kpi-card">
-                    <div class="dash-kpi-top">
-                        <div class="dash-kpi-icon-wrap dash-kpi-icon-orange">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                        </div>
-                        <div>
-                            <div class="dash-kpi-label">Total Clients</div>
-                            <div class="dash-kpi-value" id="kpi-clients">...</div>
-                        </div>
-                    </div>
-                    <div class="dash-kpi-meta">
-                        <span class="dash-trend-up">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-                            10.1%
-                        </span>
-                        <span class="dash-trend-sub">vs previous period</span>
-                    </div>
-                    <!-- Sparkline Wave SVG -->
-                    <svg class="dash-sparkline-svg" viewBox="0 0 240 50" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="grad-spark-orange" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#f97316" stop-opacity="0.35"/>
-                                <stop offset="100%" stop-color="#f97316" stop-opacity="0.0"/>
-                            </linearGradient>
-                        </defs>
-                        <path d="M0,36 Q35,18 70,30 T140,24 T210,12 T240,16 L240,50 L0,50 Z" fill="url(#grad-spark-orange)"/>
-                        <path d="M0,36 Q35,18 70,30 T140,24 T210,12 T240,16" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M0,38 Q40,25 80,34 T160,16 T240,12 L240,45 L0,45 Z" fill="url(#grad-purp-dash)"/>
+                        <path d="M0,38 Q40,25 80,34 T160,16 T240,12" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round"/>
                     </svg>
                 </div>
 
             </div>
 
-            <!-- Middle Row: 2 Major Interactive Graphs -->
-            <div class="dash-charts-grid">
+            <!-- DUAL MACRO INTELLIGENCE CHARTS (ROW 2) -->
+            <div class="dash-charts-grid" style="display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr); gap:1.5rem; align-items:start;">
                 
-                <!-- Chart 1: Sales Overview Multi-Series Area Graph -->
-                <div class="dash-card">
-                    <div class="dash-card-header">
+                <!-- CHART 1: INTERACTIVE REVENUE VS PROFIT VS COGS WAVE AREA GRAPH -->
+                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:1.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
                         <div>
-                            <h3 class="dash-card-title">Sales Overview</h3>
-                            <p class="dash-card-subtitle">Revenue over the last 6 months</p>
+                            <h3 style="margin:0 0 0.2rem 0; font-size:1.2rem; font-weight:800; color:var(--text-primary);">Macro Financial Trajectory</h3>
+                            <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">Multi-series comparison of Gross Revenue, Net Profit, and COGS</p>
                         </div>
-                        <div class="dash-chart-legend">
-                            <span class="dash-legend-item">
-                                <span class="dash-legend-dot" style="background: #3b82f6;"></span>
-                                Revenue
+
+                        <!-- Chart Series Toggles -->
+                        <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; font-weight:700;">
+                            <span style="display:inline-flex; align-items:center; gap:0.35rem; color:#e11d48;">
+                                <span style="width:8px; height:8px; border-radius:50%; background:#e11d48;"></span> Revenue
                             </span>
-                            <span class="dash-legend-item">
-                                <span class="dash-legend-dot" style="background: #8b5cf6;"></span>
-                                Orders
+                            <span style="display:inline-flex; align-items:center; gap:0.35rem; color:#10b981;">
+                                <span style="width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Net Profit
+                            </span>
+                            <span style="display:inline-flex; align-items:center; gap:0.35rem; color:#64748b;">
+                                <span style="width:8px; height:8px; border-radius:50%; background:#64748b;"></span> COGS (Cost)
                             </span>
                         </div>
                     </div>
-                    
-                    <!-- SVG Interactive Chart Container -->
-                    <div class="dash-svg-chart-container" id="dash-sales-chart-container">
-                        <svg class="dash-svg-chart" id="dash-sales-svg" viewBox="0 0 680 240" preserveAspectRatio="none">
+
+                    <!-- SVG Chart Container -->
+                    <div class="dash-svg-chart-container" id="dash-sales-chart-container" style="position:relative; width:100%; background:var(--surface-50); border-radius:12px; border:1px solid var(--border-color); padding:1rem 0.5rem;">
+                        <svg class="dash-svg-chart" id="dash-sales-svg" viewBox="0 0 680 240" preserveAspectRatio="none" style="width:100%; height:240px; display:block; overflow:visible;">
                             <defs>
-                                <linearGradient id="chartRevenueGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.38"/>
-                                    <stop offset="85%" stop-color="#93c5fd" stop-opacity="0.08"/>
-                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+                                <linearGradient id="chartRevGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#e11d48" stop-opacity="0.35"/>
+                                    <stop offset="100%" stop-color="#e11d48" stop-opacity="0.01"/>
+                                </linearGradient>
+                                <linearGradient id="chartProfitGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+                                    <stop offset="100%" stop-color="#10b981" stop-opacity="0.01"/>
                                 </linearGradient>
                             </defs>
 
                             <!-- Horizontal Grid Lines -->
-                            <g stroke="#f1f5f9" stroke-width="1.2" stroke-dasharray="4 4">
-                                <line x1="50" y1="20" x2="660" y2="20" />
-                                <line x1="50" y1="65" x2="660" y2="65" />
-                                <line x1="50" y1="110" x2="660" y2="110" />
-                                <line x1="50" y1="155" x2="660" y2="155" />
-                                <line x1="50" y1="200" x2="660" y2="200" stroke-dasharray="0" stroke="#e2e8f0" />
+                            <g stroke="rgba(0,0,0,0.06)" stroke-width="1.2" stroke-dasharray="4 4">
+                                <line x1="55" y1="20" x2="660" y2="20" />
+                                <line x1="55" y1="65" x2="660" y2="65" />
+                                <line x1="55" y1="110" x2="660" y2="110" />
+                                <line x1="55" y1="155" x2="660" y2="155" />
+                                <line x1="55" y1="200" x2="660" y2="200" stroke-dasharray="0" stroke="rgba(0,0,0,0.12)" />
                             </g>
 
                             <!-- Y-Axis Labels -->
                             <g fill="#94a3b8" font-size="11" font-weight="600" text-anchor="end">
-                                <text x="40" y="24" id="chart-y-4">400K</text>
-                                <text x="40" y="69" id="chart-y-3">300K</text>
-                                <text x="40" y="114" id="chart-y-2">200K</text>
-                                <text x="40" y="159" id="chart-y-1">100K</text>
-                                <text x="40" y="204">0</text>
+                                <text x="45" y="24" id="chart-y-4">40K</text>
+                                <text x="45" y="69" id="chart-y-3">30K</text>
+                                <text x="45" y="114" id="chart-y-2">20K</text>
+                                <text x="45" y="159" id="chart-y-1">10K</text>
+                                <text x="45" y="204">0</text>
                             </g>
 
-                            <!-- Area Paths and Lines -->
-                            <path id="chart-revenue-area" d="" fill="url(#chartRevenueGrad)" />
-                            <path id="chart-revenue-line" d="" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                            <path id="chart-orders-line" d="" fill="none" stroke="#8b5cf6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                            <!-- Area and Line Paths -->
+                            <path id="chart-revenue-area" d="" fill="url(#chartRevGrad)" />
+                            <path id="chart-profit-area" d="" fill="url(#chartProfitGrad)" />
+                            <path id="chart-revenue-line" d="" fill="none" stroke="#e11d48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                            <path id="chart-profit-line" d="" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                            <path id="chart-cost-line" d="" fill="none" stroke="#64748b" stroke-width="1.8" stroke-dasharray="3 3" stroke-linecap="round" stroke-linejoin="round" />
 
                             <!-- Interactive Coordinate Circles -->
                             <g id="chart-data-dots"></g>
@@ -436,151 +434,145 @@ export const renderOverview = async (container, workspaceId) => {
                         </svg>
 
                         <!-- Floating Glass Tooltip -->
-                        <div class="dash-chart-tooltip" id="dash-chart-tooltip">
-                            <div class="tooltip-month" id="tooltip-month-text">Month</div>
-                            <div class="tooltip-row">
-                                <span style="display:flex;align-items:center;gap:0.3rem;"><span style="width:7px;height:7px;border-radius:50%;background:#3b82f6;"></span>Revenue:</span>
+                        <div class="dash-chart-tooltip" id="dash-chart-tooltip" style="display:none; position:absolute; transform:translate(-50%, -115%); background:rgba(15,23,42,0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#ffffff; padding:0.6rem 0.85rem; border-radius:8px; font-size:0.78rem; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,0.25); z-index:50;">
+                            <div class="tooltip-month" id="tooltip-month-text" style="font-weight:700; border-bottom:1px solid rgba(255,255,255,0.15); padding-bottom:0.25rem; margin-bottom:0.35rem;">Month</div>
+                            <div class="tooltip-row" style="display:flex; justify-content:space-between; gap:0.75rem; margin-bottom:0.2rem;">
+                                <span style="color:#fda4af;">Revenue:</span>
                                 <strong id="tooltip-rev-text" style="color:#ffffff;">$0</strong>
                             </div>
-                            <div class="tooltip-row">
-                                <span style="display:flex;align-items:center;gap:0.3rem;"><span style="width:7px;height:7px;border-radius:50%;background:#8b5cf6;"></span>Orders:</span>
+                            <div class="tooltip-row" style="display:flex; justify-content:space-between; gap:0.75rem; margin-bottom:0.2rem;">
+                                <span style="color:#6ee7b7;">Profit:</span>
+                                <strong id="tooltip-profit-text" style="color:#ffffff;">$0</strong>
+                            </div>
+                            <div class="tooltip-row" style="display:flex; justify-content:space-between; gap:0.75rem;">
+                                <span style="color:#94a3b8;">Orders:</span>
                                 <strong id="tooltip-ord-text" style="color:#ffffff;">0</strong>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Chart 2: Order Status Donut Chart -->
-                <div class="dash-card">
-                    <div class="dash-card-header">
-                        <div>
-                            <h3 class="dash-card-title">Order Status</h3>
-                            <p class="dash-card-subtitle">Total orders by status</p>
-                        </div>
+                <!-- CHART 2: ORDER STATUS & REVENUE DISTRIBUTION DONUT -->
+                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:1.5rem;">
+                    <div style="margin-bottom:1.25rem;">
+                        <h3 style="margin:0 0 0.2rem 0; font-size:1.2rem; font-weight:800; color:var(--text-primary);">Order & Cash Status</h3>
+                        <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">Fulfillment health and payment completion</p>
                     </div>
 
-                    <div class="dash-donut-layout">
+                    <div class="dash-donut-layout" style="display:flex; align-items:center; gap:1.25rem; justify-content:space-around;">
                         <!-- SVG Donut -->
-                        <div class="dash-donut-graphic-wrap">
-                            <svg viewBox="0 0 160 160" width="160" height="160">
+                        <div class="dash-donut-graphic-wrap" style="position:relative; width:150px; height:150px; flex-shrink:0;">
+                            <svg viewBox="0 0 160 160" width="150" height="150">
                                 <circle cx="80" cy="80" r="58" fill="none" stroke="#f1f5f9" stroke-width="18"/>
                                 <g id="donut-segments"></g>
                             </svg>
-                            <div class="dash-donut-center-text">
-                                <div class="dash-donut-center-num" id="donut-total-count">0</div>
-                                <div class="dash-donut-center-sub">Total Orders</div>
+                            <div class="dash-donut-center-text" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;">
+                                <div class="dash-donut-center-num" id="donut-total-count" style="font-size:1.45rem; font-weight:800; color:var(--text-primary); line-height:1;">0</div>
+                                <div class="dash-donut-center-sub" style="font-size:0.72rem; color:var(--text-muted); font-weight:600; margin-top:2px;">Orders</div>
                             </div>
                         </div>
 
                         <!-- Breakdown List -->
-                        <div class="dash-donut-breakdown-list" id="donut-breakdown-list">
+                        <div class="dash-donut-breakdown-list" id="donut-breakdown-list" style="flex:1; display:flex; flex-direction:column; gap:0.5rem;">
                             <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Cash Flow Collection Bar -->
+                    <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem; font-size:0.82rem;">
+                            <span style="font-weight:700; color:var(--text-primary);">Collection Efficiency</span>
+                            <span id="dash-collection-pct" style="font-weight:800; color:#059669;">0% Paid</span>
+                        </div>
+                        <div class="perf-bar-wrap" style="height:8px;">
+                            <div class="perf-bar-fill" id="dash-collection-bar" style="width:0%;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-top:0.35rem;">
+                            <span id="dash-paid-collected">Collected: $0</span>
+                            <span id="dash-due-receivable" style="color:#d97706;">Due: $0</span>
                         </div>
                     </div>
                 </div>
 
             </div>
 
-            <!-- Bottom Row: 3 Responsive Columns -->
-            <div class="dash-bottom-grid">
+            <!-- DEEP ANALYTICAL RANKING MATRICES (ROW 3) -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem; align-items:start;">
                 
-                <!-- 1. Top Selling Products -->
-                <div class="dash-card">
-                    <div class="dash-card-header">
+                <!-- 1. TOP PERFORMING PRODUCTS -->
+                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
+                    <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h3 class="dash-card-title">Top Selling Products</h3>
-                            <p class="dash-card-subtitle">Based on total sales</p>
+                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800;">⭐ Top Performing Products</h3>
+                            <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Highest revenue & gross profit contributors</p>
                         </div>
-                        <a href="#/products" class="dash-view-all-link">View All</a>
+                        <a href="#/products" class="btn btn-sm btn-secondary" style="font-size:0.78rem; padding:0.25rem 0.65rem;">View All</a>
                     </div>
-                    <div class="dash-table-container">
-                        <table class="dash-table">
+                    <div class="table-container">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem;">
                             <thead>
-                                <tr>
-                                    <th style="width:36px;">#</th>
-                                    <th>Product</th>
-                                    <th>Category</th>
-                                    <th style="text-align:right;">Sold</th>
-                                    <th style="text-align:right;">Revenue</th>
+                                <tr style="background:var(--surface-50); border-bottom:1px solid var(--border-color); color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
+                                    <th style="padding:0.65rem 1rem;">Product</th>
+                                    <th style="padding:0.65rem; text-align:center;">Sold</th>
+                                    <th style="padding:0.65rem; text-align:right;">Revenue</th>
+                                    <th style="padding:0.65rem 1rem; text-align:right;">Profit</th>
                                 </tr>
                             </thead>
                             <tbody id="dash-top-products-tbody">
-                                <!-- Populated dynamically -->
+                                <!-- Dynamic Rows -->
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- 2. Recent Invoices -->
-                <div class="dash-card">
-                    <div class="dash-card-header">
+                <!-- 2. TOP VIP CUSTOMERS -->
+                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
+                    <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h3 class="dash-card-title">Recent Invoices</h3>
-                            <p class="dash-card-subtitle">Latest transactions</p>
+                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800;">👑 VIP Buyers Leaderboard</h3>
+                            <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Top accounts by cumulative spend</p>
                         </div>
-                        <a href="#/invoices/customer" class="dash-view-all-link">View All</a>
+                        <a href="#/customers" class="btn btn-sm btn-secondary" style="font-size:0.78rem; padding:0.25rem 0.65rem;">View People</a>
                     </div>
-                    <div class="dash-table-container">
-                        <table class="dash-table">
+                    <div class="table-container">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem;">
                             <thead>
-                                <tr>
-                                    <th>Invoice #</th>
-                                    <th>Client</th>
-                                    <th>Amount</th>
-                                    <th style="text-align:right;">Status</th>
+                                <tr style="background:var(--surface-50); border-bottom:1px solid var(--border-color); color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
+                                    <th style="padding:0.65rem 1rem;">Customer / Client</th>
+                                    <th style="padding:0.65rem; text-align:center;">Orders</th>
+                                    <th style="padding:0.65rem 1rem; text-align:right;">Total Spent</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-vip-customers-tbody">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. RECENT INVOICES WITH 1-CLICK PERFORMANCE PREVIEW -->
+                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
+                    <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800;">🧾 Recent Invoices Stream</h3>
+                            <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Latest sales & performance</p>
+                        </div>
+                        <a href="#/invoices/customer" class="btn btn-sm btn-secondary" style="font-size:0.78rem; padding:0.25rem 0.65rem;">View Invoices</a>
+                    </div>
+                    <div class="table-container">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem;">
+                            <thead>
+                                <tr style="background:var(--surface-50); border-bottom:1px solid var(--border-color); color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
+                                    <th style="padding:0.65rem 1rem;">Invoice #</th>
+                                    <th style="padding:0.65rem;">Client</th>
+                                    <th style="padding:0.65rem;">Total</th>
+                                    <th style="padding:0.65rem 1rem; text-align:right;">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="dash-recent-invoices-tbody">
-                                <!-- Populated dynamically -->
+                                <!-- Dynamic Rows -->
                             </tbody>
                         </table>
-                    </div>
-                </div>
-
-                <!-- 3. Quick Actions -->
-                <div class="dash-card">
-                    <div class="dash-card-header">
-                        <div>
-                            <h3 class="dash-card-title">Quick Actions</h3>
-                            <p class="dash-card-subtitle">Shortcuts & operations</p>
-                        </div>
-                    </div>
-                    <div class="dash-actions-stack">
-                        <a href="#/invoices/customer" class="dash-action-btn dash-action-btn-primary">
-                            <span class="dash-action-left">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                                <span>Create Invoice</span>
-                            </span>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                        </a>
-                        <a href="#/products" class="dash-action-btn">
-                            <span class="dash-action-left">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                                <span>Add Product</span>
-                            </span>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                        </a>
-                        <a href="#/market-inserter" class="dash-action-btn">
-                            <span class="dash-action-left">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                                <span>Create Order</span>
-                            </span>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                        </a>
-                        <a href="#/customers" class="dash-action-btn">
-                            <span class="dash-action-left">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-                                <span>Add Client</span>
-                            </span>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                        </a>
-                        <a href="#/analytics" class="dash-action-btn">
-                            <span class="dash-action-left">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                                <span>View Reports</span>
-                            </span>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                        </a>
                     </div>
                 </div>
 
@@ -597,13 +589,12 @@ export const renderOverview = async (container, workspaceId) => {
     if (dateBtn && dateDropdown) {
         dateBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const isOpen = dateDropdown.classList.toggle('is-open');
-            dateBtn.setAttribute('aria-expanded', isOpen);
+            const isOpen = dateDropdown.style.display === 'block';
+            dateDropdown.style.display = isOpen ? 'none' : 'block';
         });
 
         document.addEventListener('click', () => {
-            dateDropdown.classList.remove('is-open');
-            dateBtn.setAttribute('aria-expanded', 'false');
+            dateDropdown.style.display = 'none';
         });
 
         dateDropdown.querySelectorAll('.dash-date-opt').forEach(opt => {
@@ -613,8 +604,7 @@ export const renderOverview = async (container, workspaceId) => {
                 currentRange = calculateRange(f);
                 if (activeRangeLabel) activeRangeLabel.textContent = currentRange.label;
                 dateDropdown.querySelectorAll('.dash-date-opt').forEach(o => o.classList.toggle('active', o === opt));
-                dateDropdown.classList.remove('is-open');
-                dateBtn.setAttribute('aria-expanded', 'false');
+                dateDropdown.style.display = 'none';
                 computeAndRenderDashboard();
             });
         });
@@ -625,6 +615,8 @@ export const renderOverview = async (container, workspaceId) => {
     let cachedProducts = [];
     let cachedCustInvoices = [];
     let cachedBusInvoices = [];
+    let cachedCategories = [];
+    let cachedCustomers = [];
 
     const formatCurr = (val) => formatCurrency(val);
     const formatNum = (val) => Number(val || 0).toLocaleString();
@@ -665,45 +657,131 @@ export const renderOverview = async (container, workspaceId) => {
             return t >= currentRange.start && t <= currentRange.end;
         });
 
-        // 1. Calculate Top KPI Values
+        // 1. Calculate Comprehensive Analytical KPIs
         let totalRevenue = 0;
+        let totalProfit = 0;
+        let totalCOGS = 0;
+        let paidRevenue = 0;
+        let dueRevenue = 0;
+        const productSalesAgg = {}; // productId -> { name, category, units, revenue, profit }
+        const customerAgg = {}; // key -> { name, contact, orders, totalSpent }
+
         filteredInvoices.forEach(inv => {
-            totalRevenue += Number(inv.totalPrice || 0);
+            const grandTotal = Number(inv.totalPrice || inv.grandTotal || 0);
+            totalRevenue += grandTotal;
+
+            const isPaid = (inv.status || 'PAID').toUpperCase() === 'PAID';
+            if (isPaid) paidRevenue += grandTotal;
+            else dueRevenue += grandTotal;
+
+            // Compute invoice profit
+            let invProfit = 0;
+            let invCost = 0;
+
+            if (inv.items && Array.isArray(inv.items)) {
+                inv.items.forEach(item => {
+                    const qty = Number(item.quantity) || 1;
+                    const uPrice = Number(item.unitPrice || item.price || item.sellingPrice || 0);
+                    const uCost = Number(item.unitCost || 0);
+                    const lineRev = Number(item.totalPrice) || (qty * uPrice);
+                    const lineCost = qty * uCost;
+                    const lineProfit = (item.itemProfit !== undefined && item.itemProfit !== null)
+                        ? Number(item.itemProfit)
+                        : (lineRev - lineCost);
+
+                    invCost += lineCost;
+                    invProfit += lineProfit;
+
+                    const pKey = String(item.productId || item.productName || 'General');
+                    if (!productSalesAgg[pKey]) {
+                        productSalesAgg[pKey] = {
+                            id: item.productId,
+                            name: item.name || item.productName || 'Product',
+                            category: item.category || 'General',
+                            units: 0,
+                            revenue: 0,
+                            profit: 0
+                        };
+                    }
+                    productSalesAgg[pKey].units += qty;
+                    productSalesAgg[pKey].revenue += lineRev;
+                    productSalesAgg[pKey].profit += lineProfit;
+                });
+            }
+
+            if (inv.totalProfit !== undefined && inv.totalProfit !== null && !isNaN(inv.totalProfit)) {
+                invProfit = Number(inv.totalProfit);
+            }
+
+            totalProfit += invProfit;
+            totalCOGS += invCost;
+
+            // Customer aggregation
+            const cName = inv.customerName || inv.clientName || inv.businessName || 'Walk-in Customer';
+            const cContact = inv.customerNumber || inv.clientPhone || inv.clientEmail || '';
+            const cKey = (cName + '_' + cContact).toLowerCase();
+
+            if (!customerAgg[cKey]) {
+                customerAgg[cKey] = {
+                    name: cName,
+                    contact: cContact,
+                    orders: 0,
+                    totalSpent: 0
+                };
+            }
+            customerAgg[cKey].orders += 1;
+            customerAgg[cKey].totalSpent += grandTotal;
         });
 
         const totalOrders = filteredInvoices.length;
-        const totalProducts = cachedProducts.length;
+        const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
+        const netMarginPct = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100) : 0;
 
-        // Unique clients / customers count
-        const clientSet = new Set();
-        filteredInvoices.forEach(inv => {
-            const name = inv.customerName || inv.clientName || inv.buyerName;
-            if (name) clientSet.add(name.toLowerCase().trim());
+        // Inventory valuation
+        let totalInventoryValuation = 0;
+        cachedProducts.forEach(p => {
+            const qty = Number(p.quantity || 0);
+            const cost = Number(p.price || 0);
+            totalInventoryValuation += (qty * cost);
         });
-        const totalClients = Math.max(clientSet.size, 1);
 
-        // Populate Top KPIs with smooth count-up
+        // Populate Top KPIs with smooth animation
         animateNumber(container.querySelector('#kpi-revenue'), totalRevenue, true, 800);
+        animateNumber(container.querySelector('#kpi-profit'), totalProfit, true, 800);
         animateNumber(container.querySelector('#kpi-orders'), totalOrders, false, 700);
-        animateNumber(container.querySelector('#kpi-products'), totalProducts, false, 600);
-        animateNumber(container.querySelector('#kpi-clients'), totalClients, false, 600);
+        animateNumber(container.querySelector('#kpi-inventory-val'), totalInventoryValuation, true, 700);
+
+        const marginLabel = container.querySelector('#kpi-margin-pct');
+        if (marginLabel) marginLabel.textContent = `${Math.round(netMarginPct)}% Net Margin`;
+
+        const aovLabel = container.querySelector('#kpi-aov-val');
+        if (aovLabel) aovLabel.textContent = `AOV: ${formatCurr(avgOrderValue)}`;
+
+        const skuCountLabel = container.querySelector('#kpi-sku-count');
+        if (skuCountLabel) skuCountLabel.textContent = `${cachedProducts.length} SKUs Active`;
+
+        // Collection efficiency
+        const collectionPct = totalRevenue > 0 ? Math.round((paidRevenue / totalRevenue) * 100) : 100;
+        const colPctEl = container.querySelector('#dash-collection-pct');
+        const colBarEl = container.querySelector('#dash-collection-bar');
+        const colPaidEl = container.querySelector('#dash-paid-collected');
+        const colDueEl = container.querySelector('#dash-due-receivable');
+
+        if (colPctEl) colPctEl.textContent = `${collectionPct}% Collected`;
+        if (colBarEl) colBarEl.style.width = `${collectionPct}%`;
+        if (colPaidEl) colPaidEl.textContent = `Paid: ${formatCurr(paidRevenue)}`;
+        if (colDueEl) colDueEl.textContent = `Due: ${formatCurr(dueRevenue)}`;
 
         // =========================================================================
-        // 2. Sales Overview Multi-Series Area Chart Generator (Last 6 Months)
+        // 2. Multi-Series Area Chart Generator (Last 6 Months)
         // =========================================================================
-        const monthNames = ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
-        const chartMonths = [];
         const monthData = [];
-
-        // Build 6 monthly data points up to current month
         for (let i = 5; i >= 0; i--) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const mIdx = d.getMonth();
             const y = d.getFullYear();
             const mName = getMonthNameShort(mIdx);
-            chartMonths.push(mName);
 
-            // Filter invoices in this month
             const mStart = new Date(y, mIdx, 1, 0, 0, 0, 0).getTime();
             const mEnd = new Date(y, mIdx + 1, 0, 23, 59, 59, 999).getTime();
 
@@ -713,17 +791,42 @@ export const renderOverview = async (container, workspaceId) => {
             });
 
             let mRev = 0;
-            mInvoices.forEach(inv => mRev += Number(inv.totalPrice || 0));
-            let mOrd = mInvoices.length;
+            let mProfit = 0;
+            let mCost = 0;
+
+            mInvoices.forEach(inv => {
+                const gTot = Number(inv.totalPrice || inv.grandTotal || 0);
+                mRev += gTot;
+
+                let p = 0;
+                let c = 0;
+                if (inv.items && Array.isArray(inv.items)) {
+                    inv.items.forEach(item => {
+                        const qty = Number(item.quantity) || 1;
+                        const uPrice = Number(item.unitPrice || item.price || item.sellingPrice || 0);
+                        const uCost = Number(item.unitCost || 0);
+                        const lRev = Number(item.totalPrice) || (qty * uPrice);
+                        const lCost = qty * uCost;
+                        c += lCost;
+                        p += (item.itemProfit !== undefined && item.itemProfit !== null) ? Number(item.itemProfit) : (lRev - lCost);
+                    });
+                }
+                if (inv.totalProfit !== undefined && inv.totalProfit !== null && !isNaN(inv.totalProfit)) {
+                    p = Number(inv.totalProfit);
+                }
+                mProfit += p;
+                mCost += c;
+            });
 
             monthData.push({
                 month: mName,
                 revenue: mRev,
-                orders: mOrd
+                profit: mProfit,
+                cost: mCost,
+                orders: mInvoices.length
             });
         }
 
-        // SVG Coordinate Math
         const svgW = 680;
         const svgH = 240;
         const padL = 70;
@@ -731,11 +834,8 @@ export const renderOverview = async (container, workspaceId) => {
         const padT = 25;
         const padB = 200;
 
-        const maxRev = Math.max(...monthData.map(d => d.revenue), 10000);
-        // Round maxRev up to nice ceiling (e.g. 400K)
-        const ceilingRev = Math.ceil(maxRev / 100000) * 100000 || 400000;
-        const maxOrd = Math.max(...monthData.map(d => d.orders), 10);
-        const ceilingOrd = Math.ceil(maxOrd / 10) * 10 || 100;
+        const maxVal = Math.max(...monthData.map(d => Math.max(d.revenue, d.profit, d.cost)), 5000);
+        const ceilingVal = Math.ceil(maxVal / 10000) * 10000 || 50000;
 
         // Update Y-Axis labels
         const y4 = container.querySelector('#chart-y-4');
@@ -743,25 +843,26 @@ export const renderOverview = async (container, workspaceId) => {
         const y2 = container.querySelector('#chart-y-2');
         const y1 = container.querySelector('#chart-y-1');
 
-        if (y4) y4.textContent = (ceilingRev / 1000) + 'K';
-        if (y3) y3.textContent = ((ceilingRev * 0.75) / 1000) + 'K';
-        if (y2) y2.textContent = ((ceilingRev * 0.5) / 1000) + 'K';
-        if (y1) y1.textContent = ((ceilingRev * 0.25) / 1000) + 'K';
+        if (y4) y4.textContent = (ceilingVal >= 1000 ? (ceilingVal / 1000) + 'K' : ceilingVal);
+        if (y3) y3.textContent = (ceilingVal >= 1000 ? ((ceilingVal * 0.75) / 1000) + 'K' : Math.round(ceilingVal * 0.75));
+        if (y2) y2.textContent = (ceilingVal >= 1000 ? ((ceilingVal * 0.5) / 1000) + 'K' : Math.round(ceilingVal * 0.5));
+        if (y1) y1.textContent = (ceilingVal >= 1000 ? ((ceilingVal * 0.25) / 1000) + 'K' : Math.round(ceilingVal * 0.25));
 
-        // Calculate (X, Y) points
         const pointsRev = [];
-        const pointsOrd = [];
-        const stepX = (padR - padL) / (monthData.length - 1);
+        const pointsProfit = [];
+        const pointsCost = [];
+        const stepX = (padR - padL) / (monthData.length - 1 || 1);
 
         monthData.forEach((d, i) => {
             const x = padL + i * stepX;
-            const yRev = padB - (d.revenue / ceilingRev) * (padB - padT);
-            const yOrd = padB - (d.orders / ceilingOrd) * (padB - padT);
+            const yRev = padB - (d.revenue / ceilingVal) * (padB - padT);
+            const yProfit = padB - (d.profit / ceilingVal) * (padB - padT);
+            const yCost = padB - (d.cost / ceilingVal) * (padB - padT);
             pointsRev.push({ x, y: yRev, raw: d.revenue, month: d.month });
-            pointsOrd.push({ x, y: yOrd, raw: d.orders, month: d.month });
+            pointsProfit.push({ x, y: yProfit, raw: d.profit, month: d.month });
+            pointsCost.push({ x, y: yCost, raw: d.cost, month: d.month });
         });
 
-        // Generate Smooth Cubic Bezier Path
         const getSvgPath = (pts) => {
             if (pts.length === 0) return '';
             let path = `M ${pts[0].x},${pts[0].y}`;
@@ -782,20 +883,26 @@ export const renderOverview = async (container, workspaceId) => {
         };
 
         const revLinePath = getSvgPath(pointsRev);
-        const ordLinePath = getSvgPath(pointsOrd);
+        const profitLinePath = getSvgPath(pointsProfit);
+        const costLinePath = getSvgPath(pointsCost);
+
         const revAreaPath = `${revLinePath} L ${pointsRev[pointsRev.length - 1].x},${padB} L ${pointsRev[0].x},${padB} Z`;
+        const profitAreaPath = `${profitLinePath} L ${pointsProfit[pointsProfit.length - 1].x},${padB} L ${pointsProfit[0].x},${padB} Z`;
 
         const elRevArea = container.querySelector('#chart-revenue-area');
+        const elProfitArea = container.querySelector('#chart-profit-area');
         const elRevLine = container.querySelector('#chart-revenue-line');
-        const elOrdLine = container.querySelector('#chart-orders-line');
+        const elProfitLine = container.querySelector('#chart-profit-line');
+        const elCostLine = container.querySelector('#chart-cost-line');
         const elXLabels = container.querySelector('#chart-x-labels');
         const elDataDots = container.querySelector('#chart-data-dots');
 
         if (elRevArea) elRevArea.setAttribute('d', revAreaPath);
+        if (elProfitArea) elProfitArea.setAttribute('d', profitAreaPath);
         if (elRevLine) elRevLine.setAttribute('d', revLinePath);
-        if (elOrdLine) elOrdLine.setAttribute('d', ordLinePath);
+        if (elProfitLine) elProfitLine.setAttribute('d', profitLinePath);
+        if (elCostLine) elCostLine.setAttribute('d', costLinePath);
 
-        // Render X-Axis Months
         if (elXLabels) {
             elXLabels.innerHTML = monthData.map((d, i) => {
                 const x = padL + i * stepX;
@@ -803,21 +910,20 @@ export const renderOverview = async (container, workspaceId) => {
             }).join('');
         }
 
-        // Render Coordinate Dot Badges
         if (elDataDots) {
             elDataDots.innerHTML = pointsRev.map((pt, i) => `
-                <circle cx="${pt.x}" cy="${pt.y}" r="4.5" fill="#ffffff" stroke="#3b82f6" stroke-width="2.5" class="chart-dot" data-idx="${i}" />
-                <circle cx="${pointsOrd[i].x}" cy="${pointsOrd[i].y}" r="3.5" fill="#ffffff" stroke="#8b5cf6" stroke-width="2" class="chart-dot" data-idx="${i}" />
+                <circle cx="${pt.x}" cy="${pt.y}" r="4.5" fill="#ffffff" stroke="#e11d48" stroke-width="2.5" />
+                <circle cx="${pointsProfit[i].x}" cy="${pointsProfit[i].y}" r="4" fill="#ffffff" stroke="#10b981" stroke-width="2.2" />
             `).join('');
         }
 
-        // Interactive Mousemove Hover on Chart
-        const chartContainer = container.querySelector('#dash-sales-chart-container');
+        // Chart Tooltip Hover
         const chartSvg = container.querySelector('#dash-sales-svg');
         const hoverLine = container.querySelector('#chart-hover-line');
         const tooltip = container.querySelector('#dash-chart-tooltip');
         const tooltipMonth = container.querySelector('#tooltip-month-text');
         const tooltipRev = container.querySelector('#tooltip-rev-text');
+        const tooltipProfit = container.querySelector('#tooltip-profit-text');
         const tooltipOrd = container.querySelector('#tooltip-ord-text');
 
         if (chartSvg && tooltip && hoverLine) {
@@ -825,7 +931,6 @@ export const renderOverview = async (container, workspaceId) => {
                 const rect = chartSvg.getBoundingClientRect();
                 const mouseX = ((e.clientX - rect.left) / rect.width) * svgW;
 
-                // Find closest data point index
                 let closestIdx = 0;
                 let minDiff = Infinity;
                 pointsRev.forEach((pt, idx) => {
@@ -837,15 +942,12 @@ export const renderOverview = async (container, workspaceId) => {
                 });
 
                 const ptRev = pointsRev[closestIdx];
-                const ptOrd = pointsOrd[closestIdx];
                 const d = monthData[closestIdx];
 
-                // Position hover line
                 hoverLine.setAttribute('x1', ptRev.x);
                 hoverLine.setAttribute('x2', ptRev.x);
                 hoverLine.setAttribute('opacity', '1');
 
-                // Position floating tooltip
                 const tooltipLeft = (ptRev.x / svgW) * 100;
                 const tooltipTop = (ptRev.y / svgH) * 100;
 
@@ -855,6 +957,7 @@ export const renderOverview = async (container, workspaceId) => {
 
                 if (tooltipMonth) tooltipMonth.textContent = d.month;
                 if (tooltipRev) tooltipRev.textContent = formatCurr(d.revenue);
+                if (tooltipProfit) tooltipProfit.textContent = `+${formatCurr(d.profit)}`;
                 if (tooltipOrd) tooltipOrd.textContent = `${d.orders} orders`;
             });
 
@@ -868,38 +971,28 @@ export const renderOverview = async (container, workspaceId) => {
         // 3. Order Status Donut Chart Generator
         // =========================================================================
         let statusCounts = {
-            Completed: 0,
-            Processing: 0,
+            Paid: 0,
             Pending: 0,
-            Cancelled: 0,
-            Returned: 0
+            Processing: 0,
+            Cancelled: 0
         };
 
         filteredInvoices.forEach(inv => {
             const rawStatus = (inv.status || '').toUpperCase();
-            if (rawStatus === 'PAID' || rawStatus === 'COMPLETED') {
-                statusCounts.Completed++;
-            } else if (rawStatus === 'PROCESSING') {
-                statusCounts.Processing++;
-            } else if (rawStatus === 'CANCELLED' || rawStatus === 'VOID') {
-                statusCounts.Cancelled++;
-            } else if (rawStatus === 'RETURNED') {
-                statusCounts.Returned++;
-            } else {
-                statusCounts.Pending++;
-            }
+            if (rawStatus === 'PAID' || rawStatus === 'COMPLETED') statusCounts.Paid++;
+            else if (rawStatus === 'PROCESSING') statusCounts.Processing++;
+            else if (rawStatus === 'CANCELLED' || rawStatus === 'VOID') statusCounts.Cancelled++;
+            else statusCounts.Pending++;
         });
 
-        // If newly started workspace with 0 orders, display representative status breakdown
         const totalCount = Object.values(statusCounts).reduce((a, b) => a + b, 0);
         const effectiveTotal = totalCount > 0 ? totalCount : 1;
 
         const statusColors = {
-            Completed: '#10b981',
-            Processing: '#3b82f6',
+            Paid: '#10b981',
             Pending: '#f59e0b',
-            Cancelled: '#ef4444',
-            Returned: '#8b5cf6'
+            Processing: '#3b82f6',
+            Cancelled: '#ef4444'
         };
 
         const donutSegmentsEl = container.querySelector('#donut-segments');
@@ -910,7 +1003,7 @@ export const renderOverview = async (container, workspaceId) => {
 
         if (donutSegmentsEl && donutBreakdownListEl) {
             const r = 58;
-            const circumference = 2 * Math.PI * r; // ~364.42
+            const circumference = 2 * Math.PI * r;
             let accumulatedOffset = 0;
 
             donutSegmentsEl.innerHTML = Object.entries(statusCounts).map(([status, count]) => {
@@ -932,18 +1025,17 @@ export const renderOverview = async (container, workspaceId) => {
                 `;
             }).join('');
 
-            // Render right breakdown list
             donutBreakdownListEl.innerHTML = Object.entries(statusCounts).map(([status, count]) => {
                 const pct = totalCount > 0 ? ((count / totalCount) * 100).toFixed(1) : '0.0';
                 return `
-                    <div class="dash-donut-row">
-                        <div class="dash-donut-row-left">
-                            <span style="width:9px;height:9px;border-radius:50%;background:${statusColors[status]};display:inline-block;"></span>
-                            <span>${status}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem;">
+                        <div style="display:flex; align-items:center; gap:0.4rem;">
+                            <span style="width:8px; height:8px; border-radius:50%; background:${statusColors[status]};"></span>
+                            <span style="color:var(--text-primary); font-weight:600;">${status}</span>
                         </div>
-                        <div class="dash-donut-row-right">
-                            <span class="dash-donut-count">${count}</span>
-                            <span class="dash-donut-pct">${pct}%</span>
+                        <div>
+                            <strong style="color:var(--text-primary);">${count}</strong>
+                            <span style="font-size:0.75rem; color:var(--text-muted); margin-left:4px;">(${pct}%)</span>
                         </div>
                     </div>
                 `;
@@ -951,119 +1043,130 @@ export const renderOverview = async (container, workspaceId) => {
         }
 
         // =========================================================================
-        // 4. Top Selling Products Table
+        // 4. Matrix 1: Top Performing Products
         // =========================================================================
-        const productSalesMap = new Map();
-        
-        // Count sales from invoice items
-        allInvoices.forEach(inv => {
-            if (inv.items && Array.isArray(inv.items)) {
-                inv.items.forEach(item => {
-                    const key = (item.name || item.title || 'Product').trim();
-                    const qty = Number(item.quantity || item.qty || 1);
-                    const rev = Number(item.totalPrice || item.price * qty || 0);
-                    const cat = item.category || 'General';
-
-                    if (!productSalesMap.has(key)) {
-                        productSalesMap.set(key, { name: key, category: cat, sold: 0, revenue: 0 });
-                    }
-                    const record = productSalesMap.get(key);
-                    record.sold += qty;
-                    record.revenue += rev;
-                });
-            }
-        });
-
-        // Top products list
-        let topProducts = Array.from(productSalesMap.values())
-            .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, 5);
-
-        // If no sales yet, populate with catalog items
-        if (topProducts.length === 0 && cachedProducts.length > 0) {
-            topProducts = cachedProducts.slice(0, 5).map(p => ({
-                name: p.name || p.title || 'Catalog Item',
-                category: p.category || 'Standard',
-                sold: 0,
-                revenue: Number(p.price || 0)
-            }));
-        }
-
         const topProductsTbody = container.querySelector('#dash-top-products-tbody');
         if (topProductsTbody) {
+            const topProducts = Object.values(productSalesAgg)
+                .sort((a, b) => b.revenue - a.revenue || b.profit - a.profit)
+                .slice(0, 5);
+
             if (topProducts.length === 0) {
-                topProductsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:#94a3b8;">No products recorded yet.</td></tr>`;
+                topProductsTbody.innerHTML = `<tr><td colspan="4" style="padding:1.5rem; text-align:center; color:var(--text-muted);">No sales recorded in this period.</td></tr>`;
             } else {
-                topProductsTbody.innerHTML = topProducts.map((p, idx) => `
-                    <tr>
-                        <td style="color:#94a3b8;font-weight:700;">${idx + 1}</td>
-                        <td>
-                            <div class="dash-prod-cell">
-                                <div class="dash-prod-icon">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                                </div>
-                                <span>${p.name}</span>
-                            </div>
+                topProductsTbody.innerHTML = topProducts.map(p => `
+                    <tr style="border-bottom:1px solid var(--border-color);">
+                        <td style="padding:0.65rem 1rem;">
+                            <strong style="color:var(--text-primary);">${p.name}</strong>
+                            <div style="font-size:0.72rem; color:var(--text-muted);">${p.category}</div>
                         </td>
-                        <td><span class="dash-badge-cat">${p.category}</span></td>
-                        <td style="text-align:right;font-weight:600;">${p.sold}</td>
-                        <td style="text-align:right;font-weight:700;color:#0f172a;">${formatCurr(p.revenue)}</td>
+                        <td style="padding:0.65rem; text-align:center; font-weight:700; color:#e11d48;">${p.units}</td>
+                        <td style="padding:0.65rem; text-align:right; font-weight:700;">${formatCurr(p.revenue)}</td>
+                        <td style="padding:0.65rem 1rem; text-align:right; font-weight:700; color:#059669;">+${formatCurr(p.profit)}</td>
                     </tr>
                 `).join('');
             }
         }
 
         // =========================================================================
-        // 5. Recent Invoices Table
+        // 5. Matrix 2: VIP Buyers Leaderboard
         // =========================================================================
-        const recentInvoices = filteredInvoices
-            .sort((a, b) => getInvoiceTime(b) - getInvoiceTime(a))
-            .slice(0, 5);
+        const vipCustomersTbody = container.querySelector('#dash-vip-customers-tbody');
+        if (vipCustomersTbody) {
+            const topBuyers = Object.values(customerAgg)
+                .sort((a, b) => b.totalSpent - a.totalSpent || b.orders - a.orders)
+                .slice(0, 5);
 
-        const recentInvoicesTbody = container.querySelector('#dash-recent-invoices-tbody');
-        if (recentInvoicesTbody) {
-            if (recentInvoices.length === 0) {
-                recentInvoicesTbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:#94a3b8;">No transactions found in this period.</td></tr>`;
+            if (topBuyers.length === 0) {
+                vipCustomersTbody.innerHTML = `<tr><td colspan="3" style="padding:1.5rem; text-align:center; color:var(--text-muted);">No buyers recorded in this period.</td></tr>`;
             } else {
-                recentInvoicesTbody.innerHTML = recentInvoices.map(inv => {
-                    const isPaid = (inv.status || '').toUpperCase() === 'PAID';
-                    const isCancelled = (inv.status || '').toUpperCase() === 'CANCELLED';
-                    const statusClass = isPaid ? 'dash-status-paid' : (isCancelled ? 'dash-status-cancelled' : 'dash-status-pending');
-                    const statusLabel = isPaid ? 'Paid' : (isCancelled ? 'Cancelled' : 'Pending');
-                    const clientName = inv.customerName || inv.clientName || inv.buyerName || 'Walk-in Customer';
-                    const invNumber = inv.uniqueId || inv.busInvNumber || inv.id || 'INV-001';
+                vipCustomersTbody.innerHTML = topBuyers.map((c, idx) => `
+                    <tr style="border-bottom:1px solid var(--border-color);">
+                        <td style="padding:0.65rem 1rem;">
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="width:24px; height:24px; border-radius:50%; background:${idx === 0 ? '#fbbf24' : 'var(--surface-200)'}; color:${idx === 0 ? '#ffffff' : 'var(--text-primary)'}; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800;">
+                                    ${idx === 0 ? '👑' : (idx + 1)}
+                                </span>
+                                <div>
+                                    <strong style="color:var(--text-primary);">${c.name}</strong>
+                                    <div style="font-size:0.72rem; color:var(--text-muted);">${c.contact || 'Direct buyer'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding:0.65rem; text-align:center; font-weight:700;">${c.orders}</td>
+                        <td style="padding:0.65rem 1rem; text-align:right; font-weight:800; color:#e11d48;">${formatCurr(c.totalSpent)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // =========================================================================
+        // 6. Matrix 3: Recent Invoices Stream with 1-Click Viewer
+        // =========================================================================
+        const recentInvsTbody = container.querySelector('#dash-recent-invoices-tbody');
+        if (recentInvsTbody) {
+            const recentInvoices = [...allInvoices]
+                .sort((a, b) => getInvoiceTime(b) - getInvoiceTime(a))
+                .slice(0, 5);
+
+            if (recentInvoices.length === 0) {
+                recentInvsTbody.innerHTML = `<tr><td colspan="4" style="padding:1.5rem; text-align:center; color:var(--text-muted);">No invoices created yet.</td></tr>`;
+            } else {
+                recentInvsTbody.innerHTML = recentInvoices.map(inv => {
+                    const isPaid = (inv.status || 'PAID').toUpperCase() === 'PAID';
+                    const displayNum = inv.busInvNumber || inv.invoiceNumber || inv.uniqueId || 'INV';
+                    const cName = inv.customerName || inv.clientName || inv.businessName || 'Customer';
 
                     return `
-                        <tr>
-                            <td><span style="font-family:monospace;font-size:0.82rem;font-weight:600;color:#3b82f6;">${invNumber}</span></td>
-                            <td style="font-weight:500;color:#334155;">${clientName}</td>
-                            <td style="font-weight:700;color:#0f172a;">${formatCurr(inv.totalPrice || 0)}</td>
-                            <td style="text-align:right;"><span class="dash-badge-status ${statusClass}">${statusLabel}</span></td>
+                        <tr style="border-bottom:1px solid var(--border-color);">
+                            <td style="padding:0.65rem 1rem;">
+                                <code style="font-weight:700; color:var(--text-primary); font-size:0.78rem;">${displayNum}</code>
+                            </td>
+                            <td style="padding:0.65rem;">
+                                <div style="font-weight:600; color:var(--text-primary); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cName}</div>
+                            </td>
+                            <td style="padding:0.65rem; font-weight:700;">${formatCurr(inv.totalPrice || inv.grandTotal || 0)}</td>
+                            <td style="padding:0.65rem 1rem; text-align:right;">
+                                <button type="button" class="btn btn-sm btn-primary view-dash-inv-btn" data-invid="${inv.id}" style="padding:0.2rem 0.55rem; font-size:0.75rem; font-weight:700;">
+                                    View
+                                </button>
+                            </td>
                         </tr>
                     `;
                 }).join('');
+
+                recentInvsTbody.querySelectorAll('.view-dash-inv-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.target.getAttribute('data-invid');
+                        const matched = allInvoices.find(i => i.id === id);
+                        if (matched) {
+                            openInvoiceViewerModal(matched);
+                        }
+                    });
+                });
             }
         }
     };
 
-    // Load Live Workspace Data Concurrently
+    // Parallel fetch all data
     try {
-        const productService = getProductService(workspaceId);
-        const invoiceService = getInvoiceService(workspaceId);
-
-        const [products, custInvoices, busInvoices] = await Promise.all([
-            productService.getAllActiveProducts().catch(() => []),
-            invoiceService.getAllInvoices(false).catch(() => []),
-            invoiceService.getAllInvoices(true).catch(() => [])
+        const [prods, cats, custInvs, busInvs, customers] = await Promise.all([
+            getProductService(workspaceId).getAllActiveProducts().catch(() => []),
+            getCategoryService(workspaceId).getAllCategories().catch(() => []),
+            getInvoiceService(workspaceId).getAllInvoices(false).catch(() => []),
+            getInvoiceService(workspaceId).getAllInvoices(true).catch(() => []),
+            getPeopleService(workspaceId).getAllCustomers().catch(() => [])
         ]);
 
-        cachedProducts = products || [];
-        cachedCustInvoices = custInvoices || [];
-        cachedBusInvoices = busInvoices || [];
+        cachedProducts = prods;
+        cachedCategories = cats;
+        cachedCustInvoices = custInvs;
+        cachedBusInvoices = busInvs;
+        cachedCustomers = customers;
 
         computeAndRenderDashboard();
-
-    } catch (e) {
-        console.error("Dashboard data load error:", e);
+    } catch (err) {
+        console.error("Dashboard calculation error:", err);
+        showAlert.error("Failed to load dashboard data.");
     }
 };

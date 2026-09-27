@@ -192,10 +192,38 @@ const loadProductsAndCategories = async () => {
             querySnapshot.forEach(docSnap => {
                 const data = docSnap.data();
                 if (!data.isArchive) {
-                    const prd = { id: docSnap.id, ...data };
+                    const resolvedSellingPrice = Number(
+                        data.salePrice !== undefined ? data.salePrice : 
+                        (data.sellingPrice !== undefined ? data.sellingPrice : (data.price || 0))
+                    );
+
+                    const resolvedStock = Number(
+                        data.quantity !== undefined ? data.quantity : (data.stock !== undefined ? data.stock : 0)
+                    );
+
+                    const prd = {
+                        id: docSnap.id,
+                        ...data,
+                        name: data.name || 'Unnamed Product',
+                        category: (data.category || 'General').trim(),
+                        size: data.size || data.sizeWeight || '',
+                        sizeWeight: data.sizeWeight || data.size || '',
+                        sellingPrice: resolvedSellingPrice,
+                        salePrice: resolvedSellingPrice,
+                        price: resolvedSellingPrice,
+                        mrp: Number(data.mrp || 0),
+                        stock: resolvedStock,
+                        quantity: resolvedStock,
+                        imageUrl: data.imageUri || data.imageUrl || '',
+                        imageUri: data.imageUri || data.imageUrl || '',
+                        description: data.note || data.description || '',
+                        note: data.note || data.description || '',
+                        barcode: data.upcCode || data.barcode || data.sku || '',
+                        upcCode: data.upcCode || data.barcode || data.sku || ''
+                    };
                     items.push(prd);
 
-                    const catName = (prd.category || 'General').trim();
+                    const catName = prd.category;
                     catMap.set(catName, (catMap.get(catName) || 0) + 1);
                 }
             });
@@ -211,7 +239,7 @@ const loadProductsAndCategories = async () => {
     const { items = [], catMap = new Map() } = (result && typeof result === 'object') ? result : { items: [], catMap: new Map() };
 
     // Apply allowed category filter if admin specified specific categories
-    if (storeSettings.categorySelectionMode === 'SPECIFIC' && storeSettings.allowedCategories.length > 0) {
+    if (storeSettings.categorySelectionMode === 'SPECIFIC' && Array.isArray(storeSettings.allowedCategories) && storeSettings.allowedCategories.length > 0) {
         allProducts = items.filter(p => storeSettings.allowedCategories.includes(p.category));
     } else {
         allProducts = items;
@@ -254,7 +282,7 @@ const getCartTotals = () => {
     Object.keys(cart).forEach(id => {
         const item = cart[id];
         const qty = item.quantity || 0;
-        const price = Number(item.product.sellingPrice || item.product.price || 0);
+        const price = Number(item.product.sellingPrice || item.product.salePrice || item.product.price || 0);
         count += qty;
         total += (qty * price);
     });

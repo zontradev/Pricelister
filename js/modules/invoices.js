@@ -1362,7 +1362,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <td style="padding:1rem; font-weight: 700; color: var(--text-primary);">${formatCurrency(inv.totalPrice)}</td>
                     <td style="padding:1rem 1.25rem;">
                         <div style="display:flex; gap:0.4rem;">
-                            <button class="btn btn-sm btn-secondary view-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">View</button>
+                            <button class="btn btn-sm btn-primary view-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight:700; background:linear-gradient(135deg, #ff3366, #e11d48);">View</button>
                             <button class="btn btn-sm btn-secondary edit-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight:600;">Edit</button>
                             <button class="btn btn-sm btn-outline del-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; color:var(--danger);">Delete</button>
                         </div>
