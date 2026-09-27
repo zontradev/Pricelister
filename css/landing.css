@@ -633,3 +633,45 @@
         padding: 1.5rem 1.25rem;
     }
 }
+
+/* Modal Overlay & Dialog Security Styles */
+#login-modal-container {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.login-dialog {
+    background: #ffffff;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 18px;
+    box-shadow: 0 25px 60px -12px rgba(0,0,0,0.35);
+    padding: 2.25rem 2rem 2rem;
+    position: relative;
+}
+.login-logo {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 1.25rem;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.login-logo img {
+    width: 52px;
+    height: 52px;
+    max-width: 52px;
+    max-height: 52px;
+    object-fit: contain;
+}
+

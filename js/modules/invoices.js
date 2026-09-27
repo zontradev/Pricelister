@@ -10,6 +10,7 @@ import { toggleContextPanel } from '../workspace.js';
 import { generateUniqueId } from '../../DataModel.js';
 import { exportInvoicesExcel } from '../utils/exportEngine.js';
 import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
+import { openInvoiceViewerModal } from './invoiceViewer.js';
 
 export const renderInvoices = async (container, workspaceId, isBusinessInvoice) => {
     const invoiceService = getInvoiceService(workspaceId);
@@ -1210,85 +1211,15 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Attach row events
     const attachInvoiceItemEvents = (invoices) => {
-        // View Action
+        // View Action -> Dedicated Invoice Viewer Modal & PDF Template Selection
         container.querySelectorAll('.view-inv').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.getAttribute('data-id');
                 const inv = invoices.find(i => i.id === id);
                 if (inv) {
-                    const displayInvId = inv.invoiceNumber || inv.busInvNumber || inv.uniqueId;
-                    const itemsHtml = (inv.items || []).map(item => `
-                        <div style="display:flex; justify-content:space-between; padding:0.75rem 0; border-bottom:1px solid var(--border-color);">
-                            <div>
-                                <div style="font-weight:600; color:var(--text-primary);">${item.productName}</div>
-                                <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">${item.quantity} &times; ${formatCurrency(item.unitPrice)}</div>
-                            </div>
-                            <div style="font-weight:600; color:var(--text-primary); display:flex; align-items:center;">
-                                ${formatCurrency(item.totalPrice || (item.quantity * item.unitPrice))}
-                            </div>
-                        </div>
-                    `).join('');
-                    
-                    const toName = isBusinessInvoice 
-                        ? (inv.customerName || (inv.clientEmail ? `Client (${inv.clientEmail})` : 'Client Business'))
-                        : (inv.customerName || 'Customer');
-                    
-                    const html = `
-                        <div style="padding:0.5rem;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; background: var(--surface-50); padding: 1rem; border-radius: 8px;">
-                                <div>
-                                    <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); letter-spacing:0.5px;">Invoice Number</div>
-                                    <div style="font-weight:700; font-size:1.15rem; font-family:monospace; color:var(--primary); margin-top:0.25rem;">${displayInvId}</div>
-                                    <div style="font-size:0.75rem; font-family:monospace; color:var(--text-muted); margin-top:0.15rem;">ID: ${inv.uniqueId || '-'}</div>
-                                </div>
-                                <div style="text-align:right;">
-                                    <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); letter-spacing:0.5px;">Issued Date</div>
-                                    <div style="font-weight:600; font-size:1.05rem; margin-top:0.25rem; color:var(--text-primary);">${formatInvoiceDate(inv)}</div>
-                                </div>
-                            </div>
-                            
-                            <div style="background:var(--bg-card); border: 1px solid var(--border-color); padding:1.25rem; border-radius:8px; margin-bottom:2rem;">
-                                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); margin-bottom:0.5rem; letter-spacing:0.5px;">Issuer (Business)</div>
-                                <div style="font-weight:700; font-size:1rem; color:var(--text-primary);">${inv.businessName || 'Your Business'}</div>
-                                ${inv.businessAddress ? `<div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.2rem;">${inv.businessAddress}</div>` : ''}
-                                ${inv.businessPhone ? `<div style="font-size:0.85rem; color:var(--text-secondary);">Phone: ${inv.businessPhone}</div>` : ''}
-                                
-                                <div style="font-size:0.75rem; text-transform:uppercase; font-weight:600; color:var(--text-muted); margin-top:1rem; margin-bottom:0.5rem; letter-spacing:0.5px;">Billed To</div>
-                                <div style="font-weight:700; font-size:1.05rem; color:var(--text-primary);">${toName}</div>
-                                ${inv.customerNumber || inv.clientPhone ? `<div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.2rem;">Phone: ${inv.customerNumber || inv.clientPhone}</div>` : ''}
-                                ${inv.clientEmail ? `<div style="font-size:0.85rem; color:var(--text-secondary);">Email: ${inv.clientEmail}</div>` : ''}
-                                ${inv.clientAddress ? `<div style="font-size:0.85rem; color:var(--text-secondary);">Address: ${inv.clientAddress}</div>` : ''}
-                                
-                                <div style="display: inline-flex; align-items: center; justify-content: center; padding: 0.25rem 0.75rem; margin-top:1rem; border-radius: 4px; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.5px; background: ${(inv.status || '').toUpperCase() === 'PAID' ? 'rgba(16,185,129,0.15)' : 'rgba(225,29,72,0.15)'}; color: ${(inv.status || '').toUpperCase() === 'PAID' ? '#059669' : '#e11d48'}; border: 1px solid ${(inv.status || '').toUpperCase() === 'PAID' ? 'rgba(16,185,129,0.3)' : 'rgba(225,29,72,0.3)'};">
-                                    STATUS: ${inv.status || 'DRAFT'}
-                                </div>
-                            </div>
-                            
-                            <h4 style="margin-bottom:0.5rem; padding-bottom:0.5rem; border-bottom:2px solid var(--surface-200); color:var(--text-secondary);">Line Items</h4>
-                            <div style="margin-bottom:2rem;">
-                                ${itemsHtml}
-                            </div>
-                            
-                            <div style="background: var(--surface-50); padding: 1.25rem; border-radius: 8px;">
-                                ${inv.discountPercent > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; color:var(--text-secondary);"><span style="font-size:0.9rem;">Discount (${inv.discountPercent}%)</span><span></span></div>` : ''}
-                                ${inv.taxPercent > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; color:var(--text-secondary);"><span style="font-size:0.9rem;">Tax (${inv.taxPercent}%)</span><span></span></div>` : ''}
-                                ${inv.shippingCost > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; color:var(--text-secondary);"><span style="font-size:0.9rem;">Shipping</span><span>+${formatCurrency(inv.shippingCost)}</span></div>` : ''}
-                                
-                                <div style="display:flex; justify-content:space-between; margin-top:0.5rem; padding-top:1rem; border-top:1px solid var(--border-color); font-weight:700; font-size:1.25rem; color:var(--text-primary);">
-                                    <span>Grand Total</span>
-                                    <span style="color:var(--primary);">${formatCurrency(inv.totalPrice)}</span>
-                                </div>
-                            </div>
-                            
-                            <div style="margin-top: 2rem; display:flex; gap:0.5rem;">
-                                <button class="btn btn-primary btn-block" onclick="window.print()" style="padding: 0.75rem; font-size: 1rem; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
-                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2m2 4h6a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2zm8-12V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4h10z"></path></svg>
-                                    Print / Save as PDF
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    toggleContextPanel('Invoice Details', html);
+                    openInvoiceViewerModal(inv, (invoiceToEdit) => {
+                        showEditorView(true, invoiceToEdit);
+                    });
                 }
             });
         });

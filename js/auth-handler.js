@@ -423,13 +423,11 @@ export const initAuthHandler = (pageType) => {
                     }
 
                     // Update Customer Panel live status badge in sidebar
-                    if (workspace.customerPanel) {
-                        const isPanelLive = workspace.customerPanel.enabled !== false;
-                        const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
-                        if (sidebarStatus) {
-                            sidebarStatus.className = isPanelLive ? 'status-pill status-pill-active' : 'status-pill status-pill-danger';
-                            sidebarStatus.textContent = isPanelLive ? 'Live' : 'Closed';
-                        }
+                    const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
+                    if (sidebarStatus) {
+                        const isPanelLive = Boolean(workspace.customerPanel && (workspace.customerPanel.isPublished !== undefined ? workspace.customerPanel.isPublished : workspace.customerPanel.enabled));
+                        sidebarStatus.className = isPanelLive ? 'status-pill status-pill-active' : 'status-pill status-pill-danger';
+                        sidebarStatus.textContent = isPanelLive ? 'Live' : 'Closed';
                     }
 
                     window.__activeWorkspace = workspace;

@@ -1,6 +1,7 @@
-import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 import { setAppCurrencySymbol } from '../utilities.js';
+import { authService } from '../../firebase/auth.js';
 
 const db = getFirestore(firebaseApp);
 
@@ -109,43 +110,71 @@ export const getSettingsService = (workspaceId) => {
             return false;
         },
 
-        getCustomerPanelSettings: async () => {
+        getCustomerPanelSettings: async (overrideUid = null) => {
             try {
+                const uid = overrideUid || authService?.getCurrentUser()?.uid || workspaceId;
+                
+                // Read from subfield: Workspaces/{workspaceId}/CustomerPanel/{uid}
+                const subfieldRef = doc(db, 'Workspaces', workspaceId, 'CustomerPanel', uid);
                 const panelRef = doc(db, 'CustomerPanelSettings', workspaceId);
                 const wsRef = doc(db, 'Workspaces', workspaceId);
 
-                const [panelSnap, wsSnap] = await Promise.all([
+                const [subfieldSnap, panelSnap, wsSnap] = await Promise.all([
+                    getDoc(subfieldRef).catch(() => null),
                     getDoc(panelRef).catch(() => null),
                     getDoc(wsRef).catch(() => null)
                 ]);
 
+                // Also attempt reading any document in CustomerPanel subcollection if specific UID wasn't found
+                let subfieldData = subfieldSnap && subfieldSnap.exists() ? subfieldSnap.data() : null;
+                if (!subfieldData) {
+                    try {
+                        const subColRef = collection(db, 'Workspaces', workspaceId, 'CustomerPanel');
+                        const subColSnap = await getDocs(subColRef).catch(() => null);
+                        if (subColSnap && !subColSnap.empty) {
+                            subfieldData = subColSnap.docs[0].data();
+                        }
+                    } catch (e) {}
+                }
+
                 const panelData = panelSnap && panelSnap.exists() ? panelSnap.data() : {};
                 const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
+                const embeddedData = wsData.customerPanel || {};
 
-                const defaultStoreName = panelData.storeName || wsData.name || 'PriceLister Store';
+                // Merge data giving priority to subfield > standalone collection > embedded ws
+                const merged = { ...embeddedData, ...panelData, ...(subfieldData || {}) };
+
+                const defaultStoreName = merged.storeName || wsData.name || 'PriceLister Store';
                 const defaultCurrency = wsData.currency || wsData.currencySymbol || localStorage.getItem('pricelister_currency_symbol') || '$';
 
+                // isPublished / enabled flag
+                const isPublished = merged.isPublished !== undefined ? Boolean(merged.isPublished) : (merged.enabled !== undefined ? Boolean(merged.enabled) : false);
+
                 return {
-                    enabled: panelData.enabled !== undefined ? Boolean(panelData.enabled) : true,
+                    isPublished: isPublished,
+                    enabled: isPublished,
                     storeName: defaultStoreName,
-                    announcement: panelData.announcement || 'Welcome to our online catalog! Browse items and add to cart to calculate total or order directly.',
-                    termsAndConditions: panelData.termsAndConditions || '• Prices are subject to change without prior notice.\n• Stock availability is updated in real time.\n• For questions or orders, please contact us.',
-                    categorySelectionMode: panelData.categorySelectionMode || 'ALL', // 'ALL' or 'SPECIFIC'
-                    allowedCategories: Array.isArray(panelData.allowedCategories) ? panelData.allowedCategories : [],
-                    showMrp: panelData.showMrp !== undefined ? Boolean(panelData.showMrp) : true,
-                    showStockBadge: panelData.showStockBadge !== undefined ? Boolean(panelData.showStockBadge) : true,
-                    whatsappNumber: panelData.whatsappNumber || wsData.phone || '',
-                    phone: panelData.phone || wsData.phone || '',
-                    email: panelData.email || wsData.email || '',
-                    address: panelData.address || wsData.address || '',
-                    closedMessage: panelData.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.',
-                    currencySymbol: panelData.currencySymbol || defaultCurrency,
-                    updatedAt: panelData.updatedAt || null
+                    announcement: merged.announcement || 'Welcome to our online catalog! Browse items and add to cart to calculate total or order directly.',
+                    termsAndConditions: merged.termsAndConditions || '• Prices are subject to change without prior notice.\n• Stock availability is updated in real time.\n• For questions or orders, please contact us.',
+                    categorySelectionMode: merged.categorySelectionMode || 'ALL', // 'ALL' or 'SPECIFIC'
+                    allowedCategories: Array.isArray(merged.allowedCategories) ? merged.allowedCategories : [],
+                    showMrp: merged.showMrp !== undefined ? Boolean(merged.showMrp) : true,
+                    showStockBadge: merged.showStockBadge !== undefined ? Boolean(merged.showStockBadge) : true,
+                    whatsappNumber: merged.whatsappNumber || wsData.phone || '',
+                    phone: merged.phone || wsData.phone || '',
+                    email: merged.email || wsData.email || '',
+                    address: merged.address || wsData.address || '',
+                    closedMessage: merged.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.',
+                    currencySymbol: merged.currencySymbol || defaultCurrency,
+                    publishedAt: merged.publishedAt || null,
+                    updatedAt: merged.updatedAt || null,
+                    uid: uid
                 };
             } catch (err) {
                 console.error("Error loading customer panel settings:", err);
                 return {
-                    enabled: true,
+                    isPublished: false,
+                    enabled: false,
                     storeName: 'PriceLister Store',
                     announcement: 'Welcome to our online catalog!',
                     termsAndConditions: '• Prices are subject to change without prior notice.',
@@ -159,18 +188,28 @@ export const getSettingsService = (workspaceId) => {
                     address: '',
                     closedMessage: 'Temporary Closed\nShop is temporarily suspended, may start early.',
                     currencySymbol: '$',
+                    publishedAt: null,
                     updatedAt: null
                 };
             }
         },
 
-        saveCustomerPanelSettings: async (panelSettings) => {
+        saveCustomerPanelSettings: async (panelSettings, overrideUid = null) => {
             try {
+                const uid = overrideUid || authService?.getCurrentUser()?.uid || workspaceId;
+                
+                // Target 1: Workspaces/{workspaceId}/CustomerPanel/{uid}
+                const subfieldRef = doc(db, 'Workspaces', workspaceId, 'CustomerPanel', uid);
+                // Target 2: CustomerPanelSettings/{workspaceId} (public mirror for unauthenticated customer page)
                 const panelRef = doc(db, 'CustomerPanelSettings', workspaceId);
+                // Target 3: Workspaces/{workspaceId} (embedded mirror)
                 const wsRef = doc(db, 'Workspaces', workspaceId);
 
+                const isPublished = panelSettings.isPublished !== undefined ? Boolean(panelSettings.isPublished) : Boolean(panelSettings.enabled);
+
                 const payload = {
-                    enabled: Boolean(panelSettings.enabled),
+                    isPublished: isPublished,
+                    enabled: isPublished,
                     storeName: (panelSettings.storeName || '').trim(),
                     announcement: (panelSettings.announcement || '').trim(),
                     termsAndConditions: (panelSettings.termsAndConditions || '').trim(),
@@ -184,10 +223,13 @@ export const getSettingsService = (workspaceId) => {
                     address: (panelSettings.address || '').trim(),
                     closedMessage: (panelSettings.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.').trim(),
                     currencySymbol: (panelSettings.currencySymbol || '$').trim(),
-                    updatedAt: new Date()
+                    updatedAt: new Date().toISOString(),
+                    publishedAt: isPublished ? (panelSettings.publishedAt || new Date().toISOString()) : null,
+                    publishedBy: uid
                 };
 
                 await Promise.all([
+                    setDoc(subfieldRef, payload, { merge: true }),
                     setDoc(panelRef, payload, { merge: true }),
                     setDoc(wsRef, { customerPanel: payload }, { merge: true })
                 ]);

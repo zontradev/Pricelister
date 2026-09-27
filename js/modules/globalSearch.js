@@ -14,6 +14,7 @@ import { openCurrencyPickerModal } from './currencyModal.js';
 import { openAccountSwitcherModal } from '../auth-handler.js';
 import { formatCurrency, getAppCurrencySymbol, setAppCurrencySymbol } from '../utilities.js';
 import { showAlert } from '../alert-handler.js';
+import { openInvoiceViewerModal } from './invoiceViewer.js';
 
 let cachedWorkspaceId = null;
 let liveDataCache = {
@@ -654,7 +655,7 @@ const performSearch = (query, filter = 'ALL') => {
                     score: score,
                     categoryLabel: 'Sales & Invoices',
                     handler: () => {
-                        window.location.hash = route;
+                        openInvoiceViewerModal(inv);
                     }
                 });
             }

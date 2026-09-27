@@ -87,32 +87,47 @@ export const initCustomerPortal = async () => {
  * Load Store & Customer Panel Settings from Firestore
  */
 const loadStoreSettings = async () => {
+    const subColRef = collection(db, 'Workspaces', currentWorkspaceId, 'CustomerPanel');
     const panelRef = doc(db, 'CustomerPanelSettings', currentWorkspaceId);
     const wsRef = doc(db, 'Workspaces', currentWorkspaceId);
 
-    const [panelSnap, wsSnap] = await Promise.all([
+    const [subColSnap, panelSnap, wsSnap] = await Promise.all([
+        getDocs(subColRef).catch(() => null),
         getDoc(panelRef).catch(() => null),
         getDoc(wsRef).catch(() => null)
     ]);
 
+    let subfieldData = null;
+    if (subColSnap && !subColSnap.empty) {
+        subfieldData = subColSnap.docs[0].data();
+    }
+
     const panelData = panelSnap && panelSnap.exists() ? panelSnap.data() : {};
     const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
+    const embeddedData = wsData.customerPanel || {};
+
+    const merged = { ...embeddedData, ...panelData, ...(subfieldData || {}) };
+
+    const isPublished = merged.isPublished !== undefined 
+        ? Boolean(merged.isPublished) 
+        : (merged.enabled !== undefined ? Boolean(merged.enabled) : false);
 
     storeSettings = {
-        enabled: panelData.enabled !== undefined ? Boolean(panelData.enabled) : true,
-        storeName: panelData.storeName || wsData.name || 'PriceLister Store',
-        announcement: panelData.announcement || 'Welcome! Browse our catalog and add items to your cart.',
-        termsAndConditions: panelData.termsAndConditions || '• Prices are subject to change without prior notice.\n• All orders are confirmed before dispatch.',
-        categorySelectionMode: panelData.categorySelectionMode || 'ALL',
-        allowedCategories: Array.isArray(panelData.allowedCategories) ? panelData.allowedCategories : [],
-        showMrp: panelData.showMrp !== undefined ? Boolean(panelData.showMrp) : true,
-        showStockBadge: panelData.showStockBadge !== undefined ? Boolean(panelData.showStockBadge) : true,
-        whatsappNumber: panelData.whatsappNumber || wsData.phone || '',
-        phone: panelData.phone || wsData.phone || '',
-        email: panelData.email || wsData.email || '',
-        address: panelData.address || wsData.address || '',
-        closedMessage: panelData.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.',
-        currencySymbol: panelData.currencySymbol || wsData.currency || wsData.currencySymbol || '$'
+        enabled: isPublished,
+        isPublished: isPublished,
+        storeName: merged.storeName || wsData.name || 'PriceLister Store',
+        announcement: merged.announcement || 'Welcome! Browse our catalog and add items to your cart.',
+        termsAndConditions: merged.termsAndConditions || '• Prices are subject to change without prior notice.\n• All orders are confirmed before dispatch.',
+        categorySelectionMode: merged.categorySelectionMode || 'ALL',
+        allowedCategories: Array.isArray(merged.allowedCategories) ? merged.allowedCategories : [],
+        showMrp: merged.showMrp !== undefined ? Boolean(merged.showMrp) : true,
+        showStockBadge: merged.showStockBadge !== undefined ? Boolean(merged.showStockBadge) : true,
+        whatsappNumber: merged.whatsappNumber || wsData.phone || '',
+        phone: merged.phone || wsData.phone || '',
+        email: merged.email || wsData.email || '',
+        address: merged.address || wsData.address || '',
+        closedMessage: merged.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.',
+        currencySymbol: merged.currencySymbol || wsData.currency || wsData.currencySymbol || '$'
     };
 
     // Update Browser Document Title
