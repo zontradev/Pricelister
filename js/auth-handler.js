@@ -5,6 +5,7 @@ import { CONFIG } from '../config.js';
 import { initRouter } from './router.js';
 import { setAppCurrencySymbol } from './utilities.js';
 import { openCurrencyPickerModal } from './modules/currencyModal.js';
+import { initGlobalSearch } from './modules/globalSearch.js';
 
 let routerInitialized = false;
 let roleListenerUnsub = null;
@@ -414,6 +415,27 @@ export const initAuthHandler = (pageType) => {
                         settingsNavLink.title = "Settings (Admins only)";
                         settingsNavLink.innerHTML = 'Settings <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px; margin-left:4px; opacity:0.6;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
                     }
+
+                    // Customer Panel access: Admins and Co-admins only
+                    const customerPanelNavWrapper = document.getElementById('nav-item-customer-panel-wrapper');
+                    if (customerPanelNavWrapper) {
+                        customerPanelNavWrapper.style.display = isWorker ? 'none' : 'block';
+                    }
+
+                    // Update Customer Panel live status badge in sidebar
+                    if (workspace.customerPanel) {
+                        const isPanelLive = workspace.customerPanel.enabled !== false;
+                        const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
+                        if (sidebarStatus) {
+                            sidebarStatus.className = isPanelLive ? 'status-pill status-pill-active' : 'status-pill status-pill-danger';
+                            sidebarStatus.textContent = isPanelLive ? 'Live' : 'Closed';
+                        }
+                    }
+
+                    window.__activeWorkspace = workspace;
+                    window.__activeWorkspaceId = workspace.id;
+
+                    initGlobalSearch(workspace.id);
 
                     if (!routerInitialized) {
                         initRouter(workspace.id);

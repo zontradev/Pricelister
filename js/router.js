@@ -14,6 +14,7 @@ import { renderMembers } from './modules/members.js';
 import { renderProfile } from './modules/profile.js';
 import { renderMailbox } from './modules/mailbox.js';
 import { renderAnalyticsHub } from './modules/analyticsHub.js';
+import { renderCustomerPanelSetup } from './modules/customerPanelSetup.js';
 import { authService } from '../firebase/auth.js';
 import { firestoreService } from '../firebase/firestore.js';
 
@@ -101,6 +102,7 @@ const routes = {
     '/clients': { render: (c, w) => renderPeople(c, w, 'clients'), title: 'People / Clients' },
     '/workers': { render: (c, w) => renderWorkers(c, w), title: 'Settings / Workers' },
     '/settings': { render: (c, w) => renderSettings(c, w), title: 'Settings / General' },
+    '/customer-panel': { render: (c, w) => renderCustomerPanelSetup(c, w), title: 'Workspace / Customer Panel Setup' },
     '/profile': { render: (c, w) => renderProfile(c, w), title: 'Account / My Profile' },
     '/mailbox': { render: (c, w) => renderMailbox(c, w), title: 'Account / Mailbox' }
 };

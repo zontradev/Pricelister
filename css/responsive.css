@@ -793,3 +793,35 @@
         color: #000 !important;
     }
 }
+
+/* ==========================================================================
+   GLOBAL SEARCH RESPONSIVE BEHAVIOR
+   ========================================================================== */
+@media (max-width: 640px) {
+    .topbar-search-btn {
+        max-width: 140px;
+        padding: 0 0.5rem;
+        gap: 0.4rem;
+    }
+    .topbar-search-btn .search-btn-text {
+        display: none;
+    }
+    .topbar-search-btn::after {
+        content: 'Search...';
+        font-size: 0.8rem;
+    }
+    .topbar-search-btn .search-btn-shortcut {
+        display: none;
+    }
+    .palette-overlay {
+        padding: 4vh 0.5rem 1rem;
+    }
+    .palette-card {
+        max-height: 90vh;
+    }
+    .palette-filters-bar {
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+}
+

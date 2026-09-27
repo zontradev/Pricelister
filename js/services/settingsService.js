@@ -107,6 +107,97 @@ export const getSettingsService = (workspaceId) => {
                 console.warn("Failed to check vending status:", e);
             }
             return false;
+        },
+
+        getCustomerPanelSettings: async () => {
+            try {
+                const panelRef = doc(db, 'CustomerPanelSettings', workspaceId);
+                const wsRef = doc(db, 'Workspaces', workspaceId);
+
+                const [panelSnap, wsSnap] = await Promise.all([
+                    getDoc(panelRef).catch(() => null),
+                    getDoc(wsRef).catch(() => null)
+                ]);
+
+                const panelData = panelSnap && panelSnap.exists() ? panelSnap.data() : {};
+                const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
+
+                const defaultStoreName = panelData.storeName || wsData.name || 'PriceLister Store';
+                const defaultCurrency = wsData.currency || wsData.currencySymbol || localStorage.getItem('pricelister_currency_symbol') || '$';
+
+                return {
+                    enabled: panelData.enabled !== undefined ? Boolean(panelData.enabled) : true,
+                    storeName: defaultStoreName,
+                    announcement: panelData.announcement || 'Welcome to our online catalog! Browse items and add to cart to calculate total or order directly.',
+                    termsAndConditions: panelData.termsAndConditions || '• Prices are subject to change without prior notice.\n• Stock availability is updated in real time.\n• For questions or orders, please contact us.',
+                    categorySelectionMode: panelData.categorySelectionMode || 'ALL', // 'ALL' or 'SPECIFIC'
+                    allowedCategories: Array.isArray(panelData.allowedCategories) ? panelData.allowedCategories : [],
+                    showMrp: panelData.showMrp !== undefined ? Boolean(panelData.showMrp) : true,
+                    showStockBadge: panelData.showStockBadge !== undefined ? Boolean(panelData.showStockBadge) : true,
+                    whatsappNumber: panelData.whatsappNumber || wsData.phone || '',
+                    phone: panelData.phone || wsData.phone || '',
+                    email: panelData.email || wsData.email || '',
+                    address: panelData.address || wsData.address || '',
+                    closedMessage: panelData.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.',
+                    currencySymbol: panelData.currencySymbol || defaultCurrency,
+                    updatedAt: panelData.updatedAt || null
+                };
+            } catch (err) {
+                console.error("Error loading customer panel settings:", err);
+                return {
+                    enabled: true,
+                    storeName: 'PriceLister Store',
+                    announcement: 'Welcome to our online catalog!',
+                    termsAndConditions: '• Prices are subject to change without prior notice.',
+                    categorySelectionMode: 'ALL',
+                    allowedCategories: [],
+                    showMrp: true,
+                    showStockBadge: true,
+                    whatsappNumber: '',
+                    phone: '',
+                    email: '',
+                    address: '',
+                    closedMessage: 'Temporary Closed\nShop is temporarily suspended, may start early.',
+                    currencySymbol: '$',
+                    updatedAt: null
+                };
+            }
+        },
+
+        saveCustomerPanelSettings: async (panelSettings) => {
+            try {
+                const panelRef = doc(db, 'CustomerPanelSettings', workspaceId);
+                const wsRef = doc(db, 'Workspaces', workspaceId);
+
+                const payload = {
+                    enabled: Boolean(panelSettings.enabled),
+                    storeName: (panelSettings.storeName || '').trim(),
+                    announcement: (panelSettings.announcement || '').trim(),
+                    termsAndConditions: (panelSettings.termsAndConditions || '').trim(),
+                    categorySelectionMode: panelSettings.categorySelectionMode === 'SPECIFIC' ? 'SPECIFIC' : 'ALL',
+                    allowedCategories: Array.isArray(panelSettings.allowedCategories) ? panelSettings.allowedCategories : [],
+                    showMrp: Boolean(panelSettings.showMrp),
+                    showStockBadge: Boolean(panelSettings.showStockBadge),
+                    whatsappNumber: (panelSettings.whatsappNumber || '').trim(),
+                    phone: (panelSettings.phone || '').trim(),
+                    email: (panelSettings.email || '').trim(),
+                    address: (panelSettings.address || '').trim(),
+                    closedMessage: (panelSettings.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.').trim(),
+                    currencySymbol: (panelSettings.currencySymbol || '$').trim(),
+                    updatedAt: new Date()
+                };
+
+                await Promise.all([
+                    setDoc(panelRef, payload, { merge: true }),
+                    setDoc(wsRef, { customerPanel: payload }, { merge: true })
+                ]);
+
+                return true;
+            } catch (err) {
+                console.error("Error saving customer panel settings:", err);
+                throw err;
+            }
         }
     };
 };
+
