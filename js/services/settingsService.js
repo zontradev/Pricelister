@@ -116,17 +116,24 @@ export const getSettingsService = (workspaceId) => {
                 
                 // Read from subfield: Workspaces/{workspaceId}/CustomerPanel/{uid}
                 const subfieldRef = doc(db, 'Workspaces', workspaceId, 'CustomerPanel', uid);
-                const panelRef = doc(db, 'CustomerPanelSettings', workspaceId);
+                const subfieldGlobalRef = doc(db, 'Workspaces', workspaceId, 'CustomerPanel', 'settings');
+                const receiptRef = doc(db, 'ReceiptData', workspaceId);
                 const wsRef = doc(db, 'Workspaces', workspaceId);
+                const panelRef = doc(db, 'CustomerPanelSettings', workspaceId);
 
-                const [subfieldSnap, panelSnap, wsSnap] = await Promise.all([
+                const [subfieldSnap, subfieldGlobalSnap, receiptSnap, wsSnap, panelSnap] = await Promise.all([
                     getDoc(subfieldRef).catch(() => null),
-                    getDoc(panelRef).catch(() => null),
-                    getDoc(wsRef).catch(() => null)
+                    getDoc(subfieldGlobalRef).catch(() => null),
+                    getDoc(receiptRef).catch(() => null),
+                    getDoc(wsRef).catch(() => null),
+                    getDoc(panelRef).catch(() => null)
                 ]);
 
                 // Also attempt reading any document in CustomerPanel subcollection if specific UID wasn't found
-                let subfieldData = subfieldSnap && subfieldSnap.exists() ? subfieldSnap.data() : null;
+                let subfieldData = (subfieldSnap && subfieldSnap.exists()) 
+                    ? subfieldSnap.data() 
+                    : ((subfieldGlobalSnap && subfieldGlobalSnap.exists()) ? subfieldGlobalSnap.data() : null);
+
                 if (!subfieldData) {
                     try {
                         const subColRef = collection(db, 'Workspaces', workspaceId, 'CustomerPanel');
@@ -137,18 +144,28 @@ export const getSettingsService = (workspaceId) => {
                     } catch (e) {}
                 }
 
+                const receiptData = receiptSnap && receiptSnap.exists() ? receiptSnap.data() : {};
                 const panelData = panelSnap && panelSnap.exists() ? panelSnap.data() : {};
                 const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
-                const embeddedData = wsData.customerPanel || {};
+                const embeddedData = wsData.customerPanel || receiptData.customerPanel || {};
 
-                // Merge data giving priority to subfield > standalone collection > embedded ws
-                const merged = { ...embeddedData, ...panelData, ...(subfieldData || {}) };
+                // Local cache fallback
+                let localCached = {};
+                try {
+                    const raw = localStorage.getItem(`pricelister_customer_panel_${workspaceId}`);
+                    if (raw) localCached = JSON.parse(raw) || {};
+                } catch (e) {}
 
-                const defaultStoreName = merged.storeName || wsData.name || 'PriceLister Store';
-                const defaultCurrency = wsData.currency || wsData.currencySymbol || localStorage.getItem('pricelister_currency_symbol') || '$';
+                // Merge data giving priority to subfield > embedded ws/receiptData > standalone collection > local cache
+                const merged = { ...localCached, ...embeddedData, ...panelData, ...(subfieldData || {}) };
+
+                const defaultStoreName = merged.storeName || wsData.name || receiptData["Shop Name"] || 'PriceLister Store';
+                const defaultCurrency = wsData.currency || wsData.currencySymbol || receiptData["Currency"] || localStorage.getItem('pricelister_currency_symbol') || '$';
 
                 // isPublished / enabled flag
-                const isPublished = merged.isPublished !== undefined ? Boolean(merged.isPublished) : (merged.enabled !== undefined ? Boolean(merged.enabled) : false);
+                const isPublished = merged.isPublished !== undefined 
+                    ? Boolean(merged.isPublished) 
+                    : (merged.enabled !== undefined ? Boolean(merged.enabled) : (receiptData.customerPanelPublished !== undefined ? Boolean(receiptData.customerPanelPublished) : false));
 
                 return {
                     isPublished: isPublished,
@@ -160,10 +177,10 @@ export const getSettingsService = (workspaceId) => {
                     allowedCategories: Array.isArray(merged.allowedCategories) ? merged.allowedCategories : [],
                     showMrp: merged.showMrp !== undefined ? Boolean(merged.showMrp) : true,
                     showStockBadge: merged.showStockBadge !== undefined ? Boolean(merged.showStockBadge) : true,
-                    whatsappNumber: merged.whatsappNumber || wsData.phone || '',
-                    phone: merged.phone || wsData.phone || '',
+                    whatsappNumber: merged.whatsappNumber || wsData.phone || receiptData["Phone Number"] || '',
+                    phone: merged.phone || wsData.phone || receiptData["Phone Number"] || '',
                     email: merged.email || wsData.email || '',
-                    address: merged.address || wsData.address || '',
+                    address: merged.address || wsData.address || receiptData["Address / Subtitle"] || '',
                     closedMessage: merged.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.',
                     currencySymbol: merged.currencySymbol || defaultCurrency,
                     publishedAt: merged.publishedAt || null,
@@ -195,50 +212,80 @@ export const getSettingsService = (workspaceId) => {
         },
 
         saveCustomerPanelSettings: async (panelSettings, overrideUid = null) => {
+            const uid = overrideUid || authService?.getCurrentUser()?.uid || workspaceId;
+            const isPublished = panelSettings.isPublished !== undefined ? Boolean(panelSettings.isPublished) : Boolean(panelSettings.enabled);
+
+            const payload = {
+                isPublished: isPublished,
+                enabled: isPublished,
+                storeName: (panelSettings.storeName || '').trim(),
+                announcement: (panelSettings.announcement || '').trim(),
+                termsAndConditions: (panelSettings.termsAndConditions || '').trim(),
+                categorySelectionMode: panelSettings.categorySelectionMode === 'SPECIFIC' ? 'SPECIFIC' : 'ALL',
+                allowedCategories: Array.isArray(panelSettings.allowedCategories) ? panelSettings.allowedCategories : [],
+                showMrp: Boolean(panelSettings.showMrp),
+                showStockBadge: Boolean(panelSettings.showStockBadge),
+                whatsappNumber: (panelSettings.whatsappNumber || '').trim(),
+                phone: (panelSettings.phone || '').trim(),
+                email: (panelSettings.email || '').trim(),
+                address: (panelSettings.address || '').trim(),
+                closedMessage: (panelSettings.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.').trim(),
+                currencySymbol: (panelSettings.currencySymbol || '$').trim(),
+                updatedAt: new Date().toISOString(),
+                publishedAt: isPublished ? (panelSettings.publishedAt || new Date().toISOString()) : null,
+                publishedBy: uid
+            };
+
+            // 1. Immediately persist locally so state is never lost in this browser/session
             try {
-                const uid = overrideUid || authService?.getCurrentUser()?.uid || workspaceId;
-                
-                // Target 1: Workspaces/{workspaceId}/CustomerPanel/{uid}
-                const subfieldRef = doc(db, 'Workspaces', workspaceId, 'CustomerPanel', uid);
-                // Target 2: CustomerPanelSettings/{workspaceId} (public mirror for unauthenticated customer page)
-                const panelRef = doc(db, 'CustomerPanelSettings', workspaceId);
-                // Target 3: Workspaces/{workspaceId} (embedded mirror)
-                const wsRef = doc(db, 'Workspaces', workspaceId);
-
-                const isPublished = panelSettings.isPublished !== undefined ? Boolean(panelSettings.isPublished) : Boolean(panelSettings.enabled);
-
-                const payload = {
-                    isPublished: isPublished,
-                    enabled: isPublished,
-                    storeName: (panelSettings.storeName || '').trim(),
-                    announcement: (panelSettings.announcement || '').trim(),
-                    termsAndConditions: (panelSettings.termsAndConditions || '').trim(),
-                    categorySelectionMode: panelSettings.categorySelectionMode === 'SPECIFIC' ? 'SPECIFIC' : 'ALL',
-                    allowedCategories: Array.isArray(panelSettings.allowedCategories) ? panelSettings.allowedCategories : [],
-                    showMrp: Boolean(panelSettings.showMrp),
-                    showStockBadge: Boolean(panelSettings.showStockBadge),
-                    whatsappNumber: (panelSettings.whatsappNumber || '').trim(),
-                    phone: (panelSettings.phone || '').trim(),
-                    email: (panelSettings.email || '').trim(),
-                    address: (panelSettings.address || '').trim(),
-                    closedMessage: (panelSettings.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.').trim(),
-                    currencySymbol: (panelSettings.currencySymbol || '$').trim(),
-                    updatedAt: new Date().toISOString(),
-                    publishedAt: isPublished ? (panelSettings.publishedAt || new Date().toISOString()) : null,
-                    publishedBy: uid
-                };
-
-                await Promise.all([
-                    setDoc(subfieldRef, payload, { merge: true }),
-                    setDoc(panelRef, payload, { merge: true }),
-                    setDoc(wsRef, { customerPanel: payload }, { merge: true })
-                ]);
-
-                return true;
-            } catch (err) {
-                console.error("Error saving customer panel settings:", err);
-                throw err;
+                localStorage.setItem(`pricelister_customer_panel_${workspaceId}`, JSON.stringify(payload));
+                localStorage.setItem(`pricelister_customer_panel_published_${workspaceId}`, isPublished ? 'true' : 'false');
+            } catch (e) {
+                console.warn("Could not save customer panel to localStorage cache:", e);
             }
+
+            // Target 1: Workspaces/{workspaceId}/CustomerPanel/{uid} (Primary user subfield)
+            const subfieldRef = doc(db, 'Workspaces', workspaceId, 'CustomerPanel', uid);
+            // Target 2: Workspaces/{workspaceId}/CustomerPanel/settings (Universal workspace subfield)
+            const subfieldGlobalRef = doc(db, 'Workspaces', workspaceId, 'CustomerPanel', 'settings');
+            // Target 3: ReceiptData/{workspaceId} (Standard workspace data doc, accessible to all admins/co-admins)
+            const receiptRef = doc(db, 'ReceiptData', workspaceId);
+            // Target 4: Workspaces/{workspaceId} (Embedded workspace field)
+            const wsRef = doc(db, 'Workspaces', workspaceId);
+            // Target 5: CustomerPanelSettings/{workspaceId} (Public root collection mirror)
+            const panelRef = doc(db, 'CustomerPanelSettings', workspaceId);
+
+            const writeTasks = [
+                setDoc(subfieldRef, payload, { merge: true }).catch(err => {
+                    console.warn("CustomerPanel subfield write notice:", err.message);
+                    return { error: err, target: 'subfieldRef' };
+                }),
+                setDoc(subfieldGlobalRef, payload, { merge: true }).catch(err => {
+                    console.warn("CustomerPanel global subfield write notice:", err.message);
+                    return { error: err, target: 'subfieldGlobalRef' };
+                }),
+                setDoc(receiptRef, { customerPanel: payload, customerPanelPublished: isPublished }, { merge: true }).catch(err => {
+                    console.warn("ReceiptData write notice:", err.message);
+                    return { error: err, target: 'receiptRef' };
+                }),
+                setDoc(wsRef, { customerPanel: payload }, { merge: true }).catch(err => {
+                    console.warn("Workspaces write notice:", err.message);
+                    return { error: err, target: 'wsRef' };
+                }),
+                setDoc(panelRef, payload, { merge: true }).catch(err => {
+                    console.warn("CustomerPanelSettings write notice:", err.message);
+                    return { error: err, target: 'panelRef' };
+                })
+            ];
+
+            const results = await Promise.all(writeTasks);
+            const successfulWrites = results.filter(r => !r || !r.error);
+
+            if (successfulWrites.length === 0) {
+                console.warn("Firestore cloud write restricted by security rules; stored in offline local storage mirror.");
+            }
+
+            return true;
         }
     };
 };

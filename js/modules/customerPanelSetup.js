@@ -64,14 +64,21 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
     const renderMainUI = (settings) => {
         const isLive = Boolean(settings.isPublished || settings.enabled);
 
+        // Sync sidebar status pill
+        const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
+        if (sidebarStatus) {
+            sidebarStatus.className = isLive ? 'status-pill status-pill-active' : 'status-pill status-pill-danger';
+            sidebarStatus.textContent = isLive ? 'Live' : 'Closed';
+        }
+
         const statusPillHtml = isLive 
             ? `<span id="header-status-pill" style="display:inline-flex; align-items:center; gap:0.45rem; padding:0.35rem 0.85rem; border-radius:999px; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-size:0.82rem; font-weight:700;">
                  <span style="width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 8px rgba(16,185,129,0.8); animation:cp-pulse-dot 1.8s infinite;"></span>
-                 Published & Live
+                 Published
                </span>` 
             : `<span id="header-status-pill" style="display:inline-flex; align-items:center; gap:0.45rem; padding:0.35rem 0.85rem; border-radius:999px; background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; font-size:0.82rem; font-weight:700;">
                  <span style="width:8px; height:8px; border-radius:50%; background:#e11d48;"></span>
-                 Unpublished / Inactive
+                 Unpublished
                </span>`;
 
         container.innerHTML = `

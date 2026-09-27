@@ -90,11 +90,13 @@ const loadStoreSettings = async () => {
     const subColRef = collection(db, 'Workspaces', currentWorkspaceId, 'CustomerPanel');
     const panelRef = doc(db, 'CustomerPanelSettings', currentWorkspaceId);
     const wsRef = doc(db, 'Workspaces', currentWorkspaceId);
+    const receiptRef = doc(db, 'ReceiptData', currentWorkspaceId);
 
-    const [subColSnap, panelSnap, wsSnap] = await Promise.all([
+    const [subColSnap, panelSnap, wsSnap, receiptSnap] = await Promise.all([
         getDocs(subColRef).catch(() => null),
         getDoc(panelRef).catch(() => null),
-        getDoc(wsRef).catch(() => null)
+        getDoc(wsRef).catch(() => null),
+        getDoc(receiptRef).catch(() => null)
     ]);
 
     let subfieldData = null;
@@ -104,30 +106,38 @@ const loadStoreSettings = async () => {
 
     const panelData = panelSnap && panelSnap.exists() ? panelSnap.data() : {};
     const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
-    const embeddedData = wsData.customerPanel || {};
+    const receiptData = receiptSnap && receiptSnap.exists() ? receiptSnap.data() : {};
+    const embeddedData = wsData.customerPanel || receiptData.customerPanel || {};
 
-    const merged = { ...embeddedData, ...panelData, ...(subfieldData || {}) };
+    // Local storage cache fallback
+    let localData = {};
+    try {
+        const raw = localStorage.getItem(`pricelister_customer_panel_${currentWorkspaceId}`);
+        if (raw) localData = JSON.parse(raw) || {};
+    } catch (e) {}
+
+    const merged = { ...localData, ...embeddedData, ...panelData, ...(subfieldData || {}) };
 
     const isPublished = merged.isPublished !== undefined 
         ? Boolean(merged.isPublished) 
-        : (merged.enabled !== undefined ? Boolean(merged.enabled) : false);
+        : (merged.enabled !== undefined ? Boolean(merged.enabled) : (receiptData.customerPanelPublished !== undefined ? Boolean(receiptData.customerPanelPublished) : false));
 
     storeSettings = {
         enabled: isPublished,
         isPublished: isPublished,
-        storeName: merged.storeName || wsData.name || 'PriceLister Store',
+        storeName: merged.storeName || wsData.name || receiptData["Shop Name"] || 'PriceLister Store',
         announcement: merged.announcement || 'Welcome! Browse our catalog and add items to your cart.',
         termsAndConditions: merged.termsAndConditions || '• Prices are subject to change without prior notice.\n• All orders are confirmed before dispatch.',
         categorySelectionMode: merged.categorySelectionMode || 'ALL',
         allowedCategories: Array.isArray(merged.allowedCategories) ? merged.allowedCategories : [],
         showMrp: merged.showMrp !== undefined ? Boolean(merged.showMrp) : true,
         showStockBadge: merged.showStockBadge !== undefined ? Boolean(merged.showStockBadge) : true,
-        whatsappNumber: merged.whatsappNumber || wsData.phone || '',
-        phone: merged.phone || wsData.phone || '',
+        whatsappNumber: merged.whatsappNumber || wsData.phone || receiptData["Phone Number"] || '',
+        phone: merged.phone || wsData.phone || receiptData["Phone Number"] || '',
         email: merged.email || wsData.email || '',
-        address: merged.address || wsData.address || '',
+        address: merged.address || wsData.address || receiptData["Address / Subtitle"] || '',
         closedMessage: merged.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.',
-        currencySymbol: merged.currencySymbol || wsData.currency || wsData.currencySymbol || '$'
+        currencySymbol: merged.currencySymbol || wsData.currency || wsData.currencySymbol || receiptData["Currency"] || '$'
     };
 
     // Update Browser Document Title
