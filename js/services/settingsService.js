@@ -8,6 +8,23 @@ const db = getFirestore(firebaseApp);
 export const getSettingsService = (workspaceId) => {
     return {
         getWorkspaceSettings: async () => {
+            if (workspaceId === 'ws_dev_mock') {
+                setAppCurrencySymbol('$');
+                return {
+                    enableVending: true,
+                    shopName: 'PriceLister Demo Enterprise',
+                    address: '100 Silicon Way, Suite 400, San Jose, CA',
+                    phone: '+1 (555) 019-2834',
+                    endMessage: 'Thank you for choosing PriceLister Enterprise!',
+                    customerName: true,
+                    customerNumber: true,
+                    name: 'PriceLister Demo Enterprise',
+                    email: 'developer@local.test',
+                    currencySymbol: '$',
+                    currency: '$'
+                };
+            }
+
             try {
                 const receiptRef = doc(db, 'ReceiptData', workspaceId);
                 const wsRef = doc(db, 'Workspaces', workspaceId);
@@ -56,11 +73,15 @@ export const getSettingsService = (workspaceId) => {
         },
 
         saveWorkspaceSettings: async (settings) => {
-            const receiptRef = doc(db, 'ReceiptData', workspaceId);
-            const wsRef = doc(db, 'Workspaces', workspaceId);
-
             const cleanCurrency = (settings.currencySymbol || settings.currency || '$').trim().substring(0, 3) || '$';
             setAppCurrencySymbol(cleanCurrency);
+
+            if (workspaceId === 'ws_dev_mock') {
+                return true;
+            }
+
+            const receiptRef = doc(db, 'ReceiptData', workspaceId);
+            const wsRef = doc(db, 'Workspaces', workspaceId);
 
             const receiptPayload = {
                 "Vending": Boolean(settings.enableVending),
@@ -93,6 +114,7 @@ export const getSettingsService = (workspaceId) => {
         },
 
         isVendingEnabled: async () => {
+            if (workspaceId === 'ws_dev_mock') return true;
             try {
                 const receiptRef = doc(db, 'ReceiptData', workspaceId);
                 const snap = await getDoc(receiptRef);
@@ -111,6 +133,29 @@ export const getSettingsService = (workspaceId) => {
         },
 
         getCustomerPanelSettings: async (overrideUid = null) => {
+            if (workspaceId === 'ws_dev_mock') {
+                return {
+                    isPublished: true,
+                    enabled: true,
+                    storeName: 'PriceLister Demo Enterprise',
+                    announcement: 'Welcome to our online demo catalog! Browse items and calculate total or place orders.',
+                    termsAndConditions: '• Prices are subject to change without prior notice.\n• Stock availability is updated in real time.\n• For questions or orders, please contact us.',
+                    categorySelectionMode: 'ALL',
+                    allowedCategories: [],
+                    showMrp: true,
+                    showStockBadge: true,
+                    whatsappNumber: '+1 (555) 019-2834',
+                    phone: '+1 (555) 019-2834',
+                    email: 'developer@local.test',
+                    address: '100 Silicon Way, Suite 400, San Jose, CA',
+                    closedMessage: 'Temporary Closed\nShop is temporarily suspended, may start early.',
+                    currencySymbol: '$',
+                    publishedAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    uid: 'dev-mock-uid'
+                };
+            }
+
             try {
                 const uid = overrideUid || authService?.getCurrentUser()?.uid || workspaceId;
                 
@@ -170,7 +215,12 @@ export const getSettingsService = (workspaceId) => {
                 return {
                     isPublished: isPublished,
                     enabled: isPublished,
+                    brandingMode: merged.brandingMode || 'PRICELISTER', // 'PRICELISTER', 'CUSTOM', 'WORKSPACE'
                     storeName: defaultStoreName,
+                    storeLogo: merged.storeLogo || '',
+                    workspaceLogo: merged.workspaceLogo || wsData.logoUrl || wsData.imageUri || receiptData["Logo Url"] || '',
+                    customSlug: merged.customSlug || '',
+                    deployCountry: merged.deployCountry || 'Global',
                     announcement: merged.announcement || 'Welcome to our online catalog! Browse items and add to cart to calculate total or order directly.',
                     termsAndConditions: merged.termsAndConditions || '• Prices are subject to change without prior notice.\n• Stock availability is updated in real time.\n• For questions or orders, please contact us.',
                     categorySelectionMode: merged.categorySelectionMode || 'ALL', // 'ALL' or 'SPECIFIC'
@@ -192,7 +242,12 @@ export const getSettingsService = (workspaceId) => {
                 return {
                     isPublished: false,
                     enabled: false,
+                    brandingMode: 'PRICELISTER',
                     storeName: 'PriceLister Store',
+                    storeLogo: '',
+                    workspaceLogo: '',
+                    customSlug: '',
+                    deployCountry: 'Global',
                     announcement: 'Welcome to our online catalog!',
                     termsAndConditions: '• Prices are subject to change without prior notice.',
                     categorySelectionMode: 'ALL',
@@ -218,7 +273,12 @@ export const getSettingsService = (workspaceId) => {
             const payload = {
                 isPublished: isPublished,
                 enabled: isPublished,
+                brandingMode: panelSettings.brandingMode || 'PRICELISTER',
                 storeName: (panelSettings.storeName || '').trim(),
+                storeLogo: (panelSettings.storeLogo || '').trim(),
+                workspaceLogo: (panelSettings.workspaceLogo || '').trim(),
+                customSlug: (panelSettings.customSlug || '').trim().toLowerCase().replace(/[^a-z0-9-_]/g, ''),
+                deployCountry: (panelSettings.deployCountry || 'Global').trim(),
                 announcement: (panelSettings.announcement || '').trim(),
                 termsAndConditions: (panelSettings.termsAndConditions || '').trim(),
                 categorySelectionMode: panelSettings.categorySelectionMode === 'SPECIFIC' ? 'SPECIFIC' : 'ALL',
@@ -243,6 +303,11 @@ export const getSettingsService = (workspaceId) => {
             } catch (e) {
                 console.warn("Could not save customer panel to localStorage cache:", e);
             }
+
+            if (workspaceId === 'ws_dev_mock') {
+                return true;
+            }
+
 
             // Target 1: Workspaces/{workspaceId}/CustomerPanel/{uid} (Primary user subfield)
             const subfieldRef = doc(db, 'Workspaces', workspaceId, 'CustomerPanel', uid);

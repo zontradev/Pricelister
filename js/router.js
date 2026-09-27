@@ -15,6 +15,7 @@ import { renderProfile } from './modules/profile.js';
 import { renderMailbox } from './modules/mailbox.js';
 import { renderAnalyticsHub } from './modules/analyticsHub.js';
 import { renderCustomerPanelSetup } from './modules/customerPanelSetup.js';
+import { renderOrders } from './modules/orders.js';
 import { authService } from '../firebase/auth.js';
 import { firestoreService } from '../firebase/firestore.js';
 
@@ -103,6 +104,7 @@ const routes = {
     '/workers': { render: (c, w) => renderWorkers(c, w), title: 'Settings / Workers' },
     '/settings': { render: (c, w) => renderSettings(c, w), title: 'Settings / General' },
     '/customer-panel': { render: (c, w) => renderCustomerPanelSetup(c, w), title: 'Workspace / Customer Panel Setup' },
+    '/orders': { render: (c, w) => renderOrders(c, w), title: 'Workspace / Customer Orders' },
     '/profile': { render: (c, w) => renderProfile(c, w), title: 'Account / My Profile' },
     '/mailbox': { render: (c, w) => renderMailbox(c, w), title: 'Account / Mailbox' }
 };
@@ -168,19 +170,29 @@ export const initRouter = async (workspaceIdParam = null) => {
 
             // Render fresh view to prevent stale cache, stock counts, and vending mode state
             const mainContainer = document.getElementById('workspace-container');
-            if (mainContainer) {
-                mainContainer.innerHTML = '';
-                const routeContainer = document.createElement('div');
-                routeContainer.className = 'route-view';
-                mainContainer.appendChild(routeContainer);
-                await route.render(routeContainer, currentWorkspaceId, routeParam);
-            }
-            
-            // Hide the full-page loader and show app shell once the FIRST render is fully complete
             const loader = document.getElementById('app-loader');
             const shell = document.getElementById('app-shell');
-            if (loader) loader.style.display = 'none';
-            if (shell && shell.style.display === 'none') shell.style.display = 'flex';
+
+            try {
+                if (mainContainer) {
+                    mainContainer.innerHTML = '';
+                    const routeContainer = document.createElement('div');
+                    routeContainer.className = 'route-view';
+                    mainContainer.appendChild(routeContainer);
+                    await route.render(routeContainer, currentWorkspaceId, routeParam);
+                }
+            } catch (err) {
+                console.error(`Error rendering route ${path}:`, err);
+                if (mainContainer) {
+                    mainContainer.innerHTML = `<div class="route-view" style="padding:2rem;"><div class="alert alert-danger">Error rendering page view: ${err.message || 'Unknown error'}</div></div>`;
+                }
+            } finally {
+                // Hide the full-page loader and show app shell once the FIRST render is fully complete
+                if (loader) loader.style.display = 'none';
+                if (shell && shell.style.display === 'none') shell.style.display = 'flex';
+                document.body.classList.remove('app-loading');
+            }
+
 
             // Update active nav state
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));

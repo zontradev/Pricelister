@@ -15,9 +15,31 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     let dataList = [];
     let allInvoices = [];
     let activePersonDetail = null; // When non-null, shows dedicated large informative detail view
-    let activeDetailTab = 'invoices'; // 'invoices', 'payments', 'notes'
+    let activeDetailTab = 'invoices'; // 'invoices', 'notes'
+    let salesOverviewFilter = '6_MONTHS'; // 'TODAY', 'THIS_WEEK', 'THIS_MONTH', '6_MONTHS', '1_YEAR', 'ALL_TIME', 'CUSTOM'
+    let customSalesDate = '';
     
     const isBusinessMode = defaultTab === 'businesses';
+
+    // SVG Icons
+    const ICONS = {
+        person: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
+        client: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`,
+        business: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 10h.01M6 14h.01M6 18h.01M10 10h.01M10 14h.01M10 18h.01M14 10h.01M14 14h.01M14 18h.01M18 10h.01M18 14h.01M18 18h.01M6 3h12v4H6z"/></svg>`,
+        phone: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`,
+        email: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`,
+        location: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
+        orders: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>`,
+        spent: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>`,
+        calendar: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
+        due: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+        edit: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
+        plus: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+        camera: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`,
+        note: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>`,
+        back: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`,
+        close: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+    };
 
     // Fetch invoices to link real transaction data
     const fetchInvoices = async () => {
@@ -57,7 +79,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             }
         });
 
-        // Sort descending by timestamp / date
         matchedInvoices.sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
 
         let totalSpent = 0;
@@ -84,35 +105,64 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         };
     };
 
-    // Calculate 6-month monthly spend history for chart
-    const getMonthlyChartData = (invoices) => {
-        const months = [];
+    // Calculate time-filtered chart data
+    const getFilteredChartData = (invoices, filterMode, customVal = '') => {
         const now = new Date();
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            months.push({
-                label: d.toLocaleString('default', { month: 'short' }),
-                year: d.getFullYear(),
-                month: d.getMonth(),
-                amount: 0
-            });
+        let slots = [];
+
+        if (filterMode === 'TODAY') {
+            for (let h = 0; h < 24; h += 4) {
+                slots.push({ label: `${h}:00`, start: new Date(now.getFullYear(), now.getMonth(), now.getDate(), h).getTime(), end: new Date(now.getFullYear(), now.getMonth(), now.getDate(), h + 4).getTime(), amount: 0 });
+            }
+        } else if (filterMode === 'THIS_WEEK') {
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const curDay = now.getDay();
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - curDay + i);
+                slots.push({ label: dayNames[i], start: new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(), end: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).getTime(), amount: 0 });
+            }
+        } else if (filterMode === 'THIS_MONTH') {
+            const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            for (let w = 1; w <= totalDays; w += 6) {
+                const endW = Math.min(w + 5, totalDays);
+                slots.push({ label: `${w}-${endW}`, start: new Date(now.getFullYear(), now.getMonth(), w).getTime(), end: new Date(now.getFullYear(), now.getMonth(), endW, 23, 59, 59).getTime(), amount: 0 });
+            }
+        } else if (filterMode === '1_YEAR') {
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                slots.push({ label: d.toLocaleString('default', { month: 'short' }), year: d.getFullYear(), month: d.getMonth(), amount: 0 });
+            }
+        } else if (filterMode === 'CUSTOM' && customVal) {
+            const target = new Date(customVal);
+            for (let h = 0; h < 24; h += 4) {
+                slots.push({ label: `${h}:00`, start: new Date(target.getFullYear(), target.getMonth(), target.getDate(), h).getTime(), end: new Date(target.getFullYear(), target.getMonth(), target.getDate(), h + 4).getTime(), amount: 0 });
+            }
+        } else {
+            // Default: 6 MONTHS
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                slots.push({ label: d.toLocaleString('default', { month: 'short' }), year: d.getFullYear(), month: d.getMonth(), amount: 0 });
+            }
         }
 
         invoices.forEach(inv => {
             const t = Number(inv.timestamp) || 0;
+            const amt = Number(inv.totalPrice || inv.total || inv.amount || 0);
             if (t > 0) {
-                const invDate = new Date(t);
-                const mIdx = months.findIndex(m => m.year === invDate.getFullYear() && m.month === invDate.getMonth());
-                if (mIdx !== -1) {
-                    months[mIdx].amount += Number(inv.totalPrice || inv.total || inv.amount || 0);
+                if (filterMode === '6_MONTHS' || filterMode === '1_YEAR' || filterMode === 'ALL_TIME') {
+                    const invDate = new Date(t);
+                    const idx = slots.findIndex(s => s.year === invDate.getFullYear() && s.month === invDate.getMonth());
+                    if (idx !== -1) slots[idx].amount += amt;
+                } else {
+                    const idx = slots.findIndex(s => t >= s.start && t <= s.end);
+                    if (idx !== -1) slots[idx].amount += amt;
                 }
             }
         });
 
-        return months;
+        return slots;
     };
 
-    // Escape helper
     const escapeHtml = (str) => {
         return String(str || '')
             .replace(/&/g, '&amp;')
@@ -129,6 +179,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             renderDedicatedDetailView();
         } else {
             renderListView();
+            renderRealtimeList(dataList);
         }
     };
 
@@ -136,7 +187,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     // LIST VIEW
     // -------------------------------------------------------------
     const renderListView = () => {
-        const typeTitle = isBusinessMode ? 'Businesses & B2B' : 'Customers & Clients';
+        const typeTitle = isBusinessMode ? 'Businesses & Issuers' : (currentTab === 'clients' ? 'Client Directory' : 'Customer Directory');
 
         container.innerHTML = `
             <div class="people-module-container" style="animation: fadeIn 0.25s ease;">
@@ -156,20 +207,22 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     
                     <div style="display:flex; gap:0.6rem; align-items:center;">
                         <button id="btn-add-person" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; font-weight:700; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow:0 4px 12px rgba(225,29,72,0.3); padding:0.55rem 1.25rem;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            ${ICONS.plus}
                             Add ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}
                         </button>
                     </div>
                 </div>
                 
-                <!-- TABS (When not in B2B standalone mode) -->
+                <!-- TABS (Customers vs Clients vs Businesses) -->
                 ${!isBusinessMode ? `
-                    <div style="display:flex; gap:0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;">
-                        <button class="people-tab-btn ${currentTab === 'customers' ? 'active-people-tab' : ''}" data-tab="customers">
-                            <span style="font-size:1.1rem;">👤</span> Customers (${dataList.filter(d => !d.isClient).length || dataList.length})
+                    <div style="display:flex; gap:0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;" id="people-tab-group">
+                        <button class="people-tab-btn ${currentTab === 'customers' ? 'active-people-tab' : ''}" data-tab="customers" style="display:inline-flex; align-items:center; gap:6px;">
+                            ${ICONS.person}
+                            <span>Customers</span>
                         </button>
-                        <button class="people-tab-btn ${currentTab === 'clients' ? 'active-people-tab' : ''}" data-tab="clients">
-                            <span style="font-size:1.1rem;">💼</span> Clients
+                        <button class="people-tab-btn ${currentTab === 'clients' ? 'active-people-tab' : ''}" data-tab="clients" style="display:inline-flex; align-items:center; gap:6px;">
+                            ${ICONS.client}
+                            <span>Clients</span>
                         </button>
                     </div>
                 ` : ''}
@@ -178,7 +231,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 <div id="person-form-container" class="card" style="display:none; margin-bottom: 2rem; padding: 1.5rem; border:1px solid #fecdd3; background:#ffffff; box-shadow:0 10px 25px rgba(225,29,72,0.08);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
                         <h3 id="person-form-title" style="margin:0; font-size:1.2rem; font-weight:700; color:var(--text-primary);">New Entry</h3>
-                        <button type="button" id="person-cancel-x" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);">✕</button>
+                        <button type="button" id="person-cancel-x" style="background:none; border:none; cursor:pointer; color:var(--text-muted); display:flex; align-items:center;">${ICONS.close}</button>
                     </div>
 
                     <form id="person-form" style="display:flex; flex-direction:column; gap:1.25rem;">
@@ -188,16 +241,18 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         <div style="display:flex; align-items:center; gap:1.25rem; background:var(--surface-50); padding:1rem; border-radius:12px; border:1px dashed var(--border-color); flex-wrap:wrap;">
                             <div style="position:relative; width:68px; height:68px; border-radius:50%; overflow:hidden; background:#ffffff; border:2px solid #fecdd3; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
                                 <img id="person-avatar-preview" src="" alt="Avatar" style="width:100%; height:100%; object-fit:cover; display:none;">
-                                <div id="person-avatar-placeholder" style="font-size:1.8rem; color:#e11d48; font-weight:700;">👤</div>
+                                <div id="person-avatar-placeholder" style="color:#e11d48; display:flex; align-items:center; justify-content:center;">
+                                    ${currentTab === 'clients' ? ICONS.client : (isBusinessMode ? ICONS.business : ICONS.person)}
+                                </div>
                             </div>
                             <div style="flex:1; min-width:220px;">
                                 <label style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:block; margin-bottom:0.25rem;">Profile Image / Logo</label>
                                 <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                                    <label class="btn btn-secondary" style="cursor:pointer; font-size:0.82rem; padding:0.35rem 0.75rem; margin:0; font-weight:600;">
-                                        📁 Choose Image File
+                                    <label class="btn btn-secondary" style="cursor:pointer; font-size:0.82rem; padding:0.35rem 0.75rem; margin:0; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                                        ${ICONS.camera} Choose Photo File
                                         <input type="file" id="person-image-file" accept="image/*" style="display:none;">
                                     </label>
-                                    <input type="text" id="person-image-url" placeholder="or paste Image URL (https://...)" class="form-control" style="flex:1; min-width:180px; font-size:0.82rem; padding:0.35rem 0.6rem;">
+                                    <input type="url" id="person-image-url" placeholder="or paste Image URL (https://...)" class="form-control" style="flex:1; min-width:180px; font-size:0.82rem; padding:0.35rem 0.6rem;">
                                 </div>
                                 <small style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem; display:block;">Supported formats: JPG, PNG, WEBP, SVG. Appears in directory and invoice slips.</small>
                             </div>
@@ -234,10 +289,10 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             </div>
                             <div>
                                 <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Status</label>
-                                <select id="person-status" class="form-control" style="width:100%; padding:0.55rem 0.75rem;">
-                                    <option value="Active">🟢 Active</option>
-                                    <option value="Pending">🟡 Pending</option>
-                                    <option value="Inactive">⚪ Inactive</option>
+                                <select id="person-status" class="form-control" style="width:100%; padding:0.55rem 0.75rem; font-weight:600;">
+                                    <option value="Active">Active</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Inactive">Inactive</option>
                                 </select>
                             </div>
                         </div>
@@ -330,20 +385,19 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         const p = activePersonDetail;
         if (!p) {
             renderListView();
+            renderRealtimeList(dataList);
             return;
         }
 
         const stats = getPersonStats(p);
-        const monthlyData = getMonthlyChartData(stats.invoices);
+        const monthlyData = getFilteredChartData(stats.invoices, salesOverviewFilter, customSalesDate);
         const currSym = getAppCurrencySymbol();
-        const typeLabel = isBusinessMode ? 'Business' : (p.isClient ? 'Client' : 'Customer');
+        const typeLabel = isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer');
 
-        // Tags parsing
         const rawTags = Array.isArray(p.tags) ? p.tags : (p.tags ? String(p.tags).split(',') : ['Regular Customer']);
         const tags = rawTags.map(t => String(t).trim()).filter(Boolean);
         if (tags.length === 0) tags.push(typeLabel);
 
-        // Compute maximum value for chart scaling
         const maxVal = Math.max(...monthlyData.map(m => m.amount), 1000);
 
         container.innerHTML = `
@@ -353,7 +407,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
                     <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.88rem;">
                         <button type="button" id="btn-back-to-people" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-weight:600; display:flex; align-items:center; gap:0.35rem; padding:0;">
-                            <span>←</span> Back to ${isBusinessMode ? 'Businesses' : (currentTab === 'clients' ? 'Clients' : 'Customers')}
+                            ${ICONS.back} Back to ${isBusinessMode ? 'Businesses' : (currentTab === 'clients' ? 'Clients' : 'Customers')}
                         </button>
                         <span style="color:var(--text-muted);">/</span>
                         <span style="color:var(--text-primary); font-weight:700;">${escapeHtml(p.name)}</span>
@@ -361,15 +415,15 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
                     <div style="display:flex; gap:0.5rem;">
                         <button type="button" id="btn-edit-detail-profile" class="btn btn-secondary" style="font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:0.35rem;">
-                            ✏️ Edit Profile
+                            ${ICONS.edit} Edit Profile
                         </button>
                         <button type="button" id="btn-detail-create-invoice" class="btn btn-primary" style="background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:0.35rem; box-shadow:0 3px 10px rgba(225,29,72,0.25);">
-                            + Create Invoice
+                            ${ICONS.plus} Create Invoice
                         </button>
                     </div>
                 </div>
 
-                <!-- ================= 1. TOP HERO PROFILE & KPI CARDS ================= -->
+                <!-- 1. TOP HERO PROFILE & KPI CARDS -->
                 <div class="hero-kpi-grid" style="display:grid; grid-template-columns: minmax(320px, 1.4fr) repeat(auto-fit, minmax(170px, 1fr)); gap:1rem; margin-bottom:1.5rem; align-items:stretch;">
                     
                     <!-- HERO PROFILE CARD -->
@@ -383,11 +437,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                     ${p.imageUrl || p.imageUri ? `
                                         <img src="${escapeHtml(p.imageUrl || p.imageUri)}" alt="${escapeHtml(p.name)}" style="width:100%; height:100%; object-fit:cover;">
                                     ` : `
-                                        <span style="font-size:2rem; font-weight:800; color:#e11d48;">
+                                        <span style="font-size:1.75rem; font-weight:800; color:#e11d48;">
                                             ${(p.name || 'U').charAt(0).toUpperCase()}
                                         </span>
                                     `}
-                                    <div class="avatar-hover-overlay">📷</div>
+                                    <div class="avatar-hover-overlay">${ICONS.camera}</div>
                                 </div>
 
                                 <div style="flex:1; min-width:160px;">
@@ -400,7 +454,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                         </span>
                                     </div>
                                     <div style="display:flex; align-items:center; gap:0.35rem; color:var(--text-secondary); font-size:0.85rem; font-weight:600;">
-                                        <span>💼</span> ${typeLabel} Profile
+                                        ${currentTab === 'clients' ? ICONS.client : (isBusinessMode ? ICONS.business : ICONS.person)} ${typeLabel} Profile
                                     </div>
                                 </div>
                             </div>
@@ -409,17 +463,17 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             <div style="display:flex; flex-wrap:wrap; gap:1rem; font-size:0.83rem; color:var(--text-secondary); margin-bottom:1rem; padding-top:0.5rem; border-top:1px solid #f1f5f9;">
                                 ${p.phone ? `
                                     <a href="tel:${p.phone}" style="display:flex; align-items:center; gap:0.35rem; color:inherit; text-decoration:none; font-weight:500;">
-                                        <span style="color:#e11d48;">📞</span> ${escapeHtml(p.phone)}
+                                        <span style="color:#e11d48;">${ICONS.phone}</span> ${escapeHtml(p.phone)}
                                     </a>
                                 ` : ''}
                                 ${p.email ? `
                                     <a href="mailto:${p.email}" style="display:flex; align-items:center; gap:0.35rem; color:inherit; text-decoration:none; font-weight:500;">
-                                        <span style="color:#e11d48;">✉️</span> ${escapeHtml(p.email)}
+                                        <span style="color:#e11d48;">${ICONS.email}</span> ${escapeHtml(p.email)}
                                     </a>
                                 ` : ''}
                                 ${p.address ? `
                                     <span style="display:flex; align-items:center; gap:0.35rem; font-weight:500;">
-                                        <span style="color:#e11d48;">📍</span> ${escapeHtml(p.address)}
+                                        <span style="color:#e11d48;">${ICONS.location}</span> ${escapeHtml(p.address)}
                                     </span>
                                 ` : ''}
                             </div>
@@ -436,49 +490,45 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     </div>
 
                     <!-- 4 STAT CARDS -->
-                    
-                    <!-- 1. Total Orders / Invoices -->
                     <div class="card kpi-stat-card" style="padding:1.25rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <span style="font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Total Orders</span>
-                            <div style="width:36px; height:36px; border-radius:10px; background:#eff6ff; color:#3b82f6; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
-                                🛒
+                            <div style="width:36px; height:36px; border-radius:10px; background:#eff6ff; display:flex; align-items:center; justify-content:center;">
+                                ${ICONS.orders}
                             </div>
                         </div>
                         <div>
                             <div style="font-size:1.85rem; font-weight:800; color:var(--text-primary); margin:0.25rem 0;">
                                 ${stats.count}
                             </div>
-                            <div style="font-size:0.75rem; color:#10b981; font-weight:700; display:flex; align-items:center; gap:0.25rem;">
-                                <span>↑ 20%</span> <span style="color:var(--text-muted); font-weight:500;">vs last 3 months</span>
+                            <div style="font-size:0.75rem; color:#10b981; font-weight:700;">
+                                Verified transaction history
                             </div>
                         </div>
                     </div>
 
-                    <!-- 2. Total Spent / Revenue -->
                     <div class="card kpi-stat-card" style="padding:1.25rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <span style="font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Total Spent</span>
-                            <div style="width:36px; height:36px; border-radius:10px; background:#ecfdf5; color:#10b981; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
-                                💵
+                            <div style="width:36px; height:36px; border-radius:10px; background:#ecfdf5; display:flex; align-items:center; justify-content:center;">
+                                ${ICONS.spent}
                             </div>
                         </div>
                         <div>
                             <div style="font-size:1.85rem; font-weight:800; color:var(--text-primary); margin:0.25rem 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                 ${currSym} ${stats.totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
-                            <div style="font-size:0.75rem; color:#10b981; font-weight:700; display:flex; align-items:center; gap:0.25rem;">
-                                <span>↑ 15%</span> <span style="color:var(--text-muted); font-weight:500;">active spend</span>
+                            <div style="font-size:0.75rem; color:#10b981; font-weight:700;">
+                                Active volume
                             </div>
                         </div>
                     </div>
 
-                    <!-- 3. Last Order -->
                     <div class="card kpi-stat-card" style="padding:1.25rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <span style="font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Last Order</span>
-                            <div style="width:36px; height:36px; border-radius:10px; background:#fdf2f8; color:#db2777; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
-                                📅
+                            <div style="width:36px; height:36px; border-radius:10px; background:#fdf2f8; display:flex; align-items:center; justify-content:center;">
+                                ${ICONS.calendar}
                             </div>
                         </div>
                         <div>
@@ -491,12 +541,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         </div>
                     </div>
 
-                    <!-- 4. Outstanding Due / Pending -->
                     <div class="card kpi-stat-card" style="padding:1.25rem; background:#ffffff; border-radius:16px; border:1px solid ${stats.due > 0 ? '#fecdd3' : 'var(--border-color)'}; display:flex; flex-direction:column; justify-content:space-between;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <span style="font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Outstanding Due</span>
-                            <div style="width:36px; height:36px; border-radius:10px; background:#fff1f2; color:#e11d48; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
-                                ⚠️
+                            <div style="width:36px; height:36px; border-radius:10px; background:#fff1f2; display:flex; align-items:center; justify-content:center;">
+                                ${ICONS.due}
                             </div>
                         </div>
                         <div>
@@ -508,19 +557,17 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             </div>
                         </div>
                     </div>
-
                 </div>
 
-                <!-- ================= 2. TWO-COLUMN WORKSPACE BODY ================= -->
+                <!-- 2. TWO-COLUMN WORKSPACE BODY -->
                 <div style="display:grid; grid-template-columns: 310px 1fr; gap:1.25rem; align-items:start;" class="detail-body-grid">
                     
                     <!-- LEFT COLUMN: DETAILED INFO & QUICK ACTIONS -->
                     <div style="display:flex; flex-direction:column; gap:1.25rem;">
                         
-                        <!-- Customer Information Card -->
                         <div class="card" style="padding:1.5rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color);">
                             <h3 style="margin:0 0 1rem 0; font-size:1rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">
-                                <span>👤</span> ${typeLabel} Information
+                                ${currentTab === 'clients' ? ICONS.client : (isBusinessMode ? ICONS.business : ICONS.person)} ${typeLabel} Information
                             </h3>
 
                             <div style="display:flex; flex-direction:column; gap:0.85rem; font-size:0.88rem;">
@@ -551,24 +598,22 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             </div>
                         </div>
 
-                        <!-- Quick Actions Card -->
                         <div class="card" style="padding:1.5rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color);">
-                            <h3 style="margin:0 0 1rem 0; font-size:1rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">
-                                <span>⚡</span> Quick Actions
+                            <h3 style="margin:0 0 1rem 0; font-size:1rem; font-weight:700; color:var(--text-primary);">
+                                Quick Actions
                             </h3>
 
                             <div style="display:flex; flex-direction:column; gap:0.6rem;">
                                 <button type="button" id="btn-quick-new-invoice" class="btn btn-primary btn-block" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-weight:700; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); padding:0.65rem;">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    Create Invoice
+                                    ${ICONS.plus} Create Invoice
                                 </button>
                                 
                                 <button type="button" id="btn-quick-add-note" class="btn btn-secondary btn-block" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-weight:600; padding:0.6rem;">
-                                    <span>📝</span> Add / Edit Notes
+                                    ${ICONS.note} Add / Edit Notes
                                 </button>
                                 
                                 <button type="button" id="btn-quick-avatar-upload-2" class="btn btn-secondary btn-block" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-weight:600; padding:0.6rem;">
-                                    <span>📷</span> Change Photo / Image
+                                    ${ICONS.camera} Change Photo / Image
                                 </button>
                             </div>
                         </div>
@@ -578,10 +623,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     <!-- RIGHT MAIN COLUMN: TABS, INVOICE TABLE & SALES CHART -->
                     <div style="display:flex; flex-direction:column; gap:1.25rem;">
                         
-                        <!-- TABBED SECTION CARD -->
                         <div class="card" style="padding:1.5rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color);">
                             
-                            <!-- TAB BUTTONS -->
                             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
                                 <div style="display:flex; gap:0.75rem;">
                                     <button type="button" class="detail-subtab-btn ${activeDetailTab === 'invoices' ? 'active-subtab' : ''}" data-subtab="invoices">
@@ -593,11 +636,10 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 </div>
 
                                 <button type="button" class="btn btn-secondary btn-sm" onclick="window.location.hash='#/${isBusinessMode ? 'invoices/business' : 'invoices/customer'}'" style="font-size:0.78rem; padding:0.3rem 0.75rem; font-weight:600;">
-                                    View All Invoices ↗
+                                    View All Invoices &rarr;
                                 </button>
                             </div>
 
-                            <!-- TAB CONTENT: INVOICES TABLE -->
                             ${activeDetailTab === 'invoices' ? `
                                 <div style="overflow-x:auto;">
                                     <table style="width:100%; border-collapse:collapse; text-align:left;">
@@ -615,7 +657,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                             ${stats.invoices.length === 0 ? `
                                                 <tr>
                                                     <td colspan="6" style="padding:2.5rem 1rem; text-align:center; color:var(--text-muted);">
-                                                        <div style="font-size:2rem; margin-bottom:0.5rem;">🧾</div>
                                                         <strong>No Invoices Found</strong>
                                                         <p style="margin:0.25rem 0 1rem 0; font-size:0.85rem;">No invoices have been billed to this profile yet.</p>
                                                         <button type="button" id="btn-tab-empty-invoice" class="btn btn-primary btn-sm" style="background:#e11d48; font-weight:700;">+ Create First Invoice</button>
@@ -661,33 +702,43 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                     </table>
                                 </div>
                             ` : `
-                                <!-- TAB CONTENT: NOTES & REMARKS -->
                                 <div style="padding:0.5rem 0;">
                                     <div style="margin-bottom:1rem;">
                                         <label style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:block; margin-bottom:0.4rem;">Customer Remarks & Notes</label>
                                         <textarea id="detail-notes-input" rows="4" class="form-control" style="width:100%; font-family:inherit; line-height:1.5;" placeholder="Type notes regarding customer preferences, payment instructions, delivery address details...">${escapeHtml(p.notes || '')}</textarea>
                                     </div>
                                     <button type="button" id="btn-save-detail-notes" class="btn btn-primary" style="background:#e11d48; border-color:#e11d48; font-weight:700; padding:0.5rem 1.25rem;">
-                                        💾 Save Notes
+                                        Save Notes
                                     </button>
                                 </div>
                             `}
 
                         </div>
 
-                        <!-- BOTTOM: SALES OVERVIEW CHART & RECENT INVOICES SUMMARY -->
+                        <!-- SALES OVERVIEW CHART & RECENT INVOICES SUMMARY -->
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.25rem;">
                             
-                            <!-- 6-MONTH SALES OVERVIEW GRAPH (SVG Area Curve) -->
+                            <!-- SALES OVERVIEW GRAPH WITH COMPREHENSIVE TIME FILTERS -->
                             <div class="card" style="padding:1.5rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color);">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
                                     <div>
                                         <h3 style="margin:0; font-size:1rem; font-weight:700; color:var(--text-primary);">Sales Overview</h3>
-                                        <span style="font-size:0.78rem; color:var(--text-muted);">Last 6 months purchase trend</span>
+                                        <span style="font-size:0.78rem; color:var(--text-muted);">Purchase performance trend</span>
                                     </div>
-                                    <span class="badge" style="background:#fff1f2; color:#e11d48; font-size:0.75rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:6px;">
-                                        ● This Customer
-                                    </span>
+                                    
+                                    <!-- Time Filters -->
+                                    <div style="display:flex; align-items:center; gap:0.35rem;">
+                                        <select id="sales-overview-filter-select" class="form-control" style="font-size:0.78rem; padding:0.25rem 0.5rem; border-radius:6px; height:30px;">
+                                            <option value="6_MONTHS" ${salesOverviewFilter === '6_MONTHS' ? 'selected' : ''}>6 Months</option>
+                                            <option value="1_YEAR" ${salesOverviewFilter === '1_YEAR' ? 'selected' : ''}>1 Year</option>
+                                            <option value="THIS_MONTH" ${salesOverviewFilter === 'THIS_MONTH' ? 'selected' : ''}>This Month</option>
+                                            <option value="THIS_WEEK" ${salesOverviewFilter === 'THIS_WEEK' ? 'selected' : ''}>This Week</option>
+                                            <option value="TODAY" ${salesOverviewFilter === 'TODAY' ? 'selected' : ''}>Today</option>
+                                            <option value="ALL_TIME" ${salesOverviewFilter === 'ALL_TIME' ? 'selected' : ''}>All Time</option>
+                                            <option value="CUSTOM" ${salesOverviewFilter === 'CUSTOM' ? 'selected' : ''}>Specific Date...</option>
+                                        </select>
+                                        <input type="date" id="sales-overview-custom-date" style="display:${salesOverviewFilter === 'CUSTOM' ? 'inline-block' : 'none'}; font-size:0.78rem; padding:0.2rem 0.4rem; height:30px;" class="form-control" value="${customSalesDate}">
+                                    </div>
                                 </div>
 
                                 <!-- SVG Interactive Area Curve -->
@@ -700,15 +751,14 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                             </linearGradient>
                                         </defs>
 
-                                        <!-- Grid Lines -->
                                         <line x1="0" y1="30" x2="500" y2="30" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4"/>
                                         <line x1="0" y1="80" x2="500" y2="80" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4"/>
                                         <line x1="0" y1="130" x2="500" y2="130" stroke="#f1f5f9" stroke-width="1"/>
 
-                                        <!-- Construct SVG Curve Points -->
                                         ${(() => {
+                                            if (monthlyData.length === 0) return '';
                                             const pts = monthlyData.map((m, idx) => {
-                                                const x = (idx / (monthlyData.length - 1)) * 480 + 10;
+                                                const x = monthlyData.length === 1 ? 250 : (idx / (monthlyData.length - 1)) * 480 + 10;
                                                 const y = 130 - (m.amount / maxVal) * 100;
                                                 return { x, y, ...m };
                                             });
@@ -737,7 +787,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                     </svg>
                                 </div>
 
-                                <!-- X Axis Labels -->
                                 <div style="display:flex; justify-content:space-between; margin-top:0.5rem; font-size:0.75rem; color:var(--text-muted); font-weight:600; padding:0 5px;">
                                     ${monthlyData.map(m => `<span>${m.label}</span>`).join('')}
                                 </div>
@@ -842,7 +891,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         const formContainer = container.querySelector('#person-form-container');
         const form = container.querySelector('#person-form');
         const title = container.querySelector('#person-form-title');
-        const tbody = container.querySelector('#people-list-body');
         const btnAdd = container.querySelector('#btn-add-person');
         const btnCancel = container.querySelector('#person-cancel-btn');
         const btnCancelX = container.querySelector('#person-cancel-x');
@@ -852,7 +900,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         const imageFileInput = container.querySelector('#person-image-file');
         const imageUrlInput = container.querySelector('#person-image-url');
 
-        // Toggle add modal
         if (btnAdd) {
             btnAdd.addEventListener('click', () => {
                 form.reset();
@@ -868,7 +915,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         if (btnCancel) btnCancel.addEventListener('click', () => formContainer.style.display = 'none');
         if (btnCancelX) btnCancelX.addEventListener('click', () => formContainer.style.display = 'none');
 
-        // Image file preview
         if (imageFileInput) {
             imageFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
@@ -886,7 +932,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         }
 
-        // Image URL preview
         if (imageUrlInput) {
             imageUrlInput.addEventListener('input', () => {
                 const val = imageUrlInput.value.trim();
@@ -928,7 +973,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     const id = container.querySelector('#person-id').value;
                     let finalImageUrl = imageUrlInput ? imageUrlInput.value.trim() : '';
 
-                    // Upload image if file selected
                     const file = imageFileInput?.files?.[0];
                     if (file) {
                         try {
@@ -988,7 +1032,26 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         }
 
-        // Subtabs (Invoices vs Notes)
+        const filterSelect = container.querySelector('#sales-overview-filter-select');
+        const customDateInput = container.querySelector('#sales-overview-custom-date');
+        if (filterSelect) {
+            filterSelect.addEventListener('change', (e) => {
+                salesOverviewFilter = e.target.value;
+                if (salesOverviewFilter === 'CUSTOM') {
+                    if (customDateInput) customDateInput.style.display = 'inline-block';
+                } else {
+                    if (customDateInput) customDateInput.style.display = 'none';
+                    renderDedicatedDetailView();
+                }
+            });
+        }
+        if (customDateInput) {
+            customDateInput.addEventListener('change', (e) => {
+                customSalesDate = e.target.value;
+                renderDedicatedDetailView();
+            });
+        }
+
         container.querySelectorAll('.detail-subtab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 activeDetailTab = e.currentTarget.getAttribute('data-subtab');
@@ -996,13 +1059,13 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         });
 
-        // Edit Profile from details
         const btnEdit = container.querySelector('#btn-edit-detail-profile');
         if (btnEdit && activePersonDetail) {
             btnEdit.addEventListener('click', () => {
                 const p = activePersonDetail;
                 activePersonDetail = null;
                 renderListView();
+                renderRealtimeList(dataList);
 
                 const formContainer = container.querySelector('#person-form-container');
                 const title = container.querySelector('#person-form-title');
@@ -1034,9 +1097,21 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         }
 
-        // Create Invoice pre-filled
+        // Create Invoice pre-filled with this person
         const triggerCreateInvoice = () => {
-            const isBus = isBusinessMode;
+            const p = activePersonDetail;
+            if (!p) return;
+            const isBus = isBusinessMode || currentTab === 'businesses' || (p.isClient && currentTab === 'clients');
+            window.__preselectedInvoiceRecipient = {
+                mode: currentTab === 'clients' ? 'client' : (currentTab === 'businesses' ? 'business' : 'customer'),
+                id: p.id,
+                uniqueId: p.uniqueId || p.id,
+                name: p.name,
+                phone: p.phone || '',
+                email: p.email || '',
+                address: p.address || '',
+                imageUrl: p.imageUrl || p.imageUri || ''
+            };
             window.location.hash = `#/${isBus ? 'invoices/business' : 'invoices/customer'}`;
         };
 
@@ -1047,7 +1122,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         if (btnCreateInv2) btnCreateInv2.addEventListener('click', triggerCreateInvoice);
         if (btnCreateInvEmpty) btnCreateInvEmpty.addEventListener('click', triggerCreateInvoice);
 
-        // View Invoice modal directly
         container.querySelectorAll('.btn-view-invoice-modal').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const invId = e.currentTarget.getAttribute('data-invid');
@@ -1058,7 +1132,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         });
 
-        // Save inline notes
         const btnSaveNotes = container.querySelector('#btn-save-detail-notes');
         if (btnSaveNotes && activePersonDetail) {
             btnSaveNotes.addEventListener('click', async () => {
@@ -1077,12 +1150,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     showAlert.error("Failed to save notes: " + err.message);
                 } finally {
                     btnSaveNotes.disabled = false;
-                    btnSaveNotes.textContent = '💾 Save Notes';
+                    btnSaveNotes.textContent = 'Save Notes';
                 }
             });
         }
 
-        // Quick avatar image upload prompt
         const triggerAvatarModal = async () => {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -1117,6 +1189,181 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     };
 
     // -------------------------------------------------------------
+    // REALTIME LIST RENDERER
+    // -------------------------------------------------------------
+    const renderRealtimeList = (data) => {
+        dataList = data;
+        
+        if (activePersonDetail) {
+            const updatedObj = dataList.find(x => x.id === activePersonDetail.id);
+            if (updatedObj) activePersonDetail = updatedObj;
+            renderDedicatedDetailView();
+            return;
+        }
+
+        const tbody = container.querySelector('#people-list-body');
+        if (!tbody) return;
+
+        if (dataList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="padding:2.5rem; text-align:center; color: var(--text-muted);">No ${isBusinessMode ? 'businesses' : currentTab} found. Click "Add New" to create one.</td></tr>`;
+            return;
+        }
+
+        const currSym = getAppCurrencySymbol();
+
+        tbody.innerHTML = dataList.map(person => {
+            const stats = getPersonStats(person);
+            const count = Math.max(stats.count, person.invoiceCount || 0);
+            const img = person.imageUrl || person.imageUri;
+
+            const avatarFallback = currentTab === 'clients' 
+                ? ICONS.client 
+                : (isBusinessMode ? ICONS.business : ICONS.person);
+
+            return `
+                <tr class="people-table-row" data-id="${person.id}">
+                    <td style="padding:0.9rem 1.25rem;">
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <div style="width:38px; height:38px; border-radius:50%; background:#fff1f2; border:1.5px solid #fecdd3; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#e11d48;">
+                                ${img ? `
+                                    <img src="${escapeHtml(img)}" alt="${escapeHtml(person.name)}" style="width:100%; height:100%; object-fit:cover;">
+                                ` : avatarFallback}
+                            </div>
+                            <div>
+                                <strong style="color:var(--text-primary); font-size:0.92rem; display:block;">${escapeHtml(person.name)}</strong>
+                                <small class="text-muted" style="font-family:monospace; font-size:0.75rem;">${person.uniqueId || person.id}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="padding:0.9rem 1rem; font-size:0.85rem;">
+                        ${person.phone ? `<div style="display:flex; align-items:center; gap:4px;"><span style="color:#e11d48;">${ICONS.phone}</span> ${escapeHtml(person.phone)}</div>` : ''}
+                        ${person.email ? `<div style="color:var(--text-muted); display:flex; align-items:center; gap:4px;"><span style="color:#e11d48;">${ICONS.email}</span> ${escapeHtml(person.email)}</div>` : ''}
+                        ${!person.phone && !person.email ? '<span style="color:var(--text-muted);">—</span>' : ''}
+                    </td>
+                    <td style="padding:0.9rem 1rem; font-size:0.85rem; color:var(--text-secondary); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        ${escapeHtml(person.address || '—')}
+                    </td>
+                    <td style="padding:0.9rem 1rem; font-weight:700; color:var(--text-primary); font-size:0.9rem;">
+                        ${currSym} ${stats.totalSpent.toFixed(2)}
+                    </td>
+                    <td style="padding:0.9rem 1rem;">
+                        <span class="badge" style="background:${count > 0 ? '#fff1f2' : 'var(--surface-100)'}; color:${count > 0 ? '#e11d48' : 'var(--text-muted)'}; font-weight:700; font-size:0.78rem; padding:0.25rem 0.6rem; border-radius:999px; border:1px solid ${count > 0 ? '#fecdd3' : 'var(--border-color)'};">
+                            ${count} ${count === 1 ? 'Invoice' : 'Invoices'}
+                        </span>
+                    </td>
+                    <td style="padding:0.9rem 1.25rem; text-align:right;">
+                        <div style="display:inline-flex; gap:0.4rem; align-items:center;">
+                            <button type="button" class="btn btn-sm btn-primary view-person-detail" data-id="${person.id}" style="background:#e11d48; border-color:#e11d48; font-weight:600; font-size:0.78rem; padding:0.25rem 0.75rem;">
+                                View Details
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary edit-person" data-id="${person.id}" style="font-size:0.78rem; padding:0.25rem 0.65rem;">
+                                Edit
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline del-person" data-id="${person.id}" style="font-size:0.78rem; padding:0.25rem 0.65rem; color:#ef4444; border-color:#fecdd3;">
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        container.querySelectorAll('.view-person-detail').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.getAttribute('data-id');
+                const p = dataList.find(x => x.id === id);
+                if (p) {
+                    activePersonDetail = p;
+                    activeDetailTab = 'invoices';
+                    renderDedicatedDetailView();
+                }
+            });
+        });
+
+        container.querySelectorAll('.people-table-row').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('button') || e.target.closest('a')) return;
+                const id = row.getAttribute('data-id');
+                const p = dataList.find(x => x.id === id);
+                if (p) {
+                    activePersonDetail = p;
+                    activeDetailTab = 'invoices';
+                    renderDedicatedDetailView();
+                }
+            });
+        });
+
+        container.querySelectorAll('.edit-person').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.getAttribute('data-id');
+                const p = dataList.find(x => x.id === id);
+                if (p) {
+                    const formContainer = container.querySelector('#person-form-container');
+                    const title = container.querySelector('#person-form-title');
+                    const avatarPreview = container.querySelector('#person-avatar-preview');
+                    const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
+
+                    container.querySelector('#person-id').value = p.id;
+                    container.querySelector('#person-name').value = p.name || '';
+                    container.querySelector('#person-phone').value = p.phone || '';
+                    container.querySelector('#person-email').value = p.email || '';
+                    container.querySelector('#person-address').value = p.address || '';
+                    if (container.querySelector('#person-tags')) {
+                        container.querySelector('#person-tags').value = (p.tags || []).join(', ');
+                    }
+                    if (container.querySelector('#person-notes')) {
+                        container.querySelector('#person-notes').value = p.notes || '';
+                    }
+                    if (container.querySelector('#person-status')) {
+                        container.querySelector('#person-status').value = p.status || 'Active';
+                    }
+
+                    const img = p.imageUrl || p.imageUri;
+                    if (img && avatarPreview) {
+                        avatarPreview.src = img;
+                        avatarPreview.style.display = 'block';
+                        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                    }
+
+                    title.textContent = `Edit ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}`;
+                    formContainer.style.display = 'block';
+                    formContainer.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        container.querySelectorAll('.del-person').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.getAttribute('data-id');
+                const person = dataList.find(x => x.id === id);
+                const stats = getPersonStats(person);
+                const typeName = isBusinessMode ? 'business' : (currentTab === 'clients' ? 'client' : 'customer');
+                const typeCap = typeName.charAt(0).toUpperCase() + typeName.slice(1);
+
+                if (stats.count > 0) {
+                    showAlert.error(`Can't Delete ${typeName}. The ${typeCap} is used by ${stats.count} invoice${stats.count > 1 ? 's' : ''}. You have to Delete those invoices or edit this ${typeName}.`);
+                    return;
+                }
+
+                if (await showAlert.confirm(`Delete ${typeName} "${person?.name || 'this entry'}" permanently?`)) {
+                    try {
+                        if (currentTab === 'customers') await peopleService.deleteCustomer(id);
+                        else if (currentTab === 'businesses') await peopleService.deleteBusiness(id);
+                        else if (currentTab === 'clients') await peopleService.deleteClient(id);
+                        
+                        showAlert.success(`${typeCap} deleted successfully`);
+                    } catch (err) {
+                        showAlert.error(err.message);
+                    }
+                }
+            });
+        });
+    };
+
+    // -------------------------------------------------------------
     // DATA LOADER & REALTIME LISTENER
     // -------------------------------------------------------------
     let unsubscribe = null;
@@ -1127,182 +1374,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             unsubscribe = null;
         }
 
+        renderListView();
         await fetchInvoices();
-
-        const renderRealtimeList = (data) => {
-            dataList = data;
-            
-            // If viewing detail, update current object reference
-            if (activePersonDetail) {
-                const updatedObj = dataList.find(x => x.id === activePersonDetail.id);
-                if (updatedObj) activePersonDetail = updatedObj;
-                renderDedicatedDetailView();
-                return;
-            }
-
-            renderListView();
-
-            const tbody = container.querySelector('#people-list-body');
-            if (!tbody) return;
-
-            if (dataList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="padding:2.5rem; text-align:center; color: var(--text-muted);">No ${isBusinessMode ? 'businesses' : currentTab} found. Click "Add New" to create one.</td></tr>`;
-                return;
-            }
-
-            const currSym = getAppCurrencySymbol();
-
-            tbody.innerHTML = dataList.map(person => {
-                const stats = getPersonStats(person);
-                const count = Math.max(stats.count, person.invoiceCount || 0);
-                const img = person.imageUrl || person.imageUri;
-
-                return `
-                    <tr class="people-table-row" data-id="${person.id}">
-                        <td style="padding:0.9rem 1.25rem;">
-                            <div style="display:flex; align-items:center; gap:0.75rem;">
-                                <div style="width:38px; height:38px; border-radius:50%; background:#fff1f2; border:1.5px solid #fecdd3; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                                    ${img ? `
-                                        <img src="${escapeHtml(img)}" alt="${escapeHtml(person.name)}" style="width:100%; height:100%; object-fit:cover;">
-                                    ` : `
-                                        <span style="color:#e11d48; font-weight:700; font-size:0.95rem;">${(person.name || 'U').charAt(0).toUpperCase()}</span>
-                                    `}
-                                </div>
-                                <div>
-                                    <strong style="color:var(--text-primary); font-size:0.92rem; display:block;">${escapeHtml(person.name)}</strong>
-                                    <small class="text-muted" style="font-family:monospace; font-size:0.75rem;">${person.uniqueId || person.id}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="padding:0.9rem 1rem; font-size:0.85rem;">
-                            ${person.phone ? `<div>📞 ${escapeHtml(person.phone)}</div>` : ''}
-                            ${person.email ? `<div style="color:var(--text-muted);">✉️ ${escapeHtml(person.email)}</div>` : ''}
-                            ${!person.phone && !person.email ? '<span style="color:var(--text-muted);">—</span>' : ''}
-                        </td>
-                        <td style="padding:0.9rem 1rem; font-size:0.85rem; color:var(--text-secondary); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                            ${escapeHtml(person.address || '—')}
-                        </td>
-                        <td style="padding:0.9rem 1rem; font-weight:700; color:var(--text-primary); font-size:0.9rem;">
-                            ${currSym} ${stats.totalSpent.toFixed(2)}
-                        </td>
-                        <td style="padding:0.9rem 1rem;">
-                            <span class="badge" style="background:${count > 0 ? '#fff1f2' : 'var(--surface-100)'}; color:${count > 0 ? '#e11d48' : 'var(--text-muted)'}; font-weight:700; font-size:0.78rem; padding:0.25rem 0.6rem; border-radius:999px; border:1px solid ${count > 0 ? '#fecdd3' : 'var(--border-color)'};">
-                                ${count} ${count === 1 ? 'Invoice' : 'Invoices'}
-                            </span>
-                        </td>
-                        <td style="padding:0.9rem 1.25rem; text-align:right;">
-                            <div style="display:inline-flex; gap:0.4rem; align-items:center;">
-                                <button type="button" class="btn btn-sm btn-primary view-person-detail" data-id="${person.id}" style="background:#e11d48; border-color:#e11d48; font-weight:600; font-size:0.78rem; padding:0.25rem 0.75rem;">
-                                    View Details
-                                </button>
-                                <button type="button" class="btn btn-sm btn-secondary edit-person" data-id="${person.id}" style="font-size:0.78rem; padding:0.25rem 0.65rem;">
-                                    Edit
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline del-person" data-id="${person.id}" style="font-size:0.78rem; padding:0.25rem 0.65rem; color:#ef4444; border-color:#fecdd3;">
-                                    Delete
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            // Bind row clicks to open details
-            container.querySelectorAll('.view-person-detail').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const id = e.currentTarget.getAttribute('data-id');
-                    const p = dataList.find(x => x.id === id);
-                    if (p) {
-                        activePersonDetail = p;
-                        activeDetailTab = 'invoices';
-                        renderDedicatedDetailView();
-                    }
-                });
-            });
-
-            container.querySelectorAll('.people-table-row').forEach(row => {
-                row.addEventListener('click', (e) => {
-                    if (e.target.closest('button') || e.target.closest('a')) return;
-                    const id = row.getAttribute('data-id');
-                    const p = dataList.find(x => x.id === id);
-                    if (p) {
-                        activePersonDetail = p;
-                        activeDetailTab = 'invoices';
-                        renderDedicatedDetailView();
-                    }
-                });
-            });
-
-            // Bind Edit & Delete in list
-            container.querySelectorAll('.edit-person').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const id = e.currentTarget.getAttribute('data-id');
-                    const p = dataList.find(x => x.id === id);
-                    if (p) {
-                        const formContainer = container.querySelector('#person-form-container');
-                        const title = container.querySelector('#person-form-title');
-                        const avatarPreview = container.querySelector('#person-avatar-preview');
-                        const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
-
-                        container.querySelector('#person-id').value = p.id;
-                        container.querySelector('#person-name').value = p.name || '';
-                        container.querySelector('#person-phone').value = p.phone || '';
-                        container.querySelector('#person-email').value = p.email || '';
-                        container.querySelector('#person-address').value = p.address || '';
-                        if (container.querySelector('#person-tags')) {
-                            container.querySelector('#person-tags').value = (p.tags || []).join(', ');
-                        }
-                        if (container.querySelector('#person-notes')) {
-                            container.querySelector('#person-notes').value = p.notes || '';
-                        }
-                        if (container.querySelector('#person-status')) {
-                            container.querySelector('#person-status').value = p.status || 'Active';
-                        }
-
-                        const img = p.imageUrl || p.imageUri;
-                        if (img && avatarPreview) {
-                            avatarPreview.src = img;
-                            avatarPreview.style.display = 'block';
-                            if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                        }
-
-                        title.textContent = `Edit ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}`;
-                        formContainer.style.display = 'block';
-                        formContainer.scrollIntoView({ behavior: 'smooth' });
-                    }
-                });
-            });
-
-            container.querySelectorAll('.del-person').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    const id = e.currentTarget.getAttribute('data-id');
-                    const person = dataList.find(x => x.id === id);
-                    const stats = getPersonStats(person);
-                    const typeName = isBusinessMode ? 'business' : (currentTab === 'clients' ? 'client' : 'customer');
-                    const typeCap = typeName.charAt(0).toUpperCase() + typeName.slice(1);
-
-                    if (stats.count > 0) {
-                        showAlert.error(`Can't Delete ${typeName}. The ${typeCap} is used by ${stats.count} invoice${stats.count > 1 ? 's' : ''}. You have to Delete those invoices or edit this ${typeName}.`);
-                        return;
-                    }
-
-                    if (await showAlert.confirm(`Delete ${typeName} "${person?.name || 'this entry'}" permanently?`)) {
-                        try {
-                            if (currentTab === 'customers') await peopleService.deleteCustomer(id);
-                            else if (currentTab === 'businesses') await peopleService.deleteBusiness(id);
-                            else if (currentTab === 'clients') await peopleService.deleteClient(id);
-                            
-                            showAlert.success(`${typeCap} deleted successfully`);
-                        } catch (err) {
-                            showAlert.error(err.message);
-                        }
-                    }
-                });
-            });
-        };
 
         try {
             if (isBusinessMode || currentTab === 'businesses') {
@@ -1318,6 +1391,5 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         }
     };
 
-    // Initial Start
     await loadData();
 };

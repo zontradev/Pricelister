@@ -15,6 +15,7 @@ import { openAccountSwitcherModal } from '../auth-handler.js';
 import { formatCurrency, getAppCurrencySymbol, setAppCurrencySymbol } from '../utilities.js';
 import { showAlert } from '../alert-handler.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
+import { openInvoiceDetailsModal } from './invoiceDetailsModal.js';
 
 let cachedWorkspaceId = null;
 let liveDataCache = {
@@ -655,7 +656,11 @@ const performSearch = (query, filter = 'ALL') => {
                     score: score,
                     categoryLabel: 'Sales & Invoices',
                     handler: () => {
-                        openInvoiceViewerModal(inv);
+                        openInvoiceDetailsModal(inv, {
+                            onEdit: (invoiceToEdit) => {
+                                window.location.hash = inv.isBusiness ? '#/invoices/business' : '#/invoices/customer';
+                            }
+                        });
                     }
                 });
             }
@@ -877,11 +882,11 @@ const createGlobalSearchModalDOM = () => {
                 <!-- Category Filter Pills -->
                 <div class="palette-filters-bar">
                     <button type="button" class="palette-filter-pill active" data-filter="ALL">All</button>
-                    <button type="button" class="palette-filter-pill" data-filter="ACTION">⚡ Actions</button>
-                    <button type="button" class="palette-filter-pill" data-filter="PRODUCT">📦 Products</button>
-                    <button type="button" class="palette-filter-pill" data-filter="NAV">🧭 Pages</button>
-                    <button type="button" class="palette-filter-pill" data-filter="CATEGORY">🏷️ Categories</button>
-                    <button type="button" class="palette-filter-pill" data-filter="INVOICE">🧾 Invoices</button>
+                    <button type="button" class="palette-filter-pill" data-filter="ACTION">Actions</button>
+                    <button type="button" class="palette-filter-pill" data-filter="PRODUCT">Products</button>
+                    <button type="button" class="palette-filter-pill" data-filter="NAV">Pages</button>
+                    <button type="button" class="palette-filter-pill" data-filter="CATEGORY">Categories</button>
+                    <button type="button" class="palette-filter-pill" data-filter="INVOICE">Invoices</button>
                     <span class="palette-result-count" id="palette-result-count">0 found</span>
                 </div>
             </div>

@@ -14,14 +14,16 @@ const googleProvider = new GoogleAuthProvider();
 
 export const authService = {
     onAuthStateChanged: (callback) => {
-        // If developer is using the offline test session, bypass Firebase listener
-        if (CONFIG.APP_MODE === 'test') {
-            const devSession = localStorage.getItem('mock_dev_session');
-            if (devSession) {
+        // If developer is using the offline test session, immediately provide demo user
+        const devSession = localStorage.getItem('mock_dev_session');
+        if (devSession) {
+            try {
                 const user = JSON.parse(devSession);
                 authService.saveAccountToRegistry(user);
                 callback(user);
                 return () => {}; // dummy unsubscribe
+            } catch (e) {
+                localStorage.removeItem('mock_dev_session');
             }
         }
 
@@ -29,8 +31,8 @@ export const authService = {
             if (user) {
                 const appUser = {
                     uid: user.uid,
-                    email: user.email || 'test.user@pricelister.app',
-                    displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'Test User'),
+                    email: user.email || 'user@pricelister.app',
+                    displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'User'),
                     photoURL: user.photoURL || null,
                     role: 'PENDING'
                 };
@@ -44,6 +46,8 @@ export const authService = {
     
     loginWithGoogle: async (forceSelectAccount = true) => {
         try {
+            // Clear test session when initiating real production Google login
+            localStorage.removeItem('mock_dev_session');
             if (forceSelectAccount) {
                 googleProvider.setCustomParameters({ prompt: 'select_account' });
             } else {
@@ -66,11 +70,11 @@ export const authService = {
     },
     
     loginAsGuest: async () => {
-        // Purely local mock session, no Firebase setup required
+        // Purely local mock session with full admin privileges for UI testing
         const mockUser = {
             uid: 'dev-mock-uid',
             email: 'developer@local.test',
-            displayName: 'Local Developer',
+            displayName: 'Demo Admin (Testing)',
             photoURL: null,
             role: 'CREATOR_ADMIN'
         };
@@ -140,11 +144,14 @@ export const authService = {
     },
     
     getCurrentUser: () => {
-        if (CONFIG.APP_MODE === 'test') {
-            const devSession = localStorage.getItem('mock_dev_session');
-            if (devSession) return JSON.parse(devSession);
+        const devSession = localStorage.getItem('mock_dev_session');
+        if (devSession) {
+            try {
+                return JSON.parse(devSession);
+            } catch (e) {}
         }
         return auth.currentUser;
     }
 };
+
 

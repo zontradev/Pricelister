@@ -181,5 +181,113 @@ export const showAlert = {
             document.getElementById('alert-unsaved-leave').addEventListener('click', () => { cleanup(); resolve(true); });
             document.getElementById('alert-unsaved-stay').addEventListener('click', () => { cleanup(); resolve(false); });
         });
+    },
+    prompt: ({ title = 'Adjust Value', message = 'Enter value below:', defaultValue = '', inputType = 'number', confirmText = 'Confirm', cancelText = 'Cancel', min = 0, max = null } = {}) => {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.id = 'alert-prompt-modal-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.65)';
+            overlay.style.backdropFilter = 'blur(6px)';
+            overlay.style.zIndex = '999999';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.2s ease';
+
+            const modal = document.createElement('div');
+            modal.className = 'card';
+            modal.style.background = 'var(--bg-card)';
+            modal.style.padding = '2rem 1.75rem';
+            modal.style.borderRadius = 'var(--radius-lg, 16px)';
+            modal.style.maxWidth = '420px';
+            modal.style.width = '92%';
+            modal.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.35)';
+            modal.style.transform = 'scale(0.95)';
+            modal.style.transition = 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+            modal.innerHTML = `
+                <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
+                    <div style="width:44px; height:44px; border-radius:12px; background:rgba(225, 29, 72, 0.1); color:#e11d48; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-primary); margin:0;">${title}</h3>
+                        <p style="font-size:0.83rem; color:var(--text-secondary); margin:0.15rem 0 0 0;">${message}</p>
+                    </div>
+                </div>
+
+                <form id="alert-prompt-form" style="display:flex; flex-direction:column; gap:1.25rem;">
+                    <div>
+                        ${inputType === 'number' ? `
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <button type="button" id="prompt-step-minus" class="btn btn-secondary" style="width:44px; height:44px; font-size:1.2rem; font-weight:700; padding:0; display:flex; align-items:center; justify-content:center;">&minus;</button>
+                                <input type="number" id="alert-prompt-input" value="${defaultValue}" min="${min}" ${max !== null ? `max="${max}"` : ''} class="form-control" style="flex:1; height:44px; text-align:center; font-size:1.15rem; font-weight:700; color:var(--text-primary);" required autofocus>
+                                <button type="button" id="prompt-step-plus" class="btn btn-secondary" style="width:44px; height:44px; font-size:1.2rem; font-weight:700; padding:0; display:flex; align-items:center; justify-content:center;">&plus;</button>
+                            </div>
+                        ` : `
+                            <input type="${inputType}" id="alert-prompt-input" value="${defaultValue}" class="form-control" style="width:100%; height:42px; font-size:0.95rem; padding:0.5rem 0.75rem;" required autofocus>
+                        `}
+                    </div>
+
+                    <div style="display:flex; gap:0.65rem; justify-content:flex-end;">
+                        <button type="button" id="alert-prompt-cancel" class="btn btn-secondary" style="padding:0.6rem 1.25rem; font-weight:600;">${cancelText}</button>
+                        <button type="submit" id="alert-prompt-ok" class="btn btn-primary" style="padding:0.6rem 1.5rem; font-weight:700; background:#e11d48; border-color:#e11d48;">${confirmText}</button>
+                    </div>
+                </form>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            const inputEl = modal.querySelector('#alert-prompt-input');
+            const formEl = modal.querySelector('#alert-prompt-form');
+            const btnMinus = modal.querySelector('#prompt-step-minus');
+            const btnPlus = modal.querySelector('#prompt-step-plus');
+
+            if (btnMinus && inputEl) {
+                btnMinus.addEventListener('click', () => {
+                    let v = parseInt(inputEl.value, 10) || 0;
+                    if (v > min) inputEl.value = v - 1;
+                });
+            }
+            if (btnPlus && inputEl) {
+                btnPlus.addEventListener('click', () => {
+                    let v = parseInt(inputEl.value, 10) || 0;
+                    if (max === null || v < max) inputEl.value = v + 1;
+                });
+            }
+
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                modal.style.transform = 'scale(1)';
+                inputEl?.focus();
+                if (inputEl) inputEl.select();
+            });
+
+            const cleanup = () => {
+                overlay.style.opacity = '0';
+                modal.style.transform = 'scale(0.95)';
+                setTimeout(() => overlay.remove(), 200);
+            };
+
+            modal.querySelector('#alert-prompt-cancel').addEventListener('click', () => {
+                cleanup();
+                resolve(null);
+            });
+
+            formEl.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const val = inputEl ? inputEl.value : '';
+                cleanup();
+                resolve(inputType === 'number' ? (parseInt(val, 10) || 0) : val);
+            });
+        });
     }
 };
+

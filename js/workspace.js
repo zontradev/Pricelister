@@ -7,6 +7,7 @@ import { calculateInvoiceTotal } from './utils/invoiceCalculator.js';
 import { formatCurrency, getAppCurrencySymbol, setAppCurrencySymbol } from './utilities.js';
 import { authService } from '../firebase/auth.js';
 import { openInvoiceViewerModal } from './modules/invoiceViewer.js';
+import { openInvoiceDetailsModal } from './modules/invoiceDetailsModal.js';
 import { showAlert } from './alert-handler.js';
 
 export const initWorkspace = () => {
@@ -160,28 +161,38 @@ export const renderOverview = async (container, workspaceId) => {
     userName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
     // Initial Date Filter
-    let activeFilter = 'LAST_6_MONTHS'; // 'THIS_MONTH', 'LAST_30_DAYS', 'LAST_6_MONTHS', 'THIS_YEAR', 'ALL_TIME'
+    let activeFilter = 'LAST_6_MONTHS'; // 'TODAY', 'THIS_WEEK', 'THIS_MONTH', 'LAST_6_MONTHS', 'THIS_YEAR', 'ALL_TIME', 'CUSTOM'
+    let customDateVal = '';
     let activeChartSeries = 'ALL'; // 'ALL', 'REV', 'PROFIT'
     
-    const calculateRange = (filterKey) => {
+    const calculateRange = (filterKey, customDate = '') => {
         const cur = new Date();
-        if (filterKey === 'THIS_MONTH') {
-            const s = new Date(cur.getFullYear(), cur.getMonth(), 1, 0, 0, 0, 0);
+        if (filterKey === 'TODAY') {
+            const s = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), 0, 0, 0, 0);
             const e = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), 23, 59, 59, 999);
             return {
                 start: s.getTime(),
                 end: e.getTime(),
-                label: `This Month (${getMonthNameShort(cur.getMonth())} ${cur.getFullYear()})`
+                label: `Today (${cur.toLocaleDateString()})`
             };
-        } else if (filterKey === 'LAST_30_DAYS') {
-            const s = new Date(cur.getTime() - (30 * 24 * 60 * 60 * 1000));
+        } else if (filterKey === 'THIS_WEEK') {
+            const s = new Date();
+            s.setDate(cur.getDate() - 6);
             s.setHours(0, 0, 0, 0);
             const e = new Date();
             e.setHours(23, 59, 59, 999);
             return {
                 start: s.getTime(),
                 end: e.getTime(),
-                label: `Last 30 Days`
+                label: `This Week (Last 7 Days)`
+            };
+        } else if (filterKey === 'THIS_MONTH') {
+            const s = new Date(cur.getFullYear(), cur.getMonth(), 1, 0, 0, 0, 0);
+            const e = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), 23, 59, 59, 999);
+            return {
+                start: s.getTime(),
+                end: e.getTime(),
+                label: `This Month (${getMonthNameShort(cur.getMonth())} ${cur.getFullYear()})`
             };
         } else if (filterKey === 'THIS_YEAR') {
             const s = new Date(cur.getFullYear(), 0, 1, 0, 0, 0, 0);
@@ -196,6 +207,14 @@ export const renderOverview = async (container, workspaceId) => {
                 start: 0,
                 end: Infinity,
                 label: 'All Time Records'
+            };
+        } else if (filterKey === 'CUSTOM' && customDate) {
+            const s = new Date(customDate + 'T00:00:00');
+            const e = new Date(customDate + 'T23:59:59');
+            return {
+                start: s.getTime(),
+                end: e.getTime(),
+                label: `Date: ${s.toLocaleDateString()}`
             };
         } else {
             // Default: Last 6 Months
@@ -235,11 +254,12 @@ export const renderOverview = async (container, workspaceId) => {
                             <span id="dash-active-range-label">${currentRange.label}</span>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
-                        <div class="dash-date-dropdown" id="dash-date-dropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#ffffff; border:1px solid var(--border-color); border-radius:10px; box-shadow:var(--shadow-float); z-index:100; min-width:180px; padding:0.4rem;">
+                        <div class="dash-date-dropdown" id="dash-date-dropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#ffffff; border:1px solid var(--border-color); border-radius:10px; box-shadow:var(--shadow-float); z-index:100; min-width:190px; padding:0.4rem;">
                             <button type="button" class="dash-date-opt ${activeFilter === 'LAST_6_MONTHS' ? 'active' : ''}" data-filter="LAST_6_MONTHS" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">Last 6 Months</button>
                             <button type="button" class="dash-date-opt ${activeFilter === 'THIS_MONTH' ? 'active' : ''}" data-filter="THIS_MONTH" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">This Month</button>
-                            <button type="button" class="dash-date-opt ${activeFilter === 'LAST_30_DAYS' ? 'active' : ''}" data-filter="LAST_30_DAYS" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">Last 30 Days</button>
-                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_YEAR' ? 'active' : ''}" data-filter="THIS_YEAR" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">This Year</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_WEEK' ? 'active' : ''}" data-filter="THIS_WEEK" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">This Week (7 Days)</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'TODAY' ? 'active' : ''}" data-filter="TODAY" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">Today</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_YEAR' ? 'active' : ''}" data-filter="THIS_YEAR" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">This Year (1 Year)</button>
                             <button type="button" class="dash-date-opt ${activeFilter === 'ALL_TIME' ? 'active' : ''}" data-filter="ALL_TIME" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">All Time Records</button>
                         </div>
                     </div>
@@ -503,7 +523,10 @@ export const renderOverview = async (container, workspaceId) => {
                 <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
                     <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800;">⭐ Top Performing Products</h3>
+                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:6px;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                Top Performing Products
+                            </h3>
                             <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Highest revenue & gross profit contributors</p>
                         </div>
                         <a href="#/products" class="btn btn-sm btn-secondary" style="font-size:0.78rem; padding:0.25rem 0.65rem;">View All</a>
@@ -529,7 +552,10 @@ export const renderOverview = async (container, workspaceId) => {
                 <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
                     <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800;">👑 VIP Buyers Leaderboard</h3>
+                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:6px;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                VIP Buyers Leaderboard
+                            </h3>
                             <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Top accounts by cumulative spend</p>
                         </div>
                         <a href="#/customers" class="btn btn-sm btn-secondary" style="font-size:0.78rem; padding:0.25rem 0.65rem;">View People</a>
@@ -554,7 +580,10 @@ export const renderOverview = async (container, workspaceId) => {
                 <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
                     <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800;">🧾 Recent Invoices Stream</h3>
+                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:6px;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                Recent Invoices Stream
+                            </h3>
                             <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Latest sales & performance</p>
                         </div>
                         <a href="#/invoices/customer" class="btn btn-sm btn-secondary" style="font-size:0.78rem; padding:0.25rem 0.65rem;">View Invoices</a>
@@ -1084,8 +1113,8 @@ export const renderOverview = async (container, workspaceId) => {
                     <tr style="border-bottom:1px solid var(--border-color);">
                         <td style="padding:0.65rem 1rem;">
                             <div style="display:flex; align-items:center; gap:0.5rem;">
-                                <span style="width:24px; height:24px; border-radius:50%; background:${idx === 0 ? '#fbbf24' : 'var(--surface-200)'}; color:${idx === 0 ? '#ffffff' : 'var(--text-primary)'}; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800;">
-                                    ${idx === 0 ? '👑' : (idx + 1)}
+                                <span style="width:24px; height:24px; border-radius:50%; background:${idx === 0 ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' : 'var(--surface-200)'}; color:${idx === 0 ? '#ffffff' : 'var(--text-primary)'}; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800;">
+                                    ${idx === 0 ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>' : (idx + 1)}
                                 </span>
                                 <div>
                                     <strong style="color:var(--text-primary);">${c.name}</strong>
@@ -1140,7 +1169,11 @@ export const renderOverview = async (container, workspaceId) => {
                         const id = e.target.getAttribute('data-invid');
                         const matched = allInvoices.find(i => i.id === id);
                         if (matched) {
-                            openInvoiceViewerModal(matched);
+                            openInvoiceDetailsModal(matched, {
+                                onEdit: (invoiceToEdit) => {
+                                    window.location.hash = matched.isBusinessInvoice ? '#/invoices/business' : '#/invoices/customer';
+                                }
+                            });
                         }
                     });
                 });

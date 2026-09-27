@@ -541,15 +541,24 @@ export const generateInvoicePdf = async (invoice, options = {}) => {
 
     const subtotal = Number(invoice.subtotal || invoice.totalPrice || 0);
     const discountPct = Number(invoice.discountPercent || 0);
+    const addCut = Number(invoice.additionalCut || 0);
     const taxPct = Number(invoice.taxPercent || 0);
     const shipping = Number(invoice.shippingCost || 0);
     const grandTotal = Number(invoice.totalPrice || invoice.grandTotal || subtotal);
 
+    // Calculate dynamic totals box height
+    let extraRows = 0;
+    if (discountPct > 0) extraRows++;
+    if (addCut > 0) extraRows++;
+    if (taxPct > 0) extraRows++;
+    if (shipping > 0) extraRows++;
+    const boxHeight = 26 + (extraRows * 5.5);
+
     // Totals Background Box
     doc.setFillColor(COLORS.surfaceLight[0], COLORS.surfaceLight[1], COLORS.surfaceLight[2]);
-    doc.roundedRect(totalsBoxX, currentY, totalsBoxWidth, 38, 2, 2, 'F');
+    doc.roundedRect(totalsBoxX, currentY, totalsBoxWidth, boxHeight, 2, 2, 'F');
     doc.setDrawColor(COLORS.borderLight[0], COLORS.borderLight[1], COLORS.borderLight[2]);
-    doc.roundedRect(totalsBoxX, currentY, totalsBoxWidth, 38, 2, 2, 'S');
+    doc.roundedRect(totalsBoxX, currentY, totalsBoxWidth, boxHeight, 2, 2, 'S');
 
     let totY = currentY + 6;
     doc.setFont('helvetica', 'normal');
@@ -568,11 +577,19 @@ export const generateInvoicePdf = async (invoice, options = {}) => {
         doc.text(`-${formatPdfCurrency(discAmt, currencySym)}`, totalsBoxX + totalsBoxWidth - 6, totY, { align: 'right' });
     }
 
+    // Additional Cut
+    if (addCut > 0) {
+        totY += 5;
+        doc.text('Additional Cut:', totalsBoxX + 6, totY);
+        doc.text(`-${formatPdfCurrency(addCut, currencySym)}`, totalsBoxX + totalsBoxWidth - 6, totY, { align: 'right' });
+    }
+
     // Tax
     if (taxPct > 0) {
         totY += 5;
         doc.text(`Tax (${taxPct}%):`, totalsBoxX + 6, totY);
-        const taxAmt = (subtotal * taxPct) / 100;
+        const baseForTax = Math.max(0, subtotal - ((subtotal * discountPct) / 100) - addCut);
+        const taxAmt = (baseForTax * taxPct) / 100;
         doc.text(`+${formatPdfCurrency(taxAmt, currencySym)}`, totalsBoxX + totalsBoxWidth - 6, totY, { align: 'right' });
     }
 

@@ -5,6 +5,9 @@
 
 import { getFirestore, doc, getDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../firebase/firebase-config.js';
+import { getProductService } from './services/productService.js';
+import { getCategoryService } from './services/categoryService.js';
+import { getOrderService } from './services/orderService.js';
 
 const db = getFirestore(firebaseApp);
 
@@ -39,20 +42,38 @@ const escapeHtml = (str) => {
  */
 export const initCustomerPortal = async () => {
     try {
-        // 1. Resolve Workspace ID from URL or Storage
+        // 1. Resolve Workspace ID or Custom Slug from URL or Storage
         const urlParams = new URLSearchParams(window.location.search);
         currentWorkspaceId = urlParams.get('ws') || urlParams.get('workspace') || urlParams.get('id');
+        const customSlugParam = urlParams.get('shop') || urlParams.get('slug');
 
-        if (!currentWorkspaceId) {
+        if (!currentWorkspaceId && customSlugParam) {
+            // Check known local workspace mapping
             try {
-                currentWorkspaceId = localStorage.getItem('pricelister_last_public_ws') || 
-                                     localStorage.getItem('pricelister_active_workspace_id');
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('pricelister_customer_panel_')) {
+                        const raw = localStorage.getItem(key);
+                        if (raw && raw.includes(`"customSlug":"${customSlugParam.toLowerCase()}"`)) {
+                            currentWorkspaceId = key.replace('pricelister_customer_panel_', '');
+                            break;
+                        }
+                    }
+                }
             } catch (e) {}
         }
 
         if (!currentWorkspaceId) {
-            renderNoWorkspaceState();
-            return;
+            try {
+                currentWorkspaceId = localStorage.getItem('pricelister_last_public_ws') || 
+                                     localStorage.getItem('pricelister_active_workspace_id') ||
+                                     localStorage.getItem('pricelister_last_workspace_id');
+            } catch (e) {}
+        }
+
+        // Seamless fallback to demo/mock sandbox if accessed standalone
+        if (!currentWorkspaceId) {
+            currentWorkspaceId = 'ws_dev_mock';
         }
 
         // Save for convenient return
@@ -154,11 +175,26 @@ const loadStoreSettings = async () => {
         isPublished = Boolean(receiptData.customerPanelPublished);
     }
 
+    const defaultAnnouncements = [
+        'Welcome! Browse our catalog and add items to your cart.',
+        'Welcome to our online demo catalog! Browse items and calculate total or place orders.',
+        'Welcome to our online catalog! Browse items and add to cart to calculate total or order directly.',
+        'Welcome to our online catalog!'
+    ];
+    const cleanAnnouncement = (merged.announcement && merged.announcement.trim() !== '' && !defaultAnnouncements.includes(merged.announcement.trim())) 
+        ? merged.announcement.trim() 
+        : '';
+
     storeSettings = {
         enabled: isPublished,
         isPublished: isPublished,
+        brandingMode: merged.brandingMode || 'PRICELISTER',
         storeName: merged.storeName || wsData.name || receiptData["Shop Name"] || 'PriceLister Store',
-        announcement: merged.announcement || 'Welcome! Browse our catalog and add items to your cart.',
+        storeLogo: merged.storeLogo || '',
+        workspaceLogo: merged.workspaceLogo || wsData.logoUrl || wsData.imageUri || receiptData["Logo Url"] || '',
+        customSlug: merged.customSlug || '',
+        deployCountry: merged.deployCountry || 'Global',
+        announcement: cleanAnnouncement,
         termsAndConditions: merged.termsAndConditions || '• Prices are subject to change without prior notice.\n• All orders are confirmed before dispatch.',
         categorySelectionMode: merged.categorySelectionMode || 'ALL',
         allowedCategories: Array.isArray(merged.allowedCategories) ? merged.allowedCategories : [],
@@ -177,81 +213,101 @@ const loadStoreSettings = async () => {
 };
 
 /**
- * Fetch Catalog Products & Extract Categories with Timeout
+ * Fetch Catalog Products & Extract Categories
  */
 const loadProductsAndCategories = async () => {
-    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 4000));
+    try {
+        const prodService = getProductService(currentWorkspaceId);
+        const catService = getCategoryService(currentWorkspaceId);
 
-    const fetchPromise = (async () => {
-        try {
-            const productsRef = collection(db, `Workspaces/${currentWorkspaceId}/Products`);
-            const querySnapshot = await getDocs(productsRef);
-            const items = [];
-            const catMap = new Map();
+        let [itemsRaw, categoriesRaw] = await Promise.all([
+            prodService.getAllActiveProducts().catch(() => []),
+            catService.getAllCategories().catch(() => [])
+        ]);
 
-            querySnapshot.forEach(docSnap => {
-                const data = docSnap.data();
-                if (!data.isArchive) {
-                    const resolvedSellingPrice = Number(
-                        data.salePrice !== undefined ? data.salePrice : 
-                        (data.sellingPrice !== undefined ? data.sellingPrice : (data.price || 0))
-                    );
-
-                    const resolvedStock = Number(
-                        data.quantity !== undefined ? data.quantity : (data.stock !== undefined ? data.stock : 0)
-                    );
-
-                    const prd = {
-                        id: docSnap.id,
-                        ...data,
-                        name: data.name || 'Unnamed Product',
-                        category: (data.category || 'General').trim(),
-                        size: data.size || data.sizeWeight || '',
-                        sizeWeight: data.sizeWeight || data.size || '',
-                        sellingPrice: resolvedSellingPrice,
-                        salePrice: resolvedSellingPrice,
-                        price: resolvedSellingPrice,
-                        mrp: Number(data.mrp || 0),
-                        stock: resolvedStock,
-                        quantity: resolvedStock,
-                        imageUrl: data.imageUri || data.imageUrl || '',
-                        imageUri: data.imageUri || data.imageUrl || '',
-                        description: data.note || data.description || '',
-                        note: data.note || data.description || '',
-                        barcode: data.upcCode || data.barcode || data.sku || '',
-                        upcCode: data.upcCode || data.barcode || data.sku || ''
-                    };
-                    items.push(prd);
-
-                    const catName = prd.category;
-                    catMap.set(catName, (catMap.get(catName) || 0) + 1);
-                }
-            });
-
-            return { items, catMap };
-        } catch (e) {
-            console.warn("Failed to fetch remote products:", e);
-            return { items: [], catMap: new Map() };
+        // Fallback to direct collection query if service returned empty and workspace is remote
+        if ((!itemsRaw || itemsRaw.length === 0) && currentWorkspaceId !== 'ws_dev_mock') {
+            try {
+                const productsRef = collection(db, `Workspaces/${currentWorkspaceId}/Products`);
+                const querySnapshot = await getDocs(productsRef);
+                itemsRaw = [];
+                querySnapshot.forEach(docSnap => {
+                    const d = docSnap.data();
+                    if (!d.isArchive) itemsRaw.push({ id: docSnap.id, ...d });
+                });
+            } catch (e) {
+                console.warn("Direct Firestore fallback error:", e);
+            }
         }
-    })();
 
-    const result = await Promise.race([fetchPromise, timeoutPromise]);
-    const { items = [], catMap = new Map() } = (result && typeof result === 'object') ? result : { items: [], catMap: new Map() };
+        const items = [];
+        const catMap = new Map();
 
-    // Apply allowed category filter if admin specified specific categories
-    if (storeSettings.categorySelectionMode === 'SPECIFIC' && Array.isArray(storeSettings.allowedCategories) && storeSettings.allowedCategories.length > 0) {
-        allProducts = items.filter(p => storeSettings.allowedCategories.includes(p.category));
-    } else {
-        allProducts = items;
+        (itemsRaw || []).forEach(data => {
+            if (!data.isArchive) {
+                const resolvedSellingPrice = Number(
+                    data.salePrice !== undefined ? data.salePrice : 
+                    (data.sellingPrice !== undefined ? data.sellingPrice : (data.price || 0))
+                );
+
+                const resolvedStock = Number(
+                    data.quantity !== undefined ? data.quantity : (data.stock !== undefined ? data.stock : 0)
+                );
+
+                let catName = data.category || 'General';
+                if (categoriesRaw && Array.isArray(categoriesRaw)) {
+                    const match = categoriesRaw.find(c => c.uniqueId === catName || c.id === catName || c.name === catName);
+                    if (match) catName = match.name;
+                }
+
+                const prd = {
+                    id: data.id || data.uniqueId,
+                    uniqueId: data.uniqueId || data.id,
+                    ...data,
+                    name: data.name || 'Unnamed Product',
+                    category: String(catName || 'General').trim(),
+                    size: data.size || data.sizeWeight || '',
+                    sizeWeight: data.sizeWeight || data.size || '',
+                    sellingPrice: resolvedSellingPrice,
+                    salePrice: resolvedSellingPrice,
+                    price: resolvedSellingPrice,
+                    mrp: Number(data.mrp || 0),
+                    stock: resolvedStock,
+                    quantity: resolvedStock,
+                    imageUrl: data.imageUri || data.imageUrl || '',
+                    imageUri: data.imageUri || data.imageUrl || '',
+                    description: data.note || data.description || '',
+                    note: data.note || data.description || '',
+                    barcode: data.upcCode || data.barcode || data.sku || '',
+                    upcCode: data.upcCode || data.barcode || data.sku || '',
+                    variations: Array.isArray(data.variations) ? data.variations : []
+                };
+                items.push(prd);
+
+                catMap.set(prd.category, (catMap.get(prd.category) || 0) + 1);
+            }
+        });
+
+        // Apply allowed category filter if admin specified specific categories
+        if (storeSettings.categorySelectionMode === 'SPECIFIC' && Array.isArray(storeSettings.allowedCategories) && storeSettings.allowedCategories.length > 0) {
+            allProducts = items.filter(p => storeSettings.allowedCategories.includes(p.category));
+        } else {
+            allProducts = items;
+        }
+
+        // Build category list
+        categoriesList = Array.from(catMap.keys()).map(name => ({
+            name: name,
+            count: catMap.get(name)
+        }));
+
+        filteredProducts = [...allProducts];
+    } catch (err) {
+        console.warn("Could not load products:", err);
+        allProducts = [];
+        filteredProducts = [];
+        categoriesList = [];
     }
-
-    // Build category list
-    categoriesList = Array.from(catMap.keys()).map(name => ({
-        name: name,
-        count: catMap.get(name)
-    }));
-
-    filteredProducts = [...allProducts];
 };
 
 /**
@@ -297,15 +353,25 @@ const renderCustomerCatalogUI = () => {
     const app = document.getElementById('customer-app');
     if (!app) return;
 
+    const brandLogoSrc = (storeSettings.brandingMode === 'CUSTOM' && storeSettings.storeLogo)
+        ? storeSettings.storeLogo
+        : ((storeSettings.brandingMode === 'WORKSPACE' && storeSettings.workspaceLogo) ? storeSettings.workspaceLogo : 'pricelister_org.png');
+
+    const brandTagline = storeSettings.brandingMode === 'PRICELISTER' 
+        ? 'Verified PriceLister Catalog'
+        : (storeSettings.brandingMode === 'WORKSPACE' ? 'Enterprise Storefront' : 'Online Storefront');
+
     app.innerHTML = `
         <!-- HEADER -->
         <header class="cp-header">
             <div class="cp-header-inner">
                 <a href="javascript:void(0)" class="cp-brand" id="cp-brand-link">
-                    <img src="pricelister_org.png" alt="Logo" class="cp-logo">
+                    <div style="width:40px; height:40px; border-radius:10px; overflow:hidden; background:var(--surface-100); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--border-color); box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                        <img src="${escapeHtml(brandLogoSrc)}" alt="Logo" class="cp-logo" style="width:100%; height:100%; object-fit:contain;" onerror="this.src='pricelister_org.png';">
+                    </div>
                     <div>
                         <div class="cp-store-name">${escapeHtml(storeSettings.storeName)}</div>
-                        <div class="cp-store-tagline">Live Product Catalog</div>
+                        <div class="cp-store-tagline">${escapeHtml(brandTagline)}</div>
                     </div>
                 </a>
 
@@ -333,7 +399,7 @@ const renderCustomerCatalogUI = () => {
             <div class="cp-announcement-bar">
                 <div class="cp-announcement-inner">
                     <div class="cp-announcement-text">
-                        <span>📢</span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary); flex-shrink:0;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                         <span>${escapeHtml(storeSettings.announcement)}</span>
                     </div>
                     ${storeSettings.termsAndConditions ? `
@@ -399,30 +465,50 @@ const renderCustomerCatalogUI = () => {
                         <span id="cp-drawer-grand-total" style="color:var(--primary);">$0.00</span>
                     </div>
 
-                    <!-- Customer Order Details (Optional for direct inquiry) -->
-                    <div style="margin-bottom:0.85rem; display:flex; flex-direction:column; gap:0.4rem;">
-                        <input type="text" id="cp-order-customer-name" placeholder="Your Name (Optional)" class="cp-search-input" style="height:34px; font-size:0.82rem; padding:0 0.75rem;">
-                        <input type="text" id="cp-order-customer-address" placeholder="Delivery Address / Notes (Optional)" class="cp-search-input" style="height:34px; font-size:0.82rem; padding:0 0.75rem;">
+                    <!-- CUSTOMER CHECKOUT ORDER FORM -->
+                    <div style="margin:0.85rem 0; background:var(--surface-50); border:1px solid var(--border-color); border-radius:10px; padding:0.85rem; display:flex; flex-direction:column; gap:0.5rem;">
+                        <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em;">Customer Delivery Information</span>
+                        
+                        <div>
+                            <input type="text" id="cp-checkout-name" placeholder="Full Name *" required class="form-control" style="height:36px; font-size:0.85rem; padding:0 0.75rem;">
+                        </div>
+                        <div>
+                            <input type="tel" id="cp-checkout-phone" placeholder="Phone Number (e.g. 01700000000) *" required class="form-control" style="height:36px; font-size:0.85rem; padding:0 0.75rem;">
+                        </div>
+                        <div>
+                            <input type="text" id="cp-checkout-address" placeholder="Delivery Address / City *" required class="form-control" style="height:36px; font-size:0.85rem; padding:0 0.75rem;">
+                        </div>
+                        <div>
+                            <input type="text" id="cp-checkout-note" placeholder="Order Note / Landmark (Optional)" class="form-control" style="height:34px; font-size:0.82rem; padding:0 0.75rem;">
+                        </div>
                     </div>
 
-                    <div class="cp-cart-actions">
+                    <div class="cp-cart-actions" style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <button type="button" id="cp-btn-place-order" class="btn btn-primary" style="width:100%; padding:0.75rem; font-size:0.95rem; font-weight:800; display:flex; align-items:center; justify-content:center; gap:0.5rem; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Place Order (Send to Workspace)
+                        </button>
+
                         ${storeSettings.whatsappNumber ? `
-                            <button type="button" id="cp-btn-order-whatsapp" class="cp-btn-whatsapp-order" title="Send order via WhatsApp">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 15 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67Z"/></svg>
+                            <button type="button" id="cp-btn-order-whatsapp" class="cp-btn-whatsapp-order" style="padding:0.6rem; font-size:0.85rem;" title="Send order via WhatsApp">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 15 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67Z"/></svg>
                                 Send Order via WhatsApp
                             </button>
                         ` : ''}
                         
-                        <button type="button" id="cp-btn-print-slip" class="cp-btn-print-order" title="Download or print order slip">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                            Print / Download Order Slip
+                        <button type="button" id="cp-btn-print-slip" class="cp-btn-print-order" style="padding:0.55rem; font-size:0.82rem;" title="Download or print order slip">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                            Print / Download Estimate Slip
                         </button>
                     </div>
 
-                    <button type="button" id="cp-btn-clear-cart" class="cp-btn-clear-cart">Clear Shopping Cart</button>
+                    <button type="button" id="cp-btn-clear-cart" class="cp-btn-clear-cart" style="margin-top:0.4rem;">Clear Shopping Cart</button>
                 </div>
             </div>
         </div>
+
+        <!-- ORDER CONFIRMATION SLIP MODAL CONTAINER -->
+        <div id="cp-order-slip-modal-container"></div>
 
         <!-- PRODUCT QUICK VIEW MODAL CONTAINER -->
         <div id="cp-quickview-modal-container"></div>
@@ -454,7 +540,9 @@ const renderProductCardsGrid = () => {
     if (filteredProducts.length === 0) {
         grid.innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; background:#ffffff; border-radius:12px; border:1px solid var(--border-color);">
-                <div style="font-size:2.5rem; margin-bottom:0.75rem;">📦</div>
+                <div style="margin-bottom:0.75rem; color:var(--text-muted);">
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
                 <h3 style="color:var(--text-primary); margin-bottom:0.35rem;">No Products Found</h3>
                 <p style="color:var(--text-secondary); font-size:0.9rem;">Try adjusting your search or category filter.</p>
             </div>
@@ -755,6 +843,101 @@ const setupCatalogEventListeners = () => {
         });
     }
 
+    // Place Order Directly to Workspace
+    const btnPlaceOrder = document.getElementById('cp-btn-place-order');
+    if (btnPlaceOrder) {
+        btnPlaceOrder.addEventListener('click', async () => {
+            const items = Object.values(cart);
+            if (items.length === 0) {
+                alert("Your cart is empty! Please add products before placing an order.");
+                return;
+            }
+
+            const custName = (document.getElementById('cp-checkout-name')?.value || '').trim();
+            const custPhone = (document.getElementById('cp-checkout-phone')?.value || '').trim();
+            const custAddress = (document.getElementById('cp-checkout-address')?.value || '').trim();
+            const custNote = (document.getElementById('cp-checkout-note')?.value || '').trim();
+
+            if (!custName || custName.length < 2) {
+                alert("Please enter your Full Name (minimum 2 characters).");
+                document.getElementById('cp-checkout-name')?.focus();
+                return;
+            }
+
+            if (!custPhone || custPhone.length < 5) {
+                alert("Please enter a valid Phone Number (minimum 5 digits).");
+                document.getElementById('cp-checkout-phone')?.focus();
+                return;
+            }
+
+            if (!custAddress || custAddress.length < 3) {
+                alert("Please enter your Delivery Address.");
+                document.getElementById('cp-checkout-address')?.focus();
+                return;
+            }
+
+            const { total } = getCartTotals();
+
+            // Set loading state
+            btnPlaceOrder.disabled = true;
+            btnPlaceOrder.innerHTML = `
+                <div style="width:16px; height:16px; border:2px solid #ffffff; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+                <span>Sending Order to Workspace...</span>
+            `;
+
+            try {
+                const orderService = getOrderService(currentWorkspaceId);
+
+                const orderPayload = {
+                    customerName: custName,
+                    customerPhone: custPhone,
+                    customerAddress: custAddress,
+                    orderNote: custNote,
+                    currencySymbol: storeSettings.currencySymbol || '$',
+                    items: items.map(it => ({
+                        productId: it.product.id || it.product.uniqueId,
+                        productName: it.product.name,
+                        quantity: Number(it.quantity) || 1,
+                        unitPrice: Number(it.product.sellingPrice || it.product.price || 0),
+                        totalPrice: (Number(it.quantity) || 1) * Number(it.product.sellingPrice || it.product.price || 0),
+                        imageUri: it.product.imageUrl || '',
+                        sizeWeight: it.product.size || ''
+                    })),
+                    subtotal: total,
+                    totalAmount: total,
+                    status: 'PENDING',
+                    paymentMethod: 'Cash on Delivery (COD)',
+                    source: 'CUSTOMER_PORTAL'
+                };
+
+                const createdOrder = await orderService.createOrder(orderPayload);
+
+                // Clear cart after successful order placement
+                cart = {};
+                saveCartToStorage();
+                renderProductCardsGrid();
+                updateCartHeaderBadge();
+
+                // Close cart drawer
+                const cartOverlay = document.getElementById('cp-cart-overlay');
+                if (cartOverlay) cartOverlay.classList.remove('open');
+
+                // Display dedicated Order Confirmation Slip Modal
+                showCustomerPlacedOrderSlipModal(createdOrder);
+
+            } catch (err) {
+                console.error("Order placement error:", err);
+                alert("Could not place order: " + (err.message || 'Please check your connection.'));
+            } finally {
+                btnPlaceOrder.disabled = false;
+                btnPlaceOrder.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Place Order (Send to Workspace)
+                `;
+            }
+        });
+    }
+
     // WhatsApp Order Dispatcher
     const btnWhatsapp = document.getElementById('cp-btn-order-whatsapp');
     if (btnWhatsapp) {
@@ -765,11 +948,14 @@ const setupCatalogEventListeners = () => {
                 return;
             }
 
-            const custName = document.getElementById('cp-order-customer-name')?.value?.trim() || 'Customer';
-            const custAddress = document.getElementById('cp-order-customer-address')?.value?.trim() || '';
+            const custName = document.getElementById('cp-checkout-name')?.value?.trim() || 'Customer';
+            const custPhone = document.getElementById('cp-checkout-phone')?.value?.trim() || '';
+            const custAddress = document.getElementById('cp-checkout-address')?.value?.trim() || '';
+            const custNote = document.getElementById('cp-checkout-note')?.value?.trim() || '';
             const { total } = getCartTotals();
 
             let msg = `🛒 *New Order from ${custName}*\n`;
+            if (custPhone) msg += `📞 *Phone:* ${custPhone}\n`;
             msg += `Store: *${storeSettings.storeName}*\n`;
             msg += `----------------------------------------\n`;
 
@@ -784,7 +970,10 @@ const setupCatalogEventListeners = () => {
             msg += `----------------------------------------\n`;
             msg += `💰 *Grand Total: ${formatPrice(total)}*\n`;
             if (custAddress) {
-                msg += `📍 *Delivery / Notes:* ${custAddress}\n`;
+                msg += `📍 *Delivery Address:* ${custAddress}\n`;
+            }
+            if (custNote) {
+                msg += `📝 *Note:* ${custNote}\n`;
             }
             msg += `\n_Generated via PriceLister Customer Portal_`;
 
@@ -799,7 +988,7 @@ const setupCatalogEventListeners = () => {
         });
     }
 
-    // Print Order Slip
+    // Print Estimate Order Slip
     const btnPrint = document.getElementById('cp-btn-print-slip');
     if (btnPrint) {
         btnPrint.addEventListener('click', () => {
@@ -817,6 +1006,167 @@ const setupCatalogEventListeners = () => {
     if (btnTerms) {
         btnTerms.addEventListener('click', () => {
             openTermsModal();
+        });
+    }
+};
+
+/**
+ * Display Confirmed Order Slip Modal after placing order
+ */
+const showCustomerPlacedOrderSlipModal = (order) => {
+    let container = document.getElementById('cp-order-slip-modal-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'cp-order-slip-modal-container';
+        document.body.appendChild(container);
+    }
+
+    const curr = order.currencySymbol || storeSettings.currencySymbol || '$';
+    const dateStr = new Date(order.createdAt || Date.now()).toLocaleString(undefined, {
+        dateStyle: 'medium', timeStyle: 'short'
+    });
+
+    container.innerHTML = `
+        <div style="position:fixed; inset:0; background:rgba(15,23,42,0.8); backdrop-filter:blur(8px); z-index:9999; display:flex; align-items:center; justify-content:center; padding:1rem;">
+            <div class="card" style="background:#ffffff; border-radius:18px; max-width:540px; width:100%; box-shadow:0 25px 60px -15px rgba(0,0,0,0.5); overflow:hidden; border:1px solid rgba(225,29,72,0.2); animation:modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+                
+                <!-- MODAL HEADER -->
+                <div style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); padding:1.5rem; text-align:center; color:#ffffff; position:relative;">
+                    <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; margin:0 auto 0.75rem;">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <h3 style="margin:0 0 0.25rem 0; font-size:1.35rem; font-weight:800;">Order Placed Successfully!</h3>
+                    <p style="margin:0; font-size:0.85rem; opacity:0.95;">Sent directly to workspace team for fast confirmation & dispatch</p>
+                </div>
+
+                <!-- SLIP BODY -->
+                <div id="placed-slip-content" style="padding:1.5rem; font-size:0.88rem; color:var(--text-primary); max-height:65vh; overflow-y:auto;">
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem; border-bottom:1px dashed var(--border-color); padding-bottom:1rem;">
+                        <div>
+                            <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Order Number</span>
+                            <div style="font-size:1.15rem; font-weight:800; color:var(--primary); font-family:monospace;">#${escapeHtml(order.orderNumber || order.id)}</div>
+                            <span style="font-size:0.78rem; color:var(--text-muted);">${dateStr}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Order Status</span>
+                            <div style="margin-top:0.2rem;"><span style="background:#fef3c7; color:#b45309; font-weight:700; font-size:0.78rem; padding:0.2rem 0.6rem; border-radius:999px;">🟡 Pending Confirmation</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Info Box -->
+                    <div style="background:var(--surface-50); border-radius:10px; padding:0.9rem; margin-bottom:1.25rem; border:1px solid var(--border-color);">
+                        <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:0.35rem;">Customer Details</span>
+                        <div style="font-weight:700; color:var(--text-primary); font-size:0.95rem;">${escapeHtml(order.customerName)}</div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.2rem;">📞 ${escapeHtml(order.customerPhone)}</div>
+                        <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.2rem;">📍 ${escapeHtml(order.customerAddress)}</div>
+                        ${order.orderNote ? `
+                            <div style="font-size:0.8rem; color:#b45309; background:#fef3c7; padding:0.25rem 0.5rem; border-radius:6px; margin-top:0.4rem;">
+                                <strong>Note:</strong> ${escapeHtml(order.orderNote)}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Items List -->
+                    <div style="margin-bottom:1.25rem;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--border-color); color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
+                                    <th style="text-align:left; padding:0.4rem 0;">Item</th>
+                                    <th style="text-align:center; padding:0.4rem 0;">Qty</th>
+                                    <th style="text-align:right; padding:0.4rem 0;">Price</th>
+                                    <th style="text-align:right; padding:0.4rem 0;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(order.items || []).map(item => `
+                                    <tr style="border-bottom:1px solid var(--surface-100);">
+                                        <td style="padding:0.5rem 0; font-weight:600; color:var(--text-primary);">${escapeHtml(item.productName)}</td>
+                                        <td style="padding:0.5rem 0; text-align:center;">${item.quantity}</td>
+                                        <td style="padding:0.5rem 0; text-align:right;">${curr}${Number(item.unitPrice || 0).toFixed(2)}</td>
+                                        <td style="padding:0.5rem 0; text-align:right; font-weight:700;">${curr}${Number(item.totalPrice || (item.quantity * item.unitPrice) || 0).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Total Breakdown -->
+                    <div style="border-top:1px dashed var(--border-color); padding-top:0.75rem; display:flex; flex-direction:column; gap:0.35rem;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-secondary);">
+                            <span>Subtotal</span>
+                            <span>${curr}${Number(order.subtotal || order.totalAmount || 0).toFixed(2)}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800; color:var(--text-primary); border-top:1px solid var(--border-color); padding-top:0.5rem; margin-top:0.25rem;">
+                            <span>Total Payable (COD)</span>
+                            <span style="color:var(--primary);">${curr}${Number(order.totalAmount || 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- MODAL FOOTER -->
+                <div style="background:var(--surface-50); border-top:1px solid var(--border-color); padding:1rem 1.5rem; display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+                    <button type="button" id="btn-print-placed-slip" class="btn btn-secondary" style="font-weight:600; font-size:0.85rem; display:flex; align-items:center; gap:0.4rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        Print Slip
+                    </button>
+                    ${storeSettings.whatsappNumber ? `
+                        <button type="button" id="btn-wa-placed-slip" class="btn btn-secondary" style="font-weight:600; font-size:0.85rem; display:flex; align-items:center; gap:0.4rem; color:#059669;">
+                            WhatsApp Share
+                        </button>
+                    ` : ''}
+                    <button type="button" id="btn-close-placed-slip" class="btn btn-primary" style="font-weight:700; font-size:0.85rem; padding:0.5rem 1.25rem; background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        Continue Browsing
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    `;
+
+    document.getElementById('btn-close-placed-slip')?.addEventListener('click', () => container.remove());
+    document.getElementById('btn-print-placed-slip')?.addEventListener('click', () => {
+        const printContent = document.getElementById('placed-slip-content').innerHTML;
+        const printWindow = window.open('', '', 'width=650,height=750');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Order Slip - #${order.orderNumber || order.id}</title>
+                    <style>
+                        body { font-family: 'Inter', sans-serif; padding: 2rem; color: #0f172a; line-height: 1.5; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+                        th, td { padding: 0.5rem; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+                        th { text-align: left; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; }
+                    </style>
+                </head>
+                <body>
+                    <h2 style="margin:0 0 0.25rem 0;">${escapeHtml(storeSettings.storeName)} — Order Slip</h2>
+                    ${printContent}
+                    <script>window.print(); window.close();</script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    });
+
+    const waBtn = document.getElementById('btn-wa-placed-slip');
+    if (waBtn) {
+        waBtn.addEventListener('click', () => {
+            let msg = `✅ *Confirmed Order #${order.orderNumber || order.id}*\n`;
+            msg += `Customer: *${order.customerName}* (📞 ${order.customerPhone})\n`;
+            msg += `Store: *${storeSettings.storeName}*\n`;
+            msg += `----------------------------------------\n`;
+            (order.items || []).forEach((item, idx) => {
+                msg += `${idx + 1}. *${item.productName}* × ${item.quantity} = ${curr}${Number(item.totalPrice).toFixed(2)}\n`;
+            });
+            msg += `----------------------------------------\n`;
+            msg += `💰 *Total: ${curr}${Number(order.totalAmount).toFixed(2)}*\n`;
+            if (order.customerAddress) msg += `📍 *Address:* ${order.customerAddress}\n`;
+
+            let cleanPhone = (storeSettings.whatsappNumber || '').replace(/[^0-9]/g, '');
+            if (!cleanPhone.startsWith('880') && cleanPhone.startsWith('01')) cleanPhone = '88' + cleanPhone;
+            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
         });
     }
 };
@@ -1000,9 +1350,9 @@ const openTermsModal = () => {
                     </div>
                     ${storeSettings.phone || storeSettings.email ? `
                         <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color); font-size:0.85rem; color:var(--text-muted);">
-                            ${storeSettings.phone ? `<div>📞 Phone: ${escapeHtml(storeSettings.phone)}</div>` : ''}
-                            ${storeSettings.email ? `<div>✉️ Email: ${escapeHtml(storeSettings.email)}</div>` : ''}
-                            ${storeSettings.address ? `<div>📍 Address: ${escapeHtml(storeSettings.address)}</div>` : ''}
+                            ${storeSettings.phone ? `<div>Phone: ${escapeHtml(storeSettings.phone)}</div>` : ''}
+                            ${storeSettings.email ? `<div>Email: ${escapeHtml(storeSettings.email)}</div>` : ''}
+                            ${storeSettings.address ? `<div>Address: ${escapeHtml(storeSettings.address)}</div>` : ''}
                         </div>
                     ` : ''}
                 </div>
@@ -1043,10 +1393,10 @@ const renderTemporaryClosedState = () => {
             ${storeSettings.phone || storeSettings.email || storeSettings.address ? `
                 <div class="cp-closed-contact-box">
                     <strong style="color:var(--text-primary); display:block; margin-bottom:0.35rem;">Store Contact Info:</strong>
-                    ${storeSettings.phone ? `<div>📞 <strong>Phone:</strong> ${escapeHtml(storeSettings.phone)}</div>` : ''}
-                    ${storeSettings.whatsappNumber ? `<div>💬 <strong>WhatsApp:</strong> ${escapeHtml(storeSettings.whatsappNumber)}</div>` : ''}
-                    ${storeSettings.email ? `<div>✉️ <strong>Email:</strong> ${escapeHtml(storeSettings.email)}</div>` : ''}
-                    ${storeSettings.address ? `<div>📍 <strong>Address:</strong> ${escapeHtml(storeSettings.address)}</div>` : ''}
+                    ${storeSettings.phone ? `<div>Phone: ${escapeHtml(storeSettings.phone)}</div>` : ''}
+                    ${storeSettings.whatsappNumber ? `<div>WhatsApp: ${escapeHtml(storeSettings.whatsappNumber)}</div>` : ''}
+                    ${storeSettings.email ? `<div>Email: ${escapeHtml(storeSettings.email)}</div>` : ''}
+                    ${storeSettings.address ? `<div>Address: ${escapeHtml(storeSettings.address)}</div>` : ''}
                 </div>
             ` : ''}
 
@@ -1066,7 +1416,9 @@ const renderNoWorkspaceState = () => {
 
     app.innerHTML = `
         <div class="cp-closed-container" style="margin-top:12vh;">
-            <div style="font-size:3rem; margin-bottom:1rem;">🏪</div>
+            <div style="width:48px; height:48px; border-radius:50%; background:var(--surface-100); display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; color:var(--text-muted);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            </div>
             <h1 class="cp-closed-title">Store Link Required</h1>
             <p class="cp-closed-message">
                 Please open the Customer Panel using a valid shareable link provided by the store admin (e.g. <code>customer.html?ws=YOUR_STORE_ID</code>).
@@ -1084,7 +1436,9 @@ const renderErrorState = (msg) => {
 
     app.innerHTML = `
         <div class="cp-closed-container" style="margin-top:12vh;">
-            <div style="font-size:3rem; margin-bottom:1rem;">⚠️</div>
+            <div style="width:48px; height:48px; border-radius:50%; background:#fff1f2; color:#e11d48; display:flex; align-items:center; justify-content:center; margin:0 auto 1rem;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
             <h1 class="cp-closed-title">Notice</h1>
             <p class="cp-closed-message">${escapeHtml(msg)}</p>
         </div>

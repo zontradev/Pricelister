@@ -88,7 +88,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                     <div class="iv-preview-toolbar">
                         <div class="iv-view-tabs">
                             <button type="button" class="iv-view-tab active" id="iv-tab-visual">Visual Preview</button>
-                            <button type="button" class="iv-view-tab" id="iv-tab-perf">📊 Invoice Performance</button>
+                            <button type="button" class="iv-view-tab" id="iv-tab-perf">Invoice Performance</button>
                             <button type="button" class="iv-view-tab" id="iv-tab-pdf">Live Vector PDF</button>
                         </div>
                         <span style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">Real-time sync</span>
@@ -126,7 +126,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <div class="iv-template-card active" data-template="MODERN_RED">
                                 <div class="iv-tmpl-preview-bar" style="background:#e11d48;"></div>
                                 <div class="iv-tmpl-content">
-                                    <div class="iv-tmpl-name">🔴 Modern Corporate Red</div>
+                                    <div class="iv-tmpl-name">Modern Corporate Red</div>
                                     <div class="iv-tmpl-desc">Vercel/Stripe bold crimson header banner & highlighted totals block.</div>
                                 </div>
                             </div>
@@ -135,7 +135,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <div class="iv-template-card" data-template="MINIMAL_LUXURY">
                                 <div class="iv-tmpl-preview-bar" style="background:#cbd5e1; border-top: 2px solid #e11d48;"></div>
                                 <div class="iv-tmpl-content">
-                                    <div class="iv-tmpl-name">✨ Minimalist Clean Luxury</div>
+                                    <div class="iv-tmpl-name">Minimalist Clean Luxury</div>
                                     <div class="iv-tmpl-desc">Spacious fine borders, crimson dividers & high-end typography.</div>
                                 </div>
                             </div>
@@ -144,7 +144,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <div class="iv-template-card" data-template="EXECUTIVE_RECEIPT">
                                 <div class="iv-tmpl-preview-bar" style="background:#475569; border-top: 2px dashed #e11d48;"></div>
                                 <div class="iv-tmpl-content">
-                                    <div class="iv-tmpl-name">🧾 Executive Receipt Style</div>
+                                    <div class="iv-tmpl-name">Executive Receipt Style</div>
                                     <div class="iv-tmpl-desc">Classic receipt / POS format with dashed separators and centered brand.</div>
                                 </div>
                             </div>
@@ -153,7 +153,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <div class="iv-template-card" data-template="DARK_HEADER">
                                 <div class="iv-tmpl-preview-bar" style="background:#0f172a; border-bottom: 2px solid #e11d48;"></div>
                                 <div class="iv-tmpl-content">
-                                    <div class="iv-tmpl-name">🖤 Dark Header Elegance</div>
+                                    <div class="iv-tmpl-name">Dark Header Elegance</div>
                                     <div class="iv-tmpl-desc">Solid slate navy header with vibrant red badges & striped table.</div>
                                 </div>
                             </div>
@@ -169,7 +169,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <label class="iv-branding-option">
                                 <input type="radio" name="iv-branding-mode" value="WORKSPACE" ${currentOptions.brandingMode === 'WORKSPACE' ? 'checked' : ''}>
                                 <div>
-                                    <strong style="color:var(--text-primary); font-size:0.85rem; display:block;">🏷️ Workspace Store Branding</strong>
+                                    <strong style="color:var(--text-primary); font-size:0.85rem; display:block;">Business Branding</strong>
                                     <span style="font-size:0.75rem; color:var(--text-secondary);">Use current workspace name, address, phone & currency.</span>
                                 </div>
                             </label>
@@ -177,15 +177,15 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <label class="iv-branding-option">
                                 <input type="radio" name="iv-branding-mode" value="PRICELISTER" ${currentOptions.brandingMode === 'PRICELISTER' ? 'checked' : ''}>
                                 <div>
-                                    <strong style="color:var(--text-primary); font-size:0.85rem; display:block;">⭐ PriceLister Official Branding</strong>
-                                    <span style="font-size:0.75rem; color:var(--text-secondary);">Include PriceLister logo & official commercial header.</span>
+                                    <strong style="color:var(--text-primary); font-size:0.85rem; display:block;">PriceLister Branding</strong>
+                                    <span style="font-size:0.75rem; color:var(--text-secondary);">Include PriceLister logo & commercial header.</span>
                                 </div>
                             </label>
 
                             <label class="iv-branding-option">
                                 <input type="radio" name="iv-branding-mode" value="CUSTOM" ${currentOptions.brandingMode === 'CUSTOM' ? 'checked' : ''}>
                                 <div>
-                                    <strong style="color:var(--text-primary); font-size:0.85rem; display:block;">✏️ Custom Company Branding</strong>
+                                    <strong style="color:var(--text-primary); font-size:0.85rem; display:block;">Custom Business Branding</strong>
                                     <span style="font-size:0.75rem; color:var(--text-secondary);">Specify custom title, custom address, phone, and tagline.</span>
                                 </div>
                             </label>
@@ -193,7 +193,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <label class="iv-branding-option">
                                 <input type="radio" name="iv-branding-mode" value="NONE" ${currentOptions.brandingMode === 'NONE' ? 'checked' : ''}>
                                 <div>
-                                    <strong style="color:var(--text-primary); font-size:0.85rem; display:block;">🚫 White-Label (No Branding)</strong>
+                                    <strong style="color:var(--text-primary); font-size:0.85rem; display:block;">White-Label (No Branding)</strong>
                                     <span style="font-size:0.75rem; color:var(--text-secondary);">Pure clean document with zero external platform logos.</span>
                                 </div>
                             </label>
@@ -455,9 +455,14 @@ const updateVisualPreview = () => {
     const items = Array.isArray(inv.items) ? inv.items : [];
     const subtotal = Number(inv.subtotal || inv.totalPrice || 0);
     const discountPct = Number(inv.discountPercent || 0);
+    const addCut = Number(inv.additionalCut || 0);
     const taxPct = Number(inv.taxPercent || 0);
     const shipping = Number(inv.shippingCost || 0);
-    const grandTotal = Number(inv.totalPrice || inv.grandTotal || subtotal);
+
+    const discountAmount = discountPct > 0 ? (subtotal * discountPct) / 100 : 0;
+    const baseForTax = Math.max(0, subtotal - discountAmount - addCut);
+    const taxAmount = taxPct > 0 ? (baseForTax * taxPct) / 100 : 0;
+    const grandTotal = Number(inv.totalPrice || inv.grandTotal || (baseForTax + taxAmount + shipping));
 
     const isPaid = invStatus === 'PAID';
     const statusBadgeClass = isPaid ? 'iv-badge-paid' : 'iv-badge-unpaid';
@@ -551,13 +556,19 @@ const updateVisualPreview = () => {
                     ${discountPct > 0 ? `
                         <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#059669; margin-bottom:0.35rem;">
                             <span>Discount (${discountPct}%):</span>
-                            <span>-${formatCurrency((subtotal * discountPct) / 100, currentOptions.currencySymbol)}</span>
+                            <span>-${formatCurrency(discountAmount, currentOptions.currencySymbol)}</span>
+                        </div>
+                    ` : ''}
+                    ${addCut > 0 ? `
+                        <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#e11d48; margin-bottom:0.35rem;">
+                            <span>Additional Cut:</span>
+                            <span>-${formatCurrency(addCut, currentOptions.currencySymbol)}</span>
                         </div>
                     ` : ''}
                     ${taxPct > 0 ? `
                         <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#64748b; margin-bottom:0.35rem;">
                             <span>Tax (${taxPct}%):</span>
-                            <span>+${formatCurrency((subtotal * taxPct) / 100, currentOptions.currencySymbol)}</span>
+                            <span>+${formatCurrency(taxAmount, currentOptions.currencySymbol)}</span>
                         </div>
                     ` : ''}
                     ${shipping > 0 ? `
@@ -621,11 +632,35 @@ const updateVisualPreview = () => {
             </table>
 
             <div style="display:flex; justify-content:flex-end; margin-top:1.5rem;">
-                <div style="width:200px;">
+                <div style="width:220px;">
                     <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:0.35rem;">
                         <span>Subtotal:</span>
                         <span>${formatCurrency(subtotal, currentOptions.currencySymbol)}</span>
                     </div>
+                    ${discountPct > 0 ? `
+                        <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#059669; margin-bottom:0.35rem;">
+                            <span>Discount (${discountPct}%):</span>
+                            <span>-${formatCurrency(discountAmount, currentOptions.currencySymbol)}</span>
+                        </div>
+                    ` : ''}
+                    ${addCut > 0 ? `
+                        <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#e11d48; margin-bottom:0.35rem;">
+                            <span>Additional Cut:</span>
+                            <span>-${formatCurrency(addCut, currentOptions.currencySymbol)}</span>
+                        </div>
+                    ` : ''}
+                    ${taxPct > 0 ? `
+                        <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#64748b; margin-bottom:0.35rem;">
+                            <span>Tax (${taxPct}%):</span>
+                            <span>+${formatCurrency(taxAmount, currentOptions.currencySymbol)}</span>
+                        </div>
+                    ` : ''}
+                    ${shipping > 0 ? `
+                        <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#64748b; margin-bottom:0.35rem;">
+                            <span>Shipping:</span>
+                            <span>+${formatCurrency(shipping, currentOptions.currencySymbol)}</span>
+                        </div>
+                    ` : ''}
                     <div style="display:flex; justify-content:space-between; font-size:1.05rem; font-weight:800; color:#0f172a; border-top:1px solid #0f172a; padding-top:0.5rem;">
                         <span>Total:</span>
                         <span style="color:#e11d48;">${formatCurrency(grandTotal, currentOptions.currencySymbol)}</span>

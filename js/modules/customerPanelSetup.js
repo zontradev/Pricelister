@@ -9,6 +9,7 @@ import { getSettingsService } from '../services/settingsService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { showAlert } from '../alert-handler.js';
 import { getAppCurrencySymbol } from '../utilities.js';
+import { VALID_DEPLOY_COUNTRIES, VALID_BRANDING_MODES } from '../schemas/customerPanelSchema.js';
 
 export const renderCustomerPanelSetup = async (container, workspaceId) => {
     const currentUser = authService.getCurrentUser();
@@ -55,14 +56,26 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         showAlert.error("Could not load Customer Panel settings.");
     }
 
-    // Calculate customer link
+    // Base origin URL
     const baseUrl = window.location.origin + window.location.pathname.replace('app.html', 'customer.html');
-    const customerPanelUrl = `${baseUrl}?ws=${workspaceId}`;
+
+    const computeCustomerUrl = (settings) => {
+        const slug = (settings.customSlug || '').trim().toLowerCase();
+        if (slug) {
+            return `${baseUrl}?shop=${encodeURIComponent(slug)}`;
+        }
+        return `${baseUrl}?ws=${encodeURIComponent(workspaceId)}`;
+    };
 
     const isPublished = Boolean(panelSettings.isPublished || panelSettings.enabled);
 
     const renderMainUI = (settings) => {
         const isLive = Boolean(settings.isPublished || settings.enabled);
+        const currentPortalUrl = computeCustomerUrl(settings);
+        const brandingMode = settings.brandingMode || 'PRICELISTER';
+        const selectedCountry = settings.deployCountry || 'Global';
+        const wsLogo = settings.workspaceLogo || window.__activeWorkspace?.logoUrl || '';
+        const storeLogo = settings.storeLogo || '';
 
         // Sync sidebar status pill
         const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
@@ -101,7 +114,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     </button>
 
                     ${isLive ? `
-                        <a href="${customerPanelUrl}" target="_blank" class="btn btn-secondary" style="font-weight:600; display:flex; align-items:center; gap:0.4rem; color:var(--text-primary);" title="Open customer catalog in a separate new browser tab">
+                        <a href="${currentPortalUrl}" target="_blank" class="btn btn-secondary" style="font-weight:600; display:flex; align-items:center; gap:0.4rem; color:var(--text-primary);" title="Open customer catalog in a separate new browser tab">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                             Open Storefront ↗
                         </a>
@@ -124,7 +137,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                         <div style="display:flex; align-items:center; gap:1rem;">
                             <div style="width:42px; height:42px; border-radius:50%; background:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(225,29,72,0.15); flex-shrink:0;">
-                                <span style="font-size:1.4rem;">🔒</span>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                             </div>
                             <div>
                                 <h4 style="margin:0 0 0.2rem 0; font-size:1rem; font-weight:700; color:#9f1239;">Storefront Is Currently Unpublished</h4>
@@ -134,7 +147,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                             </div>
                         </div>
                         <button type="button" id="btn-banner-launch" class="btn btn-primary" style="background:#e11d48; border-color:#e11d48; font-weight:700; padding:0.5rem 1.15rem; font-size:0.88rem; display:flex; align-items:center; gap:0.4rem;">
-                            <span>🚀</span> Launch Now
+                            Launch Now
                         </button>
                     </div>
                 </div>
@@ -144,7 +157,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                         <div style="display:flex; align-items:center; gap:1rem;">
                             <div style="width:42px; height:42px; border-radius:50%; background:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(16,185,129,0.15); flex-shrink:0;">
-                                <span style="font-size:1.4rem;">🟢</span>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                             </div>
                             <div>
                                 <h4 style="margin:0 0 0.2rem 0; font-size:1rem; font-weight:700; color:#065f46;">Storefront is Live and Published</h4>
@@ -154,26 +167,42 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                             </div>
                         </div>
                         <div style="display:flex; gap:0.5rem;">
-                            <a href="${customerPanelUrl}" target="_blank" class="btn btn-primary" style="background:#059669; border-color:#059669; font-weight:700; padding:0.5rem 1.15rem; font-size:0.88rem; display:flex; align-items:center; gap:0.4rem;">
-                                <span>🚀</span> View Live Catalog
+                            <a href="${currentPortalUrl}" target="_blank" class="btn btn-primary" style="background:#059669; border-color:#059669; font-weight:700; padding:0.5rem 1.15rem; font-size:0.88rem; display:flex; align-items:center; gap:0.4rem;">
+                                View Live Catalog ↗
                             </a>
                         </div>
                     </div>
                 </div>
             `}
 
-            <!-- SHAREABLE LINK HERO CARD -->
+            <!-- BRANDING, DOMAIN & CUSTOM LINK HERO CARD -->
             <div class="card" style="margin-bottom: 1.5rem; background: #ffffff; border-left: 4px solid var(--primary); padding: 1.25rem 1.5rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-                    <div style="flex:1; min-width:280px;">
-                        <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Shareable Customer Catalog Link</span>
-                        <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.35rem;">
-                            <input type="text" id="customer-panel-url-input" readonly value="${customerPanelUrl}" class="form-control" style="font-family:monospace; font-size:0.85rem; background:var(--surface-50); color:var(--text-primary); cursor:pointer; flex:1;" title="Click to copy">
-                            <button type="button" id="btn-copy-input-link" class="btn btn-secondary" style="font-size:0.85rem; font-weight:600; white-space:nowrap;">Copy</button>
+                <div style="display:flex; flex-direction:column; gap:1rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+                        <div>
+                            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Public Storefront URL & Custom Link</span>
+                            <h4 style="margin:0.2rem 0 0 0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">Share with Customers</h4>
                         </div>
+                        <span style="font-size:0.8rem; background:var(--surface-100); padding:0.25rem 0.65rem; border-radius:6px; font-weight:600; color:var(--text-secondary);">
+                            Deploy Country: <strong>${escapeHtml(selectedCountry)}</strong>
+                        </span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="font-size:0.85rem; color:var(--text-secondary);">Customers can browse & calculate orders on any phone, tablet, or PC without logging in.</span>
+
+                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; flex:1; min-width:280px; background:var(--surface-50); border:1px solid var(--border-color); border-radius:8px; overflow:hidden;">
+                            <span style="padding:0.55rem 0.85rem; background:var(--surface-100); border-right:1px solid var(--border-color); color:var(--text-secondary); font-size:0.85rem; font-weight:600; white-space:nowrap;">
+                                pricelister.com/
+                            </span>
+                            <input type="text" id="cp-custom-slug-input" class="form-control" style="border:none; background:transparent; font-size:0.88rem; font-weight:700; color:var(--primary); padding:0.55rem 0.75rem; box-shadow:none;" value="${escapeHtml(settings.customSlug || '')}" placeholder="your-store-link (e.g. worksapceshop)">
+                        </div>
+                        <button type="button" id="btn-copy-input-link" class="btn btn-secondary" style="font-size:0.85rem; font-weight:600; white-space:nowrap; display:flex; align-items:center; gap:0.4rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            Copy Link
+                        </button>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:var(--text-secondary); flex-wrap:wrap; gap:0.5rem;">
+                        <span>Actual live URL: <code id="cp-live-url-preview" style="color:var(--text-primary); background:var(--surface-100); padding:0.15rem 0.45rem; border-radius:4px;">${currentPortalUrl}</code></span>
+                        <span>Only alphanumeric characters and hyphens allowed for custom slug.</span>
                     </div>
                 </div>
             </div>
@@ -181,9 +210,105 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
             <!-- CONFIGURATION FORM -->
             <form id="customer-panel-form" style="display:flex; flex-direction:column; gap:1.5rem;">
                 
-                <!-- 1. CLOUD SYNC & SUBFIELD INFO -->
+                <!-- 1. BRANDING & DEPLOY CONFIGURATION -->
                 <div class="card" style="padding:1.5rem;">
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">1. Firebase Cloud Subfield Storage</h3>
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">1. Branding Choice & Deploy Country</h3>
+                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Choose how your storefront is branded for visitors, select your deploy country, and customize logos.</p>
+
+                    <!-- BRANDING SELECTION CARDS -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                        
+                        <!-- Option A: PriceLister Branding -->
+                        <label class="cp-branding-card" style="border:2px solid ${brandingMode === 'PRICELISTER' ? 'var(--primary)' : 'var(--border-color)'}; background:${brandingMode === 'PRICELISTER' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:12px; padding:1.25rem; cursor:pointer; display:flex; flex-direction:column; gap:0.6rem; transition:all 0.2s ease;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <div style="display:flex; align-items:center; gap:0.6rem;">
+                                    <input type="radio" name="cp-branding-mode" value="PRICELISTER" ${brandingMode === 'PRICELISTER' ? 'checked' : ''}>
+                                    <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">PriceLister Branding</span>
+                                </div>
+                                <span style="font-size:0.72rem; background:rgba(225,29,72,0.1); color:var(--primary); padding:0.15rem 0.5rem; border-radius:999px; font-weight:700;">Default</span>
+                            </div>
+                            <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">
+                                Displays the official PriceLister badge, certified secure catalog badge, and standard platform styling.
+                            </p>
+                        </label>
+
+                        <!-- Option B: Custom Branding -->
+                        <label class="cp-branding-card" style="border:2px solid ${brandingMode === 'CUSTOM' ? 'var(--primary)' : 'var(--border-color)'}; background:${brandingMode === 'CUSTOM' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:12px; padding:1.25rem; cursor:pointer; display:flex; flex-direction:column; gap:0.6rem; transition:all 0.2s ease;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <div style="display:flex; align-items:center; gap:0.6rem;">
+                                    <input type="radio" name="cp-branding-mode" value="CUSTOM" ${brandingMode === 'CUSTOM' ? 'checked' : ''}>
+                                    <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">Custom Branding</span>
+                                </div>
+                                <span style="font-size:0.72rem; background:#f1f5f9; color:#475569; padding:0.15rem 0.5rem; border-radius:999px; font-weight:700;">Custom Logo</span>
+                            </div>
+                            <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">
+                                Upload your dedicated Store Logo, custom store name, and tailored brand visuals.
+                            </p>
+                        </label>
+
+                        <!-- Option C: Workspace Branding -->
+                        <label class="cp-branding-card" style="border:2px solid ${brandingMode === 'WORKSPACE' ? 'var(--primary)' : 'var(--border-color)'}; background:${brandingMode === 'WORKSPACE' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:12px; padding:1.25rem; cursor:pointer; display:flex; flex-direction:column; gap:0.6rem; transition:all 0.2s ease;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <div style="display:flex; align-items:center; gap:0.6rem;">
+                                    <input type="radio" name="cp-branding-mode" value="WORKSPACE" ${brandingMode === 'WORKSPACE' ? 'checked' : ''}>
+                                    <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">Workspace Branding</span>
+                                </div>
+                                <span style="font-size:0.72rem; background:#ecfdf5; color:#059669; padding:0.15rem 0.5rem; border-radius:999px; font-weight:700;">Enterprise</span>
+                            </div>
+                            <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">
+                                Automatically uses your Workspace Name and Workspace Broad Logo for a unified enterprise presence.
+                            </p>
+                        </label>
+                    </div>
+
+                    <!-- DEPLOY COUNTRY & STORE LOGOS ROW -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
+                        
+                        <!-- Deploy Country Dropdown (Required) -->
+                        <div>
+                            <label style="font-weight:700; font-size:0.88rem; margin-bottom:0.35rem; display:block; color:var(--text-primary);">
+                                Deploy Country * <span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">(Required for catalog currency & regional routing)</span>
+                            </label>
+                            <select id="cp-deploy-country" required class="form-control" style="font-weight:600; font-size:0.9rem;">
+                                ${VALID_DEPLOY_COUNTRIES.map(country => `
+                                    <option value="${escapeHtml(country)}" ${selectedCountry === country ? 'selected' : ''}>
+                                        ${escapeHtml(country)}
+                                    </option>
+                                `).join('')}
+                            </select>
+                            <small style="color:var(--text-secondary); font-size:0.78rem; margin-top:0.25rem; display:block;">
+                                Target market country for currency, phone formatting, and local operations.
+                            </small>
+                        </div>
+
+                        <!-- Store / Workspace Logo Section -->
+                        <div>
+                            <label style="font-weight:700; font-size:0.88rem; margin-bottom:0.35rem; display:block; color:var(--text-primary);">
+                                Custom Store Logo URL / Workspace Logo Broad View
+                            </label>
+                            <div style="display:flex; gap:0.75rem; align-items:center;">
+                                <div id="cp-logo-broad-preview" style="width:52px; height:52px; border-radius:12px; background:var(--surface-100); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+                                    ${(storeLogo || wsLogo) ? `
+                                        <img src="${escapeHtml(storeLogo || wsLogo)}" alt="Store Logo" style="width:100%; height:100%; object-fit:contain;">
+                                    ` : `
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                                    `}
+                                </div>
+                                <div style="flex:1;">
+                                    <input type="url" id="cp-store-logo-input" class="form-control" value="${escapeHtml(storeLogo)}" placeholder="https://... (Direct image URL for Store Logo)">
+                                </div>
+                            </div>
+                            <small style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem; display:block;">
+                                If using Workspace Branding, workspace logo is used automatically.
+                            </small>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 2. CLOUD SYNC & STATUS -->
+                <div class="card" style="padding:1.5rem;">
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">2. Firebase Cloud Subfield Storage</h3>
                     <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">
                         Settings are saved under your workspace subcollection: <code>Workspaces/${workspaceId}/CustomerPanel/${currentUser.uid}</code>
                     </p>
@@ -197,12 +322,13 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                         </div>
                         <div style="display:flex; gap:0.6rem; align-items:center;">
                             <select id="cp-status-select" class="form-control" style="font-weight:600; padding:0.5rem 1rem; width:190px;">
-                                <option value="ACTIVE" ${isLive ? 'selected' : ''}>🟢 Published (Live)</option>
-                                <option value="STOPPED" ${!isLive ? 'selected' : ''}>⏸️ Unpublished (Closed)</option>
+                                <option value="ACTIVE" ${isLive ? 'selected' : ''}>Published (Live)</option>
+                                <option value="STOPPED" ${!isLive ? 'selected' : ''}>Unpublished (Closed)</option>
                             </select>
                         </div>
                     </div>
                 </div>
+
 
                 <!-- 2. STORE BRANDING & MESSAGING -->
                 <div class="card" style="padding:1.5rem;">
@@ -354,9 +480,21 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
             });
         }
 
+        const brandingMode = document.querySelector('input[name="cp-branding-mode"]:checked')?.value || 'PRICELISTER';
+        const deployCountry = document.getElementById('cp-deploy-country')?.value || 'Global';
+        const storeLogo = (document.getElementById('cp-store-logo-input')?.value || '').trim();
+        const customSlug = (document.getElementById('cp-custom-slug-input')?.value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9-_]/g, '');
+
         return {
             isPublished: isLive,
             enabled: isLive,
+            brandingMode: brandingMode,
+            deployCountry: deployCountry,
+            storeLogo: storeLogo,
+            customSlug: customSlug,
             storeName: document.getElementById('cp-store-name')?.value || 'PriceLister Store',
             whatsappNumber: document.getElementById('cp-whatsapp')?.value || '',
             announcement: document.getElementById('cp-announcement')?.value || '',
@@ -812,21 +950,67 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
             });
         }
 
+        // Slug input change listener
+        const slugInput = document.getElementById('cp-custom-slug-input');
+        const liveUrlPreview = document.getElementById('cp-live-url-preview');
+        if (slugInput) {
+            slugInput.addEventListener('input', () => {
+                const cleanSlug = slugInput.value.toLowerCase().replace(/[^a-z0-9-_]/g, '');
+                slugInput.value = cleanSlug;
+                const newUrl = computeCustomerUrl({ customSlug: cleanSlug });
+                if (liveUrlPreview) liveUrlPreview.textContent = newUrl;
+                if (urlInput) urlInput.value = newUrl;
+            });
+        }
+
+        // Branding Mode listener
+        const brandingRadios = document.querySelectorAll('input[name="cp-branding-mode"]');
+        brandingRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                document.querySelectorAll('.cp-branding-card').forEach(card => {
+                    const isChecked = card.querySelector('input[name="cp-branding-mode"]')?.checked;
+                    card.style.borderColor = isChecked ? 'var(--primary)' : 'var(--border-color)';
+                    card.style.background = isChecked ? 'rgba(225,29,72,0.03)' : '#ffffff';
+                });
+            });
+        });
+
+        // Store Logo input listener
+        const storeLogoInput = document.getElementById('cp-store-logo-input');
+        const logoPreviewBox = document.getElementById('cp-logo-broad-preview');
+        if (storeLogoInput && logoPreviewBox) {
+            storeLogoInput.addEventListener('input', () => {
+                const val = storeLogoInput.value.trim();
+                if (val) {
+                    logoPreviewBox.innerHTML = `<img src="${escapeHtml(val)}" alt="Store Logo" style="width:100%; height:100%; object-fit:contain;" onerror="this.onerror=null; this.parentElement.innerHTML='<svg width=\\'24\\' height=\\'24\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'2\\'><rect x=\\'3\\' y=\\'3\\' width=\\'18\\' height=\\'18\\' rx=\\'2\\' ry=\\'2\\'></rect><circle cx=\\'8.5\\' cy=\\'8.5\\' r=\\'1.5\\'></circle><polyline points=\\'21 15 16 10 5 21\\'></polyline></svg>';">`;
+                } else {
+                    const wsLogo = window.__activeWorkspace?.logoUrl || '';
+                    if (wsLogo) {
+                        logoPreviewBox.innerHTML = `<img src="${escapeHtml(wsLogo)}" alt="Workspace Logo" style="width:100%; height:100%; object-fit:contain;">`;
+                    } else {
+                        logoPreviewBox.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
+                    }
+                }
+            });
+        }
+
         // Copy URL helper
         const handleCopy = () => {
+            const finalUrl = computeCustomerUrl(collectFormData());
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(customerPanelUrl).then(() => {
+                navigator.clipboard.writeText(finalUrl).then(() => {
                     showAlert.success("Customer Panel link copied to clipboard!");
                 }).catch(() => {
-                    fallbackCopy();
+                    fallbackCopy(finalUrl);
                 });
             } else {
-                fallbackCopy();
+                fallbackCopy(finalUrl);
             }
         };
 
-        const fallbackCopy = () => {
+        const fallbackCopy = (finalUrl) => {
             if (urlInput) {
+                urlInput.value = finalUrl;
                 urlInput.select();
                 document.execCommand('copy');
                 showAlert.success("Customer Panel link copied to clipboard!");

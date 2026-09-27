@@ -6,11 +6,12 @@ import { getCategoryService } from '../services/categoryService.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 import { calculateInvoiceTotal } from '../utils/invoiceCalculator.js';
-import { toggleContextPanel } from '../workspace.js';
 import { generateUniqueId } from '../../DataModel.js';
 import { exportInvoicesExcel } from '../utils/exportEngine.js';
 import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
+import { openInvoiceDetailsModal } from './invoiceDetailsModal.js';
+import { storageService } from '../../supabase/storage.js';
 
 export const renderInvoices = async (container, workspaceId, isBusinessInvoice) => {
     const invoiceService = getInvoiceService(workspaceId);
@@ -31,6 +32,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     let rawInvoices = [];
     let isVendingActive = false;
 
+    // Recipient selection mode: 'customer' | 'client' | 'walkin'
+    let recipientMode = isBusinessInvoice ? 'client' : 'customer';
+
     // State for Editing
     let editingInvoiceId = null;
     let editingInvoiceUniqueId = null;
@@ -49,6 +53,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Quick Add Entity State
     let quickAddTargetType = null; // 'business' | 'client' | 'customer'
+    let quickAddPreviewImgUrl = '';
 
     container.innerHTML = `
         <!-- ================= INVOICE LIST VIEW ================= -->
@@ -63,9 +68,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                         Export Excel
                     </button>
-                    <button id="btn-add-invoice" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px; font-weight:600;">
+                    <button id="btn-add-invoice" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; background:linear-gradient(135deg, #e11d48, #be123c); border-color:#e11d48;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                        + Add ${typeLabel}
+                        Add ${typeLabel}
                     </button>
                 </div>
             </div>
@@ -103,7 +108,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 <div class="filter-group-right">
                     <div class="search-input-wrap">
                         <span class="search-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
-                        <input type="text" id="inv-search-input" placeholder="Search by name, ID, uniqueId...">
+                        <input type="text" id="inv-search-input" placeholder="Search by name, invoice #, ID...">
                     </div>
                 </div>
             </div>
@@ -115,7 +120,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                             <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted); background: rgba(248, 250, 252, 0.7);">
                                 <th style="padding:1rem 1.25rem;">Invoice #</th>
                                 <th style="padding:1rem;">Date</th>
-                                <th style="padding:1rem;">${isBusinessInvoice ? 'Business (Issuer) & Client' : 'Customer'}</th>
+                                <th style="padding:1rem;">${isBusinessInvoice ? 'Business (Issuer) & Recipient' : 'Customer / Recipient'}</th>
                                 <th style="padding:1rem;">Status</th>
                                 <th style="padding:1rem;">Total</th>
                                 <th style="padding:1rem 1.25rem;">Actions</th>
@@ -138,281 +143,391 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             </div>
         </div>
 
-        <!-- ================= INVOICE CREATION / EDIT VIEW ================= -->
+        <!-- ================= EXPANDED INVOICE CREATION / EDIT VIEW ================= -->
         <div id="invoice-editor-view" style="display:none; margin-bottom: 2.5rem;">
             
             <!-- Top Back Bar -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
                 <button type="button" id="btn-back-to-list" class="btn btn-secondary" style="font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 0.55rem 1rem;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                    &larr; Back to Invoices
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Back to Invoices
                 </button>
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <span id="form-vending-indicator" style="font-size: 0.85rem; font-weight: 600;"></span>
                 </div>
             </div>
 
-            <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float);">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
-                    <div>
-                        <h3 id="inv-form-title" style="margin:0; font-size: 1.45rem; color: var(--text-primary); font-weight: 700;">New ${typeLabel}</h3>
-                        <p id="inv-form-subtitle" style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">Fill in the details below to generate your invoice.</p>
-                    </div>
-                </div>
-
-                <form id="invoice-form" style="display:flex; flex-direction:column; gap:1.75rem;">
-                    
-                    <!-- SECTION 1: ISSUER (YOUR BUSINESS) -->
-                    <div class="form-section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 1 — ISSUER (YOUR BUSINESS) *</h4>
-                            <button type="button" id="btn-quick-add-business" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px;">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> + New Business
-                            </button>
+            <!-- 2-COLUMN EXPANDED VIEW CONTAINER -->
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start;" class="invoice-editor-grid">
+                
+                <!-- LEFT COLUMN: MAIN FORM -->
+                <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <h3 id="inv-form-title" style="margin:0; font-size: 1.4rem; color: var(--text-primary); font-weight: 800;">New ${typeLabel}</h3>
+                            <p id="inv-form-subtitle" style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">Fill in the details below to generate your invoice.</p>
                         </div>
-                        <div style="display:flex; gap:1rem; align-items:flex-end;">
-                            <div style="flex:1;">
-                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Business <span style="color:var(--danger);">*</span></label>
-                                <select id="inv-business" class="form-control" style="width:100%; padding:0.55rem;" required>
+                    </div>
+
+                    <form id="invoice-form" style="display:flex; flex-direction:column; gap:1.75rem;">
+                        
+                        <!-- SECTION 1: ISSUER (YOUR BUSINESS) -->
+                        <div class="form-section" style="background: rgba(241, 245, 249, 0.4); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:#e11d48; color:white; font-size:0.75rem; font-weight:800;">1</span>
+                                    <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Issuer (Your Business) <span style="color:var(--danger);">*</span></h4>
+                                </div>
+                                <button type="button" id="btn-quick-add-business" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>New Business
+                                </button>
+                            </div>
+                            
+                            <div style="margin-bottom: 0.75rem;">
+                                <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Select Business Profile</label>
+                                <select id="inv-business" class="form-control" style="width:100%; padding:0.6rem; font-weight:600;" required>
                                     <option value="">Loading businesses...</option>
                                 </select>
                             </div>
-                        </div>
-                        <div id="inv-business-preview" style="display:none; margin-top: 0.5rem; font-size: 0.82rem; color: var(--text-secondary); background: var(--surface-50); padding: 0.5rem 0.75rem; border-radius: 6px;"></div>
-                    </div>
 
-                    <!-- SECTION 2: BILLED TO (CLIENT OR CUSTOMER) -->
-                    ${isBusinessInvoice ? `
-                    <div class="form-section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 2 — BILLED TO (CLIENT BUSINESS) *</h4>
-                            <button type="button" id="btn-quick-add-client" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px;">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> + New Client
-                            </button>
-                        </div>
-                        <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap: wrap;">
-                            <div style="flex:1; min-width: 220px;">
-                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Client <span style="color:var(--danger);">*</span></label>
-                                <select id="inv-client" class="form-control" style="width:100%; padding:0.55rem;" required>
-                                    <option value="">Select Client...</option>
-                                </select>
+                            <!-- BUSINESS PROFILE CARD PREVIEW (Round Avatar / SVG + Details) -->
+                            <div id="inv-business-preview-card" style="display:none; background:var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                                <!-- rendered dynamically -->
                             </div>
                         </div>
-                        <div id="inv-client-preview" style="display:none; margin-top: 0.5rem; font-size: 0.82rem; color: var(--text-secondary); background: var(--surface-50); padding: 0.5rem 0.75rem; border-radius: 6px;"></div>
-                    </div>
 
-                    <!-- SECTION 3: BUSINESS INVOICE INFO -->
-                    <div class="form-section">
-                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 3 — BUSINESS INVOICE INFO</h4>
-                        <div style="display:flex; gap:1rem; flex-wrap: wrap;">
-                            <div style="flex:1; min-width: 220px;">
-                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Title <span style="color:var(--danger);">*</span></label>
-                                <input type="text" id="inv-title" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. Invoice" value="Invoice" required>
-                            </div>
-                            <div style="flex:1; min-width: 220px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                                    <label style="font-weight: 600; font-size: 0.85rem; margin: 0;">Business Invoice Number <span style="color:var(--danger);">*</span></label>
-                                    <button type="button" id="btn-regen-bus-id" class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; display:inline-flex; align-items:center; gap:4px;">
-                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Re-roll
+                        <!-- SECTION 2: BILLED TO (SMART PROFILE SELECTOR: Customer Profile | Client Business | Custom Walk-in) -->
+                        <div class="form-section" style="background: rgba(241, 245, 249, 0.4); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap:wrap; gap:0.5rem;">
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:#e11d48; color:white; font-size:0.75rem; font-weight:800;">2</span>
+                                    <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Billed To (Recipient) <span style="color:var(--danger);">*</span></h4>
+                                </div>
+                                <div style="display:flex; gap:0.4rem;">
+                                    <button type="button" id="btn-quick-add-customer" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Customer
+                                    </button>
+                                    <button type="button" id="btn-quick-add-client" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Client
                                     </button>
                                 </div>
-                                <input type="text" id="inv-bus-number" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; color: var(--primary);" placeholder="BusInv-000000" required>
+                            </div>
+
+                            <!-- Smart Profile Switcher Pills -->
+                            <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; background: var(--bg-card); padding: 0.3rem; border-radius: 8px; border: 1px solid var(--border-color); width: fit-content;" id="recipient-type-pills">
+                                <button type="button" class="btn btn-sm ${recipientMode === 'customer' ? 'btn-primary' : 'btn-secondary'}" data-mode="customer" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 600; display:inline-flex; align-items:center; gap:5px;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    Customer Profile
+                                </button>
+                                <button type="button" class="btn btn-sm ${recipientMode === 'client' ? 'btn-primary' : 'btn-secondary'}" data-mode="client" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 600; display:inline-flex; align-items:center; gap:5px;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                                    Client Business
+                                </button>
+                                <button type="button" class="btn btn-sm ${recipientMode === 'walkin' ? 'btn-primary' : 'btn-secondary'}" data-mode="walkin" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 600; display:inline-flex; align-items:center; gap:5px;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    Custom / Walk-in
+                                </button>
+                            </div>
+
+                            <!-- Customer Profile Selector -->
+                            <div id="wrap-recipient-customer" style="${recipientMode === 'customer' ? 'display:block;' : 'display:none;'}">
+                                <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Select Customer Profile</label>
+                                <select id="inv-customer" class="form-control" style="width:100%; padding:0.6rem; font-weight:600;">
+                                    <option value="">Select saved customer...</option>
+                                </select>
+                            </div>
+
+                            <!-- Client Profile Selector -->
+                            <div id="wrap-recipient-client" style="${recipientMode === 'client' ? 'display:block;' : 'display:none;'}">
+                                <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Select Client Profile</label>
+                                <select id="inv-client" class="form-control" style="width:100%; padding:0.6rem; font-weight:600;">
+                                    <option value="">Select saved client...</option>
+                                </select>
+                            </div>
+
+                            <!-- RECIPIENT PROFILE CARD PREVIEW (Round Avatar / SVG + Details) -->
+                            <div id="inv-recipient-preview-card" style="display:none; margin-top: 0.75rem; background:var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                                <!-- rendered dynamically -->
+                            </div>
+
+                            <!-- Walk-in / Custom manual fields -->
+                            <div id="wrap-recipient-manual" style="margin-top:0.75rem; ${recipientMode === 'walkin' ? 'display:block;' : 'display:none;'}">
+                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.75rem;">
+                                    <div>
+                                        <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Recipient / Customer Name <span style="color:var(--danger);">*</span></label>
+                                        <input type="text" id="inv-customer-name" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. John Doe or Acme Corp">
+                                    </div>
+                                    <div>
+                                        <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Phone Number</label>
+                                        <input type="text" id="inv-customer-phone" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. +123456789">
+                                    </div>
+                                    <div>
+                                        <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Email Address</label>
+                                        <input type="email" id="inv-customer-email" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. client@example.com">
+                                    </div>
+                                    <div>
+                                        <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Address</label>
+                                        <input type="text" id="inv-customer-address" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. 123 Main St, City">
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    ` : `
-                    <div class="form-section">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 2 — INVOICE IDENTIFICATION & CUSTOMER</h4>
-                            <button type="button" id="btn-quick-add-customer" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem; display:inline-flex; align-items:center; gap:4px;">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> + New Customer
+
+                        <!-- SECTION 3: INVOICE IDENTIFICATION & METADATA -->
+                        <div class="form-section">
+                            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0.75rem;">
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:#e11d48; color:white; font-size:0.75rem; font-weight:800;">3</span>
+                                <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Invoice Details</h4>
+                            </div>
+                            
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.85rem;">
+                                <div>
+                                    <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Invoice Title <span style="color:var(--danger);">*</span></label>
+                                    <input type="text" id="inv-title" class="form-control" style="width:100%; padding:0.55rem; font-weight:600;" placeholder="e.g. Invoice / Tax Invoice" value="Invoice" required>
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                        <label style="font-weight: 600; font-size: 0.82rem; margin: 0;">Invoice Number <span style="color:var(--danger);">*</span></label>
+                                        <button type="button" id="btn-regen-inv-id" class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; display:inline-flex; align-items:center; gap:4px;">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Re-roll
+                                        </button>
+                                    </div>
+                                    <input type="text" id="inv-number-input" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; color: #e11d48;" required>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Payment Status</label>
+                                    <select id="inv-status" class="form-control" style="width:100%; padding:0.55rem; font-weight: 600;">
+                                        <option value="Paid">Paid</option>
+                                        <option value="Unpaid">Unpaid</option>
+                                        <option value="Draft">Draft</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 4: PRODUCTS SELECTION -->
+                        <div class="form-section">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:#e11d48; color:white; font-size:0.75rem; font-weight:800;">4</span>
+                                    <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Line Items <span style="color:var(--danger);">*</span></h4>
+                                </div>
+                                <button type="button" id="btn-toggle-picker" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.45rem;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                    <span id="picker-toggle-text">Open Advanced Product Picker</span>
+                                </button>
+                            </div>
+
+                            <!-- ADVANCED PRODUCT PICKER CONTAINER -->
+                            <div id="advanced-product-picker" class="product-picker-container" style="display:none; margin-bottom: 1.5rem;">
+                                <div class="picker-search-bar">
+                                    <div class="search-input-wrap" style="flex: 1; min-width: 220px;">
+                                        <span class="search-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+                                        <input type="text" id="picker-search-input" placeholder="Search by name, size, category, UPC..." autocomplete="off">
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <button type="button" id="picker-btn-select-all" class="btn btn-sm btn-secondary" style="font-size: 0.78rem;">Select All Visible</button>
+                                        <button type="button" id="picker-btn-clear-sel" class="btn btn-sm btn-secondary" style="font-size: 0.78rem;">Deselect All</button>
+                                    </div>
+                                </div>
+
+                                <!-- Category Filter Pills -->
+                                <div id="picker-category-pills" style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
+                                    <!-- Dynamic category pills -->
+                                </div>
+
+                                <!-- Product Cards Grid -->
+                                <div class="picker-grid" id="picker-grid-container">
+                                    <!-- Dynamic product grid -->
+                                </div>
+
+                                <!-- Picker Footer Actions -->
+                                <div class="picker-footer">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                        Selected: <strong id="picker-count-disp" style="color: #e11d48;">0</strong> products (<strong id="picker-units-disp">0</strong> units) &bull; Est. Total: <strong id="picker-subtotal-disp" style="color: var(--text-primary);">${formatCurrency(0)}</strong>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button type="button" id="picker-close-btn" class="btn btn-secondary">Hide Picker</button>
+                                        <button type="button" id="picker-add-to-inv-btn" class="btn btn-primary" style="background:#e11d48; border-color:#e11d48;">Add Selected to Invoice</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CURRENT INVOICE ITEMS LIST -->
+                            <div id="invoice-items-list" style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
+                                <!-- dynamic items list -->
+                            </div>
+
+                            <!-- Single Dropdown fallback -->
+                            <div style="display:flex; gap:1rem; align-items:flex-end; background: var(--surface-50); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid var(--border-color); flex-wrap: wrap;">
+                                <div style="flex:2; min-width: 200px;">
+                                    <label style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Quick Single Add</label>
+                                    <select id="inv-add-product-select" class="form-control" style="width:100%; padding:0.5rem;">
+                                        <option value="">Loading products...</option>
+                                    </select>
+                                </div>
+                                <div style="flex:1; max-width: 120px; min-width: 80px;">
+                                    <label style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Qty</label>
+                                    <input type="number" id="inv-add-qty" min="1" value="1" class="form-control" style="width:100%; padding:0.5rem;">
+                                </div>
+                                <button type="button" id="inv-btn-add-item" class="btn btn-secondary" style="padding:0.55rem 1.1rem; font-weight:600;">+ Add Item</button>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 5: CHARGES & ADJUSTMENTS (Discount, Additional Cut, Tax, Shipping - for both Invoice types) -->
+                        <div class="form-section" style="background: rgba(241, 245, 249, 0.4); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+                            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0.85rem;">
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:#e11d48; color:white; font-size:0.75rem; font-weight:800;">5</span>
+                                <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Discounts, Tax & Shipping Adjustments</h4>
+                            </div>
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:0.85rem;">
+                                <div>
+                                    <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Discount %</label>
+                                    <div style="position:relative;">
+                                        <input type="number" id="inv-discount" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem 1.5rem 0.55rem 0.65rem; font-weight:600;">
+                                        <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); font-weight:700;">%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Additional Cut (${getAppCurrencySymbol()})</label>
+                                    <div style="position:relative;">
+                                        <input type="number" id="inv-add-cut" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem 0.65rem 0.55rem 1.5rem; font-weight:600;">
+                                        <span style="position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); font-weight:700;">${getAppCurrencySymbol()}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Tax Rate %</label>
+                                    <div style="position:relative;">
+                                        <input type="number" id="inv-tax" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem 1.5rem 0.55rem 0.65rem; font-weight:600;">
+                                        <span style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); font-weight:700;">%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Shipping Cost (${getAppCurrencySymbol()})</label>
+                                    <div style="position:relative;">
+                                        <input type="number" id="inv-shipping" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem 0.65rem 0.55rem 1.5rem; font-weight:600;">
+                                        <span style="position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); font-weight:700;">${getAppCurrencySymbol()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 6: NOTE / PAYMENT TERMS -->
+                        <div class="form-section">
+                            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0.5rem;">
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:#e11d48; color:white; font-size:0.75rem; font-weight:800;">6</span>
+                                <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Notes & Terms</h4>
+                            </div>
+                            <textarea id="inv-note" class="form-control" style="width:100%; padding:0.6rem; min-height: 70px;" placeholder="Optional payment terms, delivery instructions, or bank details..."></textarea>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- RIGHT COLUMN: STICKY LIVE FINANCIAL SUMMARY CARD -->
+                <div style="position: sticky; top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); border-top: 4px solid #e11d48;">
+                        <h4 style="margin: 0 0 1rem 0; color: var(--text-primary); font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; justify-content: space-between;">
+                            <span>Financial Summary</span>
+                            <span id="summary-items-count" style="font-size: 0.78rem; font-weight: 600; background: rgba(225, 29, 72, 0.1); color: #e11d48; padding: 0.2rem 0.55rem; border-radius: 9999px;">0 items</span>
+                        </h4>
+
+                        <div id="inv-live-totals" style="font-size: 0.9rem; line-height: 1.75; display: flex; flex-direction: column; gap: 0.35rem;">
+                            <!-- live totals rendered dynamically -->
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                            <button type="button" class="btn btn-primary" id="inv-submit-btn" style="width: 100%; padding: 0.75rem 1rem; font-weight: 700; font-size: 0.95rem; background: linear-gradient(135deg, #e11d48, #be123c); border:none; box-shadow: 0 4px 14px rgba(225, 29, 72, 0.3);">
+                                Save Invoice
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="inv-cancel-btn" style="width: 100%; padding: 0.6rem 1rem; font-weight: 600; font-size: 0.85rem;">
+                                Cancel & Discard
                             </button>
                         </div>
-                        <div style="display:flex; gap:1rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                            <div style="flex:1; min-width: 220px;">
-                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Invoice Number</label>
-                                <input type="text" id="inv-cust-number" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; background: var(--surface-50); color: var(--primary);" readonly>
-                            </div>
-                        </div>
-
-                        <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap: wrap;">
-                            <div style="flex:1; min-width: 180px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Select Customer</label>
-                                <select id="inv-customer" class="form-control" style="width:100%; padding:0.55rem;">
-                                    <option value="">Walk-in / None</option>
-                                </select>
-                            </div>
-                            <div style="flex:1; min-width: 180px;">
-                                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Customer Name <span style="color:var(--danger);">*</span></label>
-                                <input type="text" id="inv-customer-name" required class="form-control" style="width:100%; padding:0.55rem;" placeholder="Enter customer name">
-                            </div>
-                            <div style="flex:1; min-width: 180px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Customer Phone</label>
-                                <input type="text" id="inv-customer-phone" class="form-control" style="width:100%; padding:0.55rem;" placeholder="Phone number">
-                            </div>
-                        </div>
-                    </div>
-                    `}
-
-                    <!-- SECTION: PRODUCTS SELECTION -->
-                    <div class="form-section">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                            <h4 style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION ${isBusinessInvoice ? '4' : '3'} — PRODUCTS SELECTION <span style="color:var(--danger);">*</span></h4>
-                            <button type="button" id="btn-toggle-picker" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.45rem;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                                <span id="picker-toggle-text">Open Advanced Product Picker</span>
-                            </button>
-                        </div>
-
-                        <!-- ADVANCED PRODUCT PICKER CONTAINER -->
-                        <div id="advanced-product-picker" class="product-picker-container" style="display:none; margin-bottom: 1.5rem;">
-                            <div class="picker-search-bar">
-                                <div class="search-input-wrap" style="flex: 1; min-width: 220px;">
-                                    <span class="search-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
-                                    <input type="text" id="picker-search-input" placeholder="Search by name, size, category, UPC..." autocomplete="off">
-                                </div>
-                                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                    <button type="button" id="picker-btn-select-all" class="btn btn-sm btn-secondary" style="font-size: 0.78rem;">Select All Visible</button>
-                                    <button type="button" id="picker-btn-clear-sel" class="btn btn-sm btn-secondary" style="font-size: 0.78rem;">Deselect All</button>
-                                </div>
-                            </div>
-
-                            <!-- Category Filter Pills -->
-                            <div id="picker-category-pills" style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
-                                <!-- Dynamic category pills -->
-                            </div>
-
-                            <!-- Product Cards Grid -->
-                            <div class="picker-grid" id="picker-grid-container">
-                                <!-- Dynamic product grid -->
-                            </div>
-
-                            <!-- Picker Footer Actions -->
-                            <div class="picker-footer">
-                                <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                    Selected: <strong id="picker-count-disp" style="color: var(--primary);">0</strong> products (<strong id="picker-units-disp">0</strong> units) &bull; Est. Total: <strong id="picker-subtotal-disp" style="color: var(--text-primary);">${formatCurrency(0)}</strong>
-                                </div>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <button type="button" id="picker-close-btn" class="btn btn-secondary">Hide Picker</button>
-                                    <button type="button" id="picker-add-to-inv-btn" class="btn btn-primary">Add Selected to Invoice</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- CURRENT INVOICE ITEMS LIST -->
-                        <div id="invoice-items-list" style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
-                            <!-- dynamic items list -->
-                        </div>
-
-                        <!-- Single Dropdown fallback -->
-                        <div style="display:flex; gap:1rem; align-items:flex-end; background: var(--surface-50); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid var(--border-color); flex-wrap: wrap;">
-                            <div style="flex:2; min-width: 200px;">
-                                <label style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Quick Single Add</label>
-                                <select id="inv-add-product-select" class="form-control" style="width:100%; padding:0.5rem;">
-                                    <option value="">Loading products...</option>
-                                </select>
-                            </div>
-                            <div style="flex:1; max-width: 120px; min-width: 80px;">
-                                <label style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Qty</label>
-                                <input type="number" id="inv-add-qty" min="1" value="1" class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
-                            <button type="button" id="inv-btn-add-item" class="btn btn-secondary" style="padding:0.55rem 1.1rem;">+ Add Item</button>
-                        </div>
                     </div>
 
-                    <!-- CHARGES / ADJUSTMENTS -->
-                    <div class="form-section">
-                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION ${isBusinessInvoice ? '5' : '4'} — ${isBusinessInvoice ? 'BUSINESS CHARGES' : 'ADJUSTMENTS'}</h4>
-                        <div style="display:flex; gap:1rem; flex-wrap: wrap;">
-                            <div style="flex:1; min-width: 140px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Discount %</label>
-                                <input type="number" id="inv-discount" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
-                            </div>
-                            <div style="flex:1; min-width: 140px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Additional Cut (${getAppCurrencySymbol()})</label>
-                                <input type="number" id="inv-add-cut" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
-                            </div>
-                            ${isBusinessInvoice ? `
-                            <div style="flex:1; min-width: 140px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Tax %</label>
-                                <input type="number" id="inv-tax" value="0" min="0" max="100" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
-                            </div>
-                            <div style="flex:1; min-width: 140px;">
-                                <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Shipping Cost (${getAppCurrencySymbol()})</label>
-                                <input type="number" id="inv-shipping" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem;">
-                            </div>
-                            ` : ''}
-                        </div>
+                    <!-- Quick tips card -->
+                    <div style="background: rgba(241, 245, 249, 0.6); border: 1px dashed var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
+                        <strong style="color: var(--text-primary); display:flex; align-items:center; gap:4px; margin-bottom: 2px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            Financial Calculation Note
+                        </strong>
+                        Tax % is calculated on the subtotal after subtracting discounts and additional cuts. Shipping is added directly to grand total.
                     </div>
-
-                    <!-- PAYMENT STATUS -->
-                    <div class="form-section">
-                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION ${isBusinessInvoice ? '6' : '5'} — PAYMENT STATUS</h4>
-                        <div style="display:flex; gap:1rem;">
-                            <div style="flex:1; max-width: 220px;">
-                                <select id="inv-status" class="form-control" style="width:100%; padding:0.55rem; font-weight: 600;">
-                                    <option value="Paid">Paid</option>
-                                    <option value="Unpaid">Unpaid</option>
-                                    <option value="Draft">Draft</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    ${isBusinessInvoice ? `
-                    <div class="form-section">
-                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">SECTION 7 — NOTE</h4>
-                        <div style="display:flex; gap:1rem;">
-                            <div style="flex:1;">
-                                <textarea id="inv-note" class="form-control" style="width:100%; padding:0.55rem; min-height: 70px;" placeholder="Optional invoice instructions or payment terms..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    ` : ''}
-
-                    <!-- TOTALS SUMMARY -->
-                    <div class="form-section" style="background:var(--surface-50); padding:1.25rem; border-radius:var(--radius-card); border: 1px solid var(--border-color);">
-                        <h4 style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem; letter-spacing: 0.05em; font-weight: 700;">TOTALS</h4>
-                        <div id="inv-live-totals" style="font-size:1.05rem; line-height:1.6;">
-                            <!-- live totals -->
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:1rem; margin-top:0.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; justify-content: flex-end;">
-                        <button type="button" class="btn btn-secondary" id="inv-cancel-btn" style="padding: 0.65rem 1.5rem;">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="inv-submit-btn" style="padding: 0.65rem 2rem;">Save Invoice</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
 
-        <!-- ================= QUICK ADD MODAL (Business / Client / Customer) ================= -->
-        <div id="quick-add-entity-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1050; align-items:center; justify-content:center;">
-            <div class="card" style="background:var(--bg-card); width:90%; max-width:480px; padding:1.75rem; border-radius:12px; box-shadow:var(--shadow-lg); animation:fadeIn 0.2s ease;">
+        <!-- ================= UNIVERSAL QUICK ADD MODAL (Business / Client / Customer) ================= -->
+        <div id="quick-add-entity-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:1050; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+            <div class="card" style="background:var(--bg-card); width:94%; max-width:540px; max-height: 90vh; overflow-y: auto; padding:1.75rem; border-radius:14px; box-shadow:var(--shadow-lg); animation:fadeIn 0.2s ease;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
-                    <h3 id="quick-add-modal-title" style="margin:0; font-size:1.25rem; color:var(--text-primary);">Add Entry</h3>
-                    <button type="button" id="btn-close-quick-add" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+                    <h3 id="quick-add-modal-title" style="margin:0; font-size:1.2rem; color:var(--text-primary); font-weight:800;">Add Entry</h3>
+                    <button type="button" id="btn-close-quick-add" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted); line-height:1;">&times;</button>
                 </div>
                 <form id="quick-add-form" style="display:flex; flex-direction:column; gap:1rem;">
-                    <div>
-                        <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.35rem; display:block;">Name *</label>
-                        <input type="text" id="qa-name" required class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. Acme Corp or John Doe">
+                    
+                    <!-- Avatar Upload / URL with Live Round Preview -->
+                    <div style="display:flex; align-items:center; gap:1rem; background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color);">
+                        <div id="qa-avatar-preview" style="width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #e11d48, #be123c); display:flex; align-items:center; justify-content:center; color:white; font-size:1.5rem; font-weight:700; flex-shrink:0; overflow:hidden; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem; font-weight:600; margin-bottom:0.25rem; display:block; color:var(--text-primary);">Photo / Avatar (Optional)</label>
+                            <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                                <label class="btn btn-sm btn-secondary" style="cursor:pointer; font-size:0.75rem; padding:0.25rem 0.6rem; display:inline-flex; align-items:center; gap:4px;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                    Upload Photo
+                                    <input type="file" id="qa-photo-file" accept="image/*" style="display:none;">
+                                </label>
+                                <input type="url" id="qa-photo-url" class="form-control" placeholder="Or paste image URL" style="font-size:0.75rem; padding:0.25rem 0.5rem; flex:1; min-width:140px; height:28px;">
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- All Fields -->
                     <div>
-                        <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.35rem; display:block;">Phone</label>
-                        <input type="text" id="qa-phone" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. +123456789">
+                        <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Full Name / Business Name <span style="color:var(--danger);">*</span></label>
+                        <input type="text" id="qa-name" required class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. Acme Innovations or John Doe">
                     </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                        <div>
+                            <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Phone Number</label>
+                            <input type="text" id="qa-phone" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. +123456789">
+                        </div>
+                        <div>
+                            <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Email Address</label>
+                            <input type="email" id="qa-email" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. contact@example.com">
+                        </div>
+                    </div>
+
                     <div>
-                        <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.35rem; display:block;">Email</label>
-                        <input type="email" id="qa-email" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. contact@example.com">
+                        <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Full Address</label>
+                        <input type="text" id="qa-address" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. 123 Main St, Suite 400, New York, NY">
                     </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                        <div>
+                            <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Status</label>
+                            <select id="qa-status" class="form-control" style="width:100%; padding:0.55rem;">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Tags</label>
+                            <input type="text" id="qa-tags" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. VIP, Wholesale, Retail">
+                        </div>
+                    </div>
+
                     <div>
-                        <label style="font-size:0.85rem; font-weight:600; margin-bottom:0.35rem; display:block;">Address</label>
-                        <input type="text" id="qa-address" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. 123 Main St, City">
+                        <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Notes / Payment Terms</label>
+                        <textarea id="qa-notes" class="form-control" style="width:100%; padding:0.55rem; min-height:55px;" placeholder="Optional details..."></textarea>
                     </div>
+
                     <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:0.5rem; border-top:1px solid var(--border-color); padding-top:1rem;">
                         <button type="button" id="btn-cancel-quick-add" class="btn btn-secondary">Cancel</button>
-                        <button type="submit" id="btn-save-quick-add" class="btn btn-primary">Save & Select</button>
+                        <button type="submit" id="btn-save-quick-add" class="btn btn-primary" style="background:#e11d48; border-color:#e11d48;">Save & Select</button>
                     </div>
                 </form>
             </div>
@@ -434,6 +549,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const quickAddForm = container.querySelector('#quick-add-form');
     const btnCloseQuickAdd = container.querySelector('#btn-close-quick-add');
     const btnCancelQuickAdd = container.querySelector('#btn-cancel-quick-add');
+    const qaPhotoFileInput = container.querySelector('#qa-photo-file');
+    const qaPhotoUrlInput = container.querySelector('#qa-photo-url');
+    const qaAvatarPreview = container.querySelector('#qa-avatar-preview');
 
     // ADVANCED PRODUCT PICKER LOGIC
     const pickerContainer = container.querySelector('#advanced-product-picker');
@@ -449,6 +567,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const pickerAddToInvBtn = container.querySelector('#picker-add-to-inv-btn');
     const pickerBtnSelectAll = container.querySelector('#picker-btn-select-all');
     const pickerBtnClearSel = container.querySelector('#picker-btn-clear-sel');
+
     // Helper: Category Name & ID Resolution
     function getCategoryName(catVal) {
         if (!catVal) return '';
@@ -466,13 +585,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         return found ? (found.uniqueId || found.id || found.name) : catVal;
     }
 
-    // Helper: Generate Random Business Invoice ID
-    function generateRandomBusInvId() {
+    // Helper: Generate Random Invoice ID
+    function generateRandomInvoiceId(isBus = false) {
         const random6Digits = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-        return `BusInv-${random6Digits}`;
+        return isBus ? `BusInv-${random6Digits}` : `INV-${random6Digits}`;
     }
 
-    // Helper: Safe Date Parsing & Formatting for Firestore / Epoch Timestamps
+    // Helper: Safe Date Parsing
     function getInvoiceTime(inv) {
         if (!inv) return 0;
         const ts = inv.timestamp || inv.createdAt || inv.updatedTimestamp;
@@ -501,13 +620,15 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const getInvoiceFormSnapshot = () => {
         return JSON.stringify({
             business: container.querySelector('#inv-business')?.value || '',
+            recipientMode: recipientMode,
             client: container.querySelector('#inv-client')?.value || '',
             customer: container.querySelector('#inv-customer')?.value || '',
             custName: (container.querySelector('#inv-customer-name')?.value || '').trim(),
             custPhone: (container.querySelector('#inv-customer-phone')?.value || '').trim(),
+            custEmail: (container.querySelector('#inv-customer-email')?.value || '').trim(),
+            custAddress: (container.querySelector('#inv-customer-address')?.value || '').trim(),
             title: (container.querySelector('#inv-title')?.value || '').trim(),
-            busInvNumber: (container.querySelector('#inv-bus-number')?.value || '').trim(),
-            custInvNumber: (container.querySelector('#inv-cust-number')?.value || '').trim(),
+            invNumber: (container.querySelector('#inv-number-input')?.value || '').trim(),
             discount: parseFloat(container.querySelector('#inv-discount')?.value || 0),
             addCut: parseFloat(container.querySelector('#inv-add-cut')?.value || 0),
             tax: parseFloat(container.querySelector('#inv-tax')?.value || 0),
@@ -527,16 +648,14 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             if (!initialInvoiceFormSnapshot) return false;
             return getInvoiceFormSnapshot() !== initialInvoiceFormSnapshot;
         } else {
-            // New invoice: dirty if user added products, entered customer name/phone, custom note, or non-zero adjustment
             const hasItems = invoiceItems.length > 0;
             const hasCustName = Boolean(container.querySelector('#inv-customer-name')?.value?.trim());
-            const hasCustPhone = Boolean(container.querySelector('#inv-customer-phone')?.value?.trim());
             const hasNote = Boolean(container.querySelector('#inv-note')?.value?.trim());
             const hasDiscount = parseFloat(container.querySelector('#inv-discount')?.value || 0) > 0;
             const hasAddCut = parseFloat(container.querySelector('#inv-add-cut')?.value || 0) > 0;
             const hasShipping = parseFloat(container.querySelector('#inv-shipping')?.value || 0) > 0;
             const hasTax = parseFloat(container.querySelector('#inv-tax')?.value || 0) > 0;
-            return hasItems || hasCustName || hasCustPhone || hasNote || hasDiscount || hasAddCut || hasShipping || hasTax;
+            return hasItems || hasCustName || hasNote || hasDiscount || hasAddCut || hasShipping || hasTax;
         }
     };
 
@@ -544,17 +663,19 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (!btnSubmit) return;
         const hasItems = invoiceItems.length > 0;
         const busSelected = Boolean(container.querySelector('#inv-business')?.value);
+        const hasTitle = Boolean((container.querySelector('#inv-title')?.value || '').trim());
+        const hasInvNum = Boolean((container.querySelector('#inv-number-input')?.value || '').trim());
         
-        let validRequired = false;
-        if (isBusinessInvoice) {
-            const clientSelected = Boolean(container.querySelector('#inv-client')?.value);
-            const hasTitle = Boolean((container.querySelector('#inv-title')?.value || '').trim());
-            const hasBusNum = Boolean((container.querySelector('#inv-bus-number')?.value || '').trim());
-            validRequired = hasItems && busSelected && clientSelected && hasTitle && hasBusNum;
+        let recipientValid = false;
+        if (recipientMode === 'customer') {
+            recipientValid = Boolean(container.querySelector('#inv-customer')?.value || (container.querySelector('#inv-customer-name')?.value || '').trim());
+        } else if (recipientMode === 'client') {
+            recipientValid = Boolean(container.querySelector('#inv-client')?.value || (container.querySelector('#inv-customer-name')?.value || '').trim());
         } else {
-            const hasCustName = Boolean((container.querySelector('#inv-customer-name')?.value || '').trim());
-            validRequired = hasItems && busSelected && hasCustName;
+            recipientValid = Boolean((container.querySelector('#inv-customer-name')?.value || '').trim());
         }
+
+        const validRequired = hasItems && busSelected && hasTitle && hasInvNum && recipientValid;
 
         if (!validRequired) {
             btnSubmit.disabled = true;
@@ -562,14 +683,12 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
 
         if (editingInvoiceId) {
-            // Smart Button: disabled if no changes have been made to the invoice
             btnSubmit.disabled = !isInvoiceFormDirty();
         } else {
             btnSubmit.disabled = false;
         }
     };
 
-    // Attach dirty check helper to editor DOM element for router safety
     if (editorView) {
         editorView._isDirty = isInvoiceFormDirty;
     }
@@ -619,12 +738,147 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     if (btnBackToList) btnBackToList.addEventListener('click', handleCloseEditor);
     if (btnCancel) btnCancel.addEventListener('click', handleCloseEditor);
 
+    // Business Profile Preview Card Builder (Round Avatar / SVG + details)
+    const updateBusinessPreview = () => {
+        const busSelect = container.querySelector('#inv-business');
+        const previewEl = container.querySelector('#inv-business-preview-card');
+        if (!previewEl || !busSelect) return;
+        
+        const b = allBusinesses.find(x => x.id === busSelect.value);
+        if (b) {
+            previewEl.style.display = 'block';
+            const imgUrl = b.imageUrl || b.imageUri;
+            const avatarHtml = imgUrl 
+                ? `<img src="${imgUrl}" alt="${b.name}" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid #e11d48; box-shadow:0 2px 6px rgba(0,0,0,0.1);">`
+                : `<div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, #e11d48, #be123c); display:flex; align-items:center; justify-content:center; color:white; font-size:1.25rem; font-weight:700; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 10h.01M6 14h.01M6 18h.01M10 10h.01M10 14h.01M10 18h.01M14 10h.01M14 14h.01M14 18h.01M18 10h.01M18 14h.01M18 18h.01M6 3h12v4H6z"/></svg>
+                   </div>`;
+
+            previewEl.innerHTML = `
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    ${avatarHtml}
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:0.98rem; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+                            ${b.name}
+                            <span style="font-size:0.7rem; background:rgba(225,29,72,0.1); color:#e11d48; padding:1px 6px; border-radius:4px; font-weight:600;">Issuer</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px; display:flex; flex-wrap:wrap; gap:0.65rem;">
+                            ${b.phone ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>${b.phone}</span>` : ''}
+                            ${b.email ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>${b.email}</span>` : ''}
+                            ${b.address ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${b.address}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            previewEl.style.display = 'none';
+            previewEl.innerHTML = '';
+        }
+        updateInvoiceSubmitState();
+    };
+
+    // Recipient Profile Preview Card Builder
+    const updateRecipientPreview = () => {
+        const previewEl = container.querySelector('#inv-recipient-preview-card');
+        if (!previewEl) return;
+
+        let profile = null;
+        let profileTypeLabel = 'Recipient';
+
+        if (recipientMode === 'customer') {
+            const custSelect = container.querySelector('#inv-customer');
+            profile = allCustomers.find(x => x.id === custSelect?.value);
+            profileTypeLabel = 'Customer Profile';
+        } else if (recipientMode === 'client') {
+            const cliSelect = container.querySelector('#inv-client');
+            profile = allClients.find(x => x.id === cliSelect?.value);
+            profileTypeLabel = 'Client Business';
+        }
+
+        if (profile) {
+            previewEl.style.display = 'block';
+            const imgUrl = profile.imageUrl || profile.imageUri;
+            const avatarHtml = imgUrl 
+                ? `<img src="${imgUrl}" alt="${profile.name}" style="width:46px; height:46px; border-radius:50%; object-fit:cover; border:2px solid #e11d48; box-shadow:0 2px 6px rgba(0,0,0,0.1);">`
+                : `<div style="width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg, #475569, #334155); display:flex; align-items:center; justify-content:center; color:white; font-size:1.15rem; font-weight:700; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+                    ${recipientMode === 'client' 
+                        ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 10h.01M6 14h.01M6 18h.01M10 10h.01M10 14h.01M10 18h.01M14 10h.01M14 14h.01M14 18h.01M18 10h.01M18 14h.01M18 18h.01M6 3h12v4H6z"/></svg>`
+                        : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
+                    }
+                   </div>`;
+
+            // Auto-fill hidden/manual fields
+            const nameEl = container.querySelector('#inv-customer-name');
+            const phoneEl = container.querySelector('#inv-customer-phone');
+            const emailEl = container.querySelector('#inv-customer-email');
+            const addrEl = container.querySelector('#inv-customer-address');
+
+            if (nameEl) nameEl.value = profile.name || '';
+            if (phoneEl) phoneEl.value = profile.phone || '';
+            if (emailEl) emailEl.value = profile.email || '';
+            if (addrEl) addrEl.value = profile.address || '';
+
+            previewEl.innerHTML = `
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    ${avatarHtml}
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+                            ${profile.name}
+                            <span style="font-size:0.7rem; background:rgba(37,99,235,0.1); color:#2563eb; padding:1px 6px; border-radius:4px; font-weight:600;">${profileTypeLabel}</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px; display:flex; flex-wrap:wrap; gap:0.65rem;">
+                            ${profile.phone ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>${profile.phone}</span>` : ''}
+                            ${profile.email ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>${profile.email}</span>` : ''}
+                            ${profile.address ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${profile.address}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            previewEl.style.display = 'none';
+            previewEl.innerHTML = '';
+        }
+        updateInvoiceSubmitState();
+    };
+
+    // Mode switch handler
+    const setRecipientMode = (mode) => {
+        recipientMode = mode;
+        const pills = container.querySelectorAll('#recipient-type-pills button');
+        pills.forEach(b => {
+            if (b.getAttribute('data-mode') === mode) {
+                b.className = 'btn btn-sm btn-primary';
+                b.style.background = '#e11d48';
+                b.style.borderColor = '#e11d48';
+            } else {
+                b.className = 'btn btn-sm btn-secondary';
+                b.style.background = '';
+                b.style.borderColor = '';
+            }
+        });
+
+        const wrapCust = container.querySelector('#wrap-recipient-customer');
+        const wrapCli = container.querySelector('#wrap-recipient-client');
+        const wrapMan = container.querySelector('#wrap-recipient-manual');
+
+        if (wrapCust) wrapCust.style.display = mode === 'customer' ? 'block' : 'none';
+        if (wrapCli) wrapCli.style.display = mode === 'client' ? 'block' : 'none';
+        if (wrapMan) wrapMan.style.display = mode === 'walkin' ? 'block' : 'none';
+
+        if (mode === 'walkin') {
+            const previewEl = container.querySelector('#inv-recipient-preview-card');
+            if (previewEl) previewEl.style.display = 'none';
+        } else {
+            updateRecipientPreview();
+        }
+        updateInvoiceSubmitState();
+    };
+
     // Populate Form for Editing
     const populateFormForEdit = (inv) => {
-        // Shared Business Issuer
+        // Business Issuer
         const busSelect = container.querySelector('#inv-business');
         if (busSelect) {
-            // Find by uniqueId or id
             const matchedBus = allBusinesses.find(b => (b.uniqueId && b.uniqueId === inv.businessId) || b.id === inv.businessId || b.name === inv.businessName);
             if (matchedBus) {
                 busSelect.value = matchedBus.id;
@@ -634,41 +888,50 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             updateBusinessPreview();
         }
 
-        if (isBusinessInvoice) {
-            // Client select
+        // Recipient resolution
+        const matchedCust = allCustomers.find(c => (c.uniqueId && c.uniqueId === inv.customerId) || c.id === inv.customerId || (inv.customerName && c.name === inv.customerName));
+        const matchedCli = allClients.find(c => (c.uniqueId && c.uniqueId === inv.clientId) || c.id === inv.clientId || (inv.customerName && c.name === inv.customerName));
+
+        if (inv.clientId && matchedCli) {
+            setRecipientMode('client');
             const cliSelect = container.querySelector('#inv-client');
-            if (cliSelect) {
-                const matchedCli = allClients.find(c => (c.uniqueId && c.uniqueId === inv.clientId) || c.id === inv.clientId || c.name === inv.customerName);
-                if (matchedCli) {
-                    cliSelect.value = matchedCli.id;
-                } else if (inv.clientId) {
-                    cliSelect.value = inv.clientId;
-                }
-                updateClientPreview();
-            }
-
-            const titleEl = container.querySelector('#inv-title');
-            if (titleEl) titleEl.value = inv.title || 'Invoice';
-
-            const busInvField = container.querySelector('#inv-bus-number');
-            if (busInvField) busInvField.value = inv.busInvNumber || inv.invoiceNumber || '';
-        } else {
-            // Customer
+            if (cliSelect) cliSelect.value = matchedCli.id;
+        } else if (inv.customerId && matchedCust) {
+            setRecipientMode('customer');
             const custSelect = container.querySelector('#inv-customer');
-            if (custSelect) {
-                const matchedCust = allCustomers.find(c => (c.uniqueId && c.uniqueId === inv.customerId) || c.id === inv.customerId || c.name === inv.customerName);
-                if (matchedCust) custSelect.value = matchedCust.id;
-            }
-
-            const custNameEl = container.querySelector('#inv-customer-name');
-            if (custNameEl) custNameEl.value = inv.customerName || '';
-
-            const custPhoneEl = container.querySelector('#inv-customer-phone');
-            if (custPhoneEl) custPhoneEl.value = inv.customerNumber || '';
-
-            const custInvNumEl = container.querySelector('#inv-cust-number');
-            if (custInvNumEl) custInvNumEl.value = inv.invoiceNumber || `INV-${inv.timestamp || Date.now()}`;
+            if (custSelect) custSelect.value = matchedCust.id;
+        } else if (matchedCust) {
+            setRecipientMode('customer');
+            const custSelect = container.querySelector('#inv-customer');
+            if (custSelect) custSelect.value = matchedCust.id;
+        } else if (matchedCli) {
+            setRecipientMode('client');
+            const cliSelect = container.querySelector('#inv-client');
+            if (cliSelect) cliSelect.value = matchedCli.id;
+        } else {
+            setRecipientMode('walkin');
         }
+
+        const nameEl = container.querySelector('#inv-customer-name');
+        if (nameEl) nameEl.value = inv.customerName || '';
+
+        const phoneEl = container.querySelector('#inv-customer-phone');
+        if (phoneEl) phoneEl.value = inv.customerNumber || inv.clientPhone || '';
+
+        const emailEl = container.querySelector('#inv-customer-email');
+        if (emailEl) emailEl.value = inv.clientEmail || '';
+
+        const addrEl = container.querySelector('#inv-customer-address');
+        if (addrEl) addrEl.value = inv.clientAddress || '';
+
+        updateRecipientPreview();
+
+        // Invoice Meta
+        const titleEl = container.querySelector('#inv-title');
+        if (titleEl) titleEl.value = inv.title || 'Invoice';
+
+        const invNumInput = container.querySelector('#inv-number-input');
+        if (invNumInput) invNumInput.value = inv.invoiceNumber || inv.busInvNumber || `INV-${inv.timestamp || Date.now()}`;
 
         // Line Items
         invoiceItems = (inv.items || []).map(item => ({
@@ -682,7 +945,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             sizeWeight: item.sizeWeight || ''
         }));
 
-        // Adjustments
+        // Adjustments (All 4 supported across both types)
         if (container.querySelector('#inv-discount')) container.querySelector('#inv-discount').value = inv.discountPercent || 0;
         if (container.querySelector('#inv-add-cut')) container.querySelector('#inv-add-cut').value = inv.additionalCut || 0;
         if (container.querySelector('#inv-tax')) container.querySelector('#inv-tax').value = inv.taxPercent || 0;
@@ -692,7 +955,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const statusEl = container.querySelector('#inv-status');
         if (statusEl) {
             const rawStatus = (inv.status || 'Paid').trim();
-            // Normalize to title case
             if (rawStatus.toUpperCase() === 'PAID') statusEl.value = 'Paid';
             else if (rawStatus.toUpperCase() === 'UNPAID') statusEl.value = 'Unpaid';
             else statusEl.value = 'Draft';
@@ -713,51 +975,21 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         pickerContainer.style.display = 'none';
         if (pickerToggleText) pickerToggleText.textContent = 'Open Advanced Product Picker';
 
-        if (isBusinessInvoice) {
-            const busInvField = container.querySelector('#inv-bus-number');
-            if (busInvField) busInvField.value = generateRandomBusInvId();
-            const titleEl = container.querySelector('#inv-title');
-            if (titleEl) titleEl.value = 'Invoice';
-        } else {
-            const custInvField = container.querySelector('#inv-cust-number');
-            if (custInvField) custInvField.value = `INV-${Date.now()}`;
-        }
+        setRecipientMode(isBusinessInvoice ? 'client' : 'customer');
+
+        const invNumInput = container.querySelector('#inv-number-input');
+        if (invNumInput) invNumInput.value = generateRandomInvoiceId(isBusinessInvoice);
+        
+        const titleEl = container.querySelector('#inv-title');
+        if (titleEl) titleEl.value = 'Invoice';
 
         const statusEl = container.querySelector('#inv-status');
         if (statusEl) statusEl.value = 'Paid';
 
         updateBusinessPreview();
-        updateClientPreview();
+        updateRecipientPreview();
         renderItemsList();
         updateLiveTotals();
-    };
-
-    // Business Preview Helper
-    const updateBusinessPreview = () => {
-        const busSelect = container.querySelector('#inv-business');
-        const previewEl = container.querySelector('#inv-business-preview');
-        if (!previewEl || !busSelect) return;
-        const b = allBusinesses.find(x => x.id === busSelect.value);
-        if (b) {
-            previewEl.style.display = 'block';
-            previewEl.innerHTML = `<strong>${b.name}</strong> &bull; ${b.phone || 'No phone'} &bull; ${b.address || 'No address'}`;
-        } else {
-            previewEl.style.display = 'none';
-        }
-    };
-
-    // Client Preview Helper
-    const updateClientPreview = () => {
-        const cliSelect = container.querySelector('#inv-client');
-        const previewEl = container.querySelector('#inv-client-preview');
-        if (!previewEl || !cliSelect) return;
-        const c = allClients.find(x => x.id === cliSelect.value);
-        if (c) {
-            previewEl.style.display = 'block';
-            previewEl.innerHTML = `<strong>${c.name}</strong> &bull; ${c.phone || 'No phone'} &bull; ${c.email || 'No email'} &bull; ${c.address || 'No address'}`;
-        } else {
-            previewEl.style.display = 'none';
-        }
     };
 
     const getVisibleProducts = () => {
@@ -799,7 +1031,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (pickerUnitsDisp) pickerUnitsDisp.textContent = totalUnits;
         if (pickerSubtotalDisp) pickerSubtotalDisp.textContent = formatCurrency(totalCost);
 
-        // Update Select All Visible / Deselect All Visible button state dynamically
         const visible = getVisibleProducts();
         const selectableVisible = isVendingActive ? visible.filter(p => Number(p.quantity || 0) > 0) : visible;
         const allVisibleSelected = selectableVisible.length > 0 && selectableVisible.every(p => pickerSelections[p.id] !== undefined);
@@ -1031,7 +1262,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         });
     }
 
-    // Toggle Select All Visible / Deselect All Visible for current section
     if (pickerBtnSelectAll) {
         pickerBtnSelectAll.addEventListener('click', () => {
             const visible = getVisibleProducts();
@@ -1039,12 +1269,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const allVisibleSelected = selectableVisible.length > 0 && selectableVisible.every(p => pickerSelections[p.id] !== undefined);
 
             if (allVisibleSelected) {
-                // Deselect only the currently visible section items (keeping other sections untouched!)
                 selectableVisible.forEach(p => {
                     delete pickerSelections[p.id];
                 });
             } else {
-                // Select all currently visible items (accumulating with previous category selections!)
                 selectableVisible.forEach(p => {
                     if (pickerSelections[p.id] === undefined) {
                         pickerSelections[p.id] = 1;
@@ -1056,7 +1284,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         });
     }
 
-    // Clear all selections across all sections
     if (pickerBtnClearSel) {
         pickerBtnClearSel.addEventListener('click', () => {
             pickerSelections = {};
@@ -1104,12 +1331,12 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         });
     }
 
-    const btnRegenBusId = container.querySelector('#btn-regen-bus-id');
-    if (btnRegenBusId) {
-        btnRegenBusId.addEventListener('click', () => {
-            const busInvField = container.querySelector('#inv-bus-number');
-            if (busInvField) {
-                busInvField.value = generateRandomBusInvId();
+    const btnRegenInvId = container.querySelector('#btn-regen-inv-id');
+    if (btnRegenInvId) {
+        btnRegenInvId.addEventListener('click', () => {
+            const invNumField = container.querySelector('#inv-number-input');
+            if (invNumField) {
+                invNumField.value = generateRandomInvoiceId(isBusinessInvoice);
             }
         });
     }
@@ -1117,20 +1344,27 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     // Render items list
     const renderItemsList = () => {
         const list = container.querySelector('#invoice-items-list');
+        const countBadge = container.querySelector('#summary-items-count');
+        
+        if (countBadge) {
+            const totalUnits = invoiceItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+            countBadge.textContent = `${invoiceItems.length} products (${totalUnits} units)`;
+        }
+
         if (!list) return;
         if (invoiceItems.length === 0) {
-            list.innerHTML = `<div style="color:var(--text-muted); font-size:0.875rem; padding:0.75rem 0; text-align:center; background:var(--surface-50); border-radius:8px;">No products added yet. Click above to pick products.</div>`;
+            list.innerHTML = `<div style="color:var(--text-muted); font-size:0.875rem; padding:1.25rem 0; text-align:center; background:var(--surface-50); border-radius:8px; border:1px dashed var(--border-color);">No products added yet. Click above to pick products.</div>`;
         } else {
             list.innerHTML = invoiceItems.map((item, idx) => `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:0.65rem 0.85rem; border:1px solid var(--border-color); border-radius:8px; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:0.65rem 0.85rem; border:1px solid var(--border-color); border-radius:8px; gap: 0.5rem; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
                     <div style="flex: 2; min-width: 150px;">
                         <div style="font-weight:600; font-size: 0.9rem; color:var(--text-primary);">${item.productName}</div>
                         <div style="font-size:0.78rem; color:var(--text-muted);">${item.sizeWeight ? item.sizeWeight + ' &bull; ' : ''}${formatCurrency(item.unitPrice)} each</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <input type="number" min="1" value="${item.quantity}" class="form-control item-qty-input" data-index="${idx}" style="width:70px; padding:0.25rem 0.5rem; text-align: center; height: 32px; font-size: 0.85rem;">
-                        <span style="font-weight:700; min-width: 75px; text-align: right; color: var(--text-primary);">${formatCurrency(item.quantity * item.unitPrice)}</span>
-                        <button type="button" class="btn btn-sm btn-secondary remove-item-btn" data-index="${idx}" style="color:var(--danger); padding:0.25rem 0.55rem; font-size: 0.85rem;">&times;</button>
+                        <input type="number" min="1" value="${item.quantity}" class="form-control item-qty-input" data-index="${idx}" style="width:70px; padding:0.25rem 0.5rem; text-align: center; height: 32px; font-size: 0.85rem; font-weight:600;">
+                        <span style="font-weight:700; min-width: 75px; text-align: right; color: var(--text-primary); font-size:0.92rem;">${formatCurrency(item.quantity * item.unitPrice)}</span>
+                        <button type="button" class="btn btn-sm btn-secondary remove-item-btn" data-index="${idx}" style="color:var(--danger); padding:0.25rem 0.55rem; font-size: 0.85rem;" title="Remove product">&times;</button>
                     </div>
                 </div>
             `).join('');
@@ -1170,7 +1404,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         updateInvoiceSubmitState();
     };
 
-    // Calculate live totals
+    // Calculate live totals (Expanded breakdown with Tax, Discount, Cut, Shipping)
     const updateLiveTotals = () => {
         const liveTotalsEl = container.querySelector('#inv-live-totals');
         if (!liveTotalsEl) return;
@@ -1181,15 +1415,54 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const ship = parseFloat(container.querySelector('#inv-shipping')?.value || 0);
 
         const totals = calculateInvoiceTotal(invoiceItems, dPct, addCut, tPct, ship);
+        const discountAmt = totals.subtotal * (dPct / 100);
+        const taxableBase = Math.max(0, totals.subtotal - discountAmt - addCut);
 
         liveTotalsEl.innerHTML = `
-            <div>Subtotal: ${formatCurrency(totals.subtotal)}</div>
-            ${dPct > 0 ? `<div style="color:var(--primary);">Discount (${dPct}%): -${formatCurrency(totals.subtotal * (dPct/100))}</div>` : ''}
-            ${addCut > 0 ? `<div style="color:var(--primary);">Additional Cut: -${formatCurrency(addCut)}</div>` : ''}
-            ${tPct > 0 ? `<div>Tax (${tPct}%): +${formatCurrency(totals.taxAmount)}</div>` : ''}
-            ${ship > 0 ? `<div>Shipping: +${formatCurrency(ship)}</div>` : ''}
-            <div style="font-weight:700; font-size:1.25rem; margin-top:0.5rem; color:var(--primary); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">Grand Total: ${formatCurrency(totals.grandTotal)}</div>
-            <div style="font-size:0.85rem; color:var(--text-muted);">Est. Profit: ${formatCurrency(totals.totalProfit)}</div>
+            <div style="display:flex; justify-content:space-between; color:var(--text-secondary);">
+                <span>Subtotal</span>
+                <strong style="color:var(--text-primary);">${formatCurrency(totals.subtotal)}</strong>
+            </div>
+
+            ${dPct > 0 ? `
+            <div style="display:flex; justify-content:space-between; color:#e11d48;">
+                <span>Discount (${dPct}%)</span>
+                <strong>-${formatCurrency(discountAmt)}</strong>
+            </div>` : ''}
+
+            ${addCut > 0 ? `
+            <div style="display:flex; justify-content:space-between; color:#e11d48;">
+                <span>Additional Cut</span>
+                <strong>-${formatCurrency(addCut)}</strong>
+            </div>` : ''}
+
+            ${(dPct > 0 || addCut > 0) && tPct > 0 ? `
+            <div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:0.8rem; border-top:1px dashed var(--border-color); padding-top:2px;">
+                <span>Taxable Base</span>
+                <span>${formatCurrency(taxableBase)}</span>
+            </div>` : ''}
+
+            ${tPct > 0 ? `
+            <div style="display:flex; justify-content:space-between; color:#0284c7;">
+                <span>Tax (${tPct}%)</span>
+                <strong>+${formatCurrency(totals.taxAmount)}</strong>
+            </div>` : ''}
+
+            ${ship > 0 ? `
+            <div style="display:flex; justify-content:space-between; color:#0d9488;">
+                <span>Shipping Cost</span>
+                <strong>+${formatCurrency(ship)}</strong>
+            </div>` : ''}
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.65rem; border-top: 2px solid var(--border-color); padding-top: 0.65rem;">
+                <span style="font-weight:800; font-size:1rem; color:var(--text-primary);">Grand Total</span>
+                <span style="font-weight:900; font-size:1.35rem; color:#e11d48;">${formatCurrency(totals.grandTotal)}</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+                <span>Est. Net Profit</span>
+                <strong style="color:${totals.totalProfit >= 0 ? '#10b981' : '#ef4444'};">${formatCurrency(totals.totalProfit)}</strong>
+            </div>
         `;
         updateInvoiceSubmitState();
     };
@@ -1211,8 +1484,24 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Attach row events
     const attachInvoiceItemEvents = (invoices) => {
-        // View Action -> Dedicated Invoice Viewer Modal & PDF Template Selection
         container.querySelectorAll('.view-inv').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const inv = invoices.find(i => i.id === id);
+                if (inv) {
+                    openInvoiceDetailsModal(inv, {
+                        onEdit: (invoiceToEdit) => {
+                            showEditorView(true, invoiceToEdit);
+                        },
+                        allBusinesses,
+                        allCustomers,
+                        allClients
+                    });
+                }
+            });
+        });
+
+        container.querySelectorAll('.export-pdf-inv').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.getAttribute('data-id');
                 const inv = invoices.find(i => i.id === id);
@@ -1224,7 +1513,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             });
         });
 
-        // Edit Action
         container.querySelectorAll('.edit-inv').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.getAttribute('data-id');
@@ -1235,7 +1523,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             });
         });
 
-        // Delete Action
         container.querySelectorAll('.del-inv').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
@@ -1263,7 +1550,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (countPaidEl) countPaidEl.textContent = rawInvoices.filter(i => (i.status || '').toUpperCase() === 'PAID').length;
         if (countUnpaidEl) countUnpaidEl.textContent = rawInvoices.filter(i => (i.status || '').toUpperCase() !== 'PAID').length;
 
-        // Filter by status
         let filtered = rawInvoices.filter(inv => {
             const s = (inv.status || 'Draft').toUpperCase();
             if (activeStatus === 'PAID') return s === 'PAID';
@@ -1271,7 +1557,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             return true;
         });
 
-        // Filter by date
         if (activeDateFilter !== 'ALL') {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -1297,7 +1582,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             });
         }
 
-        // Filter by search query
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             filtered = filtered.filter(inv => {
@@ -1312,7 +1596,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             });
         }
 
-        // Sort
         filtered.sort((a, b) => {
             if (activeSort === 'NEWEST') return getInvoiceTime(b) - getInvoiceTime(a);
             if (activeSort === 'OLDEST') return getInvoiceTime(a) - getInvoiceTime(b);
@@ -1321,7 +1604,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             return 0;
         });
 
-        // Render rows
         if (filtered.length === 0) {
             tbody.innerHTML = `
                 <tr>
@@ -1342,9 +1624,17 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const badgeClass = isPaid ? 'badge-paid' : 'badge-unpaid';
             const statusLabel = isPaid ? 'PAID' : (inv.status || 'UNPAID');
             
-            const entityDisplay = isBusinessInvoice 
-                ? `<strong>${inv.businessName || 'Business'}</strong>${inv.customerName || inv.clientEmail ? `<div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">To: ${inv.customerName || inv.clientEmail}</div>` : ''}`
-                : `<strong>${inv.customerName || 'Walk-in Customer'}</strong>${inv.customerNumber ? `<div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">${inv.customerNumber}</div>` : ''}`;
+            const entityDisplay = `
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div>
+                        <div style="font-weight:700; color:var(--text-primary);">${inv.businessName || 'Business'}</div>
+                        <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
+                            ${inv.customerName ? `To: <strong>${inv.customerName}</strong>` : 'To: Walk-in Recipient'}
+                            ${inv.customerNumber ? ` &bull; ${inv.customerNumber}` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
 
             const displayInvNumber = inv.invoiceNumber || inv.busInvNumber || inv.uniqueId;
 
@@ -1361,10 +1651,14 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     </td>
                     <td style="padding:1rem; font-weight: 700; color: var(--text-primary);">${formatCurrency(inv.totalPrice)}</td>
                     <td style="padding:1rem 1.25rem;">
-                        <div style="display:flex; gap:0.4rem;">
-                            <button class="btn btn-sm btn-primary view-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight:700; background:linear-gradient(135deg, #ff3366, #e11d48);">View</button>
-                            <button class="btn btn-sm btn-secondary edit-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight:600;">Edit</button>
-                            <button class="btn btn-sm btn-outline del-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; color:var(--danger);">Delete</button>
+                        <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+                            <button class="btn btn-sm btn-primary view-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight:700; background:linear-gradient(135deg, #ff3366, #e11d48); border:none;" title="View Complete Invoice Details">View</button>
+                            <button class="btn btn-sm btn-secondary export-pdf-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight:600; display:inline-flex; align-items:center; gap:3px;" title="Export PDF & Performance">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                PDF
+                            </button>
+                            <button class="btn btn-sm btn-secondary edit-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight:600;" title="Edit Invoice">Edit</button>
+                            <button class="btn btn-sm btn-outline del-inv" data-id="${inv.id}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem; color:var(--danger);" title="Delete Invoice">Delete</button>
                         </div>
                     </td>
                 </tr>
@@ -1379,7 +1673,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         try {
             renderSkeleton();
 
-            // Load Categories safely
             try {
                 allCategories = await categoryService.getAllCategories();
             } catch (catErr) {
@@ -1387,7 +1680,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 allCategories = [];
             }
 
-            // Load Vending status safely
             try {
                 isVendingActive = await settingsService.isVendingEnabled();
             } catch (vendErr) {
@@ -1410,7 +1702,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     : `<span style="color: var(--text-muted);">Vending Mode Off</span>`;
             }
 
-            // Load products safely
             try {
                 allProducts = await productService.getAllActiveProducts();
             } catch (prodErr) {
@@ -1430,22 +1721,37 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
             renderPickerCategories();
 
-            // Load businesses safely
-            try {
-                await reloadBusinesses();
-            } catch (bErr) {
-                console.warn("Could not reload businesses:", bErr);
-            }
+            // Load businesses, clients & customers
+            await reloadBusinesses();
+            await reloadClients();
+            await reloadCustomers();
 
-            // Load clients or customers safely
-            try {
-                if (isBusinessInvoice) {
-                    await reloadClients();
-                } else {
-                    await reloadCustomers();
+            // Auto-select if directed from People / Directory "Create Invoice"
+            if (window.__preselectedInvoiceRecipient) {
+                const pre = window.__preselectedInvoiceRecipient;
+                window.__preselectedInvoiceRecipient = null;
+                showEditorView(false);
+                if (pre.mode === 'customer') {
+                    setRecipientMode('customer');
+                    const custSelect = container.querySelector('#inv-customer');
+                    if (custSelect && pre.id) {
+                        custSelect.value = pre.id;
+                        updateRecipientPreview();
+                    }
+                } else if (pre.mode === 'client') {
+                    setRecipientMode('client');
+                    const cliSelect = container.querySelector('#inv-client');
+                    if (cliSelect && pre.id) {
+                        cliSelect.value = pre.id;
+                        updateRecipientPreview();
+                    }
+                } else if (pre.mode === 'business') {
+                    const busSelect = container.querySelector('#inv-business');
+                    if (busSelect && pre.id) {
+                        busSelect.value = pre.id;
+                        updateBusinessPreview();
+                    }
                 }
-            } catch (entErr) {
-                console.warn("Could not reload clients/customers:", entErr);
             }
 
             // Realtime Invoice Listener
@@ -1479,7 +1785,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const busSelect = container.querySelector('#inv-business');
         if (!busSelect) return;
         busSelect.innerHTML = '<option value="">Select Business (Issuer)...</option>' + 
-            allBusinesses.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+            allBusinesses.map(b => `<option value="${b.id}">${b.name}${b.phone ? ` (${b.phone})` : ''}</option>`).join('');
+        
         if (selectedId) {
             busSelect.value = selectedId;
         } else if (allBusinesses.length === 1 && !busSelect.value) {
@@ -1497,10 +1804,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
         const cliSelect = container.querySelector('#inv-client');
         if (!cliSelect) return;
-        cliSelect.innerHTML = '<option value="">None / Custom</option>' + 
-            allClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-        if (selectedId) cliSelect.value = selectedId;
-        updateClientPreview();
+        cliSelect.innerHTML = '<option value="">Select saved client...</option>' + 
+            allClients.map(c => `<option value="${c.id}">${c.name}${c.phone ? ` (${c.phone})` : ''}</option>`).join('');
+        if (selectedId) {
+            cliSelect.value = selectedId;
+            setRecipientMode('client');
+        }
+        updateRecipientPreview();
     };
 
     const reloadCustomers = async (selectedId = null) => {
@@ -1512,47 +1822,50 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
         const custSelect = container.querySelector('#inv-customer');
         if (!custSelect) return;
-        custSelect.innerHTML = '<option value="">Walk-in / None</option>' + 
-            allCustomers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        custSelect.innerHTML = '<option value="">Select saved customer...</option>' + 
+            allCustomers.map(c => `<option value="${c.id}">${c.name}${c.phone ? ` (${c.phone})` : ''}</option>`).join('');
         if (selectedId) {
             custSelect.value = selectedId;
-            const c = allCustomers.find(x => x.id === selectedId);
-            if (c) {
-                const nameEl = container.querySelector('#inv-customer-name');
-                const phoneEl = container.querySelector('#inv-customer-phone');
-                if (nameEl) nameEl.value = c.name;
-                if (phoneEl) phoneEl.value = c.phone || '';
-            }
+            setRecipientMode('customer');
         }
+        updateRecipientPreview();
     };
 
-    // Listen to changes on Entity Dropdowns
+    // Listen to changes on Entity Dropdowns & Pills
     container.querySelector('#inv-business')?.addEventListener('change', updateBusinessPreview);
-    container.querySelector('#inv-client')?.addEventListener('change', updateClientPreview);
-    container.querySelector('#inv-customer')?.addEventListener('change', (e) => {
-        const c = allCustomers.find(x => x.id === e.target.value);
-        if (c) {
-            container.querySelector('#inv-customer-name').value = c.name;
-            container.querySelector('#inv-customer-phone').value = c.phone || '';
-        } else {
-            container.querySelector('#inv-customer-name').value = '';
-            container.querySelector('#inv-customer-phone').value = '';
-        }
+    container.querySelector('#inv-client')?.addEventListener('change', updateRecipientPreview);
+    container.querySelector('#inv-customer')?.addEventListener('change', updateRecipientPreview);
+
+    container.querySelectorAll('#recipient-type-pills button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const mode = e.currentTarget.getAttribute('data-mode');
+            setRecipientMode(mode);
+        });
     });
 
     // QUICK ADD MODAL HANDLERS
     const openQuickAddModal = (type) => {
         quickAddTargetType = type;
         quickAddForm.reset();
+        quickAddPreviewImgUrl = '';
+        if (qaAvatarPreview) {
+            qaAvatarPreview.innerHTML = type === 'customer' 
+                ? `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
+                : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`;
+        }
+        
         const submitBtn = container.querySelector('#btn-save-quick-add');
-        if (submitBtn) submitBtn.disabled = true;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Save & Select';
+        }
 
         if (type === 'business') {
             quickAddTitle.textContent = 'Add New Business (Issuer)';
         } else if (type === 'client') {
-            quickAddTitle.textContent = 'Add New Client (Billed To)';
+            quickAddTitle.textContent = 'Add New Client Profile';
         } else {
-            quickAddTitle.textContent = 'Add New Customer';
+            quickAddTitle.textContent = 'Add New Customer Profile';
         }
         quickAddModal.style.display = 'flex';
         container.querySelector('#qa-name')?.focus();
@@ -1561,6 +1874,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const closeQuickAddModal = () => {
         quickAddModal.style.display = 'none';
         quickAddTargetType = null;
+        quickAddPreviewImgUrl = '';
     };
 
     container.querySelector('#btn-quick-add-business')?.addEventListener('click', () => openQuickAddModal('business'));
@@ -1570,17 +1884,55 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     btnCloseQuickAdd?.addEventListener('click', closeQuickAddModal);
     btnCancelQuickAdd?.addEventListener('click', closeQuickAddModal);
 
+    // Live Avatar Preview for Quick Add (File or URL)
+    qaPhotoFileInput?.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (file && qaAvatarPreview) {
+            const reader = new FileReader();
+            reader.onload = (re) => {
+                qaAvatarPreview.innerHTML = `<img src="${re.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    qaPhotoUrlInput?.addEventListener('input', (e) => {
+        const url = e.target.value.trim();
+        if (url && qaAvatarPreview) {
+            const fallbackSvg = quickAddTargetType === 'customer'
+                ? `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
+                : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`;
+            qaAvatarPreview.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.innerHTML='${fallbackSvg.replace(/'/g, "\\'")}'">`;
+        }
+    });
+
     quickAddForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const submitBtn = container.querySelector('#btn-save-quick-add');
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving...';
 
+        let finalImageUrl = qaPhotoUrlInput?.value?.trim() || '';
+        const file = qaPhotoFileInput?.files?.[0];
+
+        if (file) {
+            try {
+                finalImageUrl = await storageService.uploadImage(file, workspaceId);
+            } catch (imgErr) {
+                console.warn("Storage upload error, proceeding without upload:", imgErr);
+            }
+        }
+
         const data = {
             name: container.querySelector('#qa-name').value.trim(),
             phone: container.querySelector('#qa-phone').value.trim(),
             email: container.querySelector('#qa-email').value.trim(),
-            address: container.querySelector('#qa-address').value.trim()
+            address: container.querySelector('#qa-address').value.trim(),
+            status: container.querySelector('#qa-status').value || 'Active',
+            tags: container.querySelector('#qa-tags')?.value?.split(',').map(s => s.trim()).filter(Boolean) || [],
+            notes: container.querySelector('#qa-notes')?.value?.trim() || '',
+            imageUrl: finalImageUrl,
+            imageUri: finalImageUrl
         };
 
         try {
@@ -1719,7 +2071,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
     });
 
-    ['inv-title', 'inv-bus-number', 'inv-customer-name', 'inv-customer-phone', 'inv-note'].forEach(id => {
+    ['inv-title', 'inv-number-input', 'inv-customer-name', 'inv-customer-phone', 'inv-customer-email', 'inv-customer-address', 'inv-note'].forEach(id => {
         const el = container.querySelector('#' + id);
         if (el) {
             el.addEventListener('input', () => {
@@ -1737,7 +2089,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
     });
 
-    // Quick Add Name Input Listener for Smart Button
     container.querySelector('#qa-name')?.addEventListener('input', (e) => {
         const submitBtn = container.querySelector('#btn-save-quick-add');
         if (submitBtn) {
@@ -1756,18 +2107,26 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 btnSubmit.disabled = true;
                 btnSubmit.textContent = editingInvoiceId ? "Updating..." : "Saving...";
 
-                // Status Title Case ("Paid", "Unpaid", "Draft")
                 let rawStatus = (container.querySelector('#inv-status')?.value || 'Paid').trim();
                 if (rawStatus.toUpperCase() === 'PAID') rawStatus = 'Paid';
                 else if (rawStatus.toUpperCase() === 'UNPAID') rawStatus = 'Unpaid';
                 else rawStatus = 'Draft';
 
+                const discPct = parseFloat(container.querySelector('#inv-discount')?.value || 0);
+                const addCut = parseFloat(container.querySelector('#inv-add-cut')?.value || 0);
+                const taxPct = parseFloat(container.querySelector('#inv-tax')?.value || 0);
+                const shippingCost = parseFloat(container.querySelector('#inv-shipping')?.value || 0);
+
+                const calculatedTotals = calculateInvoiceTotal(invoiceItems, discPct, addCut, taxPct, shippingCost);
+
                 const invoiceData = {
                     isBusinessInvoice,
-                    discountPercent: parseFloat(container.querySelector('#inv-discount')?.value || 0),
-                    additionalCut: parseFloat(container.querySelector('#inv-add-cut')?.value || 0),
-                    taxPercent: parseFloat(container.querySelector('#inv-tax')?.value || 0),
-                    shippingCost: parseFloat(container.querySelector('#inv-shipping')?.value || 0),
+                    discountPercent: discPct,
+                    additionalCut: addCut,
+                    taxPercent: taxPct,
+                    shippingCost: shippingCost,
+                    totalPrice: calculatedTotals.grandTotal,
+                    totalProfit: calculatedTotals.totalProfit,
                     status: rawStatus,
                     note: container.querySelector('#inv-note')?.value || '',
                     timestamp: Date.now()
@@ -1786,61 +2145,65 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     invoiceData.businessEmail = bus.email || '';
                 }
 
-                if (isBusinessInvoice) {
-                    // 5 mandatory items: Business*, Client*, Title*, Invoice Number*, At least one item*
-                    const cSelect = container.querySelector('#inv-client');
-                    if (!cSelect || !cSelect.value) {
-                        throw new Error("Client (Billed To) is required for Business Invoices.");
-                    }
-
-                    const cli = allClients.find(c => c.id === cSelect.value);
-                    if (!cli) {
-                        throw new Error("Please select a valid Client.");
-                    }
-
-                    invoiceData.clientId = cli.uniqueId || cli.id;
-                    invoiceData.clientAddress = cli.address || '';
-                    invoiceData.clientPhone = cli.phone || '';
-                    invoiceData.clientEmail = cli.email || '';
-                    invoiceData.customerName = cli.name || '';
-                    invoiceData.customerNumber = cli.phone || '';
-
-                    const invTitle = (container.querySelector('#inv-title')?.value || '').trim();
-                    if (!invTitle) throw new Error("Invoice Title is required.");
-                    invoiceData.title = invTitle;
-                    
-                    const busInvNum = (container.querySelector('#inv-bus-number')?.value || '').trim();
-                    if (!busInvNum) throw new Error("Business Invoice Number is required.");
-                    invoiceData.busInvNumber = busInvNum;
-                    invoiceData.invoiceNumber = busInvNum;
-
-                } else {
-                    // 3 mandatory items: Business*, Customer Name*, At least one item*
+                // Shared Recipient Data (Customer / Client / Walk-in)
+                if (recipientMode === 'customer') {
                     const cSelect = container.querySelector('#inv-customer');
-                    if (cSelect && cSelect.value) {
-                        const cust = allCustomers.find(c => c.id === cSelect.value);
-                        if (cust) {
-                            invoiceData.customerId = cust.uniqueId || cust.id;
-                        }
+                    const cust = allCustomers.find(c => c.id === cSelect?.value);
+                    if (cust) {
+                        invoiceData.customerId = cust.uniqueId || cust.id;
+                        invoiceData.customerName = cust.name || '';
+                        invoiceData.customerNumber = cust.phone || '';
+                        invoiceData.clientEmail = cust.email || '';
+                        invoiceData.clientAddress = cust.address || '';
+                    } else {
+                        invoiceData.customerName = (container.querySelector('#inv-customer-name')?.value || '').trim();
+                        invoiceData.customerNumber = (container.querySelector('#inv-customer-phone')?.value || '').trim();
+                        invoiceData.clientEmail = (container.querySelector('#inv-customer-email')?.value || '').trim();
+                        invoiceData.clientAddress = (container.querySelector('#inv-customer-address')?.value || '').trim();
                     }
-
-                    const cName = container.querySelector('#inv-customer-name')?.value.trim();
-                    if (!cName) throw new Error("Customer Name is required.");
-                    
-                    invoiceData.customerName = cName;
-                    invoiceData.customerNumber = container.querySelector('#inv-customer-phone')?.value.trim() || '';
-                    
-                    const custInvNum = container.querySelector('#inv-cust-number')?.value.trim();
-                    invoiceData.invoiceNumber = custInvNum || `INV-${Date.now()}`;
+                } else if (recipientMode === 'client') {
+                    const cSelect = container.querySelector('#inv-client');
+                    const cli = allClients.find(c => c.id === cSelect?.value);
+                    if (cli) {
+                        invoiceData.clientId = cli.uniqueId || cli.id;
+                        invoiceData.customerName = cli.name || '';
+                        invoiceData.customerNumber = cli.phone || '';
+                        invoiceData.clientPhone = cli.phone || '';
+                        invoiceData.clientEmail = cli.email || '';
+                        invoiceData.clientAddress = cli.address || '';
+                    } else {
+                        invoiceData.customerName = (container.querySelector('#inv-customer-name')?.value || '').trim();
+                        invoiceData.customerNumber = (container.querySelector('#inv-customer-phone')?.value || '').trim();
+                        invoiceData.clientPhone = (container.querySelector('#inv-customer-phone')?.value || '').trim();
+                        invoiceData.clientEmail = (container.querySelector('#inv-customer-email')?.value || '').trim();
+                        invoiceData.clientAddress = (container.querySelector('#inv-customer-address')?.value || '').trim();
+                    }
+                } else {
+                    invoiceData.customerName = (container.querySelector('#inv-customer-name')?.value || '').trim();
+                    invoiceData.customerNumber = (container.querySelector('#inv-customer-phone')?.value || '').trim();
+                    invoiceData.clientPhone = (container.querySelector('#inv-customer-phone')?.value || '').trim();
+                    invoiceData.clientEmail = (container.querySelector('#inv-customer-email')?.value || '').trim();
+                    invoiceData.clientAddress = (container.querySelector('#inv-customer-address')?.value || '').trim();
                 }
 
+                if (!invoiceData.customerName) {
+                    throw new Error("Recipient / Customer Name is required.");
+                }
+
+                const invTitle = (container.querySelector('#inv-title')?.value || '').trim();
+                if (!invTitle) throw new Error("Invoice Title is required.");
+                invoiceData.title = invTitle;
+                
+                const invNumber = (container.querySelector('#inv-number-input')?.value || '').trim();
+                if (!invNumber) throw new Error("Invoice Number is required.");
+                invoiceData.invoiceNumber = invNumber;
+                invoiceData.busInvNumber = invNumber;
+
                 if (editingInvoiceId) {
-                    // Preserving document uniqueId
                     invoiceData.uniqueId = editingInvoiceUniqueId;
                     await invoiceService.updateInvoice(editingInvoiceId, invoiceData, invoiceItems, isVendingActive);
                     showAlert.success(`Invoice ${invoiceData.invoiceNumber} updated successfully!`);
                 } else {
-                    // Correct 13-character base64 uniqueId
                     invoiceData.uniqueId = editingInvoiceUniqueId || generateUniqueId();
                     await invoiceService.createInvoice(invoiceData, invoiceItems, currentUser?.uid || '', isVendingActive);
                     showAlert.success(`Invoice ${invoiceData.invoiceNumber} created successfully! ${isVendingActive ? '(Stock deducted in Vending Mode)' : ''}`);

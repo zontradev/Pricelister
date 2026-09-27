@@ -921,5 +921,34 @@
     animation: livePulse 2s infinite cubic-bezier(0.45, 0, 0.55, 1);
 }
 
+/* Invoice Status Badges */
+.badge-paid {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    letter-spacing: 0.02em;
+}
+
+.badge-unpaid {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    background: rgba(225, 29, 72, 0.12);
+    color: #e11d48;
+    border: 1px solid rgba(225, 29, 72, 0.25);
+    letter-spacing: 0.02em;
+}
+
+
+
 
 

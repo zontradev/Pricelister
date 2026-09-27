@@ -121,49 +121,117 @@ export const renderProducts = async (container, workspaceId) => {
         // Last sale report
         const lastSale = matchedInvoicesWithItems[0] || null;
 
-        // 6-Month Trend Data for SVG Chart
+        // Time-based Trend Data Calculation
         const now = new Date();
-        const monthlyTrend = [];
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            monthlyTrend.push({
-                label: d.toLocaleString('default', { month: 'short' }),
-                year: d.getFullYear(),
-                month: d.getMonth(),
-                units: 0,
-                revenue: 0,
-                profit: 0
+        let monthlyTrend = [];
+
+        if (timeRange === 'TODAY') {
+            // Hourly breakdown for today
+            for (let h = 0; h < 24; h += 4) {
+                const label = `${h.toString().padStart(2, '0')}:00`;
+                monthlyTrend.push({ label, hour: h, units: 0, revenue: 0, profit: 0 });
+            }
+            const todayStr = now.toDateString();
+            matchedInvoicesWithItems.forEach(entry => {
+                const d = new Date(entry.timestamp);
+                if (d.toDateString() === todayStr) {
+                    const h = d.getHours();
+                    const slot = monthlyTrend.find(s => h >= s.hour && h < s.hour + 4) || monthlyTrend[monthlyTrend.length - 1];
+                    if (slot) {
+                        slot.units += entry.unitsSold;
+                        slot.revenue += entry.revenue;
+                        slot.profit += entry.profit;
+                    }
+                }
+            });
+        } else if (timeRange === 'THIS_WEEK') {
+            // Last 7 days
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(now.getDate() - i);
+                monthlyTrend.push({
+                    label: d.toLocaleDateString('default', { weekday: 'short' }),
+                    dateStr: d.toDateString(),
+                    units: 0,
+                    revenue: 0,
+                    profit: 0
+                });
+            }
+            matchedInvoicesWithItems.forEach(entry => {
+                const entryDateStr = new Date(entry.timestamp).toDateString();
+                const slot = monthlyTrend.find(s => s.dateStr === entryDateStr);
+                if (slot) {
+                    slot.units += entry.unitsSold;
+                    slot.revenue += entry.revenue;
+                    slot.profit += entry.profit;
+                }
+            });
+        } else if (timeRange === '1_YEAR') {
+            // 12 months
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                monthlyTrend.push({
+                    label: d.toLocaleString('default', { month: 'short' }),
+                    year: d.getFullYear(),
+                    month: d.getMonth(),
+                    units: 0,
+                    revenue: 0,
+                    profit: 0
+                });
+            }
+            matchedInvoicesWithItems.forEach(entry => {
+                const d = new Date(entry.timestamp);
+                const m = d.getMonth();
+                const y = d.getFullYear();
+                const slot = monthlyTrend.find(s => s.month === m && s.year === y);
+                if (slot) {
+                    slot.units += entry.unitsSold;
+                    slot.revenue += entry.revenue;
+                    slot.profit += entry.profit;
+                }
+            });
+        } else {
+            // Default: 6 Months
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                monthlyTrend.push({
+                    label: d.toLocaleString('default', { month: 'short' }),
+                    year: d.getFullYear(),
+                    month: d.getMonth(),
+                    units: 0,
+                    revenue: 0,
+                    profit: 0
+                });
+            }
+            matchedInvoicesWithItems.forEach(entry => {
+                const d = new Date(entry.timestamp);
+                const m = d.getMonth();
+                const y = d.getFullYear();
+                const slot = monthlyTrend.find(s => s.month === m && s.year === y);
+                if (slot) {
+                    slot.units += entry.unitsSold;
+                    slot.revenue += entry.revenue;
+                    slot.profit += entry.profit;
+                }
             });
         }
 
-        matchedInvoicesWithItems.forEach(entry => {
-            const d = new Date(entry.timestamp);
-            const m = d.getMonth();
-            const y = d.getFullYear();
-            const slot = monthlyTrend.find(s => s.month === m && s.year === y);
-            if (slot) {
-                slot.units += entry.unitsSold;
-                slot.revenue += entry.revenue;
-                slot.profit += entry.profit;
-            }
-        });
-
         // Market Demand & Inventory Velocity Analysis
-        // Average units sold per month over the 6-month window
+        // Average units sold per month over recent window
         const totalRecentUnits = monthlyTrend.reduce((acc, curr) => acc + curr.units, 0);
-        const monthlyVelocity = totalRecentUnits > 0 ? (totalRecentUnits / 6) : (totalUnitsSold > 0 ? totalUnitsSold : 0);
+        const monthlyVelocity = totalRecentUnits > 0 ? (totalRecentUnits / (monthlyTrend.length || 1)) : (totalUnitsSold > 0 ? totalUnitsSold : 0);
         const currentStock = Number(product.quantity) || 0;
 
         let demandRating = 'Stable';
         let demandBadgeClass = 'demand-badge-stable';
         if (monthlyVelocity >= 25 || totalUnitsSold >= 50) {
-            demandRating = 'High Demand 🔥';
+            demandRating = 'High Demand';
             demandBadgeClass = 'demand-badge-high';
         } else if (monthlyVelocity >= 10 || totalUnitsSold >= 20) {
-            demandRating = 'Moderate Demand 📈';
+            demandRating = 'Moderate Demand';
             demandBadgeClass = 'demand-badge-moderate';
         } else if (totalUnitsSold === 0) {
-            demandRating = 'No Sales Yet ⏳';
+            demandRating = 'No Sales Yet';
             demandBadgeClass = 'demand-badge-slow';
         }
 
@@ -175,15 +243,15 @@ export const renderProducts = async (container, workspaceId) => {
             const days = Math.round(currentStock / dailyBurn);
             stockRunoutDays = `~${days} Days`;
             if (days <= 7) {
-                stockRunoutMsg = '🚨 Critical: Stock runout imminent';
+                stockRunoutMsg = 'Critical: Stock runout imminent';
             } else if (days <= 21) {
-                stockRunoutMsg = '⚠️ Restock recommended soon';
+                stockRunoutMsg = 'Restock recommended soon';
             } else {
-                stockRunoutMsg = '✅ Healthy inventory buffer';
+                stockRunoutMsg = 'Healthy inventory buffer';
             }
         } else if (currentStock === 0) {
             stockRunoutDays = '0 Days';
-            stockRunoutMsg = '❌ Out of stock';
+            stockRunoutMsg = 'Out of stock';
         }
 
         // Recommended reorder quantity
@@ -283,9 +351,9 @@ export const renderProducts = async (container, workspaceId) => {
     };
 
     // Render Dedicated Product Detail View
-    const renderProductDetailView = (prd) => {
+    const renderProductDetailView = (prd, activeTrendRange = '6_MONTHS') => {
         activeProductDetail = prd;
-        const analytics = calculateProductAnalytics(prd);
+        const analytics = calculateProductAnalytics(prd, activeTrendRange);
         const catName = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category)?.name || prd.category || 'General';
 
         container.innerHTML = `
@@ -319,7 +387,9 @@ export const renderProducts = async (container, workspaceId) => {
                         <div style="position:relative; width:115px; height:115px; flex-shrink:0;">
                             ${prd.imageUri 
                                 ? `<img id="detail-prd-avatar" src="${prd.imageUri}" style="width:100%; height:100%; object-fit:cover; border-radius:14px; border:2px solid var(--border-color); box-shadow:0 4px 12px rgba(0,0,0,0.06);">`
-                                : `<div id="detail-prd-avatar-placeholder" style="width:100%; height:100%; border-radius:14px; background:linear-gradient(135deg, #fce7f3 0%, #ffe4e6 100%); color:#e11d48; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:800; border:2px solid rgba(225,29,72,0.15);">📦</div>`
+                                : `<div id="detail-prd-avatar-placeholder" style="width:100%; height:100%; border-radius:14px; background:linear-gradient(135deg, #fce7f3 0%, #ffe4e6 100%); color:#e11d48; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid rgba(225,29,72,0.15);">
+                                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                   </div>`
                             }
                             <label for="detail-img-file-input" style="position:absolute; bottom:-6px; right:-6px; width:34px; height:34px; border-radius:50%; background:#e11d48; color:#ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 3px 8px rgba(225,29,72,0.4); border:2px solid #ffffff; transition:transform 0.2s;" title="Upload or change product photo">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
@@ -336,10 +406,10 @@ export const renderProducts = async (container, workspaceId) => {
                             </div>
 
                             <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem; font-size:0.85rem; color:var(--text-secondary);">
-                                ${prd.sizeWeight ? `<span style="background:var(--surface-100); padding:0.2rem 0.5rem; border-radius:5px; font-weight:600;">⚖️ ${prd.sizeWeight}</span>` : ''}
+                                ${prd.sizeWeight ? `<span style="background:var(--surface-100); padding:0.2rem 0.5rem; border-radius:5px; font-weight:600; display:inline-flex; align-items:center; gap:3px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg> ${prd.sizeWeight}</span>` : ''}
                                 ${prd.upcCode ? `<span style="background:var(--surface-100); padding:0.2rem 0.5rem; border-radius:5px; font-family:monospace; font-weight:700;">Barcode: ${prd.upcCode}</span>` : ''}
                                 <span style="background:var(--surface-100); padding:0.2rem 0.5rem; border-radius:5px;">ID: <code style="font-family:monospace; font-size:0.8rem;">${prd.uniqueId || prd.id}</code></span>
-                                ${prd.expDate ? `<span style="color:#d97706; font-weight:600;">⏳ Exp: ${prd.expDate}</span>` : ''}
+                                ${prd.expDate ? `<span style="color:#d97706; font-weight:600; display:inline-flex; align-items:center; gap:3px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Exp: ${prd.expDate}</span>` : ''}
                             </div>
 
                             <p style="margin:0; font-size:0.88rem; color:var(--text-secondary); max-width:750px;">
@@ -354,8 +424,9 @@ export const renderProducts = async (container, workspaceId) => {
                             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.2rem;">
                                 Cost: <strong>${formatCurrency(prd.price || 0)}</strong> &bull; Profit: <strong style="color:#059669;">+${formatCurrency(analytics.unitGrossProfit)}</strong>
                             </div>
-                            <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border-color); font-size:0.82rem; font-weight:700; color:${(prd.quantity || 0) > 5 ? '#059669' : '#dc2626'};">
-                                📦 ${(prd.quantity || 0) > 0 ? `${prd.quantity} Units in Stock` : 'Out of Stock (0 Units)'}
+                            <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border-color); font-size:0.82rem; font-weight:700; color:${(prd.quantity || 0) > 5 ? '#059669' : '#dc2626'}; display:flex; align-items:center; justify-content:flex-end; gap:4px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                ${(prd.quantity || 0) > 0 ? `${prd.quantity} Units in Stock` : 'Out of Stock (0 Units)'}
                             </div>
                         </div>
                     </div>
@@ -431,19 +502,23 @@ export const renderProducts = async (container, workspaceId) => {
                 <!-- 2-COLUMN DEEP ANALYTICAL SECTION -->
                 <div style="display:grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap:1.5rem; align-items:start;">
                     
-                    <!-- LEFT COLUMN: 6-MONTH TREND & INVOICE HISTORY -->
+                    <!-- LEFT COLUMN: TREND & INVOICE HISTORY -->
                     <div style="display:flex; flex-direction:column; gap:1.5rem;">
                         
-                        <!-- 6-Month Sales & Revenue Trend Chart -->
+                        <!-- Sales & Revenue Trend Chart with Time Filter -->
                         <div class="card" style="padding:1.5rem; border-radius:var(--radius-card); box-shadow:var(--shadow-float);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
                                 <div>
-                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700;">6-Month Sales & Revenue Trend</h3>
-                                    <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">Monthly revenue, sales volume, and demand fluctuations</p>
+                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700;">Sales & Revenue Trend</h3>
+                                    <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">Revenue, sales volume, and demand fluctuations over time</p>
                                 </div>
-                                <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; font-weight:600; color:var(--primary);">
-                                    <span style="width:10px; height:10px; border-radius:50%; background:#e11d48; display:inline-block;"></span>
-                                    Gross Revenue ($)
+                                <div style="display:flex; align-items:center; gap:0.6rem;">
+                                    <select id="prd-detail-trend-range" class="form-control" style="width:auto; padding:0.35rem 0.75rem; border-radius:var(--radius-pill); font-size:0.8rem; height:34px; font-weight:600;">
+                                        <option value="6_MONTHS" ${activeTrendRange === '6_MONTHS' ? 'selected' : ''}>Last 6 Months</option>
+                                        <option value="1_YEAR" ${activeTrendRange === '1_YEAR' ? 'selected' : ''}>Last 1 Year</option>
+                                        <option value="THIS_WEEK" ${activeTrendRange === 'THIS_WEEK' ? 'selected' : ''}>This Week (7 Days)</option>
+                                        <option value="TODAY" ${activeTrendRange === 'TODAY' ? 'selected' : ''}>Today (Hourly)</option>
+                                    </select>
                                 </div>
                             </div>
                             
@@ -522,7 +597,10 @@ export const renderProducts = async (container, workspaceId) => {
                         <div class="card" style="padding:1.5rem; border-radius:var(--radius-card); box-shadow:var(--shadow-float);">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.15rem;">
                                 <div>
-                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700;">⭐ Favorite Customers</h3>
+                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:6px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                        Favorite Customers
+                                    </h3>
                                     <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">Top buyers ranked by purchase volume & demand</p>
                                 </div>
                                 <span class="badge" style="background:rgba(225,29,72,0.1); color:#e11d48; font-weight:700;">
@@ -539,7 +617,7 @@ export const renderProducts = async (container, workspaceId) => {
                                     <div class="fav-customer-item">
                                         <div style="display:flex; align-items:center; gap:0.75rem;">
                                             <div style="width:36px; height:36px; border-radius:50%; background:${idx === 0 ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' : 'var(--surface-200)'}; color:${idx === 0 ? '#ffffff' : 'var(--text-primary)'}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
-                                                ${idx === 0 ? '👑' : (idx + 1)}
+                                                ${idx === 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>' : (idx + 1)}
                                             </div>
                                             <div>
                                                 <div style="font-weight:700; font-size:0.9rem; color:var(--text-primary);">${cust.name}</div>
@@ -557,7 +635,10 @@ export const renderProducts = async (container, workspaceId) => {
 
                         <!-- MARKET DEMAND & PRICING INTELLIGENCE -->
                         <div class="card" style="padding:1.5rem; border-radius:var(--radius-card); box-shadow:var(--shadow-float);">
-                            <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700;">📊 Market Demand & Pricing</h3>
+                            <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:6px;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                                Market Demand & Pricing
+                            </h3>
                             <p style="margin:0 0 1.25rem 0; font-size:0.82rem; color:var(--text-secondary);">Demand velocity, price margins, and restocking analysis</p>
 
                             <div style="display:flex; flex-direction:column; gap:1rem;">
@@ -621,6 +702,14 @@ export const renderProducts = async (container, workspaceId) => {
             });
         }
 
+        // Trend range change
+        const trendSelect = container.querySelector('#prd-detail-trend-range');
+        if (trendSelect) {
+            trendSelect.addEventListener('change', (e) => {
+                renderProductDetailView(prd, e.target.value);
+            });
+        }
+
         // Edit Product from Detail View
         const btnEditDetail = container.querySelector('#btn-detail-edit');
         if (btnEditDetail) {
@@ -653,11 +742,18 @@ export const renderProducts = async (container, workspaceId) => {
             });
         }
 
-        // Adjust Stock (+ / - count prompt)
+        // Adjust Stock (Interactive modal prompt)
         const btnAdjustStock = container.querySelector('#btn-detail-adjust-stock');
         if (btnAdjustStock) {
             btnAdjustStock.addEventListener('click', async () => {
-                const inputVal = prompt(`Adjust Stock for "${prd.name}":\nEnter new total inventory quantity:`, prd.quantity || 0);
+                const inputVal = await showAlert.prompt({
+                    title: 'Adjust Stock Quantity',
+                    message: `Set total inventory stock for <strong>${prd.name}</strong>:`,
+                    defaultValue: prd.quantity || 0,
+                    inputType: 'number',
+                    confirmText: 'Update Stock',
+                    min: 0
+                });
                 if (inputVal !== null && inputVal.trim() !== '') {
                     const newQty = parseInt(inputVal, 10);
                     if (!isNaN(newQty) && newQty >= 0) {
@@ -665,7 +761,7 @@ export const renderProducts = async (container, workspaceId) => {
                             await productService.updateProduct(prd.id, { quantity: newQty });
                             prd.quantity = newQty;
                             showAlert.success(`Stock updated to ${newQty} units`);
-                            renderProductDetailView(prd);
+                            renderProductDetailView(prd, activeTrendRange);
                         } catch (err) {
                             showAlert.error(err.message || 'Failed to update stock');
                         }
@@ -739,150 +835,327 @@ export const renderProducts = async (container, workspaceId) => {
             </div>
 
             <!-- CUSTOM CATEGORY MODAL -->
-            <div id="quick-category-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-                <div class="card" style="background:white; width:100%; max-width:400px; padding:2rem; border-radius:var(--radius-md);">
-                    <h3 style="margin-bottom:1rem; color:var(--primary);">Create Category</h3>
-                    <div style="display:flex; flex-direction:column; gap:1rem;">
+            <div id="quick-category-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:1rem;">
+                <div class="card" style="background:var(--bg-card); width:100%; max-width:420px; padding:1.75rem; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-elevated);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <div style="width:32px; height:32px; border-radius:8px; background:var(--primary-subtle); display:flex; align-items:center; justify-content:center; color:var(--primary);">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 9h16"></path><path d="M4 15h16"></path><path d="M10 3L8 21"></path><path d="M16 3l-2 18"></path></svg>
+                            </div>
+                            <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:var(--text-primary);">New Category</h3>
+                        </div>
+                        <button type="button" id="quick-cat-close-btn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.3rem; line-height:1;">&times;</button>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:1.1rem;">
                         <div>
-                            <label>Category Name *</label>
-                            <input type="text" id="quick-cat-name" class="form-control" style="width:100%; padding:0.5rem;" placeholder="e.g. Beverages">
+                            <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Category Name <span style="color:var(--danger)">*</span></label>
+                            <input type="text" id="quick-cat-name" class="form-control" style="width:100%; padding:0.6rem 0.75rem;" placeholder="e.g. Beverages, Bakery, Electronics">
                         </div>
                         <div>
-                            <label>Color</label>
-                            <input type="color" id="quick-cat-color" value="#4a90e2" class="form-control" style="width:100%; height:40px; padding:0.25rem;">
+                            <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Category Tag Color</label>
+                            <div style="display:flex; gap:0.6rem; align-items:center;">
+                                <input type="color" id="quick-cat-color" value="#e11d48" class="form-control" style="width:48px; height:38px; padding:2px; border-radius:6px; cursor:pointer;">
+                                <div style="display:flex; gap:0.3rem; flex-wrap:wrap;">
+                                    <span class="quick-color-preset" data-color="#e11d48" style="width:22px; height:22px; border-radius:50%; background:#e11d48; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
+                                    <span class="quick-color-preset" data-color="#10b981" style="width:22px; height:22px; border-radius:50%; background:#10b981; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
+                                    <span class="quick-color-preset" data-color="#3b82f6" style="width:22px; height:22px; border-radius:50%; background:#3b82f6; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
+                                    <span class="quick-color-preset" data-color="#f59e0b" style="width:22px; height:22px; border-radius:50%; background:#f59e0b; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
+                                    <span class="quick-color-preset" data-color="#8b5cf6" style="width:22px; height:22px; border-radius:50%; background:#8b5cf6; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
+                                    <span class="quick-color-preset" data-color="#06b6d4" style="width:22px; height:22px; border-radius:50%; background:#06b6d4; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
+                                </div>
+                            </div>
                         </div>
-                        <div style="display:flex; gap:1rem; margin-top:1rem;">
-                            <button type="button" id="quick-cat-save-btn" class="btn btn-primary" style="flex:1;">Save</button>
-                            <button type="button" id="quick-cat-cancel-btn" class="btn btn-secondary" style="flex:1;">Cancel</button>
+                        <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
+                            <button type="button" id="quick-cat-cancel-btn" class="btn btn-secondary" style="flex:1; padding:0.55rem;">Cancel</button>
+                            <button type="button" id="quick-cat-save-btn" class="btn btn-primary" style="flex:1; padding:0.55rem; font-weight:700;">Save Category</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- PRODUCT FORM CONTAINER -->
-            <div id="product-form-container" class="card" style="display:none; margin-bottom: 2rem; padding: 1.5rem;">
-                <h3 id="prd-form-title">New Product</h3>
-                <form id="product-form" style="display:flex; flex-direction:column; gap:1.5rem; margin-top: 1rem;">
+            <div id="product-form-container" class="prd-form-wrapper" style="display:none;">
+                <!-- Form Top Header Bar -->
+                <div class="prd-form-header-bar">
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <div id="prd-form-header-logo-box" class="prd-header-logo-box" title="Product Photo / Icon">
+                            <img id="prd-header-logo-img" src="" alt="Product Logo" style="display:none; width:100%; height:100%; object-fit:cover;">
+                            <svg id="prd-header-logo-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="color:#fff;">
+                                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                                <polyline points="2 17 12 22 22 17"></polyline>
+                                <polyline points="2 12 12 17 22 12"></polyline>
+                            </svg>
+                        </div>
+                        <div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span class="badge" id="prd-form-badge" style="background:rgba(225,29,72,0.12); color:var(--primary); font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">New Catalog Entry</span>
+                                <h3 id="prd-form-title" style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-primary);">Add New Product</h3>
+                            </div>
+                            <p style="margin:0; font-size:0.83rem; color:var(--text-secondary);">Configure pricing parameters, live profit margins, barcode & inventory stock</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:0.6rem; align-items:center;">
+                        <button type="button" class="btn btn-secondary prd-cancel-trigger" style="display:flex; align-items:center; gap:0.4rem; font-weight:600; font-size:0.85rem; padding:0.45rem 0.9rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                            Back to Catalog
+                        </button>
+                    </div>
+                </div>
+
+                <form id="product-form">
                     <input type="hidden" id="prd-id">
                     
-                    <div class="form-section">
-                        <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">SECTION 1 — BASIC INFORMATION</h4>
-                        
-                        <div style="display:flex; gap:1rem; margin-bottom: 1rem; align-items: flex-end;">
-                            <div style="flex:1;">
-                                <label>Product Image (URL)</label>
-                                <input type="text" id="prd-image" class="form-control" style="width:100%; padding:0.5rem;" placeholder="https://...">
-                            </div>
-                            <div style="flex:1; display:flex; gap:1rem; align-items:center;">
-                                <span style="color:var(--text-muted); font-size:0.9rem;">OR</span>
-                                <label class="btn btn-secondary" style="cursor:pointer; margin:0; padding:0.5rem 1rem;">
-                                    Upload from Desktop
-                                    <input type="file" id="prd-image-file" accept="image/*" style="display:none;">
-                                </label>
-                                <img id="prd-image-preview" src="" style="display:none; max-height:40px; border-radius:4px; border:1px solid var(--border-color);">
-                            </div>
-                        </div>
-
-                        <div style="display:flex; gap:1rem; margin-bottom: 1rem;">
-                            <div style="flex:2;">
-                                <label>Product Name *</label>
-                                <input type="text" id="prd-name" required class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
-                            <div style="flex:1;">
-                                <label>Size / Weight</label>
-                                <input type="text" id="prd-size" class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
-                        </div>
-
-                        <div style="display:flex; gap:1rem; margin-bottom: 1rem;">
-                            <div style="flex:1; display: flex; align-items: flex-end; gap: 0.5rem;">
-                                <div style="flex:1;">
-                                    <label>Category *</label>
-                                    <select id="prd-category" required class="form-control" style="width:100%; padding:0.5rem;">
-                                        <option value="">Loading...</option>
-                                    </select>
+                    <div class="prd-form-grid">
+                        <!-- Left Column: Core Product Info, Pricing & Inventory -->
+                        <div class="prd-form-main-col">
+                            <!-- Card 1: Basic Info -->
+                            <div class="prd-card-section">
+                                <div class="prd-card-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                    <span>Product Information</span>
                                 </div>
-                                <button type="button" id="btn-quick-cat" class="btn btn-secondary" style="padding:0.5rem 1rem;" title="Create New Category">+</button>
+                                
+                                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1rem; margin-bottom: 1rem;">
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Product Name <span style="color:var(--danger)">*</span></label>
+                                        <input type="text" id="prd-name" required class="form-control" style="width:100%; padding:0.6rem 0.75rem; font-weight:500;" placeholder="e.g. Arabica Dark Roast Coffee Beans">
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Size / Packaging</label>
+                                        <input type="text" id="prd-size" class="form-control" style="width:100%; padding:0.6rem 0.75rem;" placeholder="e.g. 500g, 1L, 12-Pack">
+                                    </div>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:1rem; margin-bottom: 1rem;">
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Category <span style="color:var(--danger)">*</span></label>
+                                        <div style="display:flex; gap:0.4rem;">
+                                            <select id="prd-category" required class="form-control" style="flex:1; padding:0.6rem 0.75rem;">
+                                                <option value="">Select Category</option>
+                                            </select>
+                                            <button type="button" id="btn-quick-cat" class="btn btn-secondary" style="padding:0.6rem 0.85rem; font-weight:700;" title="Create New Category">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">UPC / Barcode</label>
+                                        <div style="display:flex; gap:0.4rem;">
+                                            <input type="text" id="prd-upc" class="form-control" style="flex:1; padding:0.6rem 0.75rem; font-family:monospace;" placeholder="e.g. 012345678905">
+                                            <button type="button" id="btn-generate-upc" class="btn btn-secondary" style="padding:0.6rem 0.75rem; font-size:0.75rem; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:3px;" title="Generate Random 12-digit UPC Barcode">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5v14"></path><path d="M8 5v14"></path><path d="M12 5v14"></path><path d="M17 5v14"></path><path d="M21 5v14"></path></svg>
+                                                Gen
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Internal Notes / Description</label>
+                                    <textarea id="prd-note" rows="2" class="form-control" style="width:100%; padding:0.55rem 0.75rem; font-size:0.85rem; resize:vertical;" placeholder="Optional supplier notes, SKU identifiers, shelf location, or batch notes..."></textarea>
+                                </div>
                             </div>
-                            <div style="flex:1;">
-                                <label>UPC Code</label>
-                                <input type="text" id="prd-upc" class="form-control" style="width:100%; padding:0.5rem;">
+
+                            <!-- Card 2: Pricing, Cost & Margins -->
+                            <div class="prd-card-section">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); flex-wrap:wrap; gap:0.5rem;">
+                                    <div class="prd-card-title" style="margin:0; padding:0; border:none;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                        <span>Pricing & Profit Margins</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                                        <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600;">Markup Presets:</span>
+                                        <span class="prd-quick-chip" data-markup="15">+15%</span>
+                                        <span class="prd-quick-chip" data-markup="25">+25%</span>
+                                        <span class="prd-quick-chip" data-markup="35">+35%</span>
+                                        <span class="prd-quick-chip" data-markup="50">+50%</span>
+                                        <span class="prd-quick-chip" data-markup="100">2x (100%)</span>
+                                    </div>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem;">
+                                    <div>
+                                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Cost Price (COGS)</label>
+                                        <div style="position:relative;">
+                                            <input type="number" id="prd-cost-price" step="0.01" min="0" class="form-control prd-calc-trigger" style="width:100%; padding:0.6rem 0.75rem; font-weight:600;" placeholder="0.00">
+                                        </div>
+                                        <small style="color:var(--text-muted); font-size:0.72rem;">Unit purchase cost</small>
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Sale Price <span style="color:var(--danger)">*</span></label>
+                                        <div style="position:relative;">
+                                            <input type="number" id="prd-sale-price" step="0.01" min="0" required class="form-control prd-calc-trigger" style="width:100%; padding:0.6rem 0.75rem; font-weight:700; color:var(--primary); border-color:rgba(225,29,72,0.4);" placeholder="0.00">
+                                        </div>
+                                        <small style="color:var(--text-muted); font-size:0.72rem;">Customer retail price</small>
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Base / Floor Price</label>
+                                        <input type="number" id="prd-base-price" step="0.01" min="0" class="form-control" style="width:100%; padding:0.6rem 0.75rem;" placeholder="0.00">
+                                        <small style="color:var(--text-muted); font-size:0.72rem;">Minimum wholesale</small>
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">MRP (Max Retail)</label>
+                                        <input type="number" id="prd-mrp" step="0.01" min="0" class="form-control prd-calc-trigger" style="width:100%; padding:0.6rem 0.75rem;" placeholder="0.00">
+                                        <small style="color:var(--text-muted); font-size:0.72rem;">Printed box MRP</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: Inventory & Dates -->
+                            <div class="prd-card-section">
+                                <div class="prd-card-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                                    <span>Inventory & Stock Life</span>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr; gap:1rem; align-items:start;">
+                                    <div>
+                                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Stock On Hand <span style="color:var(--danger)">*</span></label>
+                                        <div style="display:flex; gap:0.4rem; align-items:center;">
+                                            <input type="number" id="prd-qty" value="0" min="0" required class="form-control prd-calc-trigger" style="width:100%; padding:0.6rem 0.75rem; font-weight:700;">
+                                        </div>
+                                        <div style="display:flex; gap:0.25rem; margin-top:0.4rem; flex-wrap:wrap;">
+                                            <button type="button" class="prd-stepper-btn" data-step="-5">-5</button>
+                                            <button type="button" class="prd-stepper-btn" data-step="-1">-1</button>
+                                            <button type="button" class="prd-stepper-btn" data-step="1">+1</button>
+                                            <button type="button" class="prd-stepper-btn" data-step="5">+5</button>
+                                            <button type="button" class="prd-stepper-btn" data-step="10">+10</button>
+                                            <button type="button" class="prd-stepper-btn" data-step="50">+50</button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Mfg Date</label>
+                                        <input type="date" id="prd-mfg-date" class="form-control" style="width:100%; padding:0.55rem 0.65rem; font-size:0.82rem;">
+                                        <small style="color:var(--text-muted); font-size:0.72rem;">Production date</small>
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Exp Date</label>
+                                        <input type="date" id="prd-exp-date" class="form-control" style="width:100%; padding:0.55rem 0.65rem; font-size:0.82rem;">
+                                        <small style="color:var(--text-muted); font-size:0.72rem;">Expiry warning</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 4: Variations -->
+                            <div class="prd-card-section" style="margin-bottom:0;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
+                                    <div class="prd-card-title" style="margin:0; padding:0; border:none;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                                        <span>Product Variations & Barcodes</span>
+                                    </div>
+                                    <button type="button" id="btn-add-variation-row" class="btn btn-secondary" style="font-size:0.78rem; padding:0.35rem 0.75rem; display:flex; align-items:center; gap:4px; font-weight:600;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                        + Add Variant
+                                    </button>
+                                </div>
+                                <div id="prd-variations-list" style="display:flex; flex-direction:column; gap:0.6rem;">
+                                    <!-- Dynamic variation rows -->
+                                </div>
+                                <div id="prd-no-variations-msg" style="color:var(--text-muted); font-size:0.82rem; font-style:italic; padding:0.4rem 0;">
+                                    No custom variations configured. Click "+ Add Variant" to create flavor, size, or secondary UPC mappings.
+                                </div>
                             </div>
                         </div>
-                        
-                        <div style="display:flex; gap:1rem;">
-                            <div style="flex:1;">
-                                <label>Note</label>
-                                <input type="text" id="prd-note" class="form-control" style="width:100%; padding:0.5rem;">
+
+                        <!-- Right Column: Media Hub & Real-Time Margin Engine -->
+                        <div class="prd-form-side-col" style="display:flex; flex-direction:column; gap:1.25rem;">
+                            <!-- Media Card -->
+                            <div class="prd-card-section" style="margin-bottom:0;">
+                                <div class="prd-card-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                    <span>Product Media</span>
+                                </div>
+
+                                <div class="prd-media-box" id="prd-media-dropzone" style="margin-bottom:0.9rem;">
+                                    <img id="prd-image-preview" class="prd-media-img" src="" style="display:none;">
+                                    <div id="prd-media-empty-state" style="text-align:center; padding:1.5rem; color:var(--text-muted);">
+                                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.4rem; opacity:0.5;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                        <div style="font-size:0.82rem; font-weight:600; color:var(--text-primary);">No Image Selected</div>
+                                        <div style="font-size:0.75rem; color:var(--text-muted);">Upload photo or paste direct image URL below</div>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+                                    <label class="btn btn-secondary" style="cursor:pointer; flex:1; justify-content:center; padding:0.5rem; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                        <span id="prd-upload-label-text">Upload Image</span>
+                                        <input type="file" id="prd-image-file" accept="image/*" style="display:none;">
+                                    </label>
+                                    <button type="button" id="btn-clear-img" class="btn btn-outline" style="padding:0.5rem 0.75rem; font-size:0.8rem; color:var(--danger);" title="Clear Image">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label style="display:block; font-size:0.76rem; font-weight:600; margin-bottom:0.25rem; color:var(--text-muted);">Direct Image URL</label>
+                                    <input type="text" id="prd-image" class="form-control" style="width:100%; padding:0.45rem 0.65rem; font-size:0.82rem;" placeholder="https://example.com/photo.jpg">
+                                </div>
+                            </div>
+
+                            <!-- Live Margin & Financial Calculator Card -->
+                            <div class="prd-calc-card">
+                                <div class="prd-calc-header">
+                                    <div>
+                                        <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; font-weight:700;">Live Financials</div>
+                                        <div style="font-size:1.05rem; font-weight:800; color:#ffffff;">Profit & Margin Engine</div>
+                                    </div>
+                                    <div id="calc-profit-pill" class="margin-pill" style="background:rgba(100, 116, 139, 0.2); color:#cbd5e1; font-size:0.75rem;">
+                                        Awaiting Price Input
+                                    </div>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+                                    <div class="prd-metric-box">
+                                        <div class="prd-metric-label">Unit Profit</div>
+                                        <div class="prd-metric-value" id="calc-unit-profit" style="color:#10b981;">$0.00</div>
+                                    </div>
+                                    <div class="prd-metric-box">
+                                        <div class="prd-metric-label">Markup %</div>
+                                        <div class="prd-metric-value" id="calc-markup">0.0%</div>
+                                    </div>
+                                    <div class="prd-metric-box">
+                                        <div class="prd-metric-label">Profit Margin</div>
+                                        <div class="prd-metric-value" id="calc-margin">0.0%</div>
+                                    </div>
+                                    <div class="prd-metric-box">
+                                        <div class="prd-metric-label">MRP Discount</div>
+                                        <div class="prd-metric-value" id="calc-mrp-discount">0%</div>
+                                    </div>
+                                </div>
+
+                                <div style="background:rgba(0,0,0,0.25); border-radius:var(--radius-md); padding:0.75rem 0.9rem; border:1px solid rgba(255,255,255,0.06);">
+                                    <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; font-weight:700; margin-bottom:0.4rem;">Batch Inventory Valuation</div>
+                                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.25rem;">
+                                        <span style="color:#cbd5e1;">Total Cost Investment:</span>
+                                        <strong id="calc-total-cost" style="color:#ffffff;">$0.00</strong>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.25rem;">
+                                        <span style="color:#cbd5e1;">Total Retail Value:</span>
+                                        <strong id="calc-total-sale" style="color:#ffffff;">$0.00</strong>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding-top:0.35rem; border-top:1px solid rgba(255,255,255,0.1); margin-top:0.35rem;">
+                                        <span style="color:#10b981; font-weight:600;">Expected Batch Profit:</span>
+                                        <strong id="calc-total-profit" style="color:#10b981;">$0.00</strong>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="form-section">
-                        <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">SECTION 2 — INVENTORY</h4>
-                        <div style="display:flex; gap:1rem;">
-                            <div style="flex:1; max-width: 200px;">
-                                <label>Stock / Qty *</label>
-                                <input type="number" id="prd-qty" value="0" min="0" required class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
+                    <!-- Bottom Action Bar -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:1.25rem 1.75rem; background:var(--surface-50); border-top:1px solid var(--border-color); flex-wrap:wrap; gap:1rem;">
+                        <div style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                            <span>Changes are saved immediately to your workspace catalog</span>
                         </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">SECTION 3 — PRICING</h4>
-                        <div style="display:flex; gap:1rem;">
-                            <div style="flex:1;">
-                                <label>Cost Price</label>
-                                <input type="number" id="prd-cost-price" step="0.01" min="0" class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
-                            <div style="flex:1;">
-                                <label>Sale Price *</label>
-                                <input type="number" id="prd-sale-price" step="0.01" min="0" required class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
-                            <div style="flex:1;">
-                                <label>Base Price</label>
-                                <input type="number" id="prd-base-price" step="0.01" min="0" class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
-                            <div style="flex:1;">
-                                <label>MRP</label>
-                                <input type="number" id="prd-mrp" step="0.01" min="0" class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h4 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">SECTION 4 — DATES</h4>
-                        <div style="display:flex; gap:1rem;">
-                            <div style="flex:1;">
-                                <label>Manufacturing Date</label>
-                                <input type="date" id="prd-mfg-date" class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
-                            <div style="flex:1;">
-                                <label>Expiration Date</label>
-                                <input type="date" id="prd-exp-date" class="form-control" style="width:100%; padding:0.5rem;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap:wrap; gap:0.5rem;">
-                            <h4 style="margin:0;">SECTION 5 — VARIATIONS (SIZE/FLAVOR & UPC)</h4>
-                            <button type="button" id="btn-add-variation-row" class="btn btn-secondary" style="font-size:0.8rem; padding:0.35rem 0.75rem; display:flex; align-items:center; gap:4px; font-weight:600;">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                + Add Variation
+                        <div style="display:flex; gap:0.75rem; align-items:center;">
+                            <button type="button" class="btn btn-secondary prd-cancel-trigger" id="prd-cancel-btn" style="padding:0.6rem 1.25rem; font-weight:600;">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="prd-submit-btn" style="padding:0.6rem 1.75rem; font-weight:700; display:flex; align-items:center; gap:0.5rem; background:linear-gradient(135deg, #ff3366, #e11d48); box-shadow:0 4px 14px rgba(225,29,72,0.3);">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                <span>Save Product</span>
                             </button>
                         </div>
-                        <div id="prd-variations-list" style="display:flex; flex-direction:column; gap:0.6rem;">
-                            <!-- Dynamic variation rows inserted here -->
-                        </div>
-                        <div id="prd-no-variations-msg" style="color:var(--text-muted); font-size:0.85rem; font-style:italic; padding:0.5rem 0;">
-                            No variations added. Click "+ Add Variation" to create size/flavor and UPC code options.
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:1rem; margin-top:1rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
-                        <button type="submit" class="btn btn-primary" id="prd-submit-btn">Save Product</button>
-                        <button type="button" class="btn btn-secondary" id="prd-cancel-btn">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -1038,7 +1311,7 @@ export const renderProducts = async (container, workspaceId) => {
             });
         });
 
-        // Edit
+        // Edit Product Click
         container.querySelectorAll('.edit-prd').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.getAttribute('data-id');
@@ -1047,13 +1320,7 @@ export const renderProducts = async (container, workspaceId) => {
                     const formContainer = container.querySelector('#product-form-container');
                     container.querySelector('#prd-id').value = prd.id;
                     container.querySelector('#prd-image').value = prd.imageUri || '';
-                    const preview = container.querySelector('#prd-image-preview');
-                    if (prd.imageUri) {
-                        preview.src = prd.imageUri;
-                        preview.style.display = 'block';
-                    } else {
-                        preview.style.display = 'none';
-                    }
+                    updateImagePreview(prd.imageUri || '');
                     
                     container.querySelector('#prd-name').value = prd.name || '';
                     container.querySelector('#prd-size').value = prd.sizeWeight || '';
@@ -1064,10 +1331,10 @@ export const renderProducts = async (container, workspaceId) => {
                     
                     container.querySelector('#prd-qty').value = prd.quantity || 0;
                     
-                    container.querySelector('#prd-cost-price').value = prd.price || '';
-                    container.querySelector('#prd-sale-price').value = prd.salePrice || '';
-                    container.querySelector('#prd-base-price').value = prd.basePrice || '';
-                    container.querySelector('#prd-mrp').value = prd.mrp || '';
+                    container.querySelector('#prd-cost-price').value = prd.price !== undefined && prd.price !== null ? prd.price : '';
+                    container.querySelector('#prd-sale-price').value = prd.salePrice !== undefined && prd.salePrice !== null ? prd.salePrice : '';
+                    container.querySelector('#prd-base-price').value = prd.basePrice !== undefined && prd.basePrice !== null ? prd.basePrice : '';
+                    container.querySelector('#prd-mrp').value = prd.mrp !== undefined && prd.mrp !== null ? prd.mrp : '';
                     
                     container.querySelector('#prd-mfg-date').value = prd.mfgDate || '';
                     container.querySelector('#prd-exp-date').value = prd.expDate || '';
@@ -1089,12 +1356,23 @@ export const renderProducts = async (container, workspaceId) => {
                         } catch(e) {}
                     }
                     
-                    container.querySelector('#prd-form-title').textContent = 'Edit Product';
-                    container.querySelector('#prd-submit-btn').textContent = 'Update Product';
+                    const badgeEl = container.querySelector('#prd-form-badge');
+                    if (badgeEl) badgeEl.textContent = 'Edit Product Mode';
+                    container.querySelector('#prd-form-title').textContent = 'Edit Product Details';
+                    
+                    const submitBtn = container.querySelector('#prd-submit-btn');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = `
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            <span>Update Product</span>
+                        `;
+                    }
+                    
                     formContainer.style.display = 'block';
                     container.querySelector('#product-list-container').style.display = 'none';
                     formContainer.scrollIntoView({ behavior: 'smooth' });
 
+                    updateLiveProfitSummary();
                     initialProductSnapshot = getProductFormSnapshot();
                     checkProductDirty();
                 }
@@ -1134,6 +1412,111 @@ export const renderProducts = async (container, workspaceId) => {
                 }
             });
         });
+    };
+
+    // Live Media Preview & Dynamic Header Logo Helper
+    const updateImagePreview = (url) => {
+        const preview = container.querySelector('#prd-image-preview');
+        const emptyState = container.querySelector('#prd-media-empty-state');
+        const headerLogoBox = container.querySelector('#prd-form-header-logo-box');
+        const headerLogoImg = container.querySelector('#prd-header-logo-img');
+        const headerLogoSvg = container.querySelector('#prd-header-logo-svg');
+
+        const hasValidImg = Boolean(url && typeof url === 'string' && url.trim() !== '');
+
+        if (preview && emptyState) {
+            if (hasValidImg) {
+                preview.src = url.trim();
+                preview.style.display = 'block';
+                emptyState.style.display = 'none';
+            } else {
+                preview.src = '';
+                preview.style.display = 'none';
+                emptyState.style.display = 'block';
+            }
+        }
+
+        if (headerLogoBox && headerLogoImg && headerLogoSvg) {
+            if (hasValidImg) {
+                headerLogoImg.src = url.trim();
+                headerLogoImg.style.display = 'block';
+                headerLogoSvg.style.display = 'none';
+                headerLogoBox.classList.add('has-img');
+            } else {
+                headerLogoImg.src = '';
+                headerLogoImg.style.display = 'none';
+                headerLogoSvg.style.display = 'block';
+                headerLogoBox.classList.remove('has-img');
+            }
+        }
+    };
+
+    // Live Financial & Profit Margin Calculator Engine
+    const updateLiveProfitSummary = () => {
+        const cost = parseFloat(container.querySelector('#prd-cost-price')?.value || 0) || 0;
+        const sale = parseFloat(container.querySelector('#prd-sale-price')?.value || 0) || 0;
+        const mrp = parseFloat(container.querySelector('#prd-mrp')?.value || 0) || 0;
+        const qty = parseInt(container.querySelector('#prd-qty')?.value || 0, 10) || 0;
+
+        const unitProfit = sale - cost;
+        const markupPct = cost > 0 ? ((unitProfit / cost) * 100) : (sale > 0 ? 100 : 0);
+        const marginPct = sale > 0 ? ((unitProfit / sale) * 100) : 0;
+        const mrpDiscountPct = (mrp > 0 && mrp > sale) ? (((mrp - sale) / mrp) * 100) : 0;
+
+        const totalCostVal = qty * cost;
+        const totalSaleVal = qty * sale;
+        const totalProfitVal = qty * unitProfit;
+
+        const unitProfitEl = container.querySelector('#calc-unit-profit');
+        const markupEl = container.querySelector('#calc-markup');
+        const marginEl = container.querySelector('#calc-margin');
+        const mrpDiscEl = container.querySelector('#calc-mrp-discount');
+        const totalCostEl = container.querySelector('#calc-total-cost');
+        const totalSaleEl = container.querySelector('#calc-total-sale');
+        const totalProfitEl = container.querySelector('#calc-total-profit');
+        const profitPill = container.querySelector('#calc-profit-pill');
+
+        if (unitProfitEl) {
+            unitProfitEl.textContent = (unitProfit >= 0 ? '+' : '') + formatCurrency(unitProfit);
+            unitProfitEl.style.color = unitProfit >= 0 ? '#10b981' : '#ef4444';
+        }
+        if (markupEl) {
+            markupEl.textContent = `${markupPct.toFixed(1)}%`;
+            markupEl.style.color = markupPct >= 0 ? '#ffffff' : '#ef4444';
+        }
+        if (marginEl) {
+            marginEl.textContent = `${marginPct.toFixed(1)}%`;
+            marginEl.style.color = marginPct >= 0 ? '#ffffff' : '#ef4444';
+        }
+        if (mrpDiscEl) {
+            mrpDiscEl.textContent = mrpDiscountPct > 0 ? `${mrpDiscountPct.toFixed(1)}% Off` : '0%';
+        }
+        if (totalCostEl) totalCostEl.textContent = formatCurrency(totalCostVal);
+        if (totalSaleEl) totalSaleEl.textContent = formatCurrency(totalSaleVal);
+        if (totalProfitEl) {
+            totalProfitEl.textContent = (totalProfitVal >= 0 ? '+' : '') + formatCurrency(totalProfitVal);
+            totalProfitEl.style.color = totalProfitVal >= 0 ? '#10b981' : '#ef4444';
+        }
+
+        if (profitPill) {
+            if (sale === 0 && cost === 0) {
+                profitPill.textContent = 'Awaiting Price Input';
+                profitPill.style.background = 'rgba(100, 116, 139, 0.2)';
+                profitPill.style.color = '#cbd5e1';
+            } else if (unitProfit > 0) {
+                profitPill.textContent = `Profitable (+${marginPct.toFixed(1)}% Margin)`;
+                profitPill.style.background = 'rgba(16, 185, 129, 0.2)';
+                profitPill.style.color = '#10b981';
+            } else if (unitProfit === 0) {
+                profitPill.textContent = 'Break-Even (0% Margin)';
+                profitPill.style.background = 'rgba(245, 158, 11, 0.2)';
+                profitPill.style.color = '#f59e0b';
+            } else {
+                profitPill.textContent = `Loss (${marginPct.toFixed(1)}% Margin)`;
+                profitPill.style.background = 'rgba(239, 68, 68, 0.2)';
+                profitPill.style.color = '#ef4444';
+            }
+        }
     };
 
     // Product Smart Button State & Snapshot Helper
@@ -1211,10 +1594,10 @@ export const renderProducts = async (container, workspaceId) => {
         row.style.cssText = 'display:flex; gap:0.75rem; align-items:center; background:var(--surface-50); padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);';
         row.innerHTML = `
             <div style="flex:2;">
-                <input type="text" class="form-control var-size-input" placeholder="Size / Flavor / Variant (e.g. 500g, Strawberry)" value="${sizeFlavor || ''}" style="width:100%; padding:0.45rem; font-size:0.85rem;">
+                <input type="text" class="form-control var-size-input" placeholder="Size / Flavor / Variant (e.g. 500g, Strawberry)" value="${sizeFlavor || ''}" style="width:100%; padding:0.45rem 0.65rem; font-size:0.85rem;">
             </div>
             <div style="flex:2;">
-                <input type="text" class="form-control var-upc-input" placeholder="UPC / Barcode (Optional)" value="${upcCode || ''}" style="width:100%; padding:0.45rem; font-size:0.85rem;">
+                <input type="text" class="form-control var-upc-input" placeholder="UPC / Barcode (Optional)" value="${upcCode || ''}" style="width:100%; padding:0.45rem 0.65rem; font-size:0.85rem; font-family:monospace;">
             </div>
             <button type="button" class="btn-remove-var" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:4px 8px; font-size:1.3rem; line-height:1;" title="Remove variation">&times;</button>
         `;
@@ -1259,8 +1642,18 @@ export const renderProducts = async (container, workspaceId) => {
         }
 
         form?.querySelectorAll('input, select, textarea').forEach(el => {
-            el.addEventListener('input', checkProductDirty);
-            el.addEventListener('change', checkProductDirty);
+            el.addEventListener('input', () => {
+                checkProductDirty();
+                if (el.classList.contains('prd-calc-trigger')) {
+                    updateLiveProfitSummary();
+                }
+            });
+            el.addEventListener('change', () => {
+                checkProductDirty();
+                if (el.classList.contains('prd-calc-trigger')) {
+                    updateLiveProfitSummary();
+                }
+            });
         });
 
         // Add Product Click
@@ -1268,48 +1661,105 @@ export const renderProducts = async (container, workspaceId) => {
             form.reset();
             clearVariations();
             container.querySelector('#prd-id').value = '';
-            container.querySelector('#prd-image-preview').style.display = 'none';
-            container.querySelector('#prd-form-title').textContent = 'New Product';
-            container.querySelector('#prd-submit-btn').textContent = 'Save Product';
+            updateImagePreview('');
+            
+            const badgeEl = container.querySelector('#prd-form-badge');
+            if (badgeEl) badgeEl.textContent = 'New Catalog Entry';
+            container.querySelector('#prd-form-title').textContent = 'Add New Product';
+            
+            const submitBtn = container.querySelector('#prd-submit-btn');
+            if (submitBtn) {
+                submitBtn.innerHTML = `
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    <span>Save Product</span>
+                `;
+            }
+            
+            updateLiveProfitSummary();
             initialProductSnapshot = null;
             checkProductDirty();
             formContainer.style.display = 'block';
             container.querySelector('#product-list-container').style.display = 'none';
+            formContainer.scrollIntoView({ behavior: 'smooth' });
         });
 
+        // Auto Generate UPC Barcode
+        container.querySelector('#btn-generate-upc')?.addEventListener('click', () => {
+            const randNum = Math.floor(10000000000 + Math.random() * 90000000000);
+            const upc = '8' + String(randNum).substring(0, 11);
+            const upcInput = container.querySelector('#prd-upc');
+            if (upcInput) {
+                upcInput.value = upc;
+                checkProductDirty();
+            }
+        });
+
+        // Quantity Stepper Buttons
+        container.querySelectorAll('.prd-stepper-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const step = parseInt(e.currentTarget.getAttribute('data-step') || '0', 10);
+                const qtyInput = container.querySelector('#prd-qty');
+                if (qtyInput) {
+                    const cur = parseInt(qtyInput.value || '0', 10) || 0;
+                    qtyInput.value = Math.max(0, cur + step);
+                    updateLiveProfitSummary();
+                    checkProductDirty();
+                }
+            });
+        });
+
+        // Quick Markup Preset Chips
+        container.querySelectorAll('.prd-quick-chip[data-markup]').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                const markup = parseFloat(e.currentTarget.getAttribute('data-markup') || '0');
+                const cost = parseFloat(container.querySelector('#prd-cost-price')?.value || 0) || 0;
+                if (cost > 0) {
+                    const newSale = Math.round((cost * (1 + markup / 100)) * 100) / 100;
+                    const saleInput = container.querySelector('#prd-sale-price');
+                    if (saleInput) {
+                        saleInput.value = newSale.toFixed(2);
+                        updateLiveProfitSummary();
+                        checkProductDirty();
+                    }
+                } else {
+                    showAlert.info("Please enter a Cost Price first to apply markup presets.");
+                }
+            });
+        });
         // Image Upload Handler
         container.querySelector('#prd-image-file')?.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
                 try {
-                    const btnLabel = e.target.parentElement;
-                    btnLabel.textContent = 'Uploading...';
+                    const uploadLabel = container.querySelector('#prd-upload-label-text');
+                    if (uploadLabel) uploadLabel.textContent = 'Uploading...';
                     
                     const url = await storageService.uploadImage(file, workspaceId);
                     
                     container.querySelector('#prd-image').value = url;
-                    const preview = container.querySelector('#prd-image-preview');
-                    preview.src = url;
-                    preview.style.display = 'block';
+                    updateImagePreview(url);
                     checkProductDirty();
-                    
-                    btnLabel.innerHTML = 'Upload from Desktop<input type="file" id="prd-image-file" accept="image/*" style="display:none;">';
+                    showAlert.success('Image uploaded successfully');
                 } catch (error) {
-                    showAlert.error('Image upload failed');
+                    showAlert.error('Image upload failed: ' + (error.message || 'Error'));
+                } finally {
+                    const uploadLabel = container.querySelector('#prd-upload-label-text');
+                    if (uploadLabel) uploadLabel.textContent = 'Upload Image';
                 }
             }
         });
 
+        // Direct Image URL Input Handler
         container.querySelector('#prd-image')?.addEventListener('input', (e) => {
-            const preview = container.querySelector('#prd-image-preview');
-            if (preview) {
-                if (e.target.value) {
-                    preview.src = e.target.value;
-                    preview.style.display = 'block';
-                } else {
-                    preview.style.display = 'none';
-                }
-            }
+            updateImagePreview(e.target.value);
+            checkProductDirty();
+        });
+
+        // Clear Image Handler
+        container.querySelector('#btn-clear-img')?.addEventListener('click', () => {
+            const imgInput = container.querySelector('#prd-image');
+            if (imgInput) imgInput.value = '';
+            updateImagePreview('');
             checkProductDirty();
         });
 
@@ -1320,22 +1770,36 @@ export const renderProducts = async (container, workspaceId) => {
         const btnQuickCat = container.querySelector('#btn-quick-cat');
         const btnSaveCat = container.querySelector('#quick-cat-save-btn');
         const btnCancelCat = container.querySelector('#quick-cat-cancel-btn');
+        const btnCloseCat = container.querySelector('#quick-cat-close-btn');
 
         if (btnQuickCat) {
             btnQuickCat.addEventListener('click', () => {
                 catNameInput.value = '';
-                catColorInput.value = '#4a90e2';
+                catColorInput.value = '#e11d48';
                 btnSaveCat.disabled = true;
                 catModal.style.display = 'flex';
                 catNameInput.focus();
             });
         }
 
+        container.querySelectorAll('.quick-color-preset').forEach(preset => {
+            preset.addEventListener('click', (e) => {
+                const color = e.currentTarget.getAttribute('data-color');
+                if (color && catColorInput) {
+                    catColorInput.value = color;
+                }
+            });
+        });
+
         catNameInput?.addEventListener('input', (e) => {
             btnSaveCat.disabled = !e.target.value.trim();
         });
 
         btnCancelCat?.addEventListener('click', () => {
+            catModal.style.display = 'none';
+        });
+
+        btnCloseCat?.addEventListener('click', () => {
             catModal.style.display = 'none';
         });
 
@@ -1363,16 +1827,17 @@ export const renderProducts = async (container, workspaceId) => {
                 if (newCat) catSelect.value = newCat.uniqueId || newCat.id;
                 
                 catModal.style.display = 'none';
+                checkProductDirty();
             } catch (err) {
                 showAlert.error(err.message);
             } finally {
                 btnSaveCat.disabled = false;
-                btnSaveCat.textContent = 'Save';
+                btnSaveCat.textContent = 'Save Category';
             }
         });
 
-        // Cancel Form
-        container.querySelector('#prd-cancel-btn')?.addEventListener('click', async () => {
+        // Cancel Form (both top and bottom triggers)
+        const handleCancelForm = async () => {
             const submitBtn = container.querySelector('#prd-submit-btn');
             if (submitBtn && !submitBtn.disabled) {
                 const leave = await showAlert.confirmUnsavedChanges();
@@ -1383,6 +1848,10 @@ export const renderProducts = async (container, workspaceId) => {
             form.reset();
             initialProductSnapshot = null;
             checkProductDirty();
+        };
+
+        container.querySelectorAll('.prd-cancel-trigger').forEach(btn => {
+            btn.addEventListener('click', handleCancelForm);
         });
 
         // Form Submit

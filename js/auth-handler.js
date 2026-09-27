@@ -433,6 +433,36 @@ export const initAuthHandler = (pageType) => {
                     window.__activeWorkspace = workspace;
                     window.__activeWorkspaceId = workspace.id;
 
+                    // If in Demo Sandbox mode, inject indicator and reset helper into topbar
+                    if (user.uid === 'dev-mock-uid') {
+                        const topbarActions = document.getElementById('topbar-actions');
+                        if (topbarActions && !document.getElementById('demo-mode-indicator')) {
+                            const demoTag = document.createElement('div');
+                            demoTag.id = 'demo-mode-indicator';
+                            demoTag.style.display = 'flex';
+                            demoTag.style.alignItems = 'center';
+                            demoTag.style.gap = '0.5rem';
+                            demoTag.innerHTML = `
+                                <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:700; background:rgba(14, 165, 233, 0.12); color:#0284c7; padding:0.25rem 0.65rem; border-radius:9999px; border:1px solid rgba(14, 165, 233, 0.3);">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                    Demo Sandbox Mode
+                                </span>
+                                <button type="button" id="btn-reset-demo-data" class="btn btn-sm btn-secondary" style="font-size:0.72rem; padding:0.2rem 0.55rem;" title="Reset demo dataset to initial state">
+                                    Reset Demo Data
+                                </button>
+                            `;
+                            topbarActions.prepend(demoTag);
+
+                            demoTag.querySelector('#btn-reset-demo-data')?.addEventListener('click', async () => {
+                                if (await showAlert.confirm("Reset all demo data back to clean factory default?")) {
+                                    localStorage.removeItem('pricelister_demo_db_v2');
+                                    showAlert.success("Demo data reset successfully!");
+                                    setTimeout(() => window.location.reload(), 300);
+                                }
+                            });
+                        }
+                    }
+
                     initGlobalSearch(workspace.id);
 
                     if (!routerInitialized) {
@@ -468,13 +498,13 @@ export const initAuthHandler = (pageType) => {
         });
     }
 
-    // Modal Google Login Button
+    // Modal Google Login Button (Production Google OAuth)
     const modalGoogleBtn = document.getElementById('modal-google-login-btn');
     if (modalGoogleBtn) {
         modalGoogleBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             modalGoogleBtn.disabled = true;
-            modalGoogleBtn.innerHTML = 'Signing In...';
+            modalGoogleBtn.innerHTML = 'Connecting to Google...';
             
             try {
                 await authService.loginWithGoogle(true);
@@ -488,36 +518,26 @@ export const initAuthHandler = (pageType) => {
         });
     }
 
-    // Modal Test Enter Button
+    // Modal Test Enter Button (Demo UI Sandbox)
     const modalTestBtn = document.getElementById('modal-test-login-btn');
     if (modalTestBtn) {
         modalTestBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             modalTestBtn.disabled = true;
-            modalTestBtn.innerHTML = 'Preparing Dev Sandbox...';
+            modalTestBtn.innerHTML = '<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Preparing Demo Sandbox...';
             
             try {
-                const user = await authService.loginAsGuest();
-                const workspace = await firestoreService.checkWorkspaceExists(user.uid, user.email);
-                if (!workspace) {
-                    await firestoreService.createWorkspace(user.uid, 'dev@pricelister.app', {
-                        name: 'Developer Sandbox',
-                        description: 'Main',
-                        phone: '000-000-0000',
-                        address: 'Local Test Environment',
-                        email: 'dev@pricelister.app',
-                        currency: '$',
-                        currencySymbol: '$'
-                    });
-                }
-                
+                await authService.loginAsGuest();
+                showAlert.success('Entering Demo UI Sandbox with complete test data.');
                 if (loginModal) loginModal.style.display = 'none';
-                window.location.href = 'app.html';
+                setTimeout(() => {
+                    window.location.href = 'app.html';
+                }, 150);
             } catch (error) {
                 console.error("Test Entry Error:", error);
                 showAlert.error('Test sign-in failed.');
                 modalTestBtn.disabled = false;
-                modalTestBtn.innerHTML = 'Test enter';
+                modalTestBtn.innerHTML = 'Test Enter &bull; Demo UI Sandbox';
             }
         });
     }

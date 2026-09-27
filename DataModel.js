@@ -249,3 +249,65 @@ export class WorkerPermission {
         this.disableDelete = data.disableDelete || false;
     }
 }
+
+export class Order {
+    constructor(data = {}) {
+        this.id = data.id || null;
+        this.orderNumber = data.orderNumber || ('ORD-' + Math.floor(100000 + Math.random() * 900000));
+        this.uniqueId = data.uniqueId || generateUniqueId();
+        this.customerName = (data.customerName || '').trim();
+        this.customerPhone = (data.customerPhone || '').trim();
+        this.customerAddress = (data.customerAddress || '').trim();
+        this.orderNote = (data.orderNote || '').trim();
+        this.items = (data.items || []).map(item => ({
+            productId: item.productId || item.id || null,
+            productName: item.productName || item.name || '',
+            quantity: Number(item.quantity) || 1,
+            unitPrice: Number(item.unitPrice || item.price || item.salePrice) || 0.0,
+            totalPrice: Number(item.totalPrice) || ((Number(item.quantity) || 1) * (Number(item.unitPrice || item.price || item.salePrice) || 0.0)),
+            imageUri: item.imageUri || item.imageUrl || '',
+            sizeWeight: item.sizeWeight || '',
+            mrp: Number(item.mrp) || 0.0
+        }));
+        this.subtotal = Number(data.subtotal) || 0.0;
+        this.shippingCost = Number(data.shippingCost) || 0.0;
+        this.totalAmount = Number(data.totalAmount) || 0.0;
+        this.currencySymbol = data.currencySymbol || '$';
+        this.status = data.status || 'PENDING'; // 'PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'COMPLETED', 'CANCELLED'
+        this.paymentMethod = data.paymentMethod || 'COD';
+        this.source = data.source || 'CUSTOMER_PANEL';
+        this.workspaceId = data.workspaceId || '';
+        this.createdAt = Number(data.createdAt) || Date.now();
+        this.updatedAt = Number(data.updatedAt) || Date.now();
+        this.isArchive = Boolean(data.isArchive);
+    }
+}
+
+export class CustomerPanelConfig {
+    constructor(data = {}) {
+        this.isPublished = Boolean(data.isPublished || data.enabled);
+        this.enabled = this.isPublished;
+        this.brandingMode = data.brandingMode || 'PRICELISTER'; // 'PRICELISTER', 'CUSTOM', 'WORKSPACE'
+        this.storeName = (data.storeName || '').trim() || 'PriceLister Store';
+        this.storeLogo = data.storeLogo || data.logoUrl || '';
+        this.workspaceLogo = data.workspaceLogo || '';
+        this.customSlug = (data.customSlug || '').trim().toLowerCase().replace(/[^a-z0-9-_]/g, '');
+        this.deployCountry = data.deployCountry || 'Global';
+        this.whatsappNumber = (data.whatsappNumber || '').trim();
+        this.phone = (data.phone || '').trim();
+        this.email = (data.email || '').trim();
+        this.address = (data.address || '').trim();
+        this.announcement = (data.announcement || '').trim();
+        this.termsAndConditions = (data.termsAndConditions || '').trim();
+        this.categorySelectionMode = data.categorySelectionMode === 'SPECIFIC' ? 'SPECIFIC' : 'ALL';
+        this.allowedCategories = Array.isArray(data.allowedCategories) ? data.allowedCategories : [];
+        this.showMrp = data.showMrp !== undefined ? Boolean(data.showMrp) : true;
+        this.showStockBadge = data.showStockBadge !== undefined ? Boolean(data.showStockBadge) : true;
+        this.closedMessage = data.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.';
+        this.currencySymbol = data.currencySymbol || '$';
+        this.publishedAt = data.publishedAt || null;
+        this.updatedAt = data.updatedAt || null;
+        this.uid = data.uid || null;
+    }
+}
+

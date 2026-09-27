@@ -7,9 +7,58 @@ import {
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { CONFIG } from '../config.js';
 import { storageService } from '../supabase/storage.js';
+import { getInitialDemoData } from './demoData.js';
 
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
+
+// Global Demo Sandbox Store
+let demoDB = null;
+
+export const getDemoStore = (collectionName) => {
+    if (!demoDB) {
+        try {
+            const saved = localStorage.getItem('pricelister_demo_db_v2');
+            if (saved) {
+                demoDB = JSON.parse(saved);
+            }
+        } catch (e) {}
+        if (!demoDB) {
+            demoDB = getInitialDemoData();
+            try {
+                localStorage.setItem('pricelister_demo_db_v2', JSON.stringify(demoDB));
+            } catch (e) {}
+        }
+    }
+    
+    // Normalize aliases
+    let targetKey = collectionName;
+    if (collectionName === 'Invoices' || collectionName === 'CustomerInvoices') {
+        targetKey = (demoDB && demoDB['Invoices']) ? 'Invoices' : 'CustomerInvoices';
+    } else if (collectionName === 'BusinessProfiles' || collectionName === 'Businesses') {
+        targetKey = (demoDB && demoDB['BusinessProfiles']) ? 'BusinessProfiles' : 'Businesses';
+    } else if (collectionName === 'ClientProfiles' || collectionName === 'Clients' || collectionName === 'Customers') {
+        targetKey = (demoDB && demoDB['ClientProfiles']) ? 'ClientProfiles' : 'Clients';
+    }
+
+    if (!demoDB[targetKey]) {
+        demoDB[targetKey] = [];
+    }
+    return demoDB[targetKey];
+};
+
+export const saveDemoStore = () => {
+    if (demoDB) {
+        try {
+            localStorage.setItem('pricelister_demo_db_v2', JSON.stringify(demoDB));
+        } catch (e) {}
+    }
+};
+
+export const resetDemoSandbox = () => {
+    demoDB = getInitialDemoData();
+    saveDemoStore();
+};
 
 // Enable local cache (offline persistence) for buttery smooth reloads
 enableMultiTabIndexedDbPersistence(db).catch((err) => {
@@ -30,12 +79,19 @@ const getCollectionName = (baseName) => {
 export const firestoreService = {
     checkWorkspaceExists: async (uid, email = null) => {
         // Purely local mock session bypass
-        if (uid === 'dev-mock-uid') {
+        if (uid === 'dev-mock-uid' || localStorage.getItem('mock_dev_session')) {
             return {
                 id: 'ws_dev_mock',
-                name: 'Local Dev Workspace',
+                workspaceId: 'DEMO-SANDBOX-01',
+                name: 'PriceLister Demo Enterprise',
+                description: 'UI Testing Sandbox',
                 email: 'developer@local.test',
+                adminEmail: 'developer@local.test',
                 role: 'CREATOR_ADMIN',
+                currency: '$',
+                currencySymbol: '$',
+                phone: '+1 (555) 019-2834',
+                address: '100 Silicon Way, Suite 400, San Jose, CA',
                 isTestData: true
             };
         }
@@ -169,6 +225,12 @@ export const firestoreService = {
     // ---------------------------------------------
     listenToUserRole: (uid, email, onRoleChange) => {
         if (!uid) return () => {};
+        if (uid === 'dev-mock-uid') {
+            if (typeof onRoleChange === 'function') {
+                onRoleChange('CREATOR_ADMIN', { role: 'CREATOR_ADMIN', name: 'Demo Admin (Testing)', email: 'developer@local.test' });
+            }
+            return () => {};
+        }
         
         // Check if Admin
         const wsRef = doc(db, 'Workspaces', uid);
@@ -212,6 +274,7 @@ export const firestoreService = {
     // INVITATION SYSTEM (Mailbox Parity)
     // ---------------------------------------------
     getPendingInvites: async (email) => {
+        if (!email || email === 'developer@local.test') return [];
         try {
             const q = query(collection(db, 'Invites'), where('workerEmail', '==', email.toLowerCase()));
             const snap = await getDocs(q);
@@ -274,7 +337,10 @@ export const firestoreService = {
     },
 
     listenUserInvites: (email, callback) => {
-        if (!email) return () => {};
+        if (!email || email === 'developer@local.test') {
+            if (typeof callback === 'function') callback([]);
+            return () => {};
+        }
         const q = query(collection(db, 'Invites'), where('workerEmail', '==', email.toLowerCase()));
         return onSnapshot(q, (snap) => {
             const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -393,6 +459,24 @@ export const firestoreService = {
     },
 
     getWorkspaceMembers: async (adminUid) => {
+        if (adminUid === 'ws_dev_mock' || adminUid === 'dev-mock-uid') {
+            return [
+                {
+                    email: 'developer@local.test',
+                    name: 'Demo Admin (Testing)',
+                    role: 'CREATOR_ADMIN',
+                    status: 'Joined',
+                    joinedAt: Date.now() - 86400000 * 30
+                },
+                {
+                    email: 'sarah.coadmin@pricelister.app',
+                    name: 'Sarah Jenkins',
+                    role: 'CO_ADMIN',
+                    status: 'Joined',
+                    joinedAt: Date.now() - 86400000 * 15
+                }
+            ];
+        }
         try {
             const membersRef = collection(db, `Workspaces/${adminUid}/Members`);
             const snap = await getDocs(membersRef);
@@ -404,7 +488,7 @@ export const firestoreService = {
     },
 
     updateMetricsCounter: async (workspaceDocUid, type, isAdding, itemCreatorId = null, count = 1) => {
-        if (!workspaceDocUid) return;
+        if (!workspaceDocUid || workspaceDocUid === 'ws_dev_mock') return;
         const currentUser = auth.currentUser;
         if (!currentUser) return;
         
@@ -454,6 +538,19 @@ export const firestoreService = {
 
     listenMemberMetrics: (workspaceDocUid, email, onUpdate) => {
         if (!workspaceDocUid) return () => {};
+        if (workspaceDocUid === 'ws_dev_mock') {
+            if (typeof onUpdate === 'function') {
+                onUpdate({
+                    adminProductCount: 12,
+                    adminInvoiceCount: 16,
+                    adminCategoryCount: 4,
+                    adminClientCount: 6,
+                    adminBusinessCount: 4,
+                    workersCount: 1
+                }, true);
+            }
+            return () => {};
+        }
         const currentUser = auth.currentUser;
         const isWorker = currentUser ? (workspaceDocUid !== currentUser.uid) : false;
         
@@ -475,32 +572,49 @@ export const firestoreService = {
     }
 };
 
+
 // Modular Repository Factory
 export const createRepository = (collectionName, workspaceId) => {
-    // For local dev mock bypass
+    // For local dev / UI testing sandbox
     if (workspaceId === 'ws_dev_mock') {
-        const mockStore = {}; // Memory store for current session
         return {
-            getAll: async () => Object.values(mockStore),
+            getAll: async () => {
+                const store = getDemoStore(collectionName);
+                return JSON.parse(JSON.stringify(store));
+            },
             listenAll: (callback) => {
-                callback(Object.values(mockStore));
+                const store = getDemoStore(collectionName);
+                callback(JSON.parse(JSON.stringify(store)));
                 return () => {}; // mock unsubscribe
             },
-            getById: async (id) => mockStore[id] || null,
+            getById: async (id) => {
+                const store = getDemoStore(collectionName);
+                const item = store.find(i => i.id === id || i.uniqueId === id);
+                return item ? JSON.parse(JSON.stringify(item)) : null;
+            },
             add: async (data) => {
-                const id = `mock_${Date.now()}`;
-                data.id = id;
-                if(!data.uniqueId) data.uniqueId = id;
-                mockStore[id] = data;
+                const store = getDemoStore(collectionName);
+                const id = data.id || `demo_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                const item = { ...data, id, uniqueId: data.uniqueId || id, createdAt: data.createdAt || new Date().toISOString() };
+                store.push(item);
+                saveDemoStore();
                 return id;
             },
             update: async (id, data) => {
-                if (mockStore[id]) {
-                    mockStore[id] = { ...mockStore[id], ...data };
+                const store = getDemoStore(collectionName);
+                const idx = store.findIndex(i => i.id === id || i.uniqueId === id);
+                if (idx >= 0) {
+                    store[idx] = { ...store[idx], ...data, updatedTimestamp: Date.now() };
+                    saveDemoStore();
                 }
             },
             delete: async (id) => {
-                delete mockStore[id];
+                const store = getDemoStore(collectionName);
+                const idx = store.findIndex(i => i.id === id || i.uniqueId === id);
+                if (idx >= 0) {
+                    store.splice(idx, 1);
+                    saveDemoStore();
+                }
             }
         };
     }
