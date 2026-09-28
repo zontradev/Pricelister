@@ -22,12 +22,16 @@
 
 /* Header & Brand */
 .sidebar-header {
-    padding: 0.85rem 1rem 0.85rem 1.25rem;
+    padding: 0 1rem 0 1.25rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--border-color);
     height: 64px;
+    min-height: 64px;
+    max-height: 64px;
+    box-sizing: border-box;
+    background-color: var(--bg-card);
     gap: 0.5rem;
     overflow: hidden;
 }
@@ -576,6 +580,10 @@
 
 .topbar {
     height: 64px;
+    min-height: 64px;
+    max-height: 64px;
+    box-sizing: border-box;
+    width: 100%;
     padding: 0 1.5rem;
     background-color: var(--bg-card);
     border-bottom: 1px solid var(--border-color);

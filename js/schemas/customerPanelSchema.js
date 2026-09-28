@@ -45,8 +45,10 @@ export const validateCustomerPanelSettings = (data) => {
         errors.push(`Branding mode must be one of: ${VALID_BRANDING_MODES.join(', ')}.`);
     }
 
-    if (data.deployCountry && !VALID_DEPLOY_COUNTRIES.includes(data.deployCountry)) {
-        errors.push('Please select a valid deploy country from the supported list.');
+    if (data.deployCountry && typeof data.deployCountry === 'string' && !VALID_DEPLOY_COUNTRIES.includes(data.deployCountry)) {
+        if (!data.deployCountry.includes(',') && !data.deployCountry.includes('Global')) {
+            errors.push('Please select a valid deploy country from the supported list.');
+        }
     }
 
     if (data.customSlug && typeof data.customSlug === 'string') {

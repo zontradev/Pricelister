@@ -83,6 +83,12 @@ export const hasUnsavedChanges = () => {
                 if (hasData) return true;
             }
         }
+
+        // 7. Customer Panel Setup: Form has unsaved modifications
+        const btnSaveCustomerPanel = document.getElementById('btn-save-customer-panel');
+        if (btnSaveCustomerPanel && !btnSaveCustomerPanel.disabled && btnSaveCustomerPanel.getAttribute('data-dirty') === 'true') {
+            return true;
+        }
     } catch (e) {
         console.warn("Edit safety check warning:", e);
     }
@@ -101,7 +107,8 @@ const routes = {
     '/customers': { render: (c, w) => renderPeople(c, w, 'customers'), title: 'People / Customers' },
     '/businesses': { render: (c, w) => renderPeople(c, w, 'businesses'), title: 'People / Businesses' },
     '/clients': { render: (c, w) => renderPeople(c, w, 'clients'), title: 'People / Clients' },
-    '/workers': { render: (c, w) => renderWorkers(c, w), title: 'Settings / Workers' },
+    '/workspace': { render: (c, w) => renderWorkers(c, w), title: 'Workspace / Hub & Members' },
+    '/workers': { render: (c, w) => renderWorkers(c, w), title: 'Workspace / Hub & Members' },
     '/settings': { render: (c, w) => renderSettings(c, w), title: 'Settings / General' },
     '/customer-panel': { render: (c, w) => renderCustomerPanelSetup(c, w), title: 'Workspace / Customer Panel Setup' },
     '/orders': { render: (c, w) => renderOrders(c, w), title: 'Workspace / Customer Orders' },
@@ -197,7 +204,9 @@ export const initRouter = async (workspaceIdParam = null) => {
             // Update active nav state
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             let activeNav = document.querySelector(`.nav-item[href="#${path}"]`);
-            if (!activeNav && path.startsWith('/analytics')) {
+            if (!activeNav && (path === '/workers' || path === '/workspace')) {
+                activeNav = document.querySelector('.nav-item[data-route="workspace"]') || document.querySelector('.nav-item[data-route="workers"]');
+            } else if (!activeNav && path.startsWith('/analytics')) {
                 activeNav = document.querySelector('.nav-item[data-route="analytics"]');
             }
             if (activeNav) activeNav.classList.add('active');

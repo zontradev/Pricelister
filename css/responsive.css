@@ -60,10 +60,15 @@
         font-size: 16px !important;
     }
 
-    /* Topbar */
-    .topbar {
-        height: 56px;
-        padding: 0 0.85rem;
+    /* Navigation Header & Content Header Matching Line & Size */
+    .topbar,
+    .sidebar-header {
+        height: 56px !important;
+        min-height: 56px !important;
+        max-height: 56px !important;
+        box-sizing: border-box !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        padding: 0 0.85rem !important;
     }
 
     .breadcrumbs {
@@ -599,28 +604,37 @@
     }
 
     .main-content {
-        align-items: center;
+        align-items: stretch;
+        width: 100%;
     }
 
     .topbar {
         width: 100%;
-        max-width: 1920px;
-        margin: 0 auto;
-        height: 72px;
-        padding: 0 3rem;
+        max-width: none;
+        margin: 0;
+        height: 64px;
+        min-height: 64px;
+        max-height: 64px;
+        box-sizing: border-box;
+        border-bottom: 1px solid var(--border-color);
+        padding: 0 2rem;
     }
 
     .sidebar {
-        width: 320px;
+        width: 280px;
     }
 
     .sidebar-header {
-        height: 72px;
-        padding: 1rem 2rem;
+        height: 64px;
+        min-height: 64px;
+        max-height: 64px;
+        box-sizing: border-box;
+        border-bottom: 1px solid var(--border-color);
+        padding: 0 1.25rem;
     }
 
     .sidebar-header h2 {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
     }
 
     .nav-item {

@@ -34,7 +34,7 @@ export const renderProducts = async (container, workspaceId) => {
     };
 
     // Calculate detailed real-time analytics for a specific product
-    const calculateProductAnalytics = (product) => {
+    const calculateProductAnalytics = (product, timeRange = '6_MONTHS') => {
         if (!product) return null;
 
         const pId = String(product.id || '');
@@ -903,7 +903,7 @@ export const renderProducts = async (container, workspaceId) => {
                     </div>
                 </div>
 
-                <form id="product-form">
+                <form id="product-form" novalidate>
                     <input type="hidden" id="prd-id">
                     
                     <div class="prd-form-grid">

@@ -5,35 +5,76 @@
  */
 
 import { authService } from '../../firebase/auth.js';
+import { firestoreService } from '../../firebase/firestore.js';
+import { storageService } from '../../firebase/storage.js';
 import { getSettingsService } from '../services/settingsService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { showAlert } from '../alert-handler.js';
 import { getAppCurrencySymbol } from '../utilities.js';
 import { VALID_DEPLOY_COUNTRIES, VALID_BRANDING_MODES } from '../schemas/customerPanelSchema.js';
 
+export const BENCHMARK_EXCHANGE_RATES = {
+    'US': { rate: 1.00, currency: 'USD', symbol: '$' },
+    'BD': { rate: 120.00, currency: 'BDT', symbol: '৳' },
+    'IN': { rate: 83.50, currency: 'INR', symbol: '₹' },
+    'CA': { rate: 1.36, currency: 'CAD', symbol: 'CA$' },
+    'GB': { rate: 0.79, currency: 'GBP', symbol: '£' },
+    'AU': { rate: 1.52, currency: 'AUD', symbol: 'AU$' },
+    'DE': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'FR': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'AE': { rate: 3.67, currency: 'AED', symbol: 'د.إ' },
+    'SA': { rate: 3.75, currency: 'SAR', symbol: '﷼' },
+    'SG': { rate: 1.35, currency: 'SGD', symbol: 'S$' },
+    'MY': { rate: 4.70, currency: 'MYR', symbol: 'RM' },
+    'JP': { rate: 155.00, currency: 'JPY', symbol: '¥' },
+    'IT': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'ES': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'BR': { rate: 5.40, currency: 'BRL', symbol: 'R$' },
+    'MX': { rate: 18.20, currency: 'MXN', symbol: 'MX$' },
+    'NL': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'ZA': { rate: 18.50, currency: 'ZAR', symbol: 'R' },
+    'PK': { rate: 278.00, currency: 'PKR', symbol: '₨' },
+    'ID': { rate: 16200.00, currency: 'IDR', symbol: 'Rp' },
+    'TR': { rate: 32.50, currency: 'TRY', symbol: '₺' },
+    'SE': { rate: 10.60, currency: 'SEK', symbol: 'kr' },
+    'CH': { rate: 0.90, currency: 'CHF', symbol: 'CHF' },
+    'QA': { rate: 3.64, currency: 'QAR', symbol: '﷼' }
+};
+
+export const DEPLOY_COUNTRY_LIST = [
+    { code: 'GLOBAL', name: 'Global', iso: '', currency: 'Universal (All Regions)', isGlobal: true },
+    { code: 'US', name: 'United States', iso: 'us', currency: 'USD ($)' },
+    { code: 'BD', name: 'Bangladesh', iso: 'bd', currency: 'BDT (৳)' },
+    { code: 'IN', name: 'India', iso: 'in', currency: 'INR (₹)' },
+    { code: 'CA', name: 'Canada', iso: 'ca', currency: 'CAD ($)' },
+    { code: 'GB', name: 'United Kingdom', iso: 'gb', currency: 'GBP (£)' },
+    { code: 'AU', name: 'Australia', iso: 'au', currency: 'AUD ($)' },
+    { code: 'DE', name: 'Germany', iso: 'de', currency: 'EUR (€)' },
+    { code: 'FR', name: 'France', iso: 'fr', currency: 'EUR (€)' },
+    { code: 'AE', name: 'United Arab Emirates', iso: 'ae', currency: 'AED (د.إ)' },
+    { code: 'SA', name: 'Saudi Arabia', iso: 'sa', currency: 'SAR (﷼)' },
+    { code: 'SG', name: 'Singapore', iso: 'sg', currency: 'SGD ($)' },
+    { code: 'MY', name: 'Malaysia', iso: 'my', currency: 'MYR (RM)' },
+    { code: 'JP', name: 'Japan', iso: 'jp', currency: 'JPY (¥)' },
+    { code: 'IT', name: 'Italy', iso: 'it', currency: 'EUR (€)' },
+    { code: 'ES', name: 'Spain', iso: 'es', currency: 'EUR (€)' },
+    { code: 'BR', name: 'Brazil', iso: 'br', currency: 'BRL (R$)' },
+    { code: 'MX', name: 'Mexico', iso: 'mx', currency: 'MXN ($)' },
+    { code: 'NL', name: 'Netherlands', iso: 'nl', currency: 'EUR (€)' },
+    { code: 'ZA', name: 'South Africa', iso: 'za', currency: 'ZAR (R)' },
+    { code: 'PK', name: 'Pakistan', iso: 'pk', currency: 'PKR (₨)' },
+    { code: 'ID', name: 'Indonesia', iso: 'id', currency: 'IDR (Rp)' },
+    { code: 'TR', name: 'Turkey', iso: 'tr', currency: 'TRY (₺)' },
+    { code: 'SE', name: 'Sweden', iso: 'se', currency: 'SEK (kr)' },
+    { code: 'CH', name: 'Switzerland', iso: 'ch', currency: 'CHF (CHF)' },
+    { code: 'QA', name: 'Qatar', iso: 'qa', currency: 'QAR (﷼)' }
+];
+
 export const renderCustomerPanelSetup = async (container, workspaceId) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return;
 
-    // 1. Role Verification: Only Admin or Co-admin can configure Customer Panel
-    const userRole = (window.__activeWorkspace?.role || 'WORKER').toUpperCase();
-    const isAuthorized = userRole === 'CREATOR_ADMIN' || userRole === 'ADMIN' || userRole === 'CREATOR' || userRole === 'CO_ADMIN' || userRole === 'CO-ADMIN';
-
-    if (!isAuthorized) {
-        container.innerHTML = `
-            <div class="card" style="text-align: center; padding: 3rem 1.5rem; max-width: 550px; margin: 2rem auto;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
-                <h3 style="color: var(--text-primary); margin-bottom: 0.5rem;">Access Restricted</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-                    Only Workspace Admins and Co-admins have permission to configure and publish the Customer Panel.
-                </p>
-                <button class="btn btn-primary" onclick="window.location.hash='#/overview'">Return to Overview</button>
-            </div>
-        `;
-        return;
-    }
-
-    // 2. Fetch Data
+    // 1. Show Loading Spinner
     container.innerHTML = `
         <div style="display:flex; justify-content:center; align-items:center; min-height:300px;">
             <div class="spinner"></div>
@@ -45,15 +86,47 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
 
     let panelSettings = {};
     let allCategories = [];
+    let wsDocInfo = {};
 
     try {
-        [panelSettings, allCategories] = await Promise.all([
-            settingsService.getCustomerPanelSettings(),
-            categoryService.getAllCategories().catch(() => [])
+        const [pSet, cats, wsInfo] = await Promise.all([
+            settingsService.getCustomerPanelSettings().catch(() => ({})),
+            categoryService.getAllCategories().catch(() => []),
+            firestoreService.checkWorkspaceExists(currentUser.uid, currentUser.email).catch(() => null)
         ]);
+        panelSettings = pSet || {};
+        allCategories = cats || [];
+        wsDocInfo = wsInfo || window.__activeWorkspace || {};
     } catch (err) {
         console.error("Error loading customer panel setup:", err);
-        showAlert.error("Could not load Customer Panel settings.");
+        panelSettings = {};
+        allCategories = [];
+        wsDocInfo = window.__activeWorkspace || {};
+    }
+
+    // 2. Role Verification: Only Admin or Co-admin can configure Customer Panel
+    let userRole = (window.__activeWorkspace?.role || '').toUpperCase();
+    const isOwner = workspaceId === currentUser.uid || wsDocInfo?.adminId === currentUser.uid || wsDocInfo?.ownerId === currentUser.uid || !userRole;
+    if (isOwner && !userRole) {
+        userRole = 'CREATOR_ADMIN';
+    }
+
+    const isAuthorized = isOwner || userRole === 'CREATOR_ADMIN' || userRole === 'ADMIN' || userRole === 'CREATOR' || userRole === 'CO_ADMIN' || userRole === 'CO-ADMIN';
+
+    if (!isAuthorized) {
+        container.innerHTML = `
+            <div class="card" style="text-align: center; padding: 3rem 1.5rem; max-width: 550px; margin: 2rem auto; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); background: #ffffff;">
+                <div style="width:64px; height:64px; border-radius:16px; background:linear-gradient(135deg, rgba(225,29,72,0.1), rgba(190,18,60,0.15)); border:1px solid rgba(225,29,72,0.25); display:inline-flex; align-items:center; justify-content:center; color:#e11d48; margin-bottom:1.25rem;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <h3 style="color: var(--text-primary); margin-bottom: 0.5rem; font-weight:800;">Access Restricted</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size:0.92rem;">
+                    Only Workspace Admins and Co-admins have permission to configure and publish the Customer Panel.
+                </p>
+                <button class="btn btn-primary" onclick="window.location.hash='#/overview'" style="background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); font-weight:700;">Return to Overview</button>
+            </div>
+        `;
+        return;
     }
 
     // Base origin URL
@@ -67,15 +140,51 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         return `${baseUrl}?ws=${encodeURIComponent(workspaceId)}`;
     };
 
-    const isPublished = Boolean(panelSettings.isPublished || panelSettings.enabled);
+    let selectedCustomLogoFile = null;
+    let isFormDirty = false;
+    let initialFormSnapshot = '';
 
     const renderMainUI = (settings) => {
         const isLive = Boolean(settings.isPublished || settings.enabled);
         const currentPortalUrl = computeCustomerUrl(settings);
         const brandingMode = settings.brandingMode || 'PRICELISTER';
-        const selectedCountry = settings.deployCountry || 'Global';
-        const wsLogo = settings.workspaceLogo || window.__activeWorkspace?.logoUrl || '';
+        
+        // Selected Countries parsing
+        let selectedCountriesList = [];
+        if (Array.isArray(settings.deployCountries) && settings.deployCountries.length > 0) {
+            selectedCountriesList = settings.deployCountries;
+        } else if (settings.deployCountry) {
+            selectedCountriesList = settings.deployCountry.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        if (selectedCountriesList.length === 0) {
+            selectedCountriesList = ['Global'];
+        }
+
+        const isGlobalSelected = selectedCountriesList.includes('Global');
+
+        const wsName = wsDocInfo.name || window.__activeWorkspace?.name || 'My Business';
+        const wsAddress = wsDocInfo.address || wsDocInfo.description || 'Verified Business Store';
+        const wsLogo = settings.workspaceLogo || wsDocInfo.logoUrl || wsDocInfo.logo || window.__activeWorkspace?.logoUrl || '';
         const storeLogo = settings.storeLogo || '';
+
+        // Dynamic Branding Values
+        let displayStoreTitle = settings.storeName || '';
+        let displayStoreSubtitle = settings.storeSubtitle || '';
+        let displayLogoSrc = 'pricelister_org.png';
+
+        if (brandingMode === 'PRICELISTER') {
+            displayStoreTitle = 'Price Lister Store';
+            displayStoreSubtitle = 'Published by PriceLister.';
+            displayLogoSrc = 'pricelister_org.png';
+        } else if (brandingMode === 'WORKSPACE') {
+            displayStoreTitle = wsName;
+            displayStoreSubtitle = wsAddress;
+            displayLogoSrc = wsLogo || 'pricelister_org.png';
+        } else { // CUSTOM
+            displayStoreTitle = settings.storeName || wsName;
+            displayStoreSubtitle = settings.storeSubtitle || wsAddress || 'Online Product Store';
+            displayLogoSrc = storeLogo || wsLogo || 'pricelister_org.png';
+        }
 
         // Sync sidebar status pill
         const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
@@ -101,9 +210,13 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.25rem;">
                         <h2 style="margin:0; font-size:1.75rem; font-weight:800; color:var(--text-primary);">Customer Panel & Public Catalog</h2>
                         ${statusPillHtml}
+                        <span id="cp-unsaved-badge" style="display:none; align-items:center; gap:0.35rem; padding:0.25rem 0.65rem; border-radius:999px; background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-size:0.78rem; font-weight:700; animation:cp-pulse-dot 2s infinite;">
+                            <span style="width:6px; height:6px; border-radius:50%; background:#f59e0b;"></span>
+                            Unsaved Changes
+                        </span>
                     </div>
                     <p style="margin:0; font-size:0.88rem; color:var(--text-secondary);">
-                        Setup, customize and publish a standalone web catalog where customers can view products, filter categories, and add items to a shopping cart.
+                        Setup, customize branding, deploy countries, and publish a standalone web catalog for your customers.
                     </p>
                 </div>
 
@@ -126,7 +239,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
 
                     <button type="button" id="btn-trigger-launch-modal" class="btn btn-primary" style="font-weight:700; display:flex; align-items:center; gap:0.5rem; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35); padding:0.6rem 1.25rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 9v-5s3.03.55 4 2c1.08 1.62 0 5 0 5"></path></svg>
-                        ${isLive ? 'Re-Launch / Publish Updates' : 'Launch Customer Panel'}
+                        ${isLive ? 'Re-Launch Updates' : 'Launch Customer Panel'}
                     </button>
                 </div>
             </div>
@@ -142,7 +255,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                             <div>
                                 <h4 style="margin:0 0 0.2rem 0; font-size:1rem; font-weight:700; color:#9f1239;">Storefront Is Currently Unpublished</h4>
                                 <p style="margin:0; font-size:0.85rem; color:#be123c;">
-                                    Until you click the <strong>Launch Customer Panel</strong> button, customer access remains closed and visitors will see your temporary closed notice.
+                                    Until you click <strong>Launch Customer Panel</strong>, customer access remains closed and visitors will see your temporary closed notice.
                                 </p>
                             </div>
                         </div>
@@ -183,8 +296,8 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                             <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Public Storefront URL & Custom Link</span>
                             <h4 style="margin:0.2rem 0 0 0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">Share with Customers</h4>
                         </div>
-                        <span style="font-size:0.8rem; background:var(--surface-100); padding:0.25rem 0.65rem; border-radius:6px; font-weight:600; color:var(--text-secondary);">
-                            Deploy Country: <strong>${escapeHtml(selectedCountry)}</strong>
+                        <span id="cp-deploy-badge" style="font-size:0.8rem; background:var(--surface-100); padding:0.25rem 0.65rem; border-radius:6px; font-weight:600; color:var(--text-secondary);">
+                            Deploy Country: <strong>${escapeHtml(isGlobalSelected ? 'Global' : selectedCountriesList.join(', '))}</strong>
                         </span>
                     </div>
 
@@ -208,169 +321,267 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
             </div>
 
             <!-- CONFIGURATION FORM -->
-            <form id="customer-panel-form" style="display:flex; flex-direction:column; gap:1.5rem;">
+            <form id="customer-panel-form" novalidate style="display:flex; flex-direction:column; gap:1.5rem;">
                 
-                <!-- 1. BRANDING & DEPLOY CONFIGURATION -->
+                <!-- 1. BRANDING CHOICES (PRICELISTER VS CUSTOM VS WORKSPACE) -->
                 <div class="card" style="padding:1.5rem;">
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">1. Branding Choice & Deploy Country</h3>
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Choose how your storefront is branded for visitors, select your deploy country, and customize logos.</p>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.25rem;">
+                        <h3 style="font-size:1.15rem; margin:0; font-weight:700; color:var(--text-primary);">1. Branding Setup</h3>
+                        <span id="cp-branding-status-tag" style="font-size:0.75rem; font-weight:700; padding:0.2rem 0.65rem; border-radius:999px; background:rgba(225,29,72,0.1); color:var(--primary);">
+                            ${brandingMode === 'PRICELISTER' ? 'PriceLister Branding' : (brandingMode === 'CUSTOM' ? 'Custom Branding' : 'Workspace Branding')}
+                        </span>
+                    </div>
+                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">
+                        Choose your branding presentation style. PriceLister branding locks official titles, while Custom Branding allows full editing.
+                    </p>
 
                     <!-- BRANDING SELECTION CARDS -->
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
                         
-                        <!-- Option A: PriceLister Branding -->
-                        <label class="cp-branding-card" style="border:2px solid ${brandingMode === 'PRICELISTER' ? 'var(--primary)' : 'var(--border-color)'}; background:${brandingMode === 'PRICELISTER' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:12px; padding:1.25rem; cursor:pointer; display:flex; flex-direction:column; gap:0.6rem; transition:all 0.2s ease;">
+                        <!-- Option A: PriceLister Branding (Locked / Cannot change) -->
+                        <label class="cp-branding-card" data-mode="PRICELISTER" style="border:2px solid ${brandingMode === 'PRICELISTER' ? 'var(--primary)' : 'var(--border-color)'}; background:${brandingMode === 'PRICELISTER' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:12px; padding:1.25rem; cursor:pointer; display:flex; flex-direction:column; gap:0.6rem; transition:all 0.2s ease;">
                             <div style="display:flex; align-items:center; justify-content:space-between;">
                                 <div style="display:flex; align-items:center; gap:0.6rem;">
                                     <input type="radio" name="cp-branding-mode" value="PRICELISTER" ${brandingMode === 'PRICELISTER' ? 'checked' : ''}>
-                                    <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">PriceLister Branding</span>
+                                    <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">Price Lister Branding</span>
                                 </div>
-                                <span style="font-size:0.72rem; background:rgba(225,29,72,0.1); color:var(--primary); padding:0.15rem 0.5rem; border-radius:999px; font-weight:700;">Default</span>
+                                <span style="font-size:0.72rem; background:rgba(225,29,72,0.1); color:var(--primary); padding:0.15rem 0.5rem; border-radius:999px; font-weight:700;">Official (Locked)</span>
                             </div>
-                            <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">
-                                Displays the official PriceLister badge, certified secure catalog badge, and standard platform styling.
-                            </p>
+                            <div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
+                                <div><strong>Title:</strong> Price Lister Store</div>
+                                <div><strong>Subtitle:</strong> Published by PriceLister.</div>
+                                <div style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem;">Fixed official badge &amp; certified secure store look.</div>
+                            </div>
                         </label>
 
-                        <!-- Option B: Custom Branding -->
-                        <label class="cp-branding-card" style="border:2px solid ${brandingMode === 'CUSTOM' ? 'var(--primary)' : 'var(--border-color)'}; background:${brandingMode === 'CUSTOM' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:12px; padding:1.25rem; cursor:pointer; display:flex; flex-direction:column; gap:0.6rem; transition:all 0.2s ease;">
+                        <!-- Option B: Custom Branding (Fully Editable) -->
+                        <label class="cp-branding-card" data-mode="CUSTOM" style="border:2px solid ${brandingMode === 'CUSTOM' ? 'var(--primary)' : 'var(--border-color)'}; background:${brandingMode === 'CUSTOM' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:12px; padding:1.25rem; cursor:pointer; display:flex; flex-direction:column; gap:0.6rem; transition:all 0.2s ease;">
                             <div style="display:flex; align-items:center; justify-content:space-between;">
                                 <div style="display:flex; align-items:center; gap:0.6rem;">
                                     <input type="radio" name="cp-branding-mode" value="CUSTOM" ${brandingMode === 'CUSTOM' ? 'checked' : ''}>
                                     <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">Custom Branding</span>
                                 </div>
-                                <span style="font-size:0.72rem; background:#f1f5f9; color:#475569; padding:0.15rem 0.5rem; border-radius:999px; font-weight:700;">Custom Logo</span>
+                                <span style="font-size:0.72rem; background:#ecfdf5; color:#059669; padding:0.15rem 0.5rem; border-radius:999px; font-weight:700;">Fully Editable</span>
                             </div>
-                            <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">
-                                Upload your dedicated Store Logo, custom store name, and tailored brand visuals.
-                            </p>
+                            <div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
+                                <div><strong>Custom Store Logo &amp; Name</strong></div>
+                                <div>Detected workspace info pre-filled &amp; fully editable.</div>
+                                <div style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem;">Upload dedicated logo, title, and subtitle.</div>
+                            </div>
                         </label>
 
                         <!-- Option C: Workspace Branding -->
-                        <label class="cp-branding-card" style="border:2px solid ${brandingMode === 'WORKSPACE' ? 'var(--primary)' : 'var(--border-color)'}; background:${brandingMode === 'WORKSPACE' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:12px; padding:1.25rem; cursor:pointer; display:flex; flex-direction:column; gap:0.6rem; transition:all 0.2s ease;">
+                        <label class="cp-branding-card" data-mode="WORKSPACE" style="border:2px solid ${brandingMode === 'WORKSPACE' ? 'var(--primary)' : 'var(--border-color)'}; background:${brandingMode === 'WORKSPACE' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:12px; padding:1.25rem; cursor:pointer; display:flex; flex-direction:column; gap:0.6rem; transition:all 0.2s ease;">
                             <div style="display:flex; align-items:center; justify-content:space-between;">
                                 <div style="display:flex; align-items:center; gap:0.6rem;">
                                     <input type="radio" name="cp-branding-mode" value="WORKSPACE" ${brandingMode === 'WORKSPACE' ? 'checked' : ''}>
                                     <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">Workspace Branding</span>
                                 </div>
-                                <span style="font-size:0.72rem; background:#ecfdf5; color:#059669; padding:0.15rem 0.5rem; border-radius:999px; font-weight:700;">Enterprise</span>
+                                <span style="font-size:0.72rem; background:#f1f5f9; color:#475569; padding:0.15rem 0.5rem; border-radius:999px; font-weight:700;">Workspace Auto</span>
                             </div>
-                            <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">
-                                Automatically uses your Workspace Name and Workspace Broad Logo for a unified enterprise presence.
-                            </p>
+                            <div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
+                                <div><strong>Title:</strong> ${escapeHtml(wsName)}</div>
+                                <div><strong>Subtitle:</strong> ${escapeHtml(wsAddress)}</div>
+                                <div style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem;">Automatically mirrors workspace identity.</div>
+                            </div>
                         </label>
                     </div>
 
-                    <!-- DEPLOY COUNTRY & STORE LOGOS ROW -->
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
+                    <!-- LOGO & BRANDING FIELDS DETAILS -->
+                    <div style="background:var(--surface-50); border:1px solid var(--border-color); border-radius:12px; padding:1.25rem; margin-top:1rem;">
                         
-                        <!-- Deploy Country Dropdown (Required) -->
-                        <div>
-                            <label style="font-weight:700; font-size:0.88rem; margin-bottom:0.35rem; display:block; color:var(--text-primary);">
-                                Deploy Country * <span style="font-size:0.75rem; font-weight:400; color:var(--text-muted);">(Required for catalog currency & regional routing)</span>
-                            </label>
-                            <select id="cp-deploy-country" required class="form-control" style="font-weight:600; font-size:0.9rem;">
-                                ${VALID_DEPLOY_COUNTRIES.map(country => `
-                                    <option value="${escapeHtml(country)}" ${selectedCountry === country ? 'selected' : ''}>
-                                        ${escapeHtml(country)}
-                                    </option>
-                                `).join('')}
-                            </select>
-                            <small style="color:var(--text-secondary); font-size:0.78rem; margin-top:0.25rem; display:block;">
-                                Target market country for currency, phone formatting, and local operations.
-                            </small>
-                        </div>
+                        <div style="display:flex; gap:1.25rem; align-items:center; flex-wrap:wrap; margin-bottom:1.25rem;">
+                            <!-- Square-Rounded Elevated Logo Box -->
+                            <div id="cp-logo-elevated-box" style="width:72px; height:72px; border-radius:16px; background:#ffffff; border:1.5px solid var(--border-color); box-shadow:0 6px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                                <img id="cp-logo-img-preview" src="${escapeHtml(displayLogoSrc)}" alt="Store Logo" style="width:100%; height:100%; object-fit:contain;" onerror="this.src='pricelister_org.png';">
+                            </div>
 
-                        <!-- Store / Workspace Logo Section -->
-                        <div>
-                            <label style="font-weight:700; font-size:0.88rem; margin-bottom:0.35rem; display:block; color:var(--text-primary);">
-                                Custom Store Logo URL / Workspace Logo Broad View
-                            </label>
-                            <div style="display:flex; gap:0.75rem; align-items:center;">
-                                <div id="cp-logo-broad-preview" style="width:52px; height:52px; border-radius:12px; background:var(--surface-100); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
-                                    ${(storeLogo || wsLogo) ? `
-                                        <img src="${escapeHtml(storeLogo || wsLogo)}" alt="Store Logo" style="width:100%; height:100%; object-fit:contain;">
-                                    ` : `
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
-                                    `}
+                            <div style="flex:1; min-width:240px;" id="cp-logo-controls-wrap">
+                                <div id="cp-logo-locked-notice" style="display:${brandingMode === 'PRICELISTER' ? 'block' : 'none'};">
+                                    <strong style="font-size:0.9rem; color:var(--text-primary);">Official PriceLister Logo (Locked)</strong>
+                                    <p style="margin:0.2rem 0 0 0; font-size:0.78rem; color:var(--text-secondary);">
+                                        Uses verified PriceLister emblem. Select <strong>Custom Branding</strong> above to upload your own store logo.
+                                    </p>
                                 </div>
-                                <div style="flex:1;">
-                                    <input type="url" id="cp-store-logo-input" class="form-control" value="${escapeHtml(storeLogo)}" placeholder="https://... (Direct image URL for Store Logo)">
+
+                                <div id="cp-logo-editable-controls" style="display:${brandingMode === 'CUSTOM' ? 'block' : 'none'};">
+                                    <input type="file" id="cp-store-logo-file-input" accept="image/*" style="display:none;">
+                                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.4rem;">
+                                        <button type="button" id="btn-cp-choose-logo" class="btn btn-secondary btn-sm" style="font-weight:600; font-size:0.85rem; padding:0.4rem 0.85rem; display:flex; align-items:center; gap:0.4rem; background:#ffffff;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                            Choose File
+                                        </button>
+                                        <button type="button" id="btn-cp-use-ws-logo" class="btn btn-xs btn-outline" style="font-size:0.78rem; padding:0.35rem 0.65rem;">
+                                            Use Workspace Logo
+                                        </button>
+                                        <button type="button" id="btn-cp-remove-logo" class="btn btn-xs" style="color:#e11d48; background:transparent; border:none; font-weight:600; font-size:0.78rem; cursor:pointer;">
+                                            Reset
+                                        </button>
+                                    </div>
+                                    <input type="text" id="cp-store-logo-input" class="form-control" style="font-size:0.82rem; height:34px; padding:0 0.65rem;" value="${escapeHtml(storeLogo)}" placeholder="Or paste direct image URL (optional)">
+                                </div>
+
+                                <div id="cp-logo-workspace-notice" style="display:${brandingMode === 'WORKSPACE' ? 'block' : 'none'};">
+                                    <strong style="font-size:0.9rem; color:var(--text-primary);">Workspace Broad Logo</strong>
+                                    <p style="margin:0.2rem 0 0 0; font-size:0.78rem; color:var(--text-secondary);">
+                                        Automatically mirrors your Workspace Logo configured in settings.
+                                    </p>
                                 </div>
                             </div>
-                            <small style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem; display:block;">
-                                If using Workspace Branding, workspace logo is used automatically.
-                            </small>
+                        </div>
+
+                        <!-- STORE TITLE & SUBTITLE FIELDS -->
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
+                            <div>
+                                <label style="font-weight:700; font-size:0.85rem; margin-bottom:0.35rem; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>Store Title</span>
+                                    <span id="cp-title-lock-badge" style="font-size:0.72rem; color:var(--text-muted); font-weight:600;">
+                                        ${brandingMode === 'PRICELISTER' ? 'View only' : (brandingMode === 'WORKSPACE' ? 'Workspace Linked' : 'Fully Editable')}
+                                    </span>
+                                </label>
+                                <input type="text" id="cp-store-name" class="form-control" 
+                                    style="font-weight:700; font-size:0.92rem; ${brandingMode !== 'CUSTOM' ? 'background:#f1f5f9; color:#475569; cursor:not-allowed;' : 'background:#ffffff;'}" 
+                                    value="${escapeHtml(displayStoreTitle)}" 
+                                    placeholder="e.g. Price Lister Store" 
+                                    ${brandingMode !== 'CUSTOM' ? 'readonly' : ''}>
+                            </div>
+
+                            <div>
+                                <label style="font-weight:700; font-size:0.85rem; margin-bottom:0.35rem; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>Store Subtitle / Tagline</span>
+                                    <span id="cp-sub-lock-badge" style="font-size:0.72rem; color:var(--text-muted); font-weight:600;">
+                                        ${brandingMode === 'PRICELISTER' ? 'View only' : (brandingMode === 'WORKSPACE' ? 'Workspace Linked' : 'Fully Editable')}
+                                    </span>
+                                </label>
+                                <input type="text" id="cp-store-subtitle" class="form-control" 
+                                    style="font-size:0.88rem; ${brandingMode !== 'CUSTOM' ? 'background:#f1f5f9; color:#475569; cursor:not-allowed;' : 'background:#ffffff;'}" 
+                                    value="${escapeHtml(displayStoreSubtitle)}" 
+                                    placeholder="e.g. Published by PriceLister." 
+                                    ${brandingMode !== 'CUSTOM' ? 'readonly' : ''}>
+                            </div>
                         </div>
 
                     </div>
                 </div>
 
-                <!-- 2. CLOUD SYNC & STATUS -->
+                <!-- 2. DEPLOY COUNTRY (GLOBAL = OTHER UNSELECTABLE; GLOBAL OFF = MULTISELECTABLE) -->
                 <div class="card" style="padding:1.5rem;">
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">2. Firebase Cloud Subfield Storage</h3>
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">
-                        Settings are saved under your workspace subcollection: <code>Workspaces/${workspaceId}/CustomerPanel/${currentUser.uid}</code>
-                    </p>
-
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem; border-radius:10px; background:var(--surface-50); border:1px solid var(--border-color); flex-wrap:wrap;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:0.25rem;">
                         <div>
-                            <span style="font-weight:600; font-size:0.95rem; color:var(--text-primary); display:block;">Publishing Status</span>
-                            <span style="font-size:0.82rem; color:var(--text-secondary);">
-                                ${isLive ? 'Active on cloud. Public catalog is serving live products.' : 'Unpublished. Customers receive a temporary closed notification.'}
-                            </span>
+                            <h3 style="font-size:1.15rem; margin:0; font-weight:700; color:var(--text-primary);">2. Deploy Country &amp; Region Selection</h3>
+                            <p style="font-size:0.85rem; color:var(--text-secondary); margin:0.2rem 0 0 0;">
+                                Select <strong>Global</strong> (covers all regions) or turn Global off to <strong>multi-select</strong> specific countries.
+                            </p>
                         </div>
-                        <div style="display:flex; gap:0.6rem; align-items:center;">
-                            <select id="cp-status-select" class="form-control" style="font-weight:600; padding:0.5rem 1rem; width:190px;">
-                                <option value="ACTIVE" ${isLive ? 'selected' : ''}>Published (Live)</option>
-                                <option value="STOPPED" ${!isLive ? 'selected' : ''}>Unpublished (Closed)</option>
-                            </select>
+                        <div style="display:flex; gap:0.4rem; align-items:center;">
+                            <button type="button" id="btn-country-select-global" class="btn btn-secondary btn-sm" style="font-size:0.78rem; font-weight:600; padding:0.3rem 0.65rem; display:inline-flex; align-items:center; gap:0.35rem;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                Global Mode
+                            </button>
+                            <button type="button" id="btn-country-select-all" class="btn btn-secondary btn-sm" style="font-size:0.78rem; font-weight:600; padding:0.3rem 0.65rem;">
+                                Select All (25)
+                            </button>
+                            <button type="button" id="btn-country-clear" class="btn btn-secondary btn-sm" style="font-size:0.78rem; font-weight:600; padding:0.3rem 0.65rem;">
+                                Clear
+                            </button>
                         </div>
+                    </div>
+
+                    <!-- Global Mode Master Notice Pill -->
+                    <div id="cp-global-mode-alert" style="margin:0.85rem 0 0.5rem 0; padding:0.65rem 0.95rem; border-radius:10px; font-size:0.85rem; display:flex; align-items:center; gap:0.6rem; transition:all 0.2s ease; ${isGlobalSelected ? 'background:rgba(225,29,72,0.06); border:1px solid rgba(225,29,72,0.25); color:var(--primary);' : 'background:#f8fafc; border:1px solid #e2e8f0; color:var(--text-secondary);'}">
+                        <span id="cp-global-mode-icon" style="display:inline-flex; align-items:center;">${isGlobalSelected ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>'}</span>
+                        <span id="cp-global-mode-text">
+                            ${isGlobalSelected 
+                                ? '<strong>E-Commerce Website will globally publish:</strong> Accessible to visitors across all international countries.' 
+                                : '<strong>Regional Target Mode:</strong> E-Commerce catalog will publish to selected target countries.'}
+                        </span>
+                    </div>
+
+                    <!-- Search Filter for Countries -->
+                    <div style="margin:0.75rem 0 0.85rem 0; position:relative;">
+                        <input type="text" id="cp-country-search" class="form-control" style="padding-left:2.3rem; font-size:0.88rem; height:38px;" placeholder="Search country (e.g. USA, Bangladesh, India, Canada, Germany...)...">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute; left:0.85rem; top:50%; transform:translateY(-50%); color:var(--text-muted);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+
+                    <!-- Flag Country Selection Grid (Category-Style Chips) -->
+                    <div id="cp-country-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap:0.65rem; max-height:360px; overflow-y:auto; padding:0.35rem 0.15rem;">
+                        ${DEPLOY_COUNTRY_LIST.map(country => {
+                            const isThisCountryGlobal = Boolean(country.isGlobal);
+                            const isChecked = isThisCountryGlobal ? isGlobalSelected : (!isGlobalSelected && selectedCountriesList.includes(country.name));
+                            const isDisabled = (!isThisCountryGlobal && isGlobalSelected);
+
+                            return `
+                                <label class="cp-country-card" data-country-name="${escapeHtml(country.name)}" data-is-global="${isThisCountryGlobal ? 'true' : 'false'}" style="display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.85rem; background:${isChecked ? 'rgba(225,29,72,0.04)' : '#ffffff'}; border:1.5px solid ${isChecked ? 'var(--primary)' : 'var(--border-color)'}; border-radius:10px; cursor:${isDisabled ? 'not-allowed' : 'pointer'}; opacity:${isDisabled ? '0.55' : '1'}; transition:all 0.15s ease; user-select:none; position:relative;">
+                                    <input type="checkbox" class="cp-country-checkbox" value="${escapeHtml(country.name)}" data-is-global="${isThisCountryGlobal ? 'true' : 'false'}" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} style="width:16px; height:16px; accent-color:var(--primary); cursor:${isDisabled ? 'not-allowed' : 'pointer'};">
+                                    
+                                    <!-- Flag Image or Globe -->
+                                    <div style="width:28px; height:20px; border-radius:4px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#f1f5f9; box-shadow:0 1px 3px rgba(0,0,0,0.15); flex-shrink:0;">
+                                        ${country.iso ? `
+                                            <img src="https://flagcdn.com/w40/${country.iso}.png" alt="${escapeHtml(country.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.outerHTML='<span style=\\'font-size:0.75rem; font-weight:700; color:var(--text-secondary);\\'>${country.code}</span>';">
+                                        ` : `
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                        `}
+                                    </div>
+
+                                    <div style="flex:1; overflow:hidden;">
+                                        <div style="font-size:0.88rem; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                            ${escapeHtml(country.name)}
+                                        </div>
+                                        <div class="cp-country-subtext" style="font-size:0.72rem; color:var(--text-muted); font-weight:500;">
+                                            ${isDisabled ? 'Included in Global' : escapeHtml(country.currency)}
+                                        </div>
+                                    </div>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <div style="margin-top:0.75rem; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:var(--text-secondary);">
+                        <span id="cp-country-selected-count">Selected: <strong>${isGlobalSelected ? 'Global (All Regions)' : `${selectedCountriesList.filter(c => c !== 'Global').length} regions`}</strong></span>
+                        <span id="cp-country-mode-helper">${isGlobalSelected ? 'Universal World Dispatch' : 'Multi-Country Selection Active'}</span>
                     </div>
                 </div>
 
-
-                <!-- 2. STORE BRANDING & MESSAGING -->
+                <!-- 3. STORE CONTACT & ORDERING -->
                 <div class="card" style="padding:1.5rem;">
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">2. Store Branding & Contact</h3>
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Information visible to customers in the catalog header and cart inquiry.</p>
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">3. Contact &amp; Ordering Options</h3>
+                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Contact information visible on customer order slips and WhatsApp checkout.</p>
 
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem; margin-bottom:1rem;">
-                        <div>
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Store Title *</label>
-                            <input type="text" id="cp-store-name" required class="form-control" value="${escapeHtml(settings.storeName || '')}" placeholder="e.g. Apex Mart & Electronics">
-                        </div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; margin-bottom:1rem;">
                         <div>
                             <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">WhatsApp Ordering Number</label>
-                            <input type="text" id="cp-whatsapp" class="form-control" value="${escapeHtml(settings.whatsappNumber || '')}" placeholder="e.g. +8801700000000 (with country code)">
-                            <small style="color:var(--text-muted); font-size:0.75rem;">Allows customers to send cart orders directly to your WhatsApp with 1 click.</small>
+                            <input type="text" id="cp-whatsapp" class="form-control" value="${escapeHtml(settings.whatsappNumber || wsDocInfo.phone || '')}" placeholder="e.g. +8801700000000 (with country code)">
+                            <small style="color:var(--text-muted); font-size:0.75rem;">Allows customers to send cart orders directly to WhatsApp with 1 click.</small>
+                        </div>
+                        <div>
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Facebook Page / ID</label>
+                            <input type="text" id="cp-facebook" class="form-control" value="${escapeHtml(settings.facebookId || settings.facebookUrl || '')}" placeholder="e.g. facebook.com/yourshop or @yourshop">
+                            <small style="color:var(--text-muted); font-size:0.75rem;">Direct Facebook page or messenger link for customers.</small>
+                        </div>
+                        <div>
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Store Phone Number</label>
+                            <input type="text" id="cp-phone" class="form-control" value="${escapeHtml(settings.phone || wsDocInfo.phone || '')}" placeholder="e.g. 01700000000">
+                        </div>
+                        <div>
+                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Store Email</label>
+                            <input type="text" id="cp-email" class="form-control" value="${escapeHtml(settings.email || wsDocInfo.email || '')}" placeholder="e.g. store@example.com">
                         </div>
                     </div>
 
                     <div style="margin-bottom:1rem;">
-                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Banner Announcement Message</label>
-                        <input type="text" id="cp-announcement" class="form-control" value="${escapeHtml(settings.announcement || '')}" placeholder="e.g. Welcome! Add items to cart to see live totals or send inquiry.">
+                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Store Address / City</label>
+                        <input type="text" id="cp-address" class="form-control" value="${escapeHtml(settings.address || wsDocInfo.address || '')}" placeholder="e.g. Block C, Dhaka, Bangladesh">
                     </div>
 
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1rem;">
-                        <div>
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Store Phone</label>
-                            <input type="text" id="cp-phone" class="form-control" value="${escapeHtml(settings.phone || '')}" placeholder="e.g. 01700000000">
-                        </div>
-                        <div>
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Store Email</label>
-                            <input type="email" id="cp-email" class="form-control" value="${escapeHtml(settings.email || '')}" placeholder="e.g. store@example.com">
-                        </div>
-                        <div>
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Address / Location</label>
-                            <input type="text" id="cp-address" class="form-control" value="${escapeHtml(settings.address || '')}" placeholder="e.g. Block C, Dhaka, Bangladesh">
-                        </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Banner Announcement Message (Optional)</label>
+                        <input type="text" id="cp-announcement" class="form-control" value="${escapeHtml(settings.announcement || '')}" placeholder="e.g. Free shipping on orders over $50!">
                     </div>
                 </div>
 
-                <!-- 3. CATEGORIES VISIBILITY -->
+                <!-- 4. CATEGORIES VISIBILITY -->
                 <div class="card" style="padding:1.5rem;">
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">3. Category Visibility</h3>
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">4. Category Visibility</h3>
                     <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Choose whether to expose all product categories or only specific ones to customers.</p>
 
                     <div style="display:flex; gap:1.5rem; margin-bottom:1.25rem; flex-wrap:wrap;">
@@ -407,14 +618,87 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     </div>
                 </div>
 
-                <!-- 4. PRICING & DISPLAY OPTIONS -->
+                <!-- 5. DOLLAR RATE, CURRENCY EXCHANGE & REGIONAL TAX -->
                 <div class="card" style="padding:1.5rem;">
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">4. Pricing & Details Options</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.35rem; flex-wrap:wrap; gap:0.5rem;">
+                        <div>
+                            <h3 style="font-size:1.15rem; margin:0 0 0.25rem 0; font-weight:700; color:var(--text-primary);">5. Dollar Rate, Currency Exchange &amp; Regional Tax</h3>
+                            <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">
+                                Enable automatic multi-currency price adjustment from USD ($) or customize local 1$ exchange value and tax per country.
+                            </p>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer; background:var(--surface-50); border:1.5px solid var(--border-color); padding:0.4rem 0.85rem; border-radius:999px;">
+                            <input type="checkbox" id="cp-enable-exchange" ${settings.currencyExchangeEnabled !== false ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--primary);">
+                            <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary);">Enable Currency Exchange</span>
+                        </label>
+                    </div>
+
+                    <div id="cp-exchange-config-container" style="display:${settings.currencyExchangeEnabled !== false ? 'block' : 'none'}; margin-top:1.25rem; border-top:1px solid var(--border-color); padding-top:1.25rem;">
+                        
+                        <!-- Exchange Mode Choice -->
+                        <div style="margin-bottom:1.25rem;">
+                            <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.5rem; display:block;">Conversion Engine Mode:</label>
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:0.75rem;">
+                                <label class="cp-exchange-mode-card" style="display:flex; align-items:flex-start; gap:0.75rem; padding:0.85rem 1rem; border:1.5px solid ${(settings.exchangeMode || 'AUTO_INTERNATIONAL') === 'AUTO_INTERNATIONAL' ? 'var(--primary)' : 'var(--border-color)'}; background:${(settings.exchangeMode || 'AUTO_INTERNATIONAL') === 'AUTO_INTERNATIONAL' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:10px; cursor:pointer;">
+                                    <input type="radio" name="cp-exchange-mode" value="AUTO_INTERNATIONAL" ${(settings.exchangeMode || 'AUTO_INTERNATIONAL') === 'AUTO_INTERNATIONAL' ? 'checked' : ''} style="margin-top:2px;">
+                                    <div>
+                                        <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                            Auto International Exchange Rates
+                                        </div>
+                                        <div style="font-size:0.76rem; color:var(--text-secondary); margin-top:0.2rem;">
+                                            Live benchmark conversion (1$ = 120 ৳ BDT, 83.5 ₹ INR, 0.92 € EUR, 0.79 £ GBP, 1.36 CA$, 3.67 AED, etc.).
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="cp-exchange-mode-card" style="display:flex; align-items:flex-start; gap:0.75rem; padding:0.85rem 1rem; border:1.5px solid ${settings.exchangeMode === 'CUSTOM_MANUAL' ? 'var(--primary)' : 'var(--border-color)'}; background:${settings.exchangeMode === 'CUSTOM_MANUAL' ? 'rgba(225,29,72,0.03)' : '#ffffff'}; border-radius:10px; cursor:pointer;">
+                                    <input type="radio" name="cp-exchange-mode" value="CUSTOM_MANUAL" ${settings.exchangeMode === 'CUSTOM_MANUAL' ? 'checked' : ''} style="margin-top:2px;">
+                                    <div>
+                                        <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                                            Custom Country Rates &amp; Tax (Manual)
+                                        </div>
+                                        <div style="font-size:0.76rem; color:var(--text-secondary); margin-top:0.2rem;">
+                                            Manually define custom 1$ USD conversion value and optional regional Tax/VAT % for each country.
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Custom Country Rates & Tax Editor -->
+                        <div id="cp-custom-rates-section" style="border:1px solid var(--border-color); border-radius:12px; padding:1.25rem; background:var(--surface-50);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.85rem; flex-wrap:wrap; gap:0.5rem;">
+                                <div>
+                                    <h4 style="margin:0 0 0.15rem 0; font-size:0.95rem; font-weight:700; color:var(--text-primary);">Regional 1$ Dollar Rates &amp; Tax %</h4>
+                                    <p style="margin:0; font-size:0.78rem; color:var(--text-secondary);">
+                                        Set how much 1 USD is worth in local currency and add regional tax percentage.
+                                    </p>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <label style="font-size:0.78rem; font-weight:600; color:var(--text-secondary);">Default Tax/VAT %:</label>
+                                    <input type="number" id="cp-default-tax" class="form-control" style="width:70px; height:30px; font-size:0.82rem; padding:0 0.4rem; text-align:center;" min="0" max="100" step="any" value="${settings.defaultTaxPct !== undefined ? settings.defaultTaxPct : 0}">
+                                </div>
+                            </div>
+
+                            <!-- Rate Table / Grid -->
+                            <div id="cp-rates-table-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap:0.75rem; max-height:340px; overflow-y:auto; padding:0.25rem;">
+                                <!-- Generated dynamically based on selected countries & directory -->
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 6. PRICING & DISPLAY OPTIONS -->
+                <div class="card" style="padding:1.5rem;">
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">6. Pricing &amp; Stock Display Options</h3>
                     <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Control how prices and stock are presented to customers.</p>
 
                     <div style="display:flex; flex-direction:column; gap:0.85rem;">
                         <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer;">
-                            <input type="checkbox" id="cp-show-mrp" ${settings.showMrp ? 'checked' : ''}>
+                            <input type="checkbox" id="cp-show-mrp" ${settings.showMrp !== false ? 'checked' : ''}>
                             <div>
                                 <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary); display:block;">Show MRP / Original Price Strikethrough</span>
                                 <span style="font-size:0.8rem; color:var(--text-secondary);">Displays crossed-out MRP with discount percentage badge if MRP is higher than Selling Price.</span>
@@ -422,7 +706,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                         </label>
 
                         <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer;">
-                            <input type="checkbox" id="cp-show-stock" ${settings.showStockBadge ? 'checked' : ''}>
+                            <input type="checkbox" id="cp-show-stock" ${settings.showStockBadge !== false ? 'checked' : ''}>
                             <div>
                                 <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary); display:block;">Show In-Stock / Availability Badges</span>
                                 <span style="font-size:0.8rem; color:var(--text-secondary);">Displays real-time stock availability badge on product cards.</span>
@@ -431,47 +715,45 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     </div>
                 </div>
 
-                <!-- 5. TERMS & CONDITIONS -->
+                <!-- 7. TERMS & CONDITIONS -->
                 <div class="card" style="padding:1.5rem;">
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">5. Terms & Conditions</h3>
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Store policies, ordering instructions, and delivery details shown to customers in a modal or notice footer.</p>
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">7. Terms &amp; Policies</h3>
+                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Store policies and delivery details shown to customers.</p>
 
-                    <textarea id="cp-terms" rows="4" class="form-control" style="width:100%; font-family:inherit; line-height:1.5;" placeholder="• Prices subject to change without notice.&#10;• Fast home delivery available.&#10;• For bulk inquiries, contact WhatsApp.">${escapeHtml(settings.termsAndConditions || '')}</textarea>
+                    <textarea id="cp-terms" rows="3" class="form-control" style="width:100%; font-family:inherit; line-height:1.5;" placeholder="• Prices subject to change without notice.&#10;• All orders are confirmed before dispatch.&#10;• Fast delivery available.">${escapeHtml(settings.termsAndConditions || '• Prices subject to change without notice.\n• All orders are confirmed before dispatch.')}</textarea>
                 </div>
 
-                <!-- 6. TEMPORARY CLOSED / SUSPENDED MESSAGE -->
+                <!-- 8. SUSPENDED / TEMPORARY CLOSED MESSAGE -->
                 <div class="card" style="padding:1.5rem;">
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">6. Suspended / Temporary Closed Message</h3>
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem; font-weight:700; color:var(--text-primary);">8. Suspended / Temporary Closed Message</h3>
                     <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Message displayed to customers when the panel is Unpublished or Stopped.</p>
 
                     <textarea id="cp-closed-msg" rows="3" class="form-control" style="width:100%; font-family:inherit;" placeholder="Temporary Closed&#10;Shop is temporarily suspended, may start early.">${escapeHtml(settings.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.')}</textarea>
                 </div>
 
                 <!-- SAVE ACTION BAR -->
-                <div style="display:flex; justify-content:space-between; gap:1rem; padding:1rem 0; align-items:center; flex-wrap:wrap;">
-                    <button type="button" class="btn btn-secondary" onclick="window.location.hash='#/overview'">Return to Overview</button>
-                    <div style="display:flex; gap:0.75rem;">
-                        <button type="submit" id="btn-save-customer-panel" class="btn btn-secondary" style="padding:0.65rem 1.5rem; font-weight:600; font-size:0.95rem;">
-                            Save Settings (Draft)
+                <div style="display:flex; justify-content:space-between; gap:1rem; padding:1.25rem 0; align-items:center; flex-wrap:wrap; position:sticky; bottom:0; background:rgba(255,255,255,0.92); backdrop-filter:blur(8px); z-index:10; border-top:1px solid var(--border-color);">
+                    <button type="button" id="btn-return-overview" class="btn btn-secondary">
+                        Return to Overview
+                    </button>
+                    <div style="display:flex; gap:0.75rem; align-items:center;">
+                        <!-- Update Button (Enabled only when changed) -->
+                        <button type="submit" id="btn-save-customer-panel" disabled data-dirty="false" class="btn btn-secondary" style="padding:0.65rem 1.65rem; font-weight:700; font-size:0.95rem; opacity:0.55; cursor:not-allowed; transition:all 0.2s ease;">
+                            Save Settings (No Changes)
                         </button>
                         <button type="button" id="btn-bottom-launch" class="btn btn-primary" style="padding:0.65rem 1.75rem; font-weight:700; font-size:0.95rem; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35); display:flex; align-items:center; gap:0.5rem;">
-                            <span>🚀</span> ${isLive ? 'Re-Launch / Publish Updates' : 'Launch Customer Panel'}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 9v-5s3.03.55 4 2c1.08 1.62 0 5 0 5"></path></svg>
+                            ${isLive ? 'Re-Launch / Publish Updates' : 'Launch Customer Panel'}
                         </button>
                     </div>
                 </div>
             </form>
         `;
 
-        bindEvents(settings);
+        bindEvents(settings, wsName, wsAddress, wsLogo);
     };
 
     const collectFormData = (forcePublishState = null) => {
-        const statusSelect = document.getElementById('cp-status-select');
-        let isLive = statusSelect ? statusSelect.value === 'ACTIVE' : true;
-        if (forcePublishState !== null) {
-            isLive = Boolean(forcePublishState);
-        }
-
         const catMode = document.querySelector('input[name="cp-cat-mode"]:checked')?.value || 'ALL';
         const selectedCats = [];
         if (catMode === 'SPECIFIC') {
@@ -481,30 +763,86 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         }
 
         const brandingMode = document.querySelector('input[name="cp-branding-mode"]:checked')?.value || 'PRICELISTER';
-        const deployCountry = document.getElementById('cp-deploy-country')?.value || 'Global';
+        
+        // Collect selected countries
+        const globalCb = document.querySelector('.cp-country-checkbox[data-is-global="true"]');
+        const isGlobal = Boolean(globalCb && globalCb.checked);
+
+        let selectedCountries = [];
+        if (isGlobal) {
+            selectedCountries = ['Global'];
+        } else {
+            document.querySelectorAll('.cp-country-checkbox:checked').forEach(cb => {
+                if (cb.value !== 'Global') {
+                    selectedCountries.push(cb.value);
+                }
+            });
+            if (selectedCountries.length === 0) {
+                selectedCountries = ['Global'];
+            }
+        }
+
+        const deployCountryPrimary = selectedCountries[0] || 'Global';
         const storeLogo = (document.getElementById('cp-store-logo-input')?.value || '').trim();
         const customSlug = (document.getElementById('cp-custom-slug-input')?.value || '')
             .trim()
             .toLowerCase()
             .replace(/[^a-z0-9-_]/g, '');
 
+        let isLive = forcePublishState !== null ? Boolean(forcePublishState) : true;
+
+        let finalStoreTitle = document.getElementById('cp-store-name')?.value || 'Price Lister Store';
+        let finalStoreSubtitle = document.getElementById('cp-store-subtitle')?.value || 'Published by PriceLister.';
+
+        if (brandingMode === 'PRICELISTER') {
+            finalStoreTitle = 'Price Lister Store';
+            finalStoreSubtitle = 'Published by PriceLister.';
+        }
+
+        // Collect Currency Exchange & Custom Rates
+        const exchangeEnabled = Boolean(document.getElementById('cp-enable-exchange')?.checked);
+        const exchangeMode = document.querySelector('input[name="cp-exchange-mode"]:checked')?.value || 'AUTO_INTERNATIONAL';
+        const defaultTaxPct = Math.max(0, Number(document.getElementById('cp-default-tax')?.value || 0));
+
+        const customRatesMap = {};
+        document.querySelectorAll('.cp-rate-card-row').forEach(row => {
+            const code = row.getAttribute('data-code');
+            const rateInp = row.querySelector('.cp-country-rate-input');
+            const taxInp = row.querySelector('.cp-country-tax-input');
+            if (code && rateInp) {
+                const rateVal = Number(rateInp.value) || (BENCHMARK_EXCHANGE_RATES[code]?.rate || 1.0);
+                const taxVal = Math.max(0, Number(taxInp?.value || 0));
+                customRatesMap[code] = {
+                    rate: rateVal,
+                    taxPct: taxVal
+                };
+            }
+        });
+
         return {
             isPublished: isLive,
             enabled: isLive,
             brandingMode: brandingMode,
-            deployCountry: deployCountry,
+            deployCountry: deployCountryPrimary,
+            deployCountries: selectedCountries,
             storeLogo: storeLogo,
             customSlug: customSlug,
-            storeName: document.getElementById('cp-store-name')?.value || 'PriceLister Store',
+            storeName: finalStoreTitle,
+            storeSubtitle: finalStoreSubtitle,
             whatsappNumber: document.getElementById('cp-whatsapp')?.value || '',
-            announcement: document.getElementById('cp-announcement')?.value || '',
+            facebookId: document.getElementById('cp-facebook')?.value || '',
             phone: document.getElementById('cp-phone')?.value || '',
             email: document.getElementById('cp-email')?.value || '',
             address: document.getElementById('cp-address')?.value || '',
+            announcement: document.getElementById('cp-announcement')?.value || '',
             categorySelectionMode: catMode,
             allowedCategories: selectedCats,
             showMrp: Boolean(document.getElementById('cp-show-mrp')?.checked),
             showStockBadge: Boolean(document.getElementById('cp-show-stock')?.checked),
+            currencyExchangeEnabled: exchangeEnabled,
+            exchangeMode: exchangeMode,
+            defaultTaxPct: defaultTaxPct,
+            customCountryRates: customRatesMap,
             termsAndConditions: document.getElementById('cp-terms')?.value || '',
             closedMessage: document.getElementById('cp-closed-msg')?.value || 'Temporary Closed\nShop is temporarily suspended, may start early.',
             currencySymbol: getAppCurrencySymbol()
@@ -512,10 +850,23 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
     };
 
     /**
-     * Dedicated Launch Modal with Round Ball / Multi-Step Progressive Loader
+     * Dedicated Launch Modal Flow
      */
     const triggerDedicatedLaunchFlow = async () => {
-        const formData = collectFormData(true); // Force publish = true
+        let formData = collectFormData(true);
+
+        // Upload custom logo if selected
+        if (selectedCustomLogoFile && formData.brandingMode === 'CUSTOM') {
+            try {
+                showAlert.info("Uploading custom store logo...");
+                const uploadedUrl = await storageService.uploadImage(selectedCustomLogoFile, workspaceId);
+                formData.storeLogo = uploadedUrl;
+            } catch (err) {
+                console.warn("Logo upload failed, continuing with existing:", err);
+            }
+        }
+
+        const customerPanelUrl = computeCustomerUrl(formData);
 
         // 1. Create Modal Container
         let modalEl = document.getElementById('customer-panel-launch-modal');
@@ -532,7 +883,10 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     <!-- MODAL HEADER -->
                     <div style="background:linear-gradient(135deg, #881337 0%, #e11d48 50%, #be123c 100%); padding:1.75rem 1.75rem 1.5rem; text-align:center; color:#ffffff; position:relative; overflow:hidden;">
                         <div style="position:absolute; width:180px; height:180px; background:radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%); top:-50px; right:-50px; border-radius:50%;"></div>
-                        <h3 style="margin:0 0 0.35rem 0; font-size:1.35rem; font-weight:800; letter-spacing:-0.01em;">🚀 Launching Customer Panel</h3>
+                        <h3 style="margin:0 0 0.35rem 0; font-size:1.35rem; font-weight:800; letter-spacing:-0.01em; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            Launching Customer Panel
+                        </h3>
                         <p style="margin:0; font-size:0.85rem; opacity:0.9;">Publishing your live storefront and syncing with Firebase Cloud...</p>
                     </div>
 
@@ -545,7 +899,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                             <div class="cp-pulse-ring-2"></div>
                             <div class="cp-launch-orb">
                                 <div class="cp-orb-shine"></div>
-                                <span style="font-size:1.6rem; animation:floatRocket 2s ease-in-out infinite;">🚀</span>
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="animation:floatRocket 2s ease-in-out infinite;"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4.5c1.62-1.63 5-2 5-2"></path><path d="M12 9V4s3.03.55 4.5 2c1.63 1.62 2 5 2 5"></path></svg>
                             </div>
                         </div>
 
@@ -556,8 +910,8 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                             <div id="launch-step-1" class="launch-step-row launch-step-active">
                                 <div class="launch-step-icon"><div class="launch-spinner"></div></div>
                                 <div style="flex:1;">
-                                    <div class="launch-step-title">Preparing Catalog & Category Rules</div>
-                                    <div class="launch-step-subtitle">Verifying catalog items and active visibility filters...</div>
+                                    <div class="launch-step-title">Preparing Catalog &amp; Regional Rules</div>
+                                    <div class="launch-step-subtitle">Verifying catalog items, countries, and branding modes...</div>
                                 </div>
                             </div>
 
@@ -574,8 +928,8 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                             <div id="launch-step-3" class="launch-step-row launch-step-pending">
                                 <div class="launch-step-icon"><span class="step-num">3</span></div>
                                 <div style="flex:1;">
-                                    <div class="launch-step-title">Applying Privacy & Read-Only Permissions</div>
-                                    <div class="launch-step-subtitle">Locking workspace invoices, prices, and settings...</div>
+                                    <div class="launch-step-title">Applying Privacy &amp; Order Handlers</div>
+                                    <div class="launch-step-subtitle">Configuring instant order receiving and checkout rules...</div>
                                 </div>
                             </div>
 
@@ -583,8 +937,8 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                             <div id="launch-step-4" class="launch-step-row launch-step-pending">
                                 <div class="launch-step-icon"><span class="step-num">4</span></div>
                                 <div style="flex:1;">
-                                    <div class="launch-step-title">Finishing & Publishing Storefront</div>
-                                    <div class="launch-step-subtitle">Finalizing live shareable URL and customer catalog...</div>
+                                    <div class="launch-step-title">Finishing &amp; Publishing Storefront</div>
+                                    <div class="launch-step-subtitle">Finalizing live shareable URL and catalog...</div>
                                 </div>
                             </div>
 
@@ -735,37 +1089,36 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
         try {
-            // STEP 1: Preparing Catalog
-            await sleep(650);
-            setStepState(1, 'done', 'Catalog structure verified.');
+            await sleep(500);
+            setStepState(1, 'done', 'Catalog and regional rules verified.');
             setStepState(2, 'active');
 
-            // STEP 2: Connecting Cloud Subfield & Saving to Firebase
             await sleep(400);
             await settingsService.saveCustomerPanelSettings(formData);
-            await sleep(400);
+            await sleep(350);
             setStepState(2, 'done', `Saved to Workspaces/${workspaceId}/CustomerPanel/${currentUser.uid}`);
             setStepState(3, 'active');
 
-            // STEP 3: Privacy & Category filters
-            await sleep(600);
-            setStepState(3, 'done', 'Read-only rules enforced & verified.');
+            await sleep(450);
+            setStepState(3, 'done', 'Read-only rules & order receiving active.');
             setStepState(4, 'active');
 
-            // STEP 4: Finishing & Launching
-            await sleep(550);
+            await sleep(400);
             setStepState(4, 'done', 'Live portal published successfully!');
-            await sleep(450);
+            await sleep(350);
 
-            // TRANSITION TO BROAD CELEBRATORY SUCCESS VIEW
+            // Reset Dirty State after publish
+            isFormDirty = false;
+            initialFormSnapshot = JSON.stringify(formData);
+            selectedCustomLogoFile = null;
+
+            // TRANSITION TO BROAD SUCCESS VIEW
             const modalContent = document.getElementById('launch-modal-content');
             if (modalContent) {
                 modalContent.innerHTML = `
                     <div style="text-align:center; animation:modalPop 0.4s ease;">
-                        
-                        <!-- CELEBRATORY BADGE -->
-                        <div style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#ffffff; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem; font-size:2.2rem; box-shadow:0 10px 25px rgba(16,185,129,0.35);">
-                            🎉
+                        <div style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#ffffff; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem; box-shadow:0 10px 25px rgba(16,185,129,0.35);">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         </div>
 
                         <h3 style="font-size:1.45rem; font-weight:800; color:var(--text-primary); margin-bottom:0.4rem;">
@@ -773,7 +1126,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                         </h3>
                         
                         <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5; margin-bottom:1.5rem; max-width:440px; margin-left:auto; margin-right:auto;">
-                            Your standalone product storefront is now <strong>100% Published & Live</strong> on Firebase Cloud. Customers can browse your products, search items, and send cart orders.
+                            Your standalone storefront is now <strong>100% Published &amp; Live</strong>. Customers can view products, calculate totals, and place orders directly to your workspace.
                         </p>
 
                         <!-- SHAREABLE LINK CARD -->
@@ -784,38 +1137,36 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                             <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
                                 <input type="text" id="modal-success-url-input" readonly value="${customerPanelUrl}" class="form-control" style="font-family:monospace; font-size:0.85rem; background:#ffffff; font-weight:600; color:var(--text-primary);">
                                 <button type="button" id="btn-modal-copy-url" class="btn btn-secondary" style="font-weight:700; white-space:nowrap; padding:0.5rem 1rem;">
-                                    📋 Copy Link
+                                    Copy Link
                                 </button>
                             </div>
                             <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
                                 <a href="${customerPanelUrl}" target="_blank" class="btn btn-primary" style="flex:1; font-weight:700; font-size:0.9rem; justify-content:center; display:flex; align-items:center; gap:0.4rem; background:linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow:0 4px 12px rgba(16,185,129,0.3);">
-                                    🚀 Open Live Storefront ↗
+                                    Open Live Storefront ↗
                                 </a>
                                 <a href="https://api.whatsapp.com/send?text=${encodeURIComponent('Check out our product catalog: ' + customerPanelUrl)}" target="_blank" class="btn btn-secondary" style="font-weight:600; font-size:0.85rem; display:flex; align-items:center; gap:0.4rem;">
-                                    💬 Share via WhatsApp
+                                    Share via WhatsApp
                                 </a>
                             </div>
                         </div>
 
                         <!-- MODAL ACTION CLOSE -->
                         <button type="button" id="btn-modal-done" class="btn btn-secondary" style="width:100%; font-weight:700; padding:0.65rem;">
-                            Done & Return to Setup
+                            Done &amp; Return to Setup
                         </button>
-
                     </div>
                 `;
 
-                // Bind copy button in modal
                 const modalUrlInput = document.getElementById('modal-success-url-input');
                 const modalCopyBtn = document.getElementById('btn-modal-copy-url');
                 const modalDoneBtn = document.getElementById('btn-modal-done');
 
                 const copyAction = () => {
                     navigator.clipboard.writeText(customerPanelUrl).then(() => {
-                        if (modalCopyBtn) modalCopyBtn.textContent = '✅ Copied!';
+                        if (modalCopyBtn) modalCopyBtn.textContent = 'Copied!';
                         showAlert.success("Storefront link copied to clipboard!");
                         setTimeout(() => {
-                            if (modalCopyBtn) modalCopyBtn.textContent = '📋 Copy Link';
+                            if (modalCopyBtn) modalCopyBtn.textContent = 'Copy Link';
                         }, 2000);
                     }).catch(() => {
                         if (modalUrlInput) {
@@ -832,13 +1183,11 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                 if (modalDoneBtn) {
                     modalDoneBtn.addEventListener('click', () => {
                         modalEl.remove();
-                        // Refresh UI to live state
                         renderMainUI({ ...formData, isPublished: true, enabled: true });
                     });
                 }
             }
 
-            // Update sidebar live status badge
             const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
             if (sidebarStatus) {
                 sidebarStatus.className = 'status-pill status-pill-active';
@@ -846,7 +1195,6 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
             }
 
             showAlert.success("Customer Panel published & live!");
-
         } catch (err) {
             console.error("Launch error:", err);
             showAlert.error("Failed to publish Customer Panel: " + (err.message || 'Error occurred'));
@@ -869,10 +1217,13 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         }
 
         try {
-            const formData = collectFormData(false); // Force publish = false
+            const formData = collectFormData(false);
             await settingsService.saveCustomerPanelSettings(formData);
 
-            // Update sidebar live status badge
+            isFormDirty = false;
+            initialFormSnapshot = JSON.stringify(formData);
+            selectedCustomLogoFile = null;
+
             const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
             if (sidebarStatus) {
                 sidebarStatus.className = 'status-pill status-pill-danger';
@@ -888,44 +1239,583 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
     };
 
     /**
-     * Bind all form and interactive button events
+     * Bind all interactive events
      */
-    const bindEvents = (currentSettings) => {
+    const bindEvents = (currentSettings, wsName, wsAddress, wsLogo) => {
         const form = document.getElementById('customer-panel-form');
-        const statusSelect = document.getElementById('cp-status-select');
-        const headerPill = document.getElementById('header-status-pill');
-        const urlInput = document.getElementById('customer-panel-url-input');
         const copyBtn = document.getElementById('btn-copy-customer-link');
         const copyInputBtn = document.getElementById('btn-copy-input-link');
         const btnLaunchHeader = document.getElementById('btn-trigger-launch-modal');
         const btnLaunchBottom = document.getElementById('btn-bottom-launch');
         const btnLaunchBanner = document.getElementById('btn-banner-launch');
         const btnUnpublish = document.getElementById('btn-unpublish-panel');
+        const btnReturnOverview = document.getElementById('btn-return-overview');
+        const submitBtn = document.getElementById('btn-save-customer-panel');
+        const unsavedBadge = document.getElementById('cp-unsaved-badge');
+
+        // Capture initial snapshot
+        initialFormSnapshot = JSON.stringify(collectFormData());
+        isFormDirty = false;
+
+        // Dirty State Checker & Update Button Controller
+        const checkDirtyState = () => {
+            const currentSnapshot = JSON.stringify(collectFormData());
+            const hasChanged = (currentSnapshot !== initialFormSnapshot) || (selectedCustomLogoFile !== null);
+            isFormDirty = hasChanged;
+
+            if (submitBtn) {
+                if (isFormDirty) {
+                    submitBtn.disabled = false;
+                    submitBtn.setAttribute('data-dirty', 'true');
+                    submitBtn.textContent = 'Update Settings (Unsaved)';
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                    submitBtn.style.background = 'var(--primary)';
+                    submitBtn.style.color = '#ffffff';
+                    submitBtn.style.borderColor = 'var(--primary)';
+                    submitBtn.style.boxShadow = '0 4px 12px rgba(225,29,72,0.35)';
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.setAttribute('data-dirty', 'false');
+                    submitBtn.textContent = 'Save Settings (No Changes)';
+                    submitBtn.style.opacity = '0.55';
+                    submitBtn.style.cursor = 'not-allowed';
+                    submitBtn.style.background = 'var(--surface-100)';
+                    submitBtn.style.color = 'var(--text-muted)';
+                    submitBtn.style.borderColor = 'var(--border-color)';
+                    submitBtn.style.boxShadow = 'none';
+                }
+            }
+
+            if (unsavedBadge) {
+                unsavedBadge.style.display = isFormDirty ? 'inline-flex' : 'none';
+            }
+        };
+
+        // Unsaved Changes Alert on Navigation
+        const handleNavigationGuard = (e) => {
+            if (isFormDirty) {
+                const leave = confirm("You have unsaved changes in Customer Panel setup. Are you sure you want to leave without saving?");
+                if (!leave) {
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        if (btnReturnOverview) {
+            btnReturnOverview.addEventListener('click', (e) => {
+                if (handleNavigationGuard(e)) {
+                    isFormDirty = false;
+                    window.location.hash = '#/overview';
+                }
+            });
+        }
+
+        // Window beforeunload prompt
+        const onBeforeUnload = (e) => {
+            if (isFormDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        };
+        window.removeEventListener('beforeunload', window._cpBeforeUnloadHandler);
+        window._cpBeforeUnloadHandler = onBeforeUnload;
+        window.addEventListener('beforeunload', onBeforeUnload);
 
         // Launch triggers
         if (btnLaunchHeader) btnLaunchHeader.addEventListener('click', triggerDedicatedLaunchFlow);
         if (btnLaunchBottom) btnLaunchBottom.addEventListener('click', triggerDedicatedLaunchFlow);
         if (btnLaunchBanner) btnLaunchBanner.addEventListener('click', triggerDedicatedLaunchFlow);
-
-        // Unpublish trigger
         if (btnUnpublish) btnUnpublish.addEventListener('click', handleUnpublishAction);
 
-        // Status change listener
-        if (statusSelect) {
-            statusSelect.addEventListener('change', () => {
-                const isLive = statusSelect.value === 'ACTIVE';
-                if (headerPill) {
-                    headerPill.innerHTML = isLive 
-                        ? `<span style="width:8px; height:8px; border-radius:50%; background:#10b981; animation:cp-pulse-dot 1.8s infinite;"></span> Published & Live`
-                        : `<span style="width:8px; height:8px; border-radius:50%; background:#e11d48;"></span> Unpublished / Inactive`;
-                    headerPill.style.background = isLive ? '#ecfdf5' : '#fff1f2';
-                    headerPill.style.color = isLive ? '#059669' : '#e11d48';
-                    headerPill.style.borderColor = isLive ? '#a7f3d0' : '#fecdd3';
+        // Branding Mode Switch Logic (Rule Enforcer)
+        const brandingRadios = document.querySelectorAll('input[name="cp-branding-mode"]');
+        const storeTitleInput = document.getElementById('cp-store-name');
+        const storeSubInput = document.getElementById('cp-store-subtitle');
+        const titleLockBadge = document.getElementById('cp-title-lock-badge');
+        const subLockBadge = document.getElementById('cp-sub-lock-badge');
+        const brandingStatusTag = document.getElementById('cp-branding-status-tag');
+        const logoLockedNotice = document.getElementById('cp-logo-locked-notice');
+        const logoEditableControls = document.getElementById('cp-logo-editable-controls');
+        const logoWorkspaceNotice = document.getElementById('cp-logo-workspace-notice');
+        const logoImgPreview = document.getElementById('cp-logo-img-preview');
+
+        const updateBrandingModeUI = (mode) => {
+            // Update Card Styles
+            document.querySelectorAll('.cp-branding-card').forEach(card => {
+                const isSelected = card.getAttribute('data-mode') === mode;
+                card.style.borderColor = isSelected ? 'var(--primary)' : 'var(--border-color)';
+                card.style.background = isSelected ? 'rgba(225,29,72,0.03)' : '#ffffff';
+            });
+
+            if (mode === 'PRICELISTER') {
+                if (brandingStatusTag) brandingStatusTag.textContent = 'PriceLister Branding (Locked)';
+                if (storeTitleInput) {
+                    storeTitleInput.value = 'Price Lister Store';
+                    storeTitleInput.readOnly = true;
+                    storeTitleInput.style.background = '#f1f5f9';
+                    storeTitleInput.style.color = '#475569';
+                    storeTitleInput.style.cursor = 'not-allowed';
+                }
+                if (storeSubInput) {
+                    storeSubInput.value = 'Published by PriceLister.';
+                    storeSubInput.readOnly = true;
+                    storeSubInput.style.background = '#f1f5f9';
+                    storeSubInput.style.color = '#475569';
+                    storeSubInput.style.cursor = 'not-allowed';
+                }
+                if (titleLockBadge) titleLockBadge.textContent = '[Locked] PriceLister Defaults';
+                if (subLockBadge) subLockBadge.textContent = '[Locked] PriceLister Defaults';
+
+                if (logoLockedNotice) logoLockedNotice.style.display = 'block';
+                if (logoEditableControls) logoEditableControls.style.display = 'none';
+                if (logoWorkspaceNotice) logoWorkspaceNotice.style.display = 'none';
+                if (logoImgPreview) logoImgPreview.src = 'pricelister_org.png';
+            } else if (mode === 'CUSTOM') {
+                if (brandingStatusTag) brandingStatusTag.textContent = 'Custom Branding (Fully Editable)';
+                if (storeTitleInput) {
+                    if (storeTitleInput.value === 'Price Lister Store') {
+                        storeTitleInput.value = wsName || '';
+                    }
+                    storeTitleInput.readOnly = false;
+                    storeTitleInput.style.background = '#ffffff';
+                    storeTitleInput.style.color = 'var(--text-primary)';
+                    storeTitleInput.style.cursor = 'text';
+                }
+                if (storeSubInput) {
+                    if (storeSubInput.value === 'Published by PriceLister.') {
+                        storeSubInput.value = wsAddress || 'Online Product Catalog';
+                    }
+                    storeSubInput.readOnly = false;
+                    storeSubInput.style.background = '#ffffff';
+                    storeSubInput.style.color = 'var(--text-primary)';
+                    storeSubInput.style.cursor = 'text';
+                }
+                if (titleLockBadge) titleLockBadge.textContent = '[Editable] Custom Mode';
+                if (subLockBadge) subLockBadge.textContent = '[Editable] Custom Mode';
+
+                if (logoLockedNotice) logoLockedNotice.style.display = 'none';
+                if (logoEditableControls) logoEditableControls.style.display = 'block';
+                if (logoWorkspaceNotice) logoWorkspaceNotice.style.display = 'none';
+                
+                const customLogoVal = (document.getElementById('cp-store-logo-input')?.value || '').trim();
+                if (logoImgPreview) {
+                    logoImgPreview.src = customLogoVal || wsLogo || 'pricelister_org.png';
+                }
+            } else if (mode === 'WORKSPACE') {
+                if (brandingStatusTag) brandingStatusTag.textContent = 'Workspace Branding (Auto)';
+                if (storeTitleInput) {
+                    storeTitleInput.value = wsName || 'Workspace Store';
+                    storeTitleInput.readOnly = true;
+                    storeTitleInput.style.background = '#f1f5f9';
+                    storeTitleInput.style.color = '#475569';
+                    storeTitleInput.style.cursor = 'not-allowed';
+                }
+                if (storeSubInput) {
+                    storeSubInput.value = wsAddress || 'Verified Workspace Store';
+                    storeSubInput.readOnly = true;
+                    storeSubInput.style.background = '#f1f5f9';
+                    storeSubInput.style.color = '#475569';
+                    storeSubInput.style.cursor = 'not-allowed';
+                }
+                if (titleLockBadge) titleLockBadge.textContent = '[Linked] Workspace Auto';
+                if (subLockBadge) subLockBadge.textContent = '[Linked] Workspace Auto';
+
+                if (logoLockedNotice) logoLockedNotice.style.display = 'none';
+                if (logoEditableControls) logoEditableControls.style.display = 'none';
+                if (logoWorkspaceNotice) logoWorkspaceNotice.style.display = 'block';
+                if (logoImgPreview) logoImgPreview.src = wsLogo || 'pricelister_org.png';
+            }
+            checkDirtyState();
+        };
+
+        brandingRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                updateBrandingModeUI(radio.value);
+            });
+        });
+
+        // Store Logo File Input & Preview in Custom Branding
+        const storeLogoFileInput = document.getElementById('cp-store-logo-file-input');
+        const btnChooseLogo = document.getElementById('btn-cp-choose-logo');
+        const btnUseWsLogo = document.getElementById('btn-cp-use-ws-logo');
+        const btnRemoveLogo = document.getElementById('btn-cp-remove-logo');
+        const storeLogoInput = document.getElementById('cp-store-logo-input');
+
+        if (btnChooseLogo && storeLogoFileInput) {
+            btnChooseLogo.addEventListener('click', () => {
+                storeLogoFileInput.click();
+            });
+        }
+
+        if (storeLogoFileInput) {
+            storeLogoFileInput.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (file) {
+                    selectedCustomLogoFile = file;
+                    const reader = new FileReader();
+                    reader.onload = (re) => {
+                        if (logoImgPreview) logoImgPreview.src = re.target.result;
+                        if (storeLogoInput) storeLogoInput.value = '';
+                    };
+                    reader.readAsDataURL(file);
+                    checkDirtyState();
                 }
             });
         }
 
-        // Category Radio Buttons
+        if (btnUseWsLogo) {
+            btnUseWsLogo.addEventListener('click', () => {
+                selectedCustomLogoFile = null;
+                if (storeLogoInput) storeLogoInput.value = wsLogo || '';
+                if (logoImgPreview) logoImgPreview.src = wsLogo || 'pricelister_org.png';
+                showAlert.info("Workspace logo loaded into custom branding.");
+                checkDirtyState();
+            });
+        }
+
+        if (btnRemoveLogo) {
+            btnRemoveLogo.addEventListener('click', () => {
+                selectedCustomLogoFile = null;
+                if (storeLogoInput) storeLogoInput.value = '';
+                if (storeLogoFileInput) storeLogoFileInput.value = '';
+                if (logoImgPreview) logoImgPreview.src = 'pricelister_org.png';
+                checkDirtyState();
+            });
+        }
+
+        if (storeLogoInput) {
+            storeLogoInput.addEventListener('input', () => {
+                const val = storeLogoInput.value.trim();
+                selectedCustomLogoFile = null;
+                if (logoImgPreview) {
+                    logoImgPreview.src = val || wsLogo || 'pricelister_org.png';
+                }
+                checkDirtyState();
+            });
+        }
+
+        // Deploy Countries Logic: Global = other unselectable; Global Off = multiselectable
+        const countrySearchInput = document.getElementById('cp-country-search');
+        const countrySelectedCount = document.getElementById('cp-country-selected-count');
+        const countryModeHelper = document.getElementById('cp-country-mode-helper');
+        const globalModeAlert = document.getElementById('cp-global-mode-alert');
+        const globalModeIcon = document.getElementById('cp-global-mode-icon');
+        const globalModeText = document.getElementById('cp-global-mode-text');
+        const deployBadge = document.getElementById('cp-deploy-badge');
+        const btnSelectGlobal = document.getElementById('btn-country-select-global');
+        const btnSelectAllCountries = document.getElementById('btn-country-select-all');
+        const btnClearCountries = document.getElementById('btn-country-clear');
+
+        const globalCheckbox = document.querySelector('.cp-country-checkbox[data-is-global="true"]');
+
+        const syncCountryCardsState = () => {
+            const isGlobalActive = Boolean(globalCheckbox && globalCheckbox.checked);
+
+            // Update Global Mode Alert Banner
+            if (globalModeAlert) {
+                globalModeAlert.style.background = isGlobalActive ? 'rgba(225,29,72,0.06)' : '#f8fafc';
+                globalModeAlert.style.borderColor = isGlobalActive ? 'rgba(225,29,72,0.25)' : '#e2e8f0';
+                globalModeAlert.style.color = isGlobalActive ? 'var(--primary)' : 'var(--text-secondary)';
+            }
+            if (globalModeIcon) {
+                globalModeIcon.innerHTML = isGlobalActive 
+                    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>'
+                    : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>';
+            }
+            if (globalModeText) {
+                globalModeText.innerHTML = isGlobalActive 
+                    ? '<strong>E-Commerce Website will globally publish:</strong> Accessible to visitors across all international countries.' 
+                    : '<strong>Regional Target Mode:</strong> E-Commerce catalog will publish to selected target countries.';
+            }
+
+            const specificSelected = [];
+
+            document.querySelectorAll('.cp-country-card').forEach(card => {
+                const cb = card.querySelector('.cp-country-checkbox');
+                const isGlobalCard = card.getAttribute('data-is-global') === 'true';
+                const subtext = card.querySelector('.cp-country-subtext');
+                const countryItem = DEPLOY_COUNTRY_LIST.find(c => c.name === card.getAttribute('data-country-name'));
+
+                if (isGlobalCard) {
+                    card.style.opacity = '1';
+                    card.style.cursor = 'pointer';
+                    cb.disabled = false;
+                    if (isGlobalActive) {
+                        card.style.borderColor = 'var(--primary)';
+                        card.style.background = 'rgba(225,29,72,0.06)';
+                        card.style.boxShadow = '0 4px 12px rgba(225,29,72,0.12)';
+                    } else {
+                        card.style.borderColor = 'var(--border-color)';
+                        card.style.background = '#ffffff';
+                        card.style.boxShadow = 'none';
+                    }
+                } else {
+                    if (isGlobalActive) {
+                        // When Global is ON: Other countries are unselectable & disabled
+                        cb.checked = false;
+                        cb.disabled = true;
+                        card.style.opacity = '0.55';
+                        card.style.cursor = 'not-allowed';
+                        card.style.borderColor = 'var(--border-color)';
+                        card.style.background = '#fafafa';
+                        card.style.boxShadow = 'none';
+                        if (subtext) subtext.textContent = 'Included in Global';
+                    } else {
+                        // When Global is OFF: Other countries are multiselectable & interactive
+                        cb.disabled = false;
+                        card.style.opacity = '1';
+                        card.style.cursor = 'pointer';
+                        if (subtext && countryItem) subtext.textContent = countryItem.currency;
+
+                        if (cb.checked) {
+                            card.style.borderColor = 'var(--primary)';
+                            card.style.background = 'rgba(225,29,72,0.04)';
+                            card.style.boxShadow = '0 2px 8px rgba(225,29,72,0.1)';
+                            specificSelected.push(cb.value);
+                        } else {
+                            card.style.borderColor = 'var(--border-color)';
+                            card.style.background = '#ffffff';
+                            card.style.boxShadow = 'none';
+                        }
+                    }
+                }
+            });
+
+            // Update Summary Badges
+            if (isGlobalActive) {
+                if (deployBadge) deployBadge.innerHTML = `Deploy Country: <strong>Global (All Regions)</strong>`;
+                if (countrySelectedCount) countrySelectedCount.innerHTML = `Selected: <strong>Global</strong> (All 26 Regions Included)`;
+                if (countryModeHelper) countryModeHelper.textContent = 'Universal World Dispatch';
+            } else {
+                const count = specificSelected.length;
+                const text = count === 0 ? 'None (Please select regions)' : specificSelected.join(', ');
+                if (deployBadge) deployBadge.innerHTML = `Deploy Country: <strong>${escapeHtml(text)}</strong>`;
+                if (countrySelectedCount) countrySelectedCount.innerHTML = `Selected: <strong>${count}</strong> ${count === 1 ? 'region' : 'regions'}`;
+            }
+
+            renderRatesTable();
+            checkDirtyState();
+        };
+
+        // Render & Bind Exchange Rate Table & Tax Inputs
+        const ratesTableContainer = document.getElementById('cp-rates-table-container');
+        const enableExchangeCb = document.getElementById('cp-enable-exchange');
+        const exchangeConfigContainer = document.getElementById('cp-exchange-config-container');
+        const exchangeModeRadios = document.querySelectorAll('input[name="cp-exchange-mode"]');
+        const defaultTaxInput = document.getElementById('cp-default-tax');
+
+        const renderRatesTable = () => {
+            if (!ratesTableContainer) return;
+
+            const isGlobalActive = Boolean(globalCheckbox && globalCheckbox.checked);
+            let activeCountries = [];
+
+            if (isGlobalActive) {
+                activeCountries = DEPLOY_COUNTRY_LIST.filter(c => !c.isGlobal);
+            } else {
+                const selectedNames = [];
+                document.querySelectorAll('.cp-country-checkbox:checked').forEach(cb => {
+                    if (cb.getAttribute('data-is-global') !== 'true') {
+                        selectedNames.push(cb.value);
+                    }
+                });
+                activeCountries = DEPLOY_COUNTRY_LIST.filter(c => selectedNames.includes(c.name));
+                if (activeCountries.length === 0) {
+                    activeCountries = DEPLOY_COUNTRY_LIST.filter(c => c.code === 'US' || c.code === 'BD');
+                }
+            }
+
+            const currentCustomRates = currentSettings.customCountryRates || {};
+            const defTax = Number(defaultTaxInput?.value || currentSettings.defaultTaxPct || 0);
+
+            ratesTableContainer.innerHTML = activeCountries.map(c => {
+                const bench = BENCHMARK_EXCHANGE_RATES[c.code] || { rate: 1.0, currency: 'USD', symbol: '$' };
+                const savedObj = currentCustomRates[c.code] || {};
+                const currentRate = savedObj.rate !== undefined ? Number(savedObj.rate) : bench.rate;
+                const currentTax = savedObj.taxPct !== undefined ? Number(savedObj.taxPct) : defTax;
+
+                const previewBaseUsd = 10.0;
+                const previewConverted = previewBaseUsd * currentRate;
+                const previewTaxAmt = (previewConverted * currentTax) / 100;
+                const previewFinal = previewConverted + previewTaxAmt;
+
+                return `
+                    <div class="cp-rate-card-row" data-code="${c.code}" style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem; display:flex; flex-direction:column; gap:0.6rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="font-size:1.25rem;">${c.flag}</span>
+                                <strong style="font-size:0.88rem; color:var(--text-primary);">${escapeHtml(c.name)}</strong>
+                            </div>
+                            <span style="font-size:0.75rem; font-weight:700; background:var(--surface-100); padding:0.2rem 0.5rem; border-radius:6px; color:var(--text-secondary);">${escapeHtml(bench.currency)} (${escapeHtml(bench.symbol)})</span>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:0.5rem; align-items:center;">
+                            <div>
+                                <label style="font-size:0.72rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.2rem;">1 USD ($) = </label>
+                                <div style="display:flex; align-items:center; gap:0.3rem;">
+                                    <input type="number" step="any" min="0" class="form-control cp-country-rate-input" value="${currentRate}" style="height:32px; font-size:0.85rem; font-weight:700; font-family:monospace; padding:0 0.5rem;">
+                                    <span style="font-size:0.8rem; font-weight:700; color:var(--text-primary);">${bench.symbol}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size:0.72rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.2rem;">Tax / VAT %</label>
+                                <div style="display:flex; align-items:center; gap:0.3rem;">
+                                    <input type="number" step="any" min="0" max="100" class="form-control cp-country-tax-input" value="${currentTax}" style="height:32px; font-size:0.85rem; padding:0 0.4rem; text-align:center;">
+                                    <span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cp-rate-preview-badge" style="font-size:0.74rem; background:var(--surface-50); border:1px solid var(--border-color); border-radius:6px; padding:0.35rem 0.6rem; color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                            <span>$10 product:</span>
+                            <strong style="color:var(--primary);">${bench.symbol}${previewFinal.toFixed(2)}</strong>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Bind live preview calculation on rate/tax input
+            ratesTableContainer.querySelectorAll('.cp-rate-card-row').forEach(row => {
+                const code = row.getAttribute('data-code');
+                const bench = BENCHMARK_EXCHANGE_RATES[code] || { rate: 1.0, symbol: '$' };
+                const rateInp = row.querySelector('.cp-country-rate-input');
+                const taxInp = row.querySelector('.cp-country-tax-input');
+                const previewBadge = row.querySelector('.cp-rate-preview-badge');
+
+                const updateRowPreview = () => {
+                    const r = Number(rateInp?.value) || 1.0;
+                    const t = Number(taxInp?.value) || 0;
+                    const finalVal = (10.0 * r) + ((10.0 * r * t) / 100);
+                    if (previewBadge) {
+                        previewBadge.innerHTML = `<span>$10 product:</span> <strong style="color:var(--primary);">${bench.symbol}${finalVal.toFixed(2)}</strong>`;
+                    }
+                    checkDirtyState();
+                };
+
+                rateInp?.addEventListener('input', updateRowPreview);
+                taxInp?.addEventListener('input', updateRowPreview);
+            });
+        };
+
+        if (enableExchangeCb && exchangeConfigContainer) {
+            enableExchangeCb.addEventListener('change', () => {
+                exchangeConfigContainer.style.display = enableExchangeCb.checked ? 'block' : 'none';
+                checkDirtyState();
+            });
+        }
+
+        exchangeModeRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                document.querySelectorAll('.cp-exchange-mode-card').forEach(card => {
+                    const isSelected = card.querySelector('input').checked;
+                    card.style.borderColor = isSelected ? 'var(--primary)' : 'var(--border-color)';
+                    card.style.background = isSelected ? 'rgba(225,29,72,0.03)' : '#ffffff';
+                });
+                checkDirtyState();
+            });
+        });
+
+        if (defaultTaxInput) {
+            defaultTaxInput.addEventListener('input', () => {
+                checkDirtyState();
+            });
+        }
+
+        renderRatesTable();
+
+        // Attach country card and checkbox click handlers
+        document.querySelectorAll('.cp-country-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const cb = card.querySelector('.cp-country-checkbox');
+                const isGlobalCard = card.getAttribute('data-is-global') === 'true';
+                const isGlobalActive = Boolean(globalCheckbox && globalCheckbox.checked);
+
+                if (isGlobalActive && !isGlobalCard) {
+                    // Clicking on a specific country while Global is ON will uncheck Global and select this country
+                    if (globalCheckbox) globalCheckbox.checked = false;
+                    if (cb) cb.checked = true;
+                    syncCountryCardsState();
+                    return;
+                }
+
+                if (e.target !== cb) {
+                    if (!cb.disabled) {
+                        cb.checked = !cb.checked;
+                        if (isGlobalCard && cb.checked) {
+                            // Turn on Global -> uncheck others
+                        }
+                        syncCountryCardsState();
+                    }
+                }
+            });
+        });
+
+        document.querySelectorAll('.cp-country-checkbox').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const isGlobalCard = cb.getAttribute('data-is-global') === 'true';
+                if (isGlobalCard && cb.checked) {
+                    // Global turned ON
+                }
+                syncCountryCardsState();
+            });
+        });
+
+        // Quick Country Action Buttons
+        if (btnSelectGlobal) {
+            btnSelectGlobal.addEventListener('click', () => {
+                if (globalCheckbox) globalCheckbox.checked = true;
+                syncCountryCardsState();
+                showAlert.info("Global mode activated. All regions universally covered.");
+            });
+        }
+
+        if (btnSelectAllCountries) {
+            btnSelectAllCountries.addEventListener('click', () => {
+                if (globalCheckbox) globalCheckbox.checked = false;
+                document.querySelectorAll('.cp-country-checkbox').forEach(cb => {
+                    if (cb.getAttribute('data-is-global') !== 'true') {
+                        cb.checked = true;
+                    }
+                });
+                syncCountryCardsState();
+                showAlert.info("All 25 specific countries selected.");
+            });
+        }
+
+        if (btnClearCountries) {
+            btnClearCountries.addEventListener('click', () => {
+                if (globalCheckbox) globalCheckbox.checked = false;
+                document.querySelectorAll('.cp-country-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+                syncCountryCardsState();
+                showAlert.info("Cleared country selection. Choose target countries or select Global.");
+            });
+        }
+
+        // Country Search Filter
+        if (countrySearchInput) {
+            countrySearchInput.addEventListener('input', () => {
+                const q = countrySearchInput.value.trim().toLowerCase();
+                document.querySelectorAll('.cp-country-card').forEach(card => {
+                    const cName = (card.getAttribute('data-country-name') || '').toLowerCase();
+                    if (!q || cName.includes(q)) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Category Radio Buttons & Checkboxes
         const catRadios = document.querySelectorAll('input[name="cp-cat-mode"]');
         const specificContainer = document.getElementById('cp-specific-categories-container');
         catRadios.forEach(r => {
@@ -933,22 +1823,30 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                 if (specificContainer) {
                     specificContainer.style.display = r.value === 'SPECIFIC' ? 'block' : 'none';
                 }
+                checkDirtyState();
             });
         });
 
-        // Select All / Clear Categories
-        const btnSelectAll = document.getElementById('btn-select-all-cats');
-        const btnClearAll = document.getElementById('btn-deselect-all-cats');
-        if (btnSelectAll) {
-            btnSelectAll.addEventListener('click', () => {
+        const btnSelectAllCats = document.getElementById('btn-select-all-cats');
+        const btnClearCats = document.getElementById('btn-deselect-all-cats');
+        if (btnSelectAllCats) {
+            btnSelectAllCats.addEventListener('click', () => {
                 document.querySelectorAll('.cp-cat-checkbox').forEach(cb => cb.checked = true);
+                checkDirtyState();
             });
         }
-        if (btnClearAll) {
-            btnClearAll.addEventListener('click', () => {
+        if (btnClearCats) {
+            btnClearCats.addEventListener('click', () => {
                 document.querySelectorAll('.cp-cat-checkbox').forEach(cb => cb.checked = false);
+                checkDirtyState();
             });
         }
+
+        // Input & Textarea Change Listeners for Dirty Checking
+        container.querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('input', checkDirtyState);
+            el.addEventListener('change', checkDirtyState);
+        });
 
         // Slug input change listener
         const slugInput = document.getElementById('cp-custom-slug-input');
@@ -959,38 +1857,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                 slugInput.value = cleanSlug;
                 const newUrl = computeCustomerUrl({ customSlug: cleanSlug });
                 if (liveUrlPreview) liveUrlPreview.textContent = newUrl;
-                if (urlInput) urlInput.value = newUrl;
-            });
-        }
-
-        // Branding Mode listener
-        const brandingRadios = document.querySelectorAll('input[name="cp-branding-mode"]');
-        brandingRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                document.querySelectorAll('.cp-branding-card').forEach(card => {
-                    const isChecked = card.querySelector('input[name="cp-branding-mode"]')?.checked;
-                    card.style.borderColor = isChecked ? 'var(--primary)' : 'var(--border-color)';
-                    card.style.background = isChecked ? 'rgba(225,29,72,0.03)' : '#ffffff';
-                });
-            });
-        });
-
-        // Store Logo input listener
-        const storeLogoInput = document.getElementById('cp-store-logo-input');
-        const logoPreviewBox = document.getElementById('cp-logo-broad-preview');
-        if (storeLogoInput && logoPreviewBox) {
-            storeLogoInput.addEventListener('input', () => {
-                const val = storeLogoInput.value.trim();
-                if (val) {
-                    logoPreviewBox.innerHTML = `<img src="${escapeHtml(val)}" alt="Store Logo" style="width:100%; height:100%; object-fit:contain;" onerror="this.onerror=null; this.parentElement.innerHTML='<svg width=\\'24\\' height=\\'24\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'2\\'><rect x=\\'3\\' y=\\'3\\' width=\\'18\\' height=\\'18\\' rx=\\'2\\' ry=\\'2\\'></rect><circle cx=\\'8.5\\' cy=\\'8.5\\' r=\\'1.5\\'></circle><polyline points=\\'21 15 16 10 5 21\\'></polyline></svg>';">`;
-                } else {
-                    const wsLogo = window.__activeWorkspace?.logoUrl || '';
-                    if (wsLogo) {
-                        logoPreviewBox.innerHTML = `<img src="${escapeHtml(wsLogo)}" alt="Workspace Logo" style="width:100%; height:100%; object-fit:contain;">`;
-                    } else {
-                        logoPreviewBox.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
-                    }
-                }
+                checkDirtyState();
             });
         }
 
@@ -1009,52 +1876,73 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         };
 
         const fallbackCopy = (finalUrl) => {
-            if (urlInput) {
-                urlInput.value = finalUrl;
-                urlInput.select();
-                document.execCommand('copy');
-                showAlert.success("Customer Panel link copied to clipboard!");
-            }
+            const temp = document.createElement('input');
+            temp.value = finalUrl;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showAlert.success("Customer Panel link copied to clipboard!");
         };
 
         if (copyBtn) copyBtn.addEventListener('click', handleCopy);
         if (copyInputBtn) copyInputBtn.addEventListener('click', handleCopy);
-        if (urlInput) urlInput.addEventListener('click', handleCopy);
 
-        // Save Draft Settings Submit
+        // Form Submit Handler (Save Settings)
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const submitBtn = document.getElementById('btn-save-customer-panel');
+                if (!isFormDirty) {
+                    showAlert.info("No changes to update.");
+                    return;
+                }
+
                 if (submitBtn) {
                     submitBtn.disabled = true;
-                    submitBtn.textContent = 'Saving...';
+                    submitBtn.textContent = 'Saving Changes...';
                 }
 
                 try {
-                    const updatedData = collectFormData();
+                    let updatedData = collectFormData();
+
+                    if (selectedCustomLogoFile && updatedData.brandingMode === 'CUSTOM') {
+                        try {
+                            const uploadedUrl = await storageService.uploadImage(selectedCustomLogoFile, workspaceId);
+                            updatedData.storeLogo = uploadedUrl;
+                        } catch (err) {
+                            console.warn("Logo upload failed, preserving draft:", err);
+                        }
+                    }
+
                     await settingsService.saveCustomerPanelSettings(updatedData);
 
-                    // Update sidebar status badge if present
+                    // Reset Dirty State
+                    isFormDirty = false;
+                    initialFormSnapshot = JSON.stringify(updatedData);
+                    selectedCustomLogoFile = null;
+
                     const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
                     if (sidebarStatus) {
                         sidebarStatus.className = updatedData.isPublished ? 'status-pill status-pill-active' : 'status-pill status-pill-danger';
                         sidebarStatus.textContent = updatedData.isPublished ? 'Live' : 'Closed';
                     }
 
-                    showAlert.success("Customer Panel settings saved successfully!");
+                    showAlert.success("Customer Panel settings updated successfully!");
                     renderMainUI(updatedData);
                 } catch (err) {
                     console.error("Save error:", err);
                     showAlert.error("Failed to save Customer Panel settings: " + (err.message || 'Error'));
-                } finally {
                     if (submitBtn) {
                         submitBtn.disabled = false;
-                        submitBtn.textContent = 'Save Settings (Draft)';
+                        submitBtn.textContent = 'Update Settings (Unsaved)';
                     }
                 }
             });
         }
+
+        // Initial sync of country cards state
+        syncCountryCardsState();
+        checkDirtyState();
     };
 
     // Initial render
@@ -1067,4 +1955,4 @@ const escapeHtml = (str) => {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
-};
+}; 

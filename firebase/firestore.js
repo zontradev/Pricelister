@@ -164,7 +164,13 @@ export const firestoreService = {
             // Generate Worker/Admin ID (Android Parity)
             const adminWorkerId = Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 8).toUpperCase();
             
-            // 1. Create Workspace Doc matching Android structure with exact required fields
+            const now = new Date();
+            const nowEpoch = now.getTime();
+            const nowIso = now.toISOString();
+            const nowFormatted = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const adminNameResolved = workspaceData.adminName || (email ? email.split('@')[0] : "Admin");
+
+            // 1. Create Workspace Doc matching schema with creation timestamps and audit info
             const workspaceRef = doc(db, 'Workspaces', documentId);
             const wsDocData = {
                 workspaceId: newWorkspaceId,
@@ -174,9 +180,31 @@ export const firestoreService = {
                 address: workspaceData.address || "",
                 email: workspaceData.email || email || "",
                 adminEmail: email || workspaceData.adminEmail || "",
-                adminName: workspaceData.adminName || workspaceData.name || "Eycon Contact",
+                adminName: adminNameResolved,
                 adminId: workspaceData.adminId || adminWorkerId,
-                createdAt: Date.now(),
+                
+                // Creation Metadata
+                createdAt: nowEpoch,
+                createdTimestamp: nowIso,
+                createdDate: nowFormatted,
+                creatorEmail: email || "",
+                creatorUid: uid,
+                creatorName: adminNameResolved,
+
+                // Last Updated Audit Info
+                updatedAt: nowEpoch,
+                updateTimestamp: nowIso,
+                updatedDate: nowFormatted,
+                updatorEmail: email || "",
+                updatorUid: uid,
+                updatorName: adminNameResolved,
+                updatorRole: 'CREATOR_ADMIN',
+
+                // Security & Versioning
+                schemaVersion: '2.0.0',
+                securityVersion: 2,
+                isProtected: true,
+
                 workersCount: 0,
                 adminProductCount: 0,
                 adminInvoiceCount: 0,
@@ -186,7 +214,9 @@ export const firestoreService = {
                 adminTotalDeleted: 0,
                 adminTotalDeletedCount: 0,
                 currency: (workspaceData.currency || workspaceData.currencySymbol || "$").trim().substring(0, 3) || "$",
-                currencySymbol: (workspaceData.currencySymbol || workspaceData.currency || "$").trim().substring(0, 3) || "$"
+                currencySymbol: (workspaceData.currencySymbol || workspaceData.currency || "$").trim().substring(0, 3) || "$",
+                logoUrl: workspaceData.logoUrl || workspaceData.logo || "",
+                logo: workspaceData.logoUrl || workspaceData.logo || ""
             };
 
             await setDoc(workspaceRef, wsDocData);
@@ -202,7 +232,12 @@ export const firestoreService = {
                 "Customer Name": true,
                 "Customer number": true,
                 "Currency": (workspaceData.currency || workspaceData.currencySymbol || "$").trim().substring(0, 3) || "$",
-                "last_updated": new Date()
+                "Logo Url": workspaceData.logoUrl || workspaceData.logo || "",
+                "created_timestamp": nowIso,
+                "created_date": nowFormatted,
+                "updated_timestamp": nowIso,
+                "updated_by_email": email || "",
+                "last_updated": now
             }, { merge: true });
 
             // 3. Update User Profile in userCollection

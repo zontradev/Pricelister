@@ -1,5 +1,6 @@
 import { authService } from '../firebase/auth.js';
 import { firestoreService } from '../firebase/firestore.js';
+import { storageService } from '../firebase/storage.js';
 import { showAlert } from './alert-handler.js';
 import { CONFIG } from '../config.js';
 import { initRouter } from './router.js';
@@ -464,6 +465,7 @@ export const initAuthHandler = (pageType) => {
                     }
 
                     initGlobalSearch(workspace.id);
+                    renderTopbarAdminProfile(user, workspace);
 
                     if (!routerInitialized) {
                         initRouter(workspace.id);
@@ -480,6 +482,179 @@ export const initAuthHandler = (pageType) => {
             }
         }
     });
+
+    /**
+     * Topbar Admin & Workspace Profile Pill (Top-Right Action Header)
+     */
+    function renderTopbarAdminProfile(user, workspace) {
+        const topbarActions = document.getElementById('topbar-actions');
+        if (!topbarActions || !user || !workspace) return;
+
+        let group = document.getElementById('topbar-right-group');
+        if (!group) {
+            group = document.createElement('div');
+            group.id = 'topbar-right-group';
+            group.className = 'topbar-right-group';
+            topbarActions.appendChild(group);
+        }
+
+        const roleUpper = (workspace.role || 'WORKER').toUpperCase();
+        const isAdmin = roleUpper === 'CREATOR_ADMIN' || roleUpper === 'ADMIN' || roleUpper === 'CREATOR';
+        const isCoAdmin = roleUpper === 'CO_ADMIN' || roleUpper === 'CO-ADMIN';
+        const roleLabel = isAdmin ? 'Admin' : (isCoAdmin ? 'Co-Admin' : 'Worker');
+        const displayName = user.displayName || (user.email ? user.email.split('@')[0] : 'Admin');
+        const wsDisplayName = workspace.name || 'PriceLister Workspace';
+        const wsIdText = workspace.workspaceId || workspace.id || '';
+        const initial = (displayName.charAt(0) || 'A').toUpperCase();
+
+        group.innerHTML = `
+            <!-- Quick Help / Shortcuts Icon Button -->
+            <button type="button" class="topbar-icon-action-btn" id="topbar-btn-help" title="Quick Help & Shortcuts (Ctrl+K)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </button>
+
+            <!-- Notification Bell Button -->
+            <button type="button" class="topbar-icon-action-btn" id="topbar-btn-notif" title="Workspace Mailbox & Notifications">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                <span class="topbar-icon-badge-dot"></span>
+            </button>
+
+            <!-- Admin / Workspace Profile Pill Trigger -->
+            <div class="topbar-profile-pill" id="topbar-profile-pill-trigger" title="Workspace Profile & Quick Switcher">
+                <div class="topbar-profile-avatar-wrap">
+                    ${user.photoURL 
+                        ? `<img src="${user.photoURL}" class="topbar-profile-avatar" alt="${displayName}">`
+                        : `<div class="topbar-profile-avatar">${initial}</div>`
+                    }
+                    <span class="topbar-profile-status-dot" title="Online & Connected"></span>
+                </div>
+                <div class="topbar-profile-meta">
+                    <span class="topbar-profile-name">${displayName}</span>
+                    <span class="topbar-profile-role">${roleLabel}</span>
+                </div>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text-muted); margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+
+            <!-- Dropdown Popover Menu -->
+            <div class="topbar-profile-dropdown" id="topbar-profile-dropdown-menu">
+                <div style="padding: 0.65rem 0.5rem 0.75rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.4rem;">
+                    <div style="display: flex; align-items: center; gap: 0.65rem;">
+                        <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(225,29,72,0.25);">
+                            ${(wsDisplayName.charAt(0) || 'W').toUpperCase()}
+                        </div>
+                        <div style="overflow: hidden; flex: 1;">
+                            <div style="font-weight: 800; font-size: 0.88rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${wsDisplayName}</div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${user.email || ''}</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 0.65rem; background: var(--surface-50); padding: 0.35rem 0.6rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; border: 1px solid var(--border-color);">
+                        <div style="font-size: 0.72rem; font-family: monospace; color: var(--text-secondary); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            ${wsIdText}
+                        </div>
+                        <button type="button" id="topbar-copy-ws-id" style="background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--primary); font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; gap: 3px;" title="Copy Workspace ID">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <a href="#/workspace" class="topbar-dropdown-item" style="display: flex; align-items: center; gap: 0.65rem; padding: 0.45rem 0.65rem; border-radius: 8px; color: var(--text-primary); text-decoration: none; font-size: 0.84rem; font-weight: 600; transition: background 0.15s ease;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        <span>Workspace Hub</span>
+                    </a>
+                    <a href="#/settings" class="topbar-dropdown-item" style="display: flex; align-items: center; gap: 0.65rem; padding: 0.45rem 0.65rem; border-radius: 8px; color: var(--text-primary); text-decoration: none; font-size: 0.84rem; font-weight: 600; transition: background 0.15s ease;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <span>Advanced Settings</span>
+                    </a>
+                    <a href="#/profile" class="topbar-dropdown-item" style="display: flex; align-items: center; gap: 0.65rem; padding: 0.45rem 0.65rem; border-radius: 8px; color: var(--text-primary); text-decoration: none; font-size: 0.84rem; font-weight: 600; transition: background 0.15s ease;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>My Profile</span>
+                    </a>
+
+                    <div style="height: 1px; background: var(--border-color); margin: 0.35rem 0;"></div>
+
+                    <button type="button" id="topbar-switch-acc-btn" class="topbar-dropdown-item" style="width: 100%; border: none; background: none; text-align: left; display: flex; align-items: center; gap: 0.65rem; padding: 0.45rem 0.65rem; border-radius: 8px; color: var(--text-primary); font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: background 0.15s ease;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                        <span>Change Account</span>
+                    </button>
+
+                    <button type="button" id="topbar-logout-btn" class="topbar-dropdown-item" style="width: 100%; border: none; background: none; text-align: left; display: flex; align-items: center; gap: 0.65rem; padding: 0.45rem 0.65rem; border-radius: 8px; color: #e11d48; font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: background 0.15s ease;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span>Sign Out</span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Event Listeners for Topbar Elements
+        const trigger = group.querySelector('#topbar-profile-pill-trigger');
+        const dropdown = group.querySelector('#topbar-profile-dropdown-menu');
+        const btnHelp = group.querySelector('#topbar-btn-help');
+        const btnNotif = group.querySelector('#topbar-btn-notif');
+        const copyWsBtn = group.querySelector('#topbar-copy-ws-id');
+        const switchAccBtn = group.querySelector('#topbar-switch-acc-btn');
+        const logoutBtn = group.querySelector('#topbar-logout-btn');
+
+        if (trigger && dropdown) {
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('show');
+            });
+
+            // Close on click outside
+            document.addEventListener('click', (e) => {
+                if (!group.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                }
+            });
+        }
+
+        if (btnHelp) {
+            btnHelp.addEventListener('click', () => {
+                const searchBtn = document.getElementById('global-search-trigger-btn');
+                if (searchBtn) searchBtn.click();
+            });
+        }
+
+        if (btnNotif) {
+            btnNotif.addEventListener('click', () => {
+                window.location.hash = '#/mailbox';
+            });
+        }
+
+        if (copyWsBtn) {
+            copyWsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (navigator.clipboard && wsIdText) {
+                    navigator.clipboard.writeText(wsIdText);
+                    const origHtml = copyWsBtn.innerHTML;
+                    copyWsBtn.innerHTML = `<span>Copied!</span>`;
+                    setTimeout(() => {
+                        copyWsBtn.innerHTML = origHtml;
+                    }, 1800);
+                }
+            });
+        }
+
+        if (switchAccBtn) {
+            switchAccBtn.addEventListener('click', () => {
+                dropdown.classList.remove('show');
+                openAccountSwitcherModal();
+            });
+        }
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                if (await showAlert.confirm('Are you sure you want to sign out?')) {
+                    await authService.logout();
+                    window.location.href = 'index.html';
+                }
+            });
+        }
+    }
 
     // Login Modal Logic
     const loginModal = document.getElementById('login-modal-container');
@@ -549,6 +724,72 @@ export const initAuthHandler = (pageType) => {
         const wsCurrPreview = document.getElementById('ws-currency-preview');
         const btnWsFindCurrency = document.getElementById('btn-ws-find-currency');
 
+        // Workspace Logo File Picking & Preview Box
+        let selectedWsLogoFile = null;
+        let wsLogoDataUrl = '';
+        const wsLogoFileInput = document.getElementById('ws-logo-file-input');
+        const btnWsChooseLogo = document.getElementById('btn-ws-choose-logo');
+        const btnWsRemoveLogo = document.getElementById('btn-ws-remove-logo');
+        const wsLogoImgPreview = document.getElementById('ws-logo-img-preview');
+        const wsLogoEmptyState = document.getElementById('ws-logo-empty-state');
+        const wsLogoBox = document.getElementById('ws-logo-preview-box');
+
+        if (btnWsChooseLogo && wsLogoFileInput) {
+            btnWsChooseLogo.addEventListener('click', () => {
+                wsLogoFileInput.click();
+            });
+        }
+
+        if (wsLogoBox && wsLogoFileInput) {
+            wsLogoBox.addEventListener('click', () => {
+                wsLogoFileInput.click();
+            });
+            wsLogoBox.style.cursor = 'pointer';
+        }
+
+        if (wsLogoFileInput) {
+            wsLogoFileInput.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (file) {
+                    if (!file.type.startsWith('image/')) {
+                        showAlert.error('Please choose a valid image file (PNG, JPG, WEBP).');
+                        return;
+                    }
+                    selectedWsLogoFile = file;
+                    const reader = new FileReader();
+                    reader.onload = (re) => {
+                        wsLogoDataUrl = re.target.result;
+                        if (wsLogoImgPreview) {
+                            wsLogoImgPreview.src = wsLogoDataUrl;
+                            wsLogoImgPreview.style.display = 'block';
+                        }
+                        if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'none';
+                        if (btnWsRemoveLogo) btnWsRemoveLogo.style.display = 'inline-block';
+                        if (btnWsChooseLogo) btnWsChooseLogo.textContent = 'Change File';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        if (btnWsRemoveLogo) {
+            btnWsRemoveLogo.addEventListener('click', () => {
+                selectedWsLogoFile = null;
+                wsLogoDataUrl = '';
+                if (wsLogoFileInput) wsLogoFileInput.value = '';
+                if (wsLogoImgPreview) {
+                    wsLogoImgPreview.src = '';
+                    wsLogoImgPreview.style.display = 'none';
+                }
+                if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'flex';
+                btnWsRemoveLogo.style.display = 'none';
+                if (btnWsChooseLogo) btnWsChooseLogo.innerHTML = `
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Choose File
+                `;
+            });
+        }
+
         const updateWsCurrPreview = (val) => {
             const sym = (val || '$').trim().substring(0, 3) || '$';
             if (wsCurrPreview) {
@@ -593,6 +834,17 @@ export const initAuthHandler = (pageType) => {
             const descInput = document.getElementById('ws-desc');
             const chosenCurrency = (document.getElementById('ws-currency')?.value || "$").trim().substring(0, 3) || "$";
 
+            let finalLogoUrl = wsLogoDataUrl || '';
+            if (selectedWsLogoFile) {
+                try {
+                    btn.textContent = 'Uploading Workspace Logo...';
+                    finalLogoUrl = await storageService.uploadImage(selectedWsLogoFile, currentUser.uid);
+                } catch (uploadErr) {
+                    console.warn("Logo storage upload failed, saving local data url:", uploadErr);
+                    finalLogoUrl = wsLogoDataUrl || '';
+                }
+            }
+
             const workspaceData = {
                 name: (document.getElementById('ws-name')?.value || "").trim(),
                 description: (descInput?.value || "Main").trim(),
@@ -602,10 +854,13 @@ export const initAuthHandler = (pageType) => {
                 adminName: currentUser.displayName || (document.getElementById('ws-name')?.value || "Eycon Contact").trim(),
                 adminEmail: currentUser.email || "",
                 currency: chosenCurrency,
-                currencySymbol: chosenCurrency
+                currencySymbol: chosenCurrency,
+                logoUrl: finalLogoUrl,
+                logo: finalLogoUrl
             };
             
             try {
+                btn.textContent = 'Finalizing Workspace...';
                 setAppCurrencySymbol(chosenCurrency);
                 await firestoreService.createWorkspace(currentUser.uid, currentUser.email, workspaceData);
                 showAlert.success('Workspace created successfully!');

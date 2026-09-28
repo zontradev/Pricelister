@@ -144,7 +144,7 @@ export const renderMembers = async (container, workspaceId) => {
                     <p style="color: var(--text-secondary); margin: 0;">View activity, creations, and deletion statistics for all connected members.</p>
                 </div>
                 <div style="display:flex; gap:0.75rem;">
-                    <button class="btn btn-secondary" onclick="window.location.hash='#/workers'" style="font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+                    <button class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="font-weight:600; display:flex; align-items:center; gap:0.4rem;">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                         Permissions & Invite
                     </button>
@@ -153,17 +153,29 @@ export const renderMembers = async (container, workspaceId) => {
 
             <!-- 1. WORKSPACE HEADER SECTION (Android Parity) -->
             <div class="card" style="padding: 1.75rem 2rem; border-radius: 14px; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--surface-0), var(--surface-50)); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
-                    <div>
-                        <div style="font-size:0.72rem; font-weight:800; color:var(--primary); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.35rem;">
-                            WORKSPACE ACTIVITY HUB
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem;">
+                    <div style="display:flex; align-items:center; gap:1.25rem;">
+                        <!-- Square-Rounded Elevated Workspace Logo Box -->
+                        <div style="width:72px; height:72px; border-radius:16px; background:#ffffff; border:1.5px solid var(--border-color); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; flex-shrink:0;">
+                            ${(wsInfo.logoUrl || wsInfo.logo) ? `
+                                <img src="${wsInfo.logoUrl || wsInfo.logo}" alt="Workspace Logo" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, #f1f5f9, #e2e8f0);color:var(--text-muted);font-weight:800;font-size:1.5rem;\\'>${(wsInfo.name || 'W').substring(0, 2).toUpperCase()}</div>';">
+                            ` : `
+                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #f1f5f9, #e2e8f0); color:var(--text-muted); font-weight:800; font-size:1.5rem;">
+                                    ${(wsInfo.name || 'W').substring(0, 2).toUpperCase()}
+                                </div>
+                            `}
                         </div>
-                        <h1 style="font-size:1.6rem; font-weight:800; color:var(--text-primary); margin:0 0 0.4rem 0;">
-                            ${wsInfo.name || 'Workspace'}
-                        </h1>
-                        <p style="color: var(--text-secondary); font-size:0.92rem; margin:0;">
-                            Tracking creation contributions and deletion audits across all team members.
-                        </p>
+                        <div>
+                            <div style="font-size:0.72rem; font-weight:800; color:var(--primary); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.35rem;">
+                                WORKSPACE ACTIVITY HUB
+                            </div>
+                            <h1 style="font-size:1.6rem; font-weight:800; color:var(--text-primary); margin:0 0 0.4rem 0;">
+                                ${wsInfo.name || 'Workspace'}
+                            </h1>
+                            <p style="color: var(--text-secondary); font-size:0.92rem; margin:0;">
+                                Tracking creation contributions and deletion audits across all team members.
+                            </p>
+                        </div>
                     </div>
                     <div style="background:var(--surface-100); padding:0.6rem 1rem; border-radius:10px; border:1px solid var(--border-color); font-size:0.85rem;">
                         <span style="color:var(--text-secondary);">Workspace ID:</span> 
@@ -239,7 +251,7 @@ export const renderMembers = async (container, workspaceId) => {
                 ${coAdmins.length === 0 && workers.length === 0 ? `
                     <div class="card" style="padding: 2rem; text-align:center; color:var(--text-secondary); border-radius:12px;">
                         <p style="margin:0;">No additional workers or co-admins joined this workspace yet.</p>
-                        <button class="btn btn-sm btn-primary mt-12" onclick="window.location.hash='#/workers'" style="margin-top:0.75rem;">+ Invite Worker</button>
+                        <button class="btn btn-sm btn-primary mt-12" onclick="window.location.hash='#/workspace'" style="margin-top:0.75rem;">+ Invite Worker</button>
                     </div>
                 ` : ''}
             </div>

@@ -163,6 +163,57 @@ body {
     color: var(--text-primary);
 }
 
+/* Region & Currency Selector Pill in Header */
+.cp-region-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 40px;
+    padding: 0 0.85rem;
+    background: var(--surface-50);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.cp-region-pill:hover {
+    background: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.15);
+}
+
+/* Contact Store Button in Header */
+.cp-contact-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 40px;
+    padding: 0 0.85rem;
+    background: var(--surface-50);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.cp-contact-btn:hover {
+    background: #ffffff;
+    border-color: #25d366;
+    color: #065f46;
+    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.2);
+}
+
 /* Cart Button in Header */
 .cp-cart-btn {
     display: flex;
@@ -206,6 +257,85 @@ body {
 .cp-cart-total-text {
     font-weight: 700;
     letter-spacing: -0.01em;
+}
+
+/* Target Range Bar */
+.cp-target-range-banner {
+    background: linear-gradient(90deg, #f8fafc 0%, #ffffff 50%, #f8fafc 100%);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.45rem 1.25rem;
+    font-size: 0.82rem;
+}
+
+.cp-target-range-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.cp-target-range-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    color: var(--text-secondary);
+}
+
+.cp-target-range-chips {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.cp-target-country-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    background: var(--surface-100);
+    border: 1px solid var(--border-color);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.cp-target-country-chip:hover {
+    background: rgba(225, 29, 72, 0.08);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.cp-target-country-chip.active {
+    background: rgba(225, 29, 72, 0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.cp-target-change-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.cp-target-change-btn:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
 }
 
 /* Announcement Bar */
@@ -631,13 +761,101 @@ body {
 
 .cp-cart-drawer {
     width: 100%;
-    max-width: 440px;
+    max-width: 680px;
     height: 100%;
     background: #ffffff;
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-float);
-    animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 768px) {
+    .cp-cart-drawer {
+        max-width: 100%;
+    }
+}
+
+.cp-contact-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 40px;
+    padding: 0 0.95rem;
+    background: var(--surface-100);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.cp-contact-btn:hover {
+    background: var(--surface-200);
+    border-color: #cbd5e1;
+}
+
+/* Regional Currency Pill in Header */
+.cp-region-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 40px;
+    padding: 0 0.85rem;
+    background: #ffffff;
+    color: var(--text-primary);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    user-select: none;
+}
+.cp-region-pill:hover {
+    background: var(--surface-50);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* PLACE ORDER RED BUTTON - HIGH CONTRAST AA ACCESSIBLE */
+.cp-btn-place-order-red {
+    width: 100%;
+    padding: 0.85rem 1.25rem;
+    font-size: 1.05rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #ffffff !important;
+    background: #e11d48 !important;
+    border: 2px solid #be123c !important;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: inherit;
+}
+.cp-btn-place-order-red:hover {
+    background: #be123c !important;
+    border-color: #9f1239 !important;
+    transform: translateY(-1.5px);
+    box-shadow: 0 6px 20px rgba(225, 29, 72, 0.5);
+}
+.cp-btn-place-order-red:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.3);
+}
+.cp-btn-place-order-red:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
 }
 
 @keyframes slideInRight {

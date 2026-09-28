@@ -19,14 +19,239 @@ let categoriesList = [];
 let activeCategory = 'ALL';
 let currentSearchQuery = '';
 let cart = {}; // { productId: { product, quantity } }
+let activeCustomerRegion = null; // { code, name, flag, iso, currencyCode, symbol }
 
-// Helper for formatting currency
-const formatPrice = (amount) => {
-    const sym = (storeSettings.currencySymbol || '$').trim();
-    const num = Number(amount) || 0;
-    const formatted = num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const COUNTRY_CURRENCY_DIRECTORY = [
+    { code: 'BD', name: 'Bangladesh', iso: 'bd', currencyCode: 'BDT', symbol: '৳', timezones: ['Asia/Dhaka'], languages: ['bn', 'bn-BD'] },
+    { code: 'US', name: 'United States', iso: 'us', currencyCode: 'USD', symbol: '$', timezones: ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Anchorage', 'America/Honolulu', 'America/Phoenix', 'America/Detroit', 'America/Indiana', 'America/Boise'], languages: ['en-US', 'en'] },
+    { code: 'IN', name: 'India', iso: 'in', currencyCode: 'INR', symbol: '₹', timezones: ['Asia/Kolkata', 'Asia/Calcutta'], languages: ['hi', 'en-IN', 'ta', 'te', 'mr', 'gu', 'kn', 'ml', 'pa', 'or'] },
+    { code: 'CA', name: 'Canada', iso: 'ca', currencyCode: 'CAD', symbol: 'CA$', timezones: ['America/Toronto', 'America/Vancouver', 'America/Montreal', 'America/Edmonton', 'America/Winnipeg', 'America/Halifax', 'America/St_Johns'], languages: ['en-CA', 'fr-CA'] },
+    { code: 'GB', name: 'United Kingdom', iso: 'gb', currencyCode: 'GBP', symbol: '£', timezones: ['Europe/London', 'Europe/Belfast'], languages: ['en-GB'] },
+    { code: 'AU', name: 'Australia', iso: 'au', currencyCode: 'AUD', symbol: 'AU$', timezones: ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Perth', 'Australia/Adelaide', 'Australia/Hobart', 'Australia/Darwin'], languages: ['en-AU'] },
+    { code: 'DE', name: 'Germany', iso: 'de', currencyCode: 'EUR', symbol: '€', timezones: ['Europe/Berlin'], languages: ['de', 'de-DE'] },
+    { code: 'FR', name: 'France', iso: 'fr', currencyCode: 'EUR', symbol: '€', timezones: ['Europe/Paris'], languages: ['fr', 'fr-FR'] },
+    { code: 'AE', name: 'United Arab Emirates', iso: 'ae', currencyCode: 'AED', symbol: 'د.إ', timezones: ['Asia/Dubai'], languages: ['ar-AE', 'ar'] },
+    { code: 'SA', name: 'Saudi Arabia', iso: 'sa', currencyCode: 'SAR', symbol: '﷼', timezones: ['Asia/Riyadh'], languages: ['ar-SA'] },
+    { code: 'SG', name: 'Singapore', iso: 'sg', currencyCode: 'SGD', symbol: 'S$', timezones: ['Asia/Singapore'], languages: ['en-SG', 'zh-SG', 'ms-SG', 'ta-SG'] },
+    { code: 'MY', name: 'Malaysia', iso: 'my', currencyCode: 'MYR', symbol: 'RM', timezones: ['Asia/Kuala_Lumpur', 'Asia/Kuching'], languages: ['ms', 'ms-MY', 'zh-MY', 'en-MY'] },
+    { code: 'JP', name: 'Japan', iso: 'jp', currencyCode: 'JPY', symbol: '¥', timezones: ['Asia/Tokyo'], languages: ['ja', 'ja-JP'] },
+    { code: 'IT', name: 'Italy', iso: 'it', currencyCode: 'EUR', symbol: '€', timezones: ['Europe/Rome'], languages: ['it', 'it-IT'] },
+    { code: 'ES', name: 'Spain', iso: 'es', currencyCode: 'EUR', symbol: '€', timezones: ['Europe/Madrid', 'Atlantic/Canary'], languages: ['es', 'es-ES'] },
+    { code: 'BR', name: 'Brazil', iso: 'br', currencyCode: 'BRL', symbol: 'R$', timezones: ['America/Sao_Paulo', 'America/Rio_Branco', 'America/Manaus', 'America/Belem', 'America/Fortaleza', 'America/Recife', 'America/Cuiaba'], languages: ['pt-BR', 'pt'] },
+    { code: 'MX', name: 'Mexico', iso: 'mx', currencyCode: 'MXN', symbol: 'MX$', timezones: ['America/Mexico_City', 'America/Cancun', 'America/Monterrey', 'America/Tijuana', 'America/Chihuahua', 'America/Hermosillo', 'America/Mazatlan'], languages: ['es-MX'] },
+    { code: 'NL', name: 'Netherlands', iso: 'nl', currencyCode: 'EUR', symbol: '€', timezones: ['Europe/Amsterdam'], languages: ['nl', 'nl-NL'] },
+    { code: 'ZA', name: 'South Africa', iso: 'za', currencyCode: 'ZAR', symbol: 'R', timezones: ['Africa/Johannesburg'], languages: ['en-ZA', 'af'] },
+    { code: 'PK', name: 'Pakistan', iso: 'pk', currencyCode: 'PKR', symbol: '₨', timezones: ['Asia/Karachi'], languages: ['ur', 'ur-PK', 'en-PK'] },
+    { code: 'ID', name: 'Indonesia', iso: 'id', currencyCode: 'IDR', symbol: 'Rp', timezones: ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura', 'Asia/Pontianak'], languages: ['id', 'id-ID'] },
+    { code: 'TR', name: 'Turkey', iso: 'tr', currencyCode: 'TRY', symbol: '₺', timezones: ['Europe/Istanbul', 'Asia/Istanbul'], languages: ['tr', 'tr-TR'] },
+    { code: 'SE', name: 'Sweden', iso: 'se', currencyCode: 'SEK', symbol: 'kr', timezones: ['Europe/Stockholm'], languages: ['sv', 'sv-SE'] },
+    { code: 'CH', name: 'Switzerland', iso: 'ch', currencyCode: 'CHF', symbol: 'CHF', timezones: ['Europe/Zurich'], languages: ['de-CH', 'fr-CH', 'it-CH'] },
+    { code: 'QA', name: 'Qatar', iso: 'qa', currencyCode: 'QAR', symbol: '﷼', timezones: ['Asia/Qatar'], languages: ['ar-QA'] }
+];
+
+/**
+ * Smart Regional Currency Resolver
+ * Evaluates customer origin against Store Launch countries (Global or specific country subset).
+ * E.g. Customer in Bangladesh sees ৳, USA customer sees $, etc.
+ */
+const resolveCustomerRegionAndCurrency = (settings) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const countryParam = (urlParams.get('country') || urlParams.get('region') || urlParams.get('geo') || '').trim().toLowerCase();
+    const currencyParam = (urlParams.get('currency') || urlParams.get('curr') || '').trim();
+    const savedCountry = (localStorage.getItem(`pricelister_customer_selected_country_${currentWorkspaceId}`) || localStorage.getItem('pricelister_customer_selected_country') || '').trim().toLowerCase();
+
+    // 1. Determine Deployed Countries
+    let storeCountries = [];
+    if (Array.isArray(settings.deployCountries) && settings.deployCountries.length > 0) {
+        storeCountries = settings.deployCountries;
+    } else if (settings.deployCountry) {
+        storeCountries = [settings.deployCountry];
+    } else {
+        storeCountries = ['Global'];
+    }
+
+    const isGlobalDeploy = storeCountries.includes('Global') || storeCountries.includes('GLOBAL') || storeCountries.includes('global');
+
+    // Helper: is country allowed
+    const isCountryAllowed = (countryObj) => {
+        if (!countryObj) return false;
+        if (isGlobalDeploy) return true;
+        return storeCountries.some(c => {
+            const clean = String(c || '').trim().toLowerCase();
+            return clean === countryObj.name.toLowerCase() || 
+                   clean === countryObj.code.toLowerCase() || 
+                   clean === countryObj.iso.toLowerCase() ||
+                   (clean === 'usa' && countryObj.code === 'US') ||
+                   (clean === 'uk' && countryObj.code === 'GB');
+        });
+    };
+
+    // 2. Candidate Detection:
+    let detectedObj = null;
+
+    // A. URL Currency Param (?currency=BDT or ?currency=৳)
+    if (currencyParam) {
+        detectedObj = COUNTRY_CURRENCY_DIRECTORY.find(c => 
+            c.currencyCode.toLowerCase() === currencyParam.toLowerCase() || 
+            c.symbol === currencyParam
+        );
+    }
+
+    // B. URL Country Param (?country=bd or ?country=bangladesh or ?country=us)
+    if (!detectedObj && countryParam) {
+        detectedObj = COUNTRY_CURRENCY_DIRECTORY.find(c => 
+            c.name.toLowerCase() === countryParam || 
+            c.code.toLowerCase() === countryParam || 
+            c.iso.toLowerCase() === countryParam ||
+            (countryParam === 'usa' && c.code === 'US') ||
+            (countryParam === 'uk' && c.code === 'GB')
+        );
+    }
+
+    // C. User Saved Selection in LocalStorage
+    if (!detectedObj && savedCountry) {
+        detectedObj = COUNTRY_CURRENCY_DIRECTORY.find(c => 
+            c.name.toLowerCase() === savedCountry || 
+            c.code.toLowerCase() === savedCountry || 
+            c.iso.toLowerCase() === savedCountry
+        );
+    }
+
+    // D. Auto Detect via Timezone
+    if (!detectedObj) {
+        try {
+            const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+            if (userTz) {
+                detectedObj = COUNTRY_CURRENCY_DIRECTORY.find(c => 
+                    (c.timezones || []).some(tz => userTz === tz || userTz.startsWith(tz) || tz.startsWith(userTz))
+                );
+            }
+        } catch (e) {}
+    }
+
+    // E. Auto Detect via Browser Languages
+    if (!detectedObj) {
+        try {
+            const navLangs = navigator.languages || [navigator.language || ''];
+            for (const lang of navLangs) {
+                if (!lang) continue;
+                const cleanLang = lang.trim().toLowerCase();
+                detectedObj = COUNTRY_CURRENCY_DIRECTORY.find(c => 
+                    (c.languages || []).some(l => l.toLowerCase() === cleanLang || cleanLang.startsWith(l.toLowerCase()))
+                );
+                if (detectedObj) break;
+            }
+        } catch (e) {}
+    }
+
+    // 3. Fallback Selection
+    const allowedList = COUNTRY_CURRENCY_DIRECTORY.filter(c => isCountryAllowed(c));
+
+    let finalRegion = null;
+    if (detectedObj && isCountryAllowed(detectedObj)) {
+        finalRegion = detectedObj;
+    } else if (allowedList.length > 0) {
+        finalRegion = allowedList[0];
+    } else {
+        // Fallback default
+        finalRegion = COUNTRY_CURRENCY_DIRECTORY.find(c => c.code === 'US') || {
+            code: 'US',
+            name: 'United States',
+            iso: 'us',
+            currencyCode: 'USD',
+            symbol: settings.currencySymbol || '$'
+        };
+    }
+
+    activeCustomerRegion = finalRegion;
+    settings.currencySymbol = finalRegion.symbol;
+    return finalRegion;
+};
+
+export const BENCHMARK_EXCHANGE_RATES = {
+    'US': { rate: 1.00, currency: 'USD', symbol: '$' },
+    'BD': { rate: 120.00, currency: 'BDT', symbol: '৳' },
+    'IN': { rate: 83.50, currency: 'INR', symbol: '₹' },
+    'CA': { rate: 1.36, currency: 'CAD', symbol: 'CA$' },
+    'GB': { rate: 0.79, currency: 'GBP', symbol: '£' },
+    'AU': { rate: 1.52, currency: 'AUD', symbol: 'AU$' },
+    'DE': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'FR': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'AE': { rate: 3.67, currency: 'AED', symbol: 'د.إ' },
+    'SA': { rate: 3.75, currency: 'SAR', symbol: '﷼' },
+    'SG': { rate: 1.35, currency: 'SGD', symbol: 'S$' },
+    'MY': { rate: 4.70, currency: 'MYR', symbol: 'RM' },
+    'JP': { rate: 155.00, currency: 'JPY', symbol: '¥' },
+    'IT': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'ES': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'BR': { rate: 5.40, currency: 'BRL', symbol: 'R$' },
+    'MX': { rate: 18.20, currency: 'MXN', symbol: 'MX$' },
+    'NL': { rate: 0.92, currency: 'EUR', symbol: '€' },
+    'ZA': { rate: 18.50, currency: 'ZAR', symbol: 'R' },
+    'PK': { rate: 278.00, currency: 'PKR', symbol: '₨' },
+    'ID': { rate: 16200.00, currency: 'IDR', symbol: 'Rp' },
+    'TR': { rate: 32.50, currency: 'TRY', symbol: '₺' },
+    'SE': { rate: 10.60, currency: 'SEK', symbol: 'kr' },
+    'CH': { rate: 0.90, currency: 'CHF', symbol: 'CHF' },
+    'QA': { rate: 3.64, currency: 'QAR', symbol: '﷼' }
+};
+
+/**
+ * Dynamic Currency Converter
+ * Converts base USD amount to active regional currency and applies regional tax
+ */
+export const convertPrice = (amountInUsd) => {
+    const num = Number(amountInUsd) || 0;
+    const regCode = (activeCustomerRegion?.code || 'US').toUpperCase();
+    
+    let rate = 1.0;
+    let taxPct = 0;
+
+    // Currency conversion is active if enabled or if non-USD country is active
+    const isExchangeActive = storeSettings.currencyExchangeEnabled !== false;
+
+    if (isExchangeActive) {
+        taxPct = Math.max(0, Number(storeSettings.defaultTaxPct || 0));
+
+        // 1. Check custom rates if configured by admin for this country
+        if (storeSettings.customCountryRates && storeSettings.customCountryRates[regCode]) {
+            const custom = storeSettings.customCountryRates[regCode];
+            if (custom.rate !== undefined && Number(custom.rate) > 0) {
+                rate = Number(custom.rate);
+            }
+            if (custom.taxPct !== undefined) {
+                taxPct = Number(custom.taxPct);
+            }
+        } else if (BENCHMARK_EXCHANGE_RATES[regCode]) {
+            rate = Number(BENCHMARK_EXCHANGE_RATES[regCode].rate) || 1.0;
+        }
+    }
+
+    const converted = num * rate;
+    const taxAmount = (converted * taxPct) / 100;
+    const finalPrice = converted + taxAmount;
+
+    return { converted, taxAmount, finalPrice, rate, taxPct };
+};
+
+/**
+ * Direct formatter for amounts already in target currency
+ */
+export const formatCurrencyValue = (amount) => {
+    const sym = (activeCustomerRegion?.symbol || storeSettings.currencySymbol || '$').trim();
+    const val = Number(amount) || 0;
+    const formatted = val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const separator = /^[A-Za-z]+$/.test(sym) ? ' ' : '';
     return `${sym}${separator}${formatted}`;
+};
+
+// Helper for formatting USD prices into local currency
+const formatPrice = (amount, isAlreadyConverted = false) => {
+    if (isAlreadyConverted) {
+        return formatCurrencyValue(amount);
+    }
+    const { finalPrice } = convertPrice(amount);
+    return formatCurrencyValue(finalPrice);
 };
 
 const escapeHtml = (str) => {
@@ -185,15 +410,30 @@ const loadStoreSettings = async () => {
         ? merged.announcement.trim() 
         : '';
 
+    const brandingMode = merged.brandingMode || 'PRICELISTER';
+    let storeName = merged.storeName || wsData.name || receiptData["Shop Name"] || 'PriceLister Store';
+    let storeSubtitle = merged.storeSubtitle || wsData.address || receiptData["Address / Subtitle"] || 'Published by PriceLister.';
+
+    if (brandingMode === 'PRICELISTER') {
+        storeName = 'Price Lister Store';
+        storeSubtitle = 'Published by PriceLister.';
+    }
+
     storeSettings = {
         enabled: isPublished,
         isPublished: isPublished,
-        brandingMode: merged.brandingMode || 'PRICELISTER',
-        storeName: merged.storeName || wsData.name || receiptData["Shop Name"] || 'PriceLister Store',
+        brandingMode: brandingMode,
+        storeName: storeName,
+        storeSubtitle: storeSubtitle,
         storeLogo: merged.storeLogo || '',
         workspaceLogo: merged.workspaceLogo || wsData.logoUrl || wsData.imageUri || receiptData["Logo Url"] || '',
         customSlug: merged.customSlug || '',
         deployCountry: merged.deployCountry || 'Global',
+        deployCountries: Array.isArray(merged.deployCountries) && merged.deployCountries.length > 0 ? merged.deployCountries : [merged.deployCountry || 'Global'],
+        currencyExchangeEnabled: merged.currencyExchangeEnabled !== undefined ? Boolean(merged.currencyExchangeEnabled) : false,
+        exchangeMode: merged.exchangeMode || 'AUTO_INTERNATIONAL',
+        defaultTaxPct: Math.max(0, Number(merged.defaultTaxPct || 0)),
+        customCountryRates: merged.customCountryRates || {},
         announcement: cleanAnnouncement,
         termsAndConditions: merged.termsAndConditions || '• Prices are subject to change without prior notice.\n• All orders are confirmed before dispatch.',
         categorySelectionMode: merged.categorySelectionMode || 'ALL',
@@ -201,12 +441,16 @@ const loadStoreSettings = async () => {
         showMrp: merged.showMrp !== undefined ? Boolean(merged.showMrp) : true,
         showStockBadge: merged.showStockBadge !== undefined ? Boolean(merged.showStockBadge) : true,
         whatsappNumber: merged.whatsappNumber || wsData.phone || receiptData["Phone Number"] || '',
+        facebookId: merged.facebookId || merged.facebookUrl || wsData.facebookId || '',
         phone: merged.phone || wsData.phone || receiptData["Phone Number"] || '',
         email: merged.email || wsData.email || '',
         address: merged.address || wsData.address || receiptData["Address / Subtitle"] || '',
         closedMessage: merged.closedMessage || 'Temporary Closed\nShop is temporarily suspended, may start early.',
         currencySymbol: merged.currencySymbol || wsData.currency || wsData.currencySymbol || receiptData["Currency"] || '$'
     };
+
+    // Auto-detect Regional Currency (e.g. Bangladesh -> ৳, USA -> $) based on store launch rules
+    resolveCustomerRegionAndCurrency(storeSettings);
 
     // Update Browser Document Title
     document.title = `${storeSettings.storeName} — Online Product Catalog`;
@@ -338,9 +582,10 @@ const getCartTotals = () => {
     Object.keys(cart).forEach(id => {
         const item = cart[id];
         const qty = item.quantity || 0;
-        const price = Number(item.product.sellingPrice || item.product.salePrice || item.product.price || 0);
+        const rawPrice = Number(item.product.sellingPrice || item.product.salePrice || item.product.price || 0);
+        const { finalPrice } = convertPrice(rawPrice);
         count += qty;
-        total += (qty * price);
+        total += (qty * finalPrice);
     });
 
     return { count, total };
@@ -357,9 +602,36 @@ const renderCustomerCatalogUI = () => {
         ? storeSettings.storeLogo
         : ((storeSettings.brandingMode === 'WORKSPACE' && storeSettings.workspaceLogo) ? storeSettings.workspaceLogo : 'pricelister_org.png');
 
-    const brandTagline = storeSettings.brandingMode === 'PRICELISTER' 
-        ? 'Verified PriceLister Catalog'
-        : (storeSettings.brandingMode === 'WORKSPACE' ? 'Enterprise Storefront' : 'Online Storefront');
+    // Determine Deployed Countries for Target Range Banner
+    let storeCountries = [];
+    if (Array.isArray(storeSettings.deployCountries) && storeSettings.deployCountries.length > 0) {
+        storeCountries = storeSettings.deployCountries;
+    } else if (storeSettings.deployCountry) {
+        storeCountries = [storeSettings.deployCountry];
+    } else {
+        storeCountries = ['Global'];
+    }
+
+    const isGlobalDeploy = storeCountries.includes('Global') || storeCountries.includes('GLOBAL') || storeCountries.includes('global');
+
+    const allowedRegions = isGlobalDeploy 
+        ? COUNTRY_CURRENCY_DIRECTORY 
+        : COUNTRY_CURRENCY_DIRECTORY.filter(c => {
+            return storeCountries.some(sc => {
+                const clean = String(sc || '').trim().toLowerCase();
+                return clean === c.name.toLowerCase() || 
+                       clean === c.code.toLowerCase() || 
+                       clean === c.iso.toLowerCase() ||
+                       (clean === 'usa' && c.code === 'US') ||
+                       (clean === 'uk' && c.code === 'GB');
+            });
+        });
+
+    const activeRegCode = (activeCustomerRegion?.code || 'US').toUpperCase();
+
+    const brandTagline = storeSettings.storeSubtitle || (storeSettings.brandingMode === 'PRICELISTER' 
+        ? 'Published by PriceLister.' 
+        : (storeSettings.brandingMode === 'WORKSPACE' ? 'Enterprise Storefront' : 'Online Storefront'));
 
     app.innerHTML = `
         <!-- HEADER -->
@@ -384,6 +656,20 @@ const renderCustomerCatalogUI = () => {
                     <button type="button" id="cp-clear-search-btn" class="cp-clear-search" title="Clear">✕</button>
                 </div>
 
+                <!-- Smart Region & Currency Selector Pill -->
+                <button type="button" id="cp-open-region-btn" class="cp-region-pill" title="Selected Region & Currency: ${escapeHtml(activeCustomerRegion?.name || 'Store Region')} (${escapeHtml(activeCustomerRegion?.currencyCode || '')})">
+                    <span>${activeCustomerRegion?.iso ? `<img src="https://flagcdn.com/w20/${activeCustomerRegion.iso}.png" width="16" height="11" style="vertical-align:middle; border-radius:2px;">` : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`}</span>
+                    <span>${escapeHtml(activeCustomerRegion?.symbol || '$')}</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">${escapeHtml(activeCustomerRegion?.currencyCode || '')}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+
+                <!-- Contact Store Trigger Button -->
+                <button type="button" id="cp-open-contact-btn" class="cp-contact-btn" title="Contact store & inquiries">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    <span>Contact Store</span>
+                </button>
+
                 <!-- Shopping Cart Trigger Button -->
                 <button type="button" id="cp-open-cart-btn" class="cp-cart-btn" title="View your shopping cart">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
@@ -393,6 +679,43 @@ const renderCustomerCatalogUI = () => {
                 </button>
             </div>
         </header>
+
+        <!-- TARGET RANGE & REGION DISPATCH BAR -->
+        <div class="cp-target-range-banner">
+            <div class="cp-target-range-inner">
+                <div class="cp-target-range-left">
+                    <span style="display:inline-flex; align-items:center; color:var(--primary);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></span>
+                    <span style="font-weight:700; color:var(--text-primary); font-size:0.8rem;">
+                        ${isGlobalDeploy ? 'Global Dispatch:' : `Target Delivery Range (${allowedRegions.length} Regions):`}
+                    </span>
+                    
+                    ${isGlobalDeploy ? `
+                        <span id="cp-target-global-summary" style="font-size:0.78rem; color:var(--text-secondary);">
+                            Universal Worldwide Catalog • Converted for <strong>${escapeHtml(activeCustomerRegion?.name || 'Local Region')} (${escapeHtml(activeCustomerRegion?.symbol || '$')})</strong>
+                        </span>
+                    ` : `
+                        <div class="cp-target-range-chips">
+                            ${allowedRegions.map(r => {
+                                const isSelected = activeRegCode === r.code;
+                                return `
+                                    <button type="button" class="cp-target-country-chip ${isSelected ? 'active' : ''}" data-code="${r.code}" title="Switch price & currency to ${escapeHtml(r.name)} (${escapeHtml(r.currencyCode)})">
+                                        <span>${r.iso ? `<img src="https://flagcdn.com/w20/${r.iso}.png" width="16" height="11" style="vertical-align:middle; border-radius:2px;">` : `<span style="font-weight:700; font-size:0.75rem;">${r.code}</span>`}</span>
+                                        <span>${escapeHtml(r.name)}</span>
+                                        <span style="opacity:0.8; font-family:monospace;">(${escapeHtml(r.symbol)})</span>
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
+                </div>
+
+                <div style="display:flex; align-items:center; gap:0.4rem;">
+                    <button type="button" id="cp-banner-change-region-btn" class="cp-target-change-btn">
+                        <span style="display:inline-flex; align-items:center; gap:0.35rem;">Currency &amp; Rates (${escapeHtml(activeCustomerRegion?.symbol || '$')}) <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- ANNOUNCEMENT BANNER -->
         ${storeSettings.announcement ? `
@@ -484,9 +807,9 @@ const renderCustomerCatalogUI = () => {
                     </div>
 
                     <div class="cp-cart-actions" style="display:flex; flex-direction:column; gap:0.5rem;">
-                        <button type="button" id="cp-btn-place-order" class="btn btn-primary" style="width:100%; padding:0.75rem; font-size:0.95rem; font-weight:800; display:flex; align-items:center; justify-content:center; gap:0.5rem; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35);">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            Place Order (Send to Workspace)
+                        <button type="button" id="cp-btn-place-order" class="cp-btn-place-order-red" title="Place order to server and WhatsApp automatically">
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <span>PLACE ORDER</span>
                         </button>
 
                         ${storeSettings.whatsappNumber ? `
@@ -698,7 +1021,7 @@ const updateCartHeaderBadge = () => {
     const { count, total } = getCartTotals();
 
     if (badge) badge.textContent = count;
-    if (totalEl) totalEl.textContent = formatPrice(total);
+    if (totalEl) totalEl.textContent = formatCurrencyValue(total);
 };
 
 /**
@@ -714,12 +1037,14 @@ const renderCartDrawerList = () => {
     const { count, total } = getCartTotals();
 
     if (itemsCountEl) itemsCountEl.textContent = `${count} ${count === 1 ? 'item' : 'items'}`;
-    if (grandTotalEl) grandTotalEl.textContent = formatPrice(total);
+    if (grandTotalEl) grandTotalEl.textContent = formatCurrencyValue(total);
 
     if (items.length === 0) {
         list.innerHTML = `
             <div style="text-align: center; padding: 3rem 1rem; color:var(--text-muted);">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🛒</div>
+                <div style="width:56px; height:56px; border-radius:50%; background:var(--surface-100); display:inline-flex; align-items:center; justify-content:center; color:var(--text-muted); margin-bottom:0.75rem;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                </div>
                 <div style="font-weight:600; font-size:1rem; color:var(--text-primary); margin-bottom:0.25rem;">Your Cart is Empty</div>
                 <p style="font-size:0.85rem;">Browse the catalog and add products to calculate your total.</p>
             </div>
@@ -882,27 +1207,39 @@ const setupCatalogEventListeners = () => {
             btnPlaceOrder.disabled = true;
             btnPlaceOrder.innerHTML = `
                 <div style="width:16px; height:16px; border:2px solid #ffffff; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
-                <span>Sending Order to Workspace...</span>
+                <span>PLACING ORDER...</span>
             `;
 
             try {
                 const orderService = getOrderService(currentWorkspaceId);
+                const curSymbol = activeCustomerRegion?.symbol || storeSettings.currencySymbol || '$';
+                const curCode = activeCustomerRegion?.currencyCode || 'USD';
+                const regInfo = convertPrice(1);
 
                 const orderPayload = {
                     customerName: custName,
                     customerPhone: custPhone,
                     customerAddress: custAddress,
                     orderNote: custNote,
-                    currencySymbol: storeSettings.currencySymbol || '$',
-                    items: items.map(it => ({
-                        productId: it.product.id || it.product.uniqueId,
-                        productName: it.product.name,
-                        quantity: Number(it.quantity) || 1,
-                        unitPrice: Number(it.product.sellingPrice || it.product.price || 0),
-                        totalPrice: (Number(it.quantity) || 1) * Number(it.product.sellingPrice || it.product.price || 0),
-                        imageUri: it.product.imageUrl || '',
-                        sizeWeight: it.product.size || ''
-                    })),
+                    currencySymbol: curSymbol,
+                    currencyCode: curCode,
+                    exchangeRate: regInfo.rate || 1.0,
+                    taxPct: regInfo.taxPct || 0,
+                    items: items.map(it => {
+                        const rawPrice = Number(it.product.sellingPrice || it.product.price || 0);
+                        const conv = convertPrice(rawPrice);
+                        const qty = Number(it.quantity) || 1;
+                        return {
+                            productId: it.product.id || it.product.uniqueId,
+                            productName: it.product.name,
+                            quantity: qty,
+                            unitPrice: conv.finalPrice,
+                            baseUnitPriceUsd: rawPrice,
+                            totalPrice: qty * conv.finalPrice,
+                            imageUri: it.product.imageUrl || '',
+                            sizeWeight: it.product.size || ''
+                        };
+                    }),
                     subtotal: total,
                     totalAmount: total,
                     status: 'PENDING',
@@ -925,14 +1262,48 @@ const setupCatalogEventListeners = () => {
                 // Display dedicated Order Confirmation Slip Modal
                 showCustomerPlacedOrderSlipModal(createdOrder);
 
+                // AUTOMATICALLY SEND TO WHATSAPP AS WELL
+                if (storeSettings.whatsappNumber) {
+                    try {
+                        let cleanPhone = String(storeSettings.whatsappNumber).replace(/[^0-9]/g, '');
+                        if (!cleanPhone.startsWith('880') && cleanPhone.startsWith('01')) {
+                            cleanPhone = '88' + cleanPhone;
+                        }
+
+                        let msg = `*New Order #${createdOrder.orderNumber || createdOrder.id}*\n`;
+                        msg += `Customer: *${custName}*\n`;
+                        if (custPhone) msg += `*Phone:* ${custPhone}\n`;
+                        msg += `Store: *${storeSettings.storeName}*\n`;
+                        msg += `----------------------------------------\n`;
+                        items.forEach((item, index) => {
+                            const p = item.product;
+                            const price = formatPrice(p.sellingPrice || p.price || 0);
+                            const conv = convertPrice(p.sellingPrice || p.price || 0);
+                            const lineTotal = formatCurrencyValue(item.quantity * conv.finalPrice);
+                            msg += `${index + 1}. *${p.name}* ${p.size ? `(${p.size})` : ''}\n`;
+                            msg += `   Qty: ${item.quantity} × ${price} = *${lineTotal}*\n`;
+                        });
+                        msg += `----------------------------------------\n`;
+                        msg += `*Grand Total: ${formatCurrencyValue(total)}*\n`;
+                        if (custAddress) msg += `*Delivery Address:* ${custAddress}\n`;
+                        if (custNote) msg += `*Note:* ${custNote}\n`;
+                        msg += `\n_Placed via PriceLister Customer Portal_`;
+
+                        const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+                        window.open(waUrl, '_blank');
+                    } catch (waErr) {
+                        console.warn("Auto WhatsApp open warning:", waErr);
+                    }
+                }
+
             } catch (err) {
                 console.error("Order placement error:", err);
                 alert("Could not place order: " + (err.message || 'Please check your connection.'));
             } finally {
                 btnPlaceOrder.disabled = false;
                 btnPlaceOrder.innerHTML = `
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    Place Order (Send to Workspace)
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>PLACE ORDER</span>
                 `;
             }
         });
@@ -954,26 +1325,27 @@ const setupCatalogEventListeners = () => {
             const custNote = document.getElementById('cp-checkout-note')?.value?.trim() || '';
             const { total } = getCartTotals();
 
-            let msg = `🛒 *New Order from ${custName}*\n`;
-            if (custPhone) msg += `📞 *Phone:* ${custPhone}\n`;
+            let msg = `*New Order from ${custName}*\n`;
+            if (custPhone) msg += `*Phone:* ${custPhone}\n`;
             msg += `Store: *${storeSettings.storeName}*\n`;
             msg += `----------------------------------------\n`;
 
             items.forEach((item, index) => {
                 const p = item.product;
                 const price = formatPrice(p.sellingPrice || p.price || 0);
-                const lineTotal = formatPrice(item.quantity * (p.sellingPrice || p.price || 0));
+                const conv = convertPrice(p.sellingPrice || p.price || 0);
+                const lineTotal = formatCurrencyValue(item.quantity * conv.finalPrice);
                 msg += `${index + 1}. *${p.name}* ${p.size ? `(${p.size})` : ''}\n`;
                 msg += `   Qty: ${item.quantity} × ${price} = *${lineTotal}*\n`;
             });
 
             msg += `----------------------------------------\n`;
-            msg += `💰 *Grand Total: ${formatPrice(total)}*\n`;
+            msg += `*Grand Total: ${formatCurrencyValue(total)}*\n`;
             if (custAddress) {
-                msg += `📍 *Delivery Address:* ${custAddress}\n`;
+                msg += `*Delivery Address:* ${custAddress}\n`;
             }
             if (custNote) {
-                msg += `📝 *Note:* ${custNote}\n`;
+                msg += `*Note:* ${custNote}\n`;
             }
             msg += `\n_Generated via PriceLister Customer Portal_`;
 
@@ -1001,13 +1373,472 @@ const setupCatalogEventListeners = () => {
         });
     }
 
+    // Region & Currency Switcher Trigger
+    const btnOpenRegion = document.getElementById('cp-open-region-btn');
+    if (btnOpenRegion) {
+        btnOpenRegion.addEventListener('click', () => {
+            showCustomerRegionSwitcherModal();
+        });
+    }
+
+    const btnBannerChangeRegion = document.getElementById('cp-banner-change-region-btn');
+    if (btnBannerChangeRegion) {
+        btnBannerChangeRegion.addEventListener('click', () => {
+            showCustomerRegionSwitcherModal();
+        });
+    }
+
+    // Target Range Country Chips 1-Click Switch
+    document.querySelectorAll('.cp-target-country-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const code = chip.getAttribute('data-code');
+            const chosen = COUNTRY_CURRENCY_DIRECTORY.find(c => c.code === code);
+            if (chosen) {
+                applyCustomerRegion(chosen);
+            }
+        });
+    });
+
+    // Contact Store Modal
+    const btnOpenContact = document.getElementById('cp-open-contact-btn');
+    if (btnOpenContact) {
+        btnOpenContact.addEventListener('click', () => {
+            showCustomerContactModal();
+        });
+    }
+
     // Terms & Conditions Modal
     const btnTerms = document.getElementById('cp-open-terms-btn');
     if (btnTerms) {
         btnTerms.addEventListener('click', () => {
-            openTermsModal();
+            showCustomerTermsModal();
         });
     }
+};
+
+/**
+ * Terms & Policies Modal
+ */
+const showCustomerTermsModal = () => {
+    let container = document.getElementById('cp-terms-modal-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'cp-terms-modal-container';
+        document.body.appendChild(container);
+    }
+
+    container.innerHTML = `
+        <div class="cp-modal-overlay" id="cp-terms-modal-overlay" style="display:flex; animation:fadeIn 0.2s ease;">
+            <div class="cp-modal-card" style="max-width:480px; border-radius:18px; overflow:hidden; box-shadow:0 25px 60px -15px rgba(0,0,0,0.5); animation:modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+                <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:1.25rem 1.5rem; text-align:center; color:#ffffff; position:relative;">
+                    <button type="button" class="cp-cart-close-btn" id="btn-close-terms-modal" style="position:absolute; right:1rem; top:1rem; color:#94a3b8; font-size:1.4rem;">✕</button>
+                    <h3 style="margin:0; font-size:1.2rem; font-weight:800;">Terms &amp; Policies</h3>
+                </div>
+                <div style="padding:1.5rem; background:#ffffff; font-size:0.88rem; color:var(--text-secondary); line-height:1.6; white-space:pre-line; max-height:60vh; overflow-y:auto;">
+                    ${escapeHtml(storeSettings.termsAndConditions || '• Prices subject to change without notice.\n• All orders are confirmed before dispatch.')}
+                </div>
+                <div style="padding:0.85rem 1.25rem; background:var(--surface-50); border-top:1px solid var(--border-color); text-align:center;">
+                    <button type="button" class="btn btn-secondary" id="btn-done-terms-modal" style="width:100%; font-weight:700; padding:0.55rem;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('btn-close-terms-modal')?.addEventListener('click', () => container.remove());
+    document.getElementById('btn-done-terms-modal')?.addEventListener('click', () => container.remove());
+    document.getElementById('cp-terms-modal-overlay')?.addEventListener('click', (e) => {
+        if (e.target.id === 'cp-terms-modal-overlay') {
+            container.remove();
+        }
+    });
+};
+
+/**
+ * Apply Customer Region Selection & Live Recalculation
+ */
+export const applyCustomerRegion = (chosen) => {
+    if (!chosen) return;
+
+    activeCustomerRegion = chosen;
+    storeSettings.currencySymbol = chosen.symbol;
+
+    try {
+        localStorage.setItem(`pricelister_customer_selected_country_${currentWorkspaceId}`, chosen.code);
+        localStorage.setItem('pricelister_customer_selected_country', chosen.code);
+    } catch (e) {}
+
+    // 1. Update Header Button Pill
+    const headerBtn = document.getElementById('cp-open-region-btn');
+    if (headerBtn) {
+        headerBtn.innerHTML = `
+            <span>${chosen.iso ? `<img src="https://flagcdn.com/w20/${chosen.iso}.png" width="16" height="11" style="vertical-align:middle; border-radius:2px;">` : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`}</span>
+            <span>${escapeHtml(chosen.symbol || '$')}</span>
+            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">${escapeHtml(chosen.currencyCode || '')}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        `;
+        headerBtn.title = `Selected Region & Currency: ${chosen.name} (${chosen.currencyCode})`;
+    }
+
+    // 2. Update Target Country Chips Active State
+    document.querySelectorAll('.cp-target-country-chip').forEach(chip => {
+        const cCode = chip.getAttribute('data-code');
+        if (cCode === chosen.code) {
+            chip.classList.add('active');
+        } else {
+            chip.classList.remove('active');
+        }
+    });
+
+    // 3. Update Banner Button Text
+    const bannerBtn = document.getElementById('cp-banner-change-region-btn');
+    if (bannerBtn) {
+        bannerBtn.innerHTML = `<span style="display:inline-flex; align-items:center; gap:0.35rem;">Currency &amp; Rates (${escapeHtml(chosen.symbol || '$')}) <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>`;
+    }
+
+    // 4. Update Global Summary Text if present
+    const globalSummary = document.getElementById('cp-target-global-summary');
+    if (globalSummary) {
+        globalSummary.innerHTML = `Universal Worldwide Catalog • Converted for <strong>${escapeHtml(chosen.name)} (${escapeHtml(chosen.symbol)})</strong>`;
+    }
+
+    // 5. Re-render Product Grid with converted prices & rates
+    renderProductCardsGrid();
+
+    // 6. Update Cart Drawer and Badges
+    updateCartHeaderBadge();
+    renderCartDrawerList();
+
+    // 7. Update QuickView modal if currently open
+    const qvOverlay = document.getElementById('cp-qv-overlay');
+    if (qvOverlay) {
+        const qvPrdId = qvOverlay.getAttribute('data-product-id');
+        if (qvPrdId) {
+            window.cpOpenQuickView(qvPrdId);
+        }
+    }
+};
+
+/**
+ * Regional Currency Switcher Modal
+ * Lets customer choose their country/currency among allowed launch regions.
+ */
+const showCustomerRegionSwitcherModal = () => {
+    let container = document.getElementById('cp-region-modal-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'cp-region-modal-container';
+        document.body.appendChild(container);
+    }
+
+    // 1. Determine Deployed Countries
+    let storeCountries = [];
+    if (Array.isArray(storeSettings.deployCountries) && storeSettings.deployCountries.length > 0) {
+        storeCountries = storeSettings.deployCountries;
+    } else if (storeSettings.deployCountry) {
+        storeCountries = [storeSettings.deployCountry];
+    } else {
+        storeCountries = ['Global'];
+    }
+
+    const isGlobalDeploy = storeCountries.includes('Global') || storeCountries.includes('GLOBAL') || storeCountries.includes('global');
+
+    // Filter allowed countries
+    const allowedRegions = isGlobalDeploy 
+        ? COUNTRY_CURRENCY_DIRECTORY 
+        : COUNTRY_CURRENCY_DIRECTORY.filter(c => {
+            return storeCountries.some(sc => {
+                const clean = String(sc || '').trim().toLowerCase();
+                return clean === c.name.toLowerCase() || 
+                       clean === c.code.toLowerCase() || 
+                       clean === c.iso.toLowerCase() ||
+                       (clean === 'usa' && c.code === 'US') ||
+                       (clean === 'uk' && c.code === 'GB');
+            });
+        });
+
+    const displayList = allowedRegions.length > 0 ? allowedRegions : COUNTRY_CURRENCY_DIRECTORY;
+
+    container.innerHTML = `
+        <div class="cp-modal-overlay" id="cp-region-modal-overlay" style="display:flex; animation:fadeIn 0.2s ease;">
+            <div class="cp-modal-card" style="max-width:500px; border-radius:18px; overflow:hidden; box-shadow:0 25px 60px -15px rgba(0,0,0,0.5); animation:modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+                
+                <!-- HEADER -->
+                <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:1.35rem 1.5rem; text-align:center; color:#ffffff; position:relative;">
+                    <button type="button" class="cp-cart-close-btn" id="btn-close-region-modal" style="position:absolute; right:1rem; top:1rem; color:#94a3b8; font-size:1.4rem;">✕</button>
+                    <div style="width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.1); display:inline-flex; align-items:center; justify-content:center; margin-bottom:0.5rem; color:#ffffff;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    </div>
+                    <h3 style="margin:0 0 0.2rem 0; font-size:1.25rem; font-weight:800;">Select Region &amp; Currency</h3>
+                    <p style="margin:0; font-size:0.82rem; opacity:0.85;">
+                        ${isGlobalDeploy ? 'Global publish active • Prices automatically adjust based on country' : `Store published to ${displayList.length} target region${displayList.length > 1 ? 's' : ''}`}
+                    </p>
+                </div>
+
+                <!-- SEARCH (IF MULTIPLE COUNTRIES) -->
+                ${displayList.length > 4 ? `
+                    <div style="padding:0.75rem 1.25rem 0.25rem; background:#ffffff;">
+                        <input type="text" id="cp-region-search-input" placeholder="Search country or currency (e.g. Bangladesh, USA, EUR)..." class="form-control" style="font-size:0.85rem; height:36px;">
+                    </div>
+                ` : ''}
+
+                <!-- LIST OF REGIONS -->
+                <div id="cp-region-list-container" style="padding:0.85rem 1.25rem; max-height:55vh; overflow-y:auto; display:flex; flex-direction:column; gap:0.55rem; background:#ffffff;">
+                    ${displayList.map(r => {
+                        const isSelected = activeCustomerRegion && (activeCustomerRegion.code === r.code || activeCustomerRegion.name === r.name);
+                        
+                        // Calculate live country rate & tax for preview
+                        let rate = 1.0;
+                        let taxPct = Math.max(0, Number(storeSettings.defaultTaxPct || 0));
+                        if (storeSettings.customCountryRates && storeSettings.customCountryRates[r.code]) {
+                            const custom = storeSettings.customCountryRates[r.code];
+                            if (custom.rate !== undefined && Number(custom.rate) > 0) rate = Number(custom.rate);
+                            if (custom.taxPct !== undefined) taxPct = Number(custom.taxPct);
+                        } else if (BENCHMARK_EXCHANGE_RATES[r.code]) {
+                            rate = Number(BENCHMARK_EXCHANGE_RATES[r.code].rate) || 1.0;
+                        }
+
+                        const preview10 = (10.0 * rate) + ((10.0 * rate * taxPct) / 100);
+
+                        return `
+                            <div class="cp-region-item-row" data-code="${r.code}" data-name="${escapeHtml(r.name)}" data-currency="${escapeHtml(r.currencyCode)}" style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; border-radius:10px; border:1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}; background:${isSelected ? 'rgba(225,29,72,0.04)' : 'var(--surface-50)'}; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.borderColor='var(--primary)';" onmouseout="this.style.borderColor='${isSelected ? 'var(--primary)' : 'var(--border-color)'}';">
+                                <div style="display:flex; align-items:center; gap:0.75rem;">
+                                    <span style="font-size:1.45rem;">${r.flag}</span>
+                                    <div>
+                                        <div style="font-weight:700; font-size:0.9rem; color:var(--text-primary);">${escapeHtml(r.name)}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:0.4rem; margin-top:2px;">
+                                            <span>1 USD = ${rate} ${escapeHtml(r.symbol)}</span>
+                                            ${taxPct > 0 ? `<span style="background:rgba(225,29,72,0.1); color:var(--primary); padding:1px 4px; border-radius:4px; font-weight:700;">+${taxPct}% Tax</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.6rem;">
+                                    <div style="text-align:right;">
+                                        <span style="font-weight:800; font-size:1.05rem; color:var(--primary); font-family:monospace;">${escapeHtml(r.symbol)}</span>
+                                        <div style="font-size:0.7rem; color:var(--text-muted);">$10 = ${escapeHtml(r.symbol)}${preview10.toFixed(2)}</div>
+                                    </div>
+                                    ${isSelected ? `
+                                        <span style="width:22px; height:22px; border-radius:50%; background:var(--primary); color:#ffffff; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800;">✓</span>
+                                    ` : `
+                                        <span style="width:22px; height:22px; border-radius:50%; border:1.5px solid var(--border-color);"></span>
+                                    `}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+
+                <!-- FOOTER -->
+                <div style="padding:0.85rem 1.25rem; background:var(--surface-50); border-top:1px solid var(--border-color); text-align:center;">
+                    <button type="button" class="btn btn-secondary" id="btn-done-region-modal" style="width:100%; font-weight:700; padding:0.55rem;">
+                        Close
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    `;
+
+    // Search filter within modal
+    const searchInp = document.getElementById('cp-region-search-input');
+    if (searchInp) {
+        searchInp.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase().trim();
+            document.querySelectorAll('.cp-region-item-row').forEach(row => {
+                const name = (row.getAttribute('data-name') || '').toLowerCase();
+                const code = (row.getAttribute('data-code') || '').toLowerCase();
+                const curr = (row.getAttribute('data-currency') || '').toLowerCase();
+                const match = name.includes(q) || code.includes(q) || curr.includes(q);
+                row.style.display = match ? 'flex' : 'none';
+            });
+        });
+    }
+
+    // Handle Region Selection Click
+    document.querySelectorAll('.cp-region-item-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const code = row.getAttribute('data-code');
+            const chosen = COUNTRY_CURRENCY_DIRECTORY.find(c => c.code === code);
+            if (chosen) {
+                applyCustomerRegion(chosen);
+                container.remove();
+            }
+        });
+    });
+
+    document.getElementById('btn-close-region-modal')?.addEventListener('click', () => container.remove());
+    document.getElementById('btn-done-region-modal')?.addEventListener('click', () => container.remove());
+    document.getElementById('cp-region-modal-overlay')?.addEventListener('click', (e) => {
+        if (e.target.id === 'cp-region-modal-overlay') {
+            container.remove();
+        }
+    });
+};
+
+/**
+ * Contact Store Modal with WhatsApp, Facebook, Call, Email, and Location
+ */
+const showCustomerContactModal = () => {
+    let container = document.getElementById('cp-contact-modal-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'cp-contact-modal-container';
+        document.body.appendChild(container);
+    }
+
+    const brandLogoSrc = (storeSettings.brandingMode === 'CUSTOM' && storeSettings.storeLogo)
+        ? storeSettings.storeLogo
+        : ((storeSettings.brandingMode === 'WORKSPACE' && storeSettings.workspaceLogo) ? storeSettings.workspaceLogo : 'pricelister_org.png');
+
+    // Resolve Facebook URL
+    let fbLink = '';
+    let fbDisplay = storeSettings.facebookId || '';
+    if (storeSettings.facebookId) {
+        const raw = storeSettings.facebookId.trim();
+        if (raw.startsWith('http://') || raw.startsWith('https://')) {
+            fbLink = raw;
+            fbDisplay = raw.replace(/^https?:\/\/(www\.)?facebook\.com\//i, '@');
+        } else {
+            const handle = raw.replace(/^@/, '');
+            fbLink = `https://facebook.com/${handle}`;
+            fbDisplay = `@${handle}`;
+        }
+    }
+
+    // Resolve WhatsApp Link
+    let cleanWa = (storeSettings.whatsappNumber || '').replace(/[^0-9]/g, '');
+    if (cleanWa && !cleanWa.startsWith('880') && cleanWa.startsWith('01')) {
+        cleanWa = '88' + cleanWa;
+    }
+    const waUrl = cleanWa ? `https://api.whatsapp.com/send?phone=${cleanWa}&text=${encodeURIComponent(`Hello ${storeSettings.storeName}, I am browsing your online catalog and would like to inquire about products.`)}` : '';
+
+    container.innerHTML = `
+        <div class="cp-modal-overlay" id="cp-contact-modal-overlay" style="display:flex; animation:fadeIn 0.2s ease;">
+            <div class="cp-modal-card" style="max-width:520px; border-radius:18px; overflow:hidden; box-shadow:0 25px 60px -15px rgba(0,0,0,0.5); animation:modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+                
+                <!-- HEADER -->
+                <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:1.5rem; text-align:center; color:#ffffff; position:relative;">
+                    <button type="button" class="cp-cart-close-btn" id="btn-close-contact-modal" style="position:absolute; right:1rem; top:1rem; color:#94a3b8; font-size:1.4rem;">✕</button>
+                    
+                    <div style="width:58px; height:58px; border-radius:14px; background:#ffffff; display:flex; align-items:center; justify-content:center; margin:0 auto 0.75rem; padding:4px; box-shadow:0 6px 16px rgba(0,0,0,0.25);">
+                        <img src="${escapeHtml(brandLogoSrc)}" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:10px;" onerror="this.src='pricelister_org.png';">
+                    </div>
+
+                    <h3 style="margin:0 0 0.25rem 0; font-size:1.3rem; font-weight:800; letter-spacing:-0.01em;">${escapeHtml(storeSettings.storeName)}</h3>
+                    <p style="margin:0; font-size:0.84rem; opacity:0.85;">${escapeHtml(storeSettings.storeSubtitle || 'Online Product Catalog')}</p>
+                </div>
+
+                <!-- CONTACT CHANNELS BODY -->
+                <div style="padding:1.5rem; display:flex; flex-direction:column; gap:0.85rem; max-height:65vh; overflow-y:auto; background:#ffffff;">
+                    
+                    <!-- WhatsApp Direct Contact -->
+                    ${cleanWa ? `
+                        <a href="${waUrl}" target="_blank" style="text-decoration:none; display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1.15rem; background:#ecfdf5; border:1.5px solid #a7f3d0; border-radius:12px; transition:all 0.15s ease; color:#065f46;" onmouseover="this.style.background='#d1fae5'; this.style.borderColor='#6ee7b7';" onmouseout="this.style.background='#ecfdf5'; this.style.borderColor='#a7f3d0';">
+                            <div style="display:flex; align-items:center; gap:0.85rem;">
+                                <div style="width:40px; height:40px; border-radius:10px; background:#25d366; color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 3px 10px rgba(37,211,102,0.35);">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 15 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67Z"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; font-size:0.95rem; color:#065f46;">Chat on WhatsApp</div>
+                                    <div style="font-size:0.8rem; color:#059669; font-family:monospace;">${escapeHtml(storeSettings.whatsappNumber)}</div>
+                                </div>
+                            </div>
+                            <span style="font-size:0.85rem; font-weight:700; color:#059669; background:#ffffff; padding:0.35rem 0.75rem; border-radius:999px; border:1px solid #a7f3d0;">Message ↗</span>
+                        </a>
+                    ` : ''}
+
+                    <!-- Facebook Page / Messenger -->
+                    ${fbLink ? `
+                        <a href="${fbLink}" target="_blank" style="text-decoration:none; display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1.15rem; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; transition:all 0.15s ease; color:#1e40af;" onmouseover="this.style.background='#dbeafe'; this.style.borderColor='#93c5fd';" onmouseout="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe';">
+                            <div style="display:flex; align-items:center; gap:0.85rem;">
+                                <div style="width:40px; height:40px; border-radius:10px; background:#1877f2; color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 3px 10px rgba(24,119,242,0.35);">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; font-size:0.95rem; color:#1e40af;">Facebook Page</div>
+                                    <div style="font-size:0.8rem; color:#2563eb;">${escapeHtml(fbDisplay)}</div>
+                                </div>
+                            </div>
+                            <span style="font-size:0.85rem; font-weight:700; color:#2563eb; background:#ffffff; padding:0.35rem 0.75rem; border-radius:999px; border:1px solid #bfdbfe;">Visit Page ↗</span>
+                        </a>
+                    ` : ''}
+
+                    <!-- Direct Phone Call -->
+                    ${storeSettings.phone ? `
+                        <a href="tel:${escapeHtml(storeSettings.phone)}" style="text-decoration:none; display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1.15rem; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px; transition:all 0.15s ease; color:var(--text-primary);" onmouseover="this.style.background='#f1f5f9';" onmouseout="this.style.background='#f8fafc';">
+                            <div style="display:flex; align-items:center; gap:0.85rem;">
+                                <div style="width:40px; height:40px; border-radius:10px; background:#475569; color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">Call Store Direct</div>
+                                    <div style="font-size:0.8rem; color:var(--text-secondary);">${escapeHtml(storeSettings.phone)}</div>
+                                </div>
+                            </div>
+                            <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary); background:#ffffff; padding:0.35rem 0.75rem; border-radius:999px; border:1px solid #cbd5e1; display:inline-flex; align-items:center; gap:0.35rem;">
+                                Call Now
+                            </span>
+                        </a>
+                    ` : ''}
+
+                    <!-- Email Support -->
+                    ${storeSettings.email ? `
+                        <a href="mailto:${escapeHtml(storeSettings.email)}" style="text-decoration:none; display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1.15rem; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px; transition:all 0.15s ease; color:var(--text-primary);" onmouseover="this.style.background='#f1f5f9';" onmouseout="this.style.background='#f8fafc';">
+                            <div style="display:flex; align-items:center; gap:0.85rem;">
+                                <div style="width:40px; height:40px; border-radius:10px; background:#0284c7; color:#ffffff; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">Email Support</div>
+                                    <div style="font-size:0.8rem; color:var(--text-secondary);">${escapeHtml(storeSettings.email)}</div>
+                                </div>
+                            </div>
+                            <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary); background:#ffffff; padding:0.35rem 0.75rem; border-radius:999px; border:1px solid #cbd5e1; display:inline-flex; align-items:center; gap:0.35rem;">
+                                Send Email
+                            </span>
+                        </a>
+                    ` : ''}
+
+                    <!-- Store Location Address -->
+                    ${storeSettings.address ? `
+                        <div style="padding:0.9rem 1.15rem; background:var(--surface-50); border:1px solid var(--border-color); border-radius:12px; display:flex; gap:0.85rem; align-items:flex-start;">
+                            <div style="width:36px; height:36px; border-radius:8px; background:var(--surface-200); color:var(--text-secondary); display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            </div>
+                            <div>
+                                <div style="font-weight:700; font-size:0.9rem; color:var(--text-primary); margin-bottom:0.15rem;">Store Address &amp; Location</div>
+                                <div style="font-size:0.85rem; color:var(--text-secondary); line-height:1.4;">${escapeHtml(storeSettings.address)}</div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${!cleanWa && !fbLink && !storeSettings.phone && !storeSettings.email && !storeSettings.address ? `
+                        <div style="text-align:center; padding:2rem 1rem; color:var(--text-muted);">
+                            <p style="margin:0; font-size:0.9rem;">Store owner has not configured contact details yet.</p>
+                        </div>
+                    ` : ''}
+
+                </div>
+
+                <!-- FOOTER -->
+                <div style="padding:1rem 1.5rem; background:var(--surface-50); border-top:1px solid var(--border-color); text-align:center;">
+                    <button type="button" class="btn btn-secondary" id="btn-done-contact-modal" style="width:100%; font-weight:700; padding:0.6rem;">
+                        Close
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    `;
+
+    document.getElementById('btn-close-contact-modal')?.addEventListener('click', () => container.remove());
+    document.getElementById('btn-done-contact-modal')?.addEventListener('click', () => container.remove());
+    document.getElementById('cp-contact-modal-overlay')?.addEventListener('click', (e) => {
+        if (e.target.id === 'cp-contact-modal-overlay') {
+            container.remove();
+        }
+    });
 };
 
 /**
@@ -1050,7 +1881,7 @@ const showCustomerPlacedOrderSlipModal = (order) => {
                         </div>
                         <div style="text-align:right;">
                             <span style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Order Status</span>
-                            <div style="margin-top:0.2rem;"><span style="background:#fef3c7; color:#b45309; font-weight:700; font-size:0.78rem; padding:0.2rem 0.6rem; border-radius:999px;">🟡 Pending Confirmation</span></div>
+                            <div style="margin-top:0.2rem;"><span style="background:#fef3c7; color:#b45309; font-weight:700; font-size:0.78rem; padding:0.2rem 0.6rem; border-radius:999px; display:inline-flex; align-items:center; gap:0.35rem;"><span style="width:7px; height:7px; border-radius:50%; background:#d97706;"></span> Pending Confirmation</span></div>
                         </div>
                     </div>
 
@@ -1058,8 +1889,8 @@ const showCustomerPlacedOrderSlipModal = (order) => {
                     <div style="background:var(--surface-50); border-radius:10px; padding:0.9rem; margin-bottom:1.25rem; border:1px solid var(--border-color);">
                         <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:0.35rem;">Customer Details</span>
                         <div style="font-weight:700; color:var(--text-primary); font-size:0.95rem;">${escapeHtml(order.customerName)}</div>
-                        <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.2rem;">📞 ${escapeHtml(order.customerPhone)}</div>
-                        <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.2rem;">📍 ${escapeHtml(order.customerAddress)}</div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.2rem;">Phone: ${escapeHtml(order.customerPhone)}</div>
+                        <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.2rem;">Address: ${escapeHtml(order.customerAddress)}</div>
                         ${order.orderNote ? `
                             <div style="font-size:0.8rem; color:#b45309; background:#fef3c7; padding:0.25rem 0.5rem; border-radius:6px; margin-top:0.4rem;">
                                 <strong>Note:</strong> ${escapeHtml(order.orderNote)}
@@ -1153,16 +1984,16 @@ const showCustomerPlacedOrderSlipModal = (order) => {
     const waBtn = document.getElementById('btn-wa-placed-slip');
     if (waBtn) {
         waBtn.addEventListener('click', () => {
-            let msg = `✅ *Confirmed Order #${order.orderNumber || order.id}*\n`;
-            msg += `Customer: *${order.customerName}* (📞 ${order.customerPhone})\n`;
+            let msg = `*Confirmed Order #${order.orderNumber || order.id}*\n`;
+            msg += `Customer: *${order.customerName}* (${order.customerPhone})\n`;
             msg += `Store: *${storeSettings.storeName}*\n`;
             msg += `----------------------------------------\n`;
             (order.items || []).forEach((item, idx) => {
                 msg += `${idx + 1}. *${item.productName}* × ${item.quantity} = ${curr}${Number(item.totalPrice).toFixed(2)}\n`;
             });
             msg += `----------------------------------------\n`;
-            msg += `💰 *Total: ${curr}${Number(order.totalAmount).toFixed(2)}*\n`;
-            if (order.customerAddress) msg += `📍 *Address:* ${order.customerAddress}\n`;
+            msg += `*Total: ${curr}${Number(order.totalAmount).toFixed(2)}*\n`;
+            if (order.customerAddress) msg += `*Address:* ${order.customerAddress}\n`;
 
             let cleanPhone = (storeSettings.whatsappNumber || '').replace(/[^0-9]/g, '');
             if (!cleanPhone.startsWith('880') && cleanPhone.startsWith('01')) cleanPhone = '88' + cleanPhone;

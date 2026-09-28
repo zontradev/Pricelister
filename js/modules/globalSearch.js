@@ -231,7 +231,7 @@ const getStaticActions = (workspaceId) => [
         badge: 'Security',
         badgeClass: 'badge-action',
         handler: () => {
-            window.location.hash = '#/workers';
+            window.location.hash = '#/workspace';
         }
     },
     {

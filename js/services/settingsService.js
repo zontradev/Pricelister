@@ -52,7 +52,21 @@ export const getSettingsService = (workspaceId) => {
                     name: wsData.name || '',
                     email: wsData.email || '',
                     currencySymbol: resolvedCurrency,
-                    currency: resolvedCurrency
+                    currency: resolvedCurrency,
+
+                    // Creation & Audit Trail Data Model
+                    createdAt: wsData.createdAt || null,
+                    createdTimestamp: wsData.createdTimestamp || receiptData["created_timestamp"] || (wsData.createdAt ? new Date(wsData.createdAt).toISOString() : ''),
+                    createdDate: wsData.createdDate || receiptData["created_date"] || '',
+                    creatorEmail: wsData.creatorEmail || wsData.adminEmail || '',
+                    creatorName: wsData.creatorName || wsData.adminName || '',
+                    
+                    updatedAt: wsData.updatedAt || null,
+                    updateTimestamp: wsData.updateTimestamp || receiptData["updated_timestamp"] || '',
+                    updatedDate: wsData.updatedDate || (wsData.updatedAt ? new Date(wsData.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''),
+                    updatorEmail: wsData.updatorEmail || receiptData["updated_by_email"] || '',
+                    updatorName: wsData.updatorName || '',
+                    updatorRole: wsData.updatorRole || ''
                 };
             } catch (err) {
                 console.error("Error fetching workspace settings:", err);
@@ -80,6 +94,15 @@ export const getSettingsService = (workspaceId) => {
                 return true;
             }
 
+            const currentUser = authService.getCurrentUser();
+            const now = new Date();
+            const nowEpoch = now.getTime();
+            const nowIso = now.toISOString();
+            const nowFormatted = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const updatorEmail = currentUser?.email || settings.email || '';
+            const updatorUid = currentUser?.uid || '';
+            const updatorName = currentUser?.displayName || (updatorEmail ? updatorEmail.split('@')[0] : 'Admin');
+
             const receiptRef = doc(db, 'ReceiptData', workspaceId);
             const wsRef = doc(db, 'Workspaces', workspaceId);
 
@@ -92,7 +115,9 @@ export const getSettingsService = (workspaceId) => {
                 "Customer Name": settings.customerName !== undefined ? settings.customerName : true,
                 "Customer number": settings.customerNumber !== undefined ? settings.customerNumber : true,
                 "Currency": cleanCurrency,
-                "last_updated": new Date()
+                "updated_by_email": updatorEmail,
+                "updated_timestamp": nowIso,
+                "last_updated": now
             };
 
             const wsPayload = {
@@ -102,7 +127,16 @@ export const getSettingsService = (workspaceId) => {
                 address: settings.address || '',
                 currency: cleanCurrency,
                 currencySymbol: cleanCurrency,
-                enableVending: Boolean(settings.enableVending)
+                enableVending: Boolean(settings.enableVending),
+
+                // Audit Trail
+                updatedAt: nowEpoch,
+                updateTimestamp: nowIso,
+                updatedDate: nowFormatted,
+                updatorEmail: updatorEmail,
+                updatorUid: updatorUid,
+                updatorName: updatorName,
+                updatorRole: settings.userRole || 'ADMIN'
             };
 
             await Promise.all([

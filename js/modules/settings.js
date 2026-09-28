@@ -11,25 +11,28 @@ import { openCurrencyPickerModal } from './currencyModal.js';
 
 const db = getFirestore(firebaseApp);
 
+const escapeHtml = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
 export const renderSettings = async (container, workspaceId) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return;
 
     container.innerHTML = `
-        <div class="module-header" style="margin-bottom: 2rem;">
-            <h2>Workspace Settings</h2>
-            <div id="settings-role-badge"></div>
-        </div>
-        <div id="settings-content-area">
-            <div class="skeleton-shimmer" style="width: 100%; height: 260px; border-radius: var(--radius-card);"></div>
+        <div style="display:flex; justify-content:center; align-items:center; min-height:350px;">
+            <div class="spinner"></div>
         </div>
     `;
 
-    const contentArea = container.querySelector('#settings-content-area');
-    const roleBadgeArea = container.querySelector('#settings-role-badge');
-
     try {
-        // 1. DETERMINE USER'S ROLE IN THIS WORKSPACE
+        // 1. DETERMINE USER ROLE
         let userRole = 'WORKER';
         let isAdmin = false;
         let isCoAdmin = false;
@@ -38,19 +41,16 @@ export const renderSettings = async (container, workspaceId) => {
         const wsSnap = await getDoc(wsRef);
         const wsData = wsSnap.exists() ? wsSnap.data() : {};
 
-        // Check if user is Workspace Creator / Owner
         if (wsData.adminId === currentUser.uid || workspaceId === currentUser.uid) {
             userRole = 'CREATOR_ADMIN';
             isAdmin = true;
         } else {
-            // Check Members subcollection
             for (const sub of ['Members', 'members']) {
                 try {
                     const mRef = doc(db, 'Workspaces', workspaceId, sub, currentUser.uid);
                     const mSnap = await getDoc(mRef);
                     if (mSnap.exists()) {
-                        const mData = mSnap.data();
-                        userRole = (mData.role || 'WORKER').toUpperCase();
+                        userRole = (mSnap.data().role || 'WORKER').toUpperCase();
                         break;
                     }
                     if (currentUser.email) {
@@ -61,7 +61,7 @@ export const renderSettings = async (container, workspaceId) => {
                             break;
                         }
                     }
-                } catch(e) {}
+                } catch (e) {}
             }
 
             if (userRole === 'CREATOR_ADMIN' || userRole === 'ADMIN' || userRole === 'CREATOR') {
@@ -73,27 +73,26 @@ export const renderSettings = async (container, workspaceId) => {
 
         const canAccessSettings = isAdmin || isCoAdmin;
 
-        // 2. WORKER RESTRICTION CHECK
+        // Worker Restriction View
         if (!canAccessSettings) {
-            contentArea.innerHTML = `
-                <div class="card" style="padding: 3rem 2rem; text-align: center; max-width: 540px; margin: 2rem auto; border-radius: var(--radius-card); box-shadow: var(--shadow-elevated);">
-                    <div style="color: var(--primary); margin-bottom: 1.25rem;">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            container.innerHTML = `
+                <div style="max-width: 560px; margin: 3rem auto; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 20px; padding: 2.5rem; text-align: center; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.06);">
+                    <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(225, 29, 72, 0.08); color: #e11d48; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     </div>
-                    <h3 style="color: var(--text-primary); margin-bottom: 0.75rem; font-size: 1.4rem;">Access Restricted</h3>
-                    <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
-                        Workspace Settings and Vending Mode configurations can only be managed by <strong>Admins</strong> and <strong>Co-Admins</strong>.
-                        Workers have operational permissions and cannot alter workspace preferences.
+                    <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">Access Restricted</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; margin-bottom: 1.5rem;">
+                        Advanced Workspace Settings, Currency Configurations, and Inventory Automation can only be configured by <strong>Admins</strong> and <strong>Co-Admins</strong>.
                     </p>
                     <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-                        <button class="btn btn-secondary" onclick="window.location.hash='#/overview'">Back to Overview</button>
-                        <button class="btn btn-primary" onclick="window.location.hash='#/invoices/customer'">Create Invoices</button>
-                        <button id="btn-worker-leave-ws" class="btn btn-outline" style="color:var(--danger); border-color:var(--danger);">Leave Workspace</button>
+                        <button class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="border-radius: 8px;">Workspace Hub</button>
+                        <button class="btn btn-primary" onclick="window.location.hash='#/invoices/customer'" style="border-radius: 8px;">Create Invoices</button>
+                        <button id="btn-worker-leave-ws" class="btn btn-outline" style="color:#e11d48; border-color:rgba(225,29,72,0.3); border-radius: 8px;">Leave Workspace</button>
                     </div>
                 </div>
             `;
 
-            contentArea.querySelector('#btn-worker-leave-ws')?.addEventListener('click', async () => {
+            container.querySelector('#btn-worker-leave-ws')?.addEventListener('click', async () => {
                 if (await showAlert.confirm("Are you sure you want to leave this workspace? You will lose access to its products and invoices.")) {
                     try {
                         await firestoreService.leaveWorkspace(workspaceId, currentUser);
@@ -107,375 +106,610 @@ export const renderSettings = async (container, workspaceId) => {
             return;
         }
 
-        // Show Admin/Co-Admin badge in header
-        if (roleBadgeArea) {
-            roleBadgeArea.innerHTML = getRoleBadgeHtml(isAdmin ? 'CREATOR_ADMIN' : 'CO_ADMIN');
-        }
-
-        // 3. LOAD WORKSPACE SETTINGS FROM SERVER (ReceiptData & Workspaces)
+        // 2. LOAD SERVER SETTINGS
         const settingsService = getSettingsService(workspaceId);
         const currentSettings = await settingsService.getWorkspaceSettings();
 
-        // 4. RENDER SETTINGS INTERFACE
-        contentArea.innerHTML = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.75rem; max-width: 1000px;">
+        const wsDisplayName = currentSettings.name || wsData.name || 'PriceLister Workspace';
+        const wsIdText = wsData.workspaceId || wsData.id || workspaceId;
+        const wsEmail = currentSettings.email || wsData.email || currentUser.email || '';
+        const wsPhone = currentSettings.phone || wsData.phone || '';
+        const wsAddress = currentSettings.address || wsData.address || '';
+        const wsShopName = currentSettings.shopName || wsDisplayName;
+        const wsEndMsg = currentSettings.endMessage || 'Thank you for your business!';
+        const wsCurrency = (currentSettings.currencySymbol || '$').trim().substring(0, 3) || '$';
+        const isVendingActive = Boolean(currentSettings.enableVending);
+        const printCustName = Boolean(currentSettings.customerName);
+        const printCustPhone = Boolean(currentSettings.customerNumber);
+        const logoUrl = wsData.logoUrl || '';
+
+        const wsCreatedDate = currentSettings.createdDate || (wsData.createdAt ? new Date(wsData.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent');
+        const wsCreatedTimestamp = currentSettings.createdTimestamp || (wsData.createdAt ? new Date(wsData.createdAt).toISOString() : '');
+        const wsCreatorEmail = currentSettings.creatorEmail || wsData.creatorEmail || wsData.adminEmail || currentUser.email || '';
+
+        const wsUpdatedDate = currentSettings.updatedDate || (wsData.updatedAt ? new Date(wsData.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent');
+        const wsUpdateTimestamp = currentSettings.updateTimestamp || (wsData.updatedAt ? new Date(wsData.updatedAt).toISOString() : '');
+        const wsUpdatorEmail = currentSettings.updatorEmail || wsData.updatorEmail || wsCreatorEmail;
+
+        // Render Advanced Settings Interface
+        container.innerHTML = `
+            <div class="advanced-settings-wrapper" style="max-width: 1180px; margin: 0 auto; padding-bottom: 5rem;">
                 
-                <!-- VENDING MODE (PRIMARY FEATURE) -->
-                <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); grid-column: 1 / -1; border-left: 4px solid var(--primary); background: rgba(255, 255, 255, 0.95);">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 260px;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary);"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
-                                <h3 style="margin: 0; font-size: 1.2rem; color: var(--text-primary); font-weight: 700;">Vending Mode (Inventory Automation)</h3>
+                <!-- TOP HEADER HERO -->
+                <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 20px; padding: 1.75rem 2rem; margin-bottom: 1.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem; box-shadow: 0 8px 30px -5px rgba(0,0,0,0.03);">
+                    <div style="display: flex; align-items: center; gap: 1.15rem;">
+                        <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; font-weight: 800; box-shadow: 0 6px 18px rgba(225, 29, 72, 0.25); flex-shrink: 0;">
+                            ${escapeHtml((wsDisplayName.charAt(0) || 'W').toUpperCase())}
+                        </div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <h2 style="margin: 0; font-size: 1.45rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">Advanced Workspace Settings</h2>
+                                <span style="font-size: 0.72rem; font-weight: 700; padding: 0.18rem 0.6rem; border-radius: 9999px; background: ${isAdmin ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(22, 163, 74, 0.12)'}; color: ${isAdmin ? '#ffffff' : '#16a34a'}; border: 1px solid ${isAdmin ? 'rgba(5, 150, 105, 0.8)' : 'rgba(22, 163, 74, 0.35)'};">
+                                    ${isAdmin ? 'Creator Admin' : 'Co-Admin'}
+                                </span>
                             </div>
-                            <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin: 0;">
-                                Enable real-time factual sales tracking. When active, every created invoice automatically deducts product items from your live stock.
+                            <p style="margin: 0.25rem 0 0 0; color: var(--text-muted); font-size: 0.88rem;">
+                                Manage business credentials, regional currency, automated stock deductions, receipt templates, and data backups.
                             </p>
                         </div>
-
-                        <div>
-                            <label class="switch-container">
-                                <input type="checkbox" id="set-vending" class="switch-input" ${currentSettings.enableVending ? 'checked' : ''}>
-                                <span class="switch-track">
-                                    <span class="switch-thumb"></span>
-                                </span>
-                                <span id="vending-status-label" style="font-size: 0.9rem; font-weight: 600; color: ${currentSettings.enableVending ? 'var(--primary)' : 'var(--text-muted)'}; min-width: 80px;">
-                                    ${currentSettings.enableVending ? 'ENABLED' : 'DISABLED'}
-                                </span>
-                            </label>
-                        </div>
                     </div>
 
-                    <div id="vending-info-banner" style="margin-top: 1.25rem; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.85rem; background: ${currentSettings.enableVending ? 'rgba(16, 185, 129, 0.08)' : 'rgba(241, 245, 249, 0.8)'}; border: 1px solid ${currentSettings.enableVending ? 'rgba(16, 185, 129, 0.25)' : 'var(--border-color)'}; color: ${currentSettings.enableVending ? '#047857' : 'var(--text-secondary)'};">
-                        ${currentSettings.enableVending 
-                            ? '<strong>Active Mode:</strong> Products added to customer or business invoices will reduce inventory quantity in real-time on save.' 
-                            : '<strong>Standard Mode:</strong> Invoices are generated as records only. Product quantities in inventory will remain unaffected.'
-                        }
+                    <div style="display: flex; gap: 0.65rem; align-items: center;">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; font-weight: 600; padding: 0.55rem 1rem; border-radius: 10px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            <span>Workspace Hub</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- CURRENCY CONFIGURATION CARD -->
-                <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); grid-column: 1 / -1; background: #ffffff;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; flex-wrap: wrap;">
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary);"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                                <h3 style="margin: 0; font-size: 1.2rem; color: var(--text-primary); font-weight: 700;">Workspace Currency</h3>
-                            </div>
-                            <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.88rem;">
-                                Choose standard country currency or enter custom text (max 3 characters).
-                            </p>
-                        </div>
-
-                        <!-- Live formatted preview -->
-                        <div style="background: var(--surface-50); border: 1px solid var(--border-color); padding: 0.45rem 1rem; border-radius: 10px; font-size: 0.88rem; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 500;">Live Sample:</span>
-                            <strong id="currency-live-preview" style="color: var(--primary); font-family: monospace; font-size: 1.05rem;">${currentSettings.currencySymbol || '$'} 1,250.00</strong>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; align-items: flex-end;">
-                        <div>
-                            <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; display: block; color: var(--text-primary);">
-                                Currency Symbol (Max 3 Characters)
-                            </label>
-                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                <input type="text" id="set-currency" class="form-control" maxlength="3" value="${currentSettings.currencySymbol || '$'}" placeholder="e.g. $" style="font-family: monospace; font-weight: 700; font-size: 1.15rem; width: 100px; text-align: center; letter-spacing: 1px;">
-                                <button type="button" id="btn-find-currency" class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.85rem; padding: 0.65rem 0.9rem; white-space: nowrap;">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                    Find Country / Symbol
-                                </button>
-                                <button type="button" id="btn-change-currency" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.85rem; padding: 0.65rem 1.15rem; white-space: nowrap;" disabled>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                                    Change Currency
-                                </button>
-                            </div>
-                            <small style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.35rem; display: block;">
-                                You can type custom letters (e.g. <code>৳</code>, <code>$</code>, <code>EUR</code>, <code>AED</code>) or click search to select a country.
-                            </small>
-                        </div>
-
-                        <!-- Popular shortcuts -->
-                        <div>
-                            <label style="font-weight: 600; font-size: 0.8rem; margin-bottom: 0.4rem; display: block; color: var(--text-muted);">
-                                Popular Quick Presets:
-                            </label>
-                            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;" id="currency-presets-container">
-                                <button type="button" class="btn-currency-quick" data-symbol="$" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇺🇸 $ USD</button>
-                                <button type="button" class="btn-currency-quick" data-symbol="৳" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇧🇩 ৳ BDT</button>
-                                <button type="button" class="btn-currency-quick" data-symbol="€" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇪🇺 € EUR</button>
-                                <button type="button" class="btn-currency-quick" data-symbol="£" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇬🇧 £ GBP</button>
-                                <button type="button" class="btn-currency-quick" data-symbol="₹" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇮🇳 ₹ INR</button>
-                                <button type="button" class="btn-currency-quick" data-symbol="د.إ" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇦🇪 د.إ AED</button>
-                                <button type="button" class="btn-currency-quick" data-symbol="¥" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; font-weight: 600; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇯🇵 ¥ JPY</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- GENERAL WORKSPACE INFO -->
-                <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card);">
-                    <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-size: 1.1rem; color: var(--text-primary);">
-                        General Workspace
-                    </h3>
-                    
-                    <form id="settings-general-form" style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div class="form-group">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Workspace Name *</label>
-                            <input type="text" id="set-name" class="form-control" value="${currentSettings.name || wsData.name || ''}" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Business Email *</label>
-                            <input type="email" id="set-email" class="form-control" value="${currentSettings.email || wsData.email || ''}" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Business Phone</label>
-                            <input type="text" id="set-phone" class="form-control" value="${currentSettings.phone || wsData.phone || ''}">
-                        </div>
-
-                        <div class="form-group">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Business Address</label>
-                            <textarea id="set-address" class="form-control" style="min-height: 80px;">${currentSettings.address || wsData.address || ''}</textarea>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- RECEIPT & INVOICE PRINT SETTINGS -->
-                <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card);">
-                    <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; font-size: 1.1rem; color: var(--text-primary);">
-                        Receipt & Print Details
-                    </h3>
-
-                    <form id="settings-receipt-form" style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div class="form-group">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Shop / Display Name</label>
-                            <input type="text" id="set-shop-name" class="form-control" value="${currentSettings.shopName || ''}" placeholder="Appears at top of receipts">
-                        </div>
-
-                        <div class="form-group">
-                            <label style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.35rem; display: block;">Receipt End Message</label>
-                            <input type="text" id="set-end-msg" class="form-control" value="${currentSettings.endMessage || ''}" placeholder="e.g. Thank you for your business!">
-                        </div>
-
-                        <div class="form-group" style="margin-top: 0.5rem;">
-                            <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.9rem;">
-                                <input type="checkbox" id="set-show-cust-name" ${currentSettings.customerName ? 'checked' : ''}>
-                                <span>Print Customer Name on Receipts</span>
-                            </label>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.9rem;">
-                                <input type="checkbox" id="set-show-cust-num" ${currentSettings.customerNumber ? 'checked' : ''}>
-                                <span>Print Customer Phone on Receipts</span>
-                            </label>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- 4. DATA MANAGEMENT & EXPORT / IMPORT -->
-                <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); grid-column: 1 / -1; background: var(--surface-0); border: 1px solid var(--border-color);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:1rem;">
-                        <div>
-                            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.25rem 0; display:flex; align-items:center; gap:0.5rem;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                Data Management & Excel Tools
-                            </h3>
-                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Import spreadsheets with auto-category grouping, generate custom Excel & PDF reports, or download full backups.</p>
-                        </div>
-                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                            <button id="btn-settings-headers-template" class="btn btn-secondary" style="font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;" title="Download blank Excel sheet with column headers only">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                Headers Only
-                            </button>
-                            <button id="btn-settings-sample-template" class="btn btn-secondary" style="font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;" title="Download Excel template with sample grocery items">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                Example File
-                            </button>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
-                        <div style="background: var(--surface-50); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
-                            <div>
-                                <strong style="display:block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">Market Inserter (Grid)</strong>
-                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Insert up to 250 products at once in a fast spreadsheet grid with live image picking & duplicate protection.</p>
-                            </div>
-                            <button id="btn-settings-market-inserter" class="btn btn-primary" style="font-size: 0.85rem; font-weight: 700; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
-                                Launch Market Inserter
-                            </button>
-                        </div>
-
-                        <div style="background: var(--surface-50); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
-                            <div>
-                                <strong style="display:block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">Excel & CSV Import</strong>
-                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Batch add products with automatic column detection, category clustering, and custom color assignment.</p>
-                            </div>
-                            <button id="btn-settings-import-excel" class="btn btn-secondary" style="font-size: 0.85rem; font-weight: 600; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                Launch Import Tool
-                            </button>
-                        </div>
-
-                        <div style="background: var(--surface-50); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
-                            <div>
-                                <strong style="display:block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">Custom Data Exporter</strong>
-                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Export customizable Excel spreadsheets, printable PDF price lists with catalogs, or full JSON backups.</p>
-                            </div>
-                            <button id="btn-settings-export-data" class="btn btn-secondary" style="font-size: 0.85rem; font-weight: 600; width: 100%; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                Launch Exporter
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SAVE ACTIONS -->
-                <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem;">
-                    <button type="button" id="btn-save-settings" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;" disabled>
-                        Save Workspace Settings
+                <!-- NAVIGATION TABS -->
+                <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1.5px solid var(--border-color);" id="settings-tabs-nav">
+                    <button type="button" class="settings-tab-btn active" data-tab="tab-general" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: 1px solid var(--border-color); background: #ffffff; color: var(--text-primary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                        <span>General & Brand</span>
+                    </button>
+                    <button type="button" class="settings-tab-btn" data-tab="tab-currency" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                        <span>Currency & Region</span>
+                    </button>
+                    <button type="button" class="settings-tab-btn" data-tab="tab-receipts" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        <span>Receipts & Invoicing</span>
+                    </button>
+                    <button type="button" class="settings-tab-btn" data-tab="tab-vending" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                        <span>Automation & Stock</span>
+                    </button>
+                    <button type="button" class="settings-tab-btn" data-tab="tab-data" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>Data & Excel Tools</span>
+                    </button>
+                    <button type="button" class="settings-tab-btn" data-tab="tab-security" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <span>Security & Audit</span>
                     </button>
                 </div>
 
-                <!-- WORKSPACE MANAGEMENT & DELETION -->
-                ${isAdmin ? `
-                    <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); grid-column: 1 / -1; border: 1px solid rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.02); margin-top: 1rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 260px;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--danger);"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                    <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary); font-weight: 700;">Delete Workspace</h3>
+                <!-- ======================================================== -->
+                <!-- TAB 1: GENERAL & BRAND -->
+                <!-- ======================================================== -->
+                <div class="settings-tab-pane active" id="tab-general">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+                        
+                        <!-- Card: Identity & Details -->
+                        <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                            <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(225, 29, 72, 0.08); color: #e11d48; display: flex; align-items: center; justify-content: center;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                 </div>
-                                <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5; margin: 0;">
-                                    Permanently destroy this workspace and wipe all products, invoices, categories, clients, settings, and cloud media from the server.
-                                    <br><strong style="color:var(--text-primary);">Requirement:</strong> Remove all active workers inside Workspace before deleting.
-                                </p>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">Workspace Credentials</h3>
                             </div>
+
+                            <form id="settings-general-form" style="display: flex; flex-direction: column; gap: 1.15rem;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Workspace Name *</label>
+                                    <input type="text" id="set-name" class="form-control" value="${escapeHtml(wsDisplayName)}" required style="border-radius: 8px; font-weight: 600;">
+                                    <small style="color: var(--text-muted); font-size: 0.75rem;">Visible to all invited workers and displayed on customer portals.</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Business Email *</label>
+                                    <input type="email" id="set-email" class="form-control" value="${escapeHtml(wsEmail)}" required style="border-radius: 8px;">
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Business Phone / WhatsApp</label>
+                                    <input type="text" id="set-phone" class="form-control" value="${escapeHtml(wsPhone)}" placeholder="+1 (555) 000-0000" style="border-radius: 8px;">
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Registered Address</label>
+                                    <textarea id="set-address" class="form-control" rows="3" placeholder="Suite, Street, City, Country" style="border-radius: 8px; font-family: inherit;">${escapeHtml(wsAddress)}</textarea>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Card: Workspace ID & Audit Trail -->
+                        <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between;">
                             <div>
-                                <button type="button" id="btn-delete-workspace" class="btn" style="background: var(--danger); color: white; font-weight: 700; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25); cursor: pointer;">
-                                    Delete Entire Workspace
-                                </button>
+                                <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                    </div>
+                                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">Identifier & Audit Trail</h3>
+                                </div>
+
+                                <div style="background: var(--surface-50); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem;">
+                                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.4rem;">Unique Workspace ID</div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                                        <code style="font-family: monospace; font-size: 0.95rem; font-weight: 800; color: var(--primary);">${escapeHtml(wsIdText)}</code>
+                                        <button type="button" id="btn-copy-settings-ws-id" class="btn btn-sm btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px;">
+                                            Copy ID
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Audit Metadata -->
+                                <div style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.15rem; font-size: 0.82rem; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <div>
+                                        <strong style="color: var(--text-primary);">Created Date:</strong> ${escapeHtml(wsCreatedDate)}
+                                        ${wsCreatedTimestamp ? `<div style="font-family:monospace; font-size:0.72rem; color:var(--text-muted);">${escapeHtml(wsCreatedTimestamp)}</div>` : ''}
+                                    </div>
+                                    <div style="border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                                        <strong style="color: var(--text-primary);">Last Updated:</strong> ${escapeHtml(wsUpdatedDate)}
+                                        ${wsUpdateTimestamp ? `<div style="font-family:monospace; font-size:0.72rem; color:var(--text-muted);">${escapeHtml(wsUpdateTimestamp)}</div>` : ''}
+                                    </div>
+                                    <div style="border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                                        <strong style="color: var(--text-primary);">Last Modified By:</strong>
+                                        <span style="font-weight:600; color:#e11d48;"> ${escapeHtml(wsUpdatorEmail || 'Admin')}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: rgba(225, 29, 72, 0.04); border: 1px solid rgba(225, 29, 72, 0.15); border-radius: 10px; padding: 0.85rem 1rem; margin-top: 1.5rem; display: flex; align-items: center; gap: 0.65rem;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                <span style="font-size: 0.8rem; color: var(--text-secondary);">Enterprise multi-tenant isolation with real-time Firestore sync.</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- TAB 2: CURRENCY & REGION -->
+                <!-- ======================================================== -->
+                <div class="settings-tab-pane" id="tab-currency" style="display: none;">
+                    <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                    Workspace Currency Configuration
+                                </h3>
+                                <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.88rem;">Select a country currency standard or type custom symbol characters (max 3 letters).</p>
+                            </div>
+
+                            <!-- Live Sample Badge -->
+                            <div style="background: rgba(225, 29, 72, 0.06); border: 1.5px solid rgba(225, 29, 72, 0.2); padding: 0.55rem 1.15rem; border-radius: 12px; display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="font-size: 0.78rem; font-weight: 700; color: #be123c; text-transform: uppercase;">Live Sample:</span>
+                                <strong id="currency-live-preview" style="color: #e11d48; font-family: monospace; font-size: 1.15rem; font-weight: 800;">${escapeHtml(wsCurrency)} 1,450.00</strong>
+                            </div>
+                        </div>
+
+                        <!-- Input & Buttons Grid -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; align-items: flex-end; margin-bottom: 1.5rem;">
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); margin-bottom: 0.4rem; display: block;">
+                                    Custom Currency Symbol (Max 3 Chars)
+                                </label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                    <input type="text" id="set-currency" class="form-control" maxlength="3" value="${escapeHtml(wsCurrency)}" placeholder="$" style="font-family: monospace; font-weight: 800; font-size: 1.25rem; width: 110px; text-align: center; border-radius: 10px; color: var(--primary);">
+                                    <button type="button" id="btn-find-currency" class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 700; font-size: 0.85rem; padding: 0.65rem 1rem; border-radius: 10px;">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                        Find Country Symbol
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Popular Quick Presets -->
+                            <div>
+                                <label style="font-weight: 700; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.45rem; display: block;">
+                                    Instant 1-Click Presets:
+                                </label>
+                                <div style="display: flex; gap: 0.45rem; flex-wrap: wrap;" id="currency-presets-container">
+                                    <button type="button" class="btn-currency-quick" data-symbol="$" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">$ USD</button>
+                                    <button type="button" class="btn-currency-quick" data-symbol="৳" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">৳ BDT</button>
+                                    <button type="button" class="btn-currency-quick" data-symbol="€" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">€ EUR</button>
+                                    <button type="button" class="btn-currency-quick" data-symbol="£" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">£ GBP</button>
+                                    <button type="button" class="btn-currency-quick" data-symbol="₹" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">₹ INR</button>
+                                    <button type="button" class="btn-currency-quick" data-symbol="AED" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">AED</button>
+                                    <button type="button" class="btn-currency-quick" data-symbol="¥" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">¥ JPY</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                ` : `
-                    <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); grid-column: 1 / -1; border: 1px solid rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.02); margin-top: 1rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 260px;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--danger);"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                                    <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary); font-weight: 700;">Leave Workspace</h3>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- TAB 3: RECEIPTS & INVOICING -->
+                <!-- ======================================================== -->
+                <div class="settings-tab-pane" id="tab-receipts" style="display: none;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+                        
+                        <!-- Left Form -->
+                        <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                            <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(225, 29, 72, 0.08); color: #e11d48; display: flex; align-items: center; justify-content: center;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                                 </div>
-                                <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5; margin: 0;">
-                                    Disconnect your account from this workspace. You will be redirected to create or join a new workspace.
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">Printout & Ticket Details</h3>
+                            </div>
+
+                            <form id="settings-receipt-form" style="display: flex; flex-direction: column; gap: 1.15rem;">
+                                <div class="form-group">
+                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Shop / Header Name</label>
+                                    <input type="text" id="set-shop-name" class="form-control" value="${escapeHtml(wsShopName)}" placeholder="e.g. Apex Superstore" style="border-radius: 8px;">
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Receipt Footer Note</label>
+                                    <input type="text" id="set-end-msg" class="form-control" value="${escapeHtml(wsEndMsg)}" placeholder="e.g. Goods once sold are returnable within 7 days." style="border-radius: 8px;">
+                                </div>
+
+                                <div style="background: var(--surface-50); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1rem; margin-top: 0.5rem;">
+                                    <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.65rem;">Customer Information on Invoices</div>
+                                    
+                                    <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.86rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">
+                                        <input type="checkbox" id="set-show-cust-name" ${printCustName ? 'checked' : ''} style="width:16px; height:16px; accent-color:#e11d48;">
+                                        <span>Print Customer Name on POS Invoices</span>
+                                    </label>
+
+                                    <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.86rem; font-weight: 600; color: var(--text-primary);">
+                                        <input type="checkbox" id="set-show-cust-num" ${printCustPhone ? 'checked' : ''} style="width:16px; height:16px; accent-color:#e11d48;">
+                                        <span>Print Customer Phone Number on Receipts</span>
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Right: Interactive Live Ticket Box -->
+                        <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; flex-direction: column;">
+                            <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.75rem;">Interactive Live Receipt Preview</div>
+                            
+                            <div style="background: #fafafa; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 1.5rem; font-family: monospace; font-size: 0.82rem; color: #1e293b; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <div style="text-align: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 0.75rem; margin-bottom: 0.75rem;">
+                                        <strong id="preview-shop-title" style="font-size: 1rem; font-weight: 800; display: block; text-transform: uppercase;">${escapeHtml(wsShopName)}</strong>
+                                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">INVOICE #INV-2026-0042</div>
+                                        <div style="font-size: 0.72rem; color: #64748b;">${new Date().toLocaleDateString()}</div>
+                                    </div>
+
+                                    <div id="preview-cust-meta" style="margin-bottom: 0.75rem; font-size: 0.75rem; color: #475569;">
+                                        ${printCustName ? '<div>Customer: Alex Rivera</div>' : ''}
+                                        ${printCustPhone ? '<div>Phone: +1 555-0199</div>' : ''}
+                                    </div>
+
+                                    <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #cbd5e1; padding-bottom: 0.4rem; font-weight: 700;">
+                                        <span>ITEM</span>
+                                        <span>QTY</span>
+                                        <span>TOTAL</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                        <span>Premium Roast Blend</span>
+                                        <span>2x</span>
+                                        <span>${escapeHtml(wsCurrency)} 32.00</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 0.2rem 0; border-top: 1px dashed #cbd5e1; margin-top: 0.4rem; font-weight: 800;">
+                                        <span>TOTAL DUE</span>
+                                        <span id="preview-ticket-total" style="color: #e11d48;">${escapeHtml(wsCurrency)} 32.00</span>
+                                    </div>
+                                </div>
+
+                                <div style="text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 0.75rem; margin-top: 1rem; font-size: 0.74rem; color: #64748b;" id="preview-footer-note">
+                                    ${escapeHtml(wsEndMsg)}
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- TAB 4: AUTOMATION & VENDING MODE -->
+                <!-- ======================================================== -->
+                <div class="settings-tab-pane" id="tab-vending" style="display: none;">
+                    <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1.25rem; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 260px;">
+                                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
+                                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(225, 29, 72, 0.08); color: #e11d48; display: flex; align-items: center; justify-content: center;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                                    </div>
+                                    <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">Vending Mode (Automated Stock Deductions)</h3>
+                                </div>
+                                <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; margin: 0;">
+                                    When enabled, every generated customer POS receipt or wholesale business invoice will automatically deduct product quantities from active inventory in real time.
                                 </p>
                             </div>
+
                             <div>
-                                <button type="button" id="btn-leave-workspace" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); font-weight: 700; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer;">
-                                    Leave Workspace
-                                </button>
+                                <label class="switch-container">
+                                    <input type="checkbox" id="set-vending" class="switch-input" ${isVendingActive ? 'checked' : ''}>
+                                    <span class="switch-track">
+                                        <span class="switch-thumb"></span>
+                                    </span>
+                                    <span id="vending-status-label" style="font-size: 0.9rem; font-weight: 800; color: ${isVendingActive ? '#059669' : 'var(--text-muted)'}; min-width: 85px;">
+                                        ${isVendingActive ? 'ENABLED' : 'DISABLED'}
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Comparison Cards -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+                            <div style="border: 1.5px solid ${isVendingActive ? '#10b981' : 'var(--border-color)'}; background: ${isVendingActive ? 'rgba(16, 185, 129, 0.05)' : '#ffffff'}; padding: 1.25rem; border-radius: 14px;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 0.92rem; color: #059669; margin-bottom: 0.35rem;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    Active Mode (Automated Tracking)
+                                </div>
+                                <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+                                    Invoices immediately decrease stock count. Provides instant alerts if a product falls below its threshold.
+                                </p>
+                            </div>
+
+                            <div style="border: 1.5px solid ${!isVendingActive ? '#f59e0b' : 'var(--border-color)'}; background: ${!isVendingActive ? 'rgba(245, 158, 11, 0.05)' : '#ffffff'}; padding: 1.25rem; border-radius: 14px;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 0.92rem; color: #d97706; margin-bottom: 0.35rem;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                    Standard Mode (Records Only)
+                                </div>
+                                <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+                                    Invoices are recorded as sales history without modifying warehouse inventory numbers.
+                                </p>
                             </div>
                         </div>
                     </div>
-                `}
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- TAB 5: DATA & EXCEL TOOLS -->
+                <!-- ======================================================== -->
+                <div class="settings-tab-pane" id="tab-data" style="display: none;">
+                    <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    Spreadsheet & Batch Migration Hub
+                                </h3>
+                                <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.88rem;">Import catalog spreadsheets, launch high-speed grid editors, and export formatted reports.</p>
+                            </div>
+
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button type="button" id="btn-settings-headers-template" class="btn btn-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px; display: flex; align-items: center; gap: 0.4rem;">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    Headers Only
+                                </button>
+                                <button type="button" id="btn-settings-sample-template" class="btn btn-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 8px; display: flex; align-items: center; gap: 0.4rem;">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    Sample File
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 3 Action Cards -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+                            
+                            <div style="background: var(--surface-50); padding: 1.35rem; border-radius: 14px; border: 1.5px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 1rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.35rem;">Market Inserter (Rapid Grid)</div>
+                                    <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">Direct 250-item spreadsheet editor with instant image picking, category assignment, and duplicate prevention.</p>
+                                </div>
+                                <button type="button" id="btn-settings-market-inserter" class="btn btn-primary" style="font-size: 0.86rem; font-weight: 700; width: 100%; border-radius: 10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
+                                    Launch Market Inserter
+                                </button>
+                            </div>
+
+                            <div style="background: var(--surface-50); padding: 1.35rem; border-radius: 14px; border: 1.5px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 1rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.35rem;">Excel & CSV Import</div>
+                                    <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">Batch upload products with automatic column matching, auto-category grouping, and unit price calculation.</p>
+                                </div>
+                                <button type="button" id="btn-settings-import-excel" class="btn btn-secondary" style="font-size: 0.86rem; font-weight: 700; width: 100%; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    Upload Spreadsheet
+                                </button>
+                            </div>
+
+                            <div style="background: var(--surface-50); padding: 1.35rem; border-radius: 14px; border: 1.5px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 1rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.35rem;">Custom Data Exporter</div>
+                                    <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.25rem;">Download complete inventory catalogs, printable PDF pricelists, customer directories, or full JSON backups.</p>
+                                </div>
+                                <button type="button" id="btn-settings-export-data" class="btn btn-secondary" style="font-size: 0.86rem; font-weight: 700; width: 100%; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                    Export Records
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- TAB 6: SECURITY & DANGER ZONE -->
+                <!-- ======================================================== -->
+                <div class="settings-tab-pane" id="tab-security" style="display: none;">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        
+                        <!-- Security & Access Summary -->
+                        <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                            <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.08); color: #059669; display: flex; align-items: center; justify-content: center;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                </div>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">Role Policies & Permissions</h3>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; font-size: 0.85rem;">
+                                <div style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem;">
+                                    <strong style="color: var(--text-primary); display: block; margin-bottom: 0.35rem;">Admins & Co-Admins:</strong>
+                                    Full management rights for products, categories, invoices, customer panel, workers, and settings.
+                                </div>
+                                <div style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem;">
+                                    <strong style="color: var(--text-primary); display: block; margin-bottom: 0.35rem;">Workers:</strong>
+                                    Operational catalog browsing & POS invoice generation with granular add/edit/delete restriction flags.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Danger Zone -->
+                        ${isAdmin ? `
+                            <div style="background: #ffffff; border: 1.5px solid rgba(239, 68, 68, 0.4); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(239, 68, 68, 0.05);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 260px;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(239, 68, 68, 0.08); color: #dc2626; display: flex; align-items: center; justify-content: center;">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                            </div>
+                                            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #dc2626;">Delete Workspace</h3>
+                                        </div>
+                                        <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.55; margin: 0;">
+                                            Permanently delete this workspace and wipe all catalog products, invoices, categories, clients, settings, and cloud media from the database.
+                                            <br><strong style="color:var(--text-primary);">Requirement:</strong> Remove all active workers in Workspace Hub before deleting.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <button type="button" id="btn-delete-workspace" class="btn" style="background: #dc2626; color: #ffffff; font-weight: 800; border: none; padding: 0.75rem 1.5rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.25); cursor: pointer;">
+                                            Delete Entire Workspace
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : `
+                            <div style="background: #ffffff; border: 1.5px solid rgba(239, 68, 68, 0.4); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(239, 68, 68, 0.05);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 260px;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(239, 68, 68, 0.08); color: #dc2626; display: flex; align-items: center; justify-content: center;">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                                            </div>
+                                            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #dc2626;">Leave Workspace</h3>
+                                        </div>
+                                        <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.55; margin: 0;">
+                                            Disconnect your account from this workspace. You will lose access to its products and invoices.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <button type="button" id="btn-leave-workspace" class="btn btn-outline" style="color: #dc2626; border-color: rgba(220, 38, 38, 0.4); font-weight: 800; padding: 0.75rem 1.5rem; border-radius: 10px; cursor: pointer;">
+                                            Leave Workspace
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- FLOATING STICKY SAVE BAR (APPEARS ON CHANGE) -->
+                <!-- ======================================================== -->
+                <div id="settings-floating-bar" style="position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 9999px; padding: 0.65rem 1.25rem 0.65rem 1.5rem; box-shadow: 0 15px 35px -5px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1.25rem; z-index: 1000; transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); opacity: 0; pointer-events: none;">
+                    <div style="display: flex; align-items: center; gap: 0.65rem;">
+                        <span style="width: 9px; height: 9px; border-radius: 50%; background: #e11d48; box-shadow: 0 0 8px rgba(225, 29, 72, 0.6); display: inline-block;"></span>
+                        <span style="font-size: 0.86rem; font-weight: 700; color: var(--text-primary);">Unsaved Changes</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button type="button" id="btn-discard-settings" class="btn btn-sm btn-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 9999px; padding: 0.4rem 0.9rem;">
+                            Discard
+                        </button>
+                        <button type="button" id="btn-save-settings" class="btn btn-sm btn-primary" style="font-size: 0.82rem; font-weight: 700; border-radius: 9999px; padding: 0.4rem 1.25rem; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
 
             </div>
         `;
 
-        // Switch interaction
-        const vendingInput = contentArea.querySelector('#set-vending');
-        const vendingLabel = contentArea.querySelector('#vending-status-label');
-        const vendingBanner = contentArea.querySelector('#vending-info-banner');
+        // Tab Navigation Interaction
+        const tabButtons = container.querySelectorAll('.settings-tab-btn');
+        const tabPanes = container.querySelectorAll('.settings-tab-pane');
 
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-tab');
+                tabButtons.forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = 'transparent';
+                    b.style.borderColor = 'transparent';
+                    b.style.color = 'var(--text-secondary)';
+                });
+                tabPanes.forEach(p => {
+                    p.style.display = 'none';
+                    p.classList.remove('active');
+                });
+
+                btn.classList.add('active');
+                btn.style.background = '#ffffff';
+                btn.style.borderColor = 'var(--border-color)';
+                btn.style.color = 'var(--text-primary)';
+
+                const activePane = container.querySelector(`#${targetId}`);
+                if (activePane) {
+                    activePane.style.display = 'block';
+                    activePane.classList.add('active');
+                }
+            });
+        });
+
+        // Live Ticket Preview updates
+        const shopNameInput = container.querySelector('#set-shop-name');
+        const endMsgInput = container.querySelector('#set-end-msg');
+        const custNameCheck = container.querySelector('#set-show-cust-name');
+        const custPhoneCheck = container.querySelector('#set-show-cust-num');
+        const previewShop = container.querySelector('#preview-shop-title');
+        const previewEnd = container.querySelector('#preview-footer-note');
+        const previewCustMeta = container.querySelector('#preview-cust-meta');
+
+        const updateTicketPreview = () => {
+            if (previewShop) previewShop.textContent = shopNameInput?.value || wsDisplayName;
+            if (previewEnd) previewEnd.textContent = endMsgInput?.value || wsEndMsg;
+            if (previewCustMeta) {
+                let html = '';
+                if (custNameCheck?.checked) html += '<div>Customer: Alex Rivera</div>';
+                if (custPhoneCheck?.checked) html += '<div>Phone: +1 555-0199</div>';
+                previewCustMeta.innerHTML = html;
+            }
+        };
+
+        [shopNameInput, endMsgInput].forEach(inp => inp?.addEventListener('input', updateTicketPreview));
+        [custNameCheck, custPhoneCheck].forEach(chk => chk?.addEventListener('change', updateTicketPreview));
+
+        // Vending Switch
+        const vendingInput = container.querySelector('#set-vending');
+        const vendingLabel = container.querySelector('#vending-status-label');
         if (vendingInput) {
             vendingInput.addEventListener('change', (e) => {
                 const isChecked = e.target.checked;
-                vendingLabel.textContent = isChecked ? 'ENABLED' : 'DISABLED';
-                vendingLabel.style.color = isChecked ? 'var(--primary)' : 'var(--text-muted)';
-                if (isChecked) {
-                    vendingBanner.style.background = 'rgba(16, 185, 129, 0.08)';
-                    vendingBanner.style.borderColor = 'rgba(16, 185, 129, 0.25)';
-                    vendingBanner.style.color = '#047857';
-                    vendingBanner.innerHTML = '<strong>Active Mode:</strong> Products added to customer or business invoices will reduce inventory quantity in real-time on save.';
-                } else {
-                    vendingBanner.style.background = 'rgba(241, 245, 249, 0.8)';
-                    vendingBanner.style.borderColor = 'var(--border-color)';
-                    vendingBanner.style.color = 'var(--text-secondary)';
-                    vendingBanner.innerHTML = '<strong>Standard Mode:</strong> Invoices are generated as records only. Product quantities in inventory will remain unaffected.';
+                if (vendingLabel) {
+                    vendingLabel.textContent = isChecked ? 'ENABLED' : 'DISABLED';
+                    vendingLabel.style.color = isChecked ? '#059669' : 'var(--text-muted)';
                 }
-                checkGeneralSettingsDirty();
+                checkDirty();
             });
         }
 
-        // Currency Live Preview & Modal Picker Handlers
-        const currencyInput = contentArea.querySelector('#set-currency');
-        const currencyPreview = contentArea.querySelector('#currency-live-preview');
-        const btnFindCurrency = contentArea.querySelector('#btn-find-currency');
-        const btnChangeCurrency = contentArea.querySelector('#btn-change-currency');
-        const btnSave = contentArea.querySelector('#btn-save-settings');
-
-        // State snapshot for dirty checking
-        let savedCurrencyState = (currentSettings.currencySymbol || '$').trim().substring(0, 3) || '$';
-        let savedSettingsSnapshot = {
-            enableVending: Boolean(currentSettings.enableVending),
-            currencySymbol: savedCurrencyState,
-            name: (currentSettings.name || wsData.name || '').trim(),
-            email: (currentSettings.email || wsData.email || '').trim(),
-            phone: (currentSettings.phone || wsData.phone || '').trim(),
-            address: (currentSettings.address || wsData.address || '').trim(),
-            shopName: (currentSettings.shopName || '').trim(),
-            endMessage: (currentSettings.endMessage || '').trim(),
-            customerName: Boolean(currentSettings.customerName),
-            customerNumber: Boolean(currentSettings.customerNumber)
-        };
+        // Currency Picker & Quick Presets
+        const currencyInput = container.querySelector('#set-currency');
+        const currencyPreview = container.querySelector('#currency-live-preview');
+        const previewTicketTotal = container.querySelector('#preview-ticket-total');
+        const btnFindCurrency = container.querySelector('#btn-find-currency');
 
         const updateCurrencyPreview = (val) => {
             const sym = (val || '$').trim().substring(0, 3) || '$';
-            if (currencyPreview) {
-                currencyPreview.textContent = `${sym} 1,250.00`;
-            }
-        };
-
-        const checkCurrencyButtonState = () => {
-            const currentVal = (currencyInput?.value || '').trim().substring(0, 3);
-            const isDifferent = currentVal.length > 0 && currentVal !== savedCurrencyState;
-            if (btnChangeCurrency) {
-                btnChangeCurrency.disabled = !isDifferent;
-            }
-            checkGeneralSettingsDirty();
-        };
-
-        const checkGeneralSettingsDirty = () => {
-            if (!btnSave) return;
-            const currentVending = Boolean(contentArea.querySelector('#set-vending')?.checked);
-            const currentCur = (currencyInput?.value || '$').trim().substring(0, 3) || '$';
-            const currentName = (contentArea.querySelector('#set-name')?.value || '').trim();
-            const currentEmail = (contentArea.querySelector('#set-email')?.value || '').trim();
-            const currentPhone = (contentArea.querySelector('#set-phone')?.value || '').trim();
-            const currentAddr = (contentArea.querySelector('#set-address')?.value || '').trim();
-            const currentShop = (contentArea.querySelector('#set-shop-name')?.value || '').trim();
-            const currentEndMsg = (contentArea.querySelector('#set-end-msg')?.value || '').trim();
-            const currentCustName = Boolean(contentArea.querySelector('#set-show-cust-name')?.checked);
-            const currentCustNum = Boolean(contentArea.querySelector('#set-show-cust-num')?.checked);
-
-            const isDirty = (
-                currentVending !== savedSettingsSnapshot.enableVending ||
-                currentCur !== savedSettingsSnapshot.currencySymbol ||
-                currentName !== savedSettingsSnapshot.name ||
-                currentEmail !== savedSettingsSnapshot.email ||
-                currentPhone !== savedSettingsSnapshot.phone ||
-                currentAddr !== savedSettingsSnapshot.address ||
-                currentShop !== savedSettingsSnapshot.shopName ||
-                currentEndMsg !== savedSettingsSnapshot.endMessage ||
-                currentCustName !== savedSettingsSnapshot.customerName ||
-                currentCustNum !== savedSettingsSnapshot.customerNumber
-            );
-
-            const isValid = currentName.length > 0 && currentEmail.length > 0;
-            btnSave.disabled = !(isDirty && isValid);
+            if (currencyPreview) currencyPreview.textContent = `${sym} 1,450.00`;
+            if (previewTicketTotal) previewTicketTotal.textContent = `${sym} 32.00`;
         };
 
         if (currencyInput) {
@@ -484,7 +718,7 @@ export const renderSettings = async (container, workspaceId) => {
                     e.target.value = e.target.value.substring(0, 3);
                 }
                 updateCurrencyPreview(e.target.value);
-                checkCurrencyButtonState();
+                checkDirty();
             });
         }
 
@@ -494,203 +728,222 @@ export const renderSettings = async (container, workspaceId) => {
                     const cleanSymbol = selectedSymbol.substring(0, 3);
                     if (currencyInput) currencyInput.value = cleanSymbol;
                     updateCurrencyPreview(cleanSymbol);
-                    checkCurrencyButtonState();
+                    checkDirty();
                     showAlert.success(`Currency selected: ${name} (${cleanSymbol})`);
                 });
             });
         }
 
-        contentArea.querySelectorAll('.btn-currency-quick').forEach(btn => {
+        container.querySelectorAll('.btn-currency-quick').forEach(btn => {
             btn.addEventListener('click', () => {
                 const sym = (btn.getAttribute('data-symbol') || '$').substring(0, 3);
                 if (currencyInput) currencyInput.value = sym;
                 updateCurrencyPreview(sym);
-                checkCurrencyButtonState();
+                checkDirty();
             });
         });
 
-        // Dedicated Change Currency button action
-        if (btnChangeCurrency) {
-            btnChangeCurrency.addEventListener('click', async () => {
-                const newCurrency = (currencyInput?.value || '$').trim().substring(0, 3) || '$';
-                btnChangeCurrency.disabled = true;
-                btnChangeCurrency.textContent = 'Updating...';
+        // Copy Workspace ID in Settings
+        container.querySelector('#btn-copy-settings-ws-id')?.addEventListener('click', () => {
+            if (navigator.clipboard && wsIdText) {
+                navigator.clipboard.writeText(wsIdText);
+                showAlert.success("Workspace ID copied to clipboard!");
+            }
+        });
 
-                try {
-                    await settingsService.saveWorkspaceSettings({
-                        ...savedSettingsSnapshot,
-                        currency: newCurrency,
-                        currencySymbol: newCurrency
-                    });
+        // Snapshot & Dirty Checking for Floating Bar
+        let savedSnapshot = {
+            enableVending: isVendingActive,
+            currencySymbol: wsCurrency,
+            name: wsDisplayName,
+            email: wsEmail,
+            phone: wsPhone,
+            address: wsAddress,
+            shopName: wsShopName,
+            endMessage: wsEndMsg,
+            customerName: printCustName,
+            customerNumber: printCustPhone
+        };
 
-                    savedCurrencyState = newCurrency;
-                    savedSettingsSnapshot.currencySymbol = newCurrency;
-                    btnChangeCurrency.innerHTML = `
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        Change Currency
-                    `;
-                    checkCurrencyButtonState();
-                    showAlert.success(`Workspace currency updated successfully to ${newCurrency}`);
-                } catch (err) {
-                    console.error("Change currency error:", err);
-                    showAlert.error("Failed to update currency: " + (err.message || 'Unknown error'));
-                    btnChangeCurrency.disabled = false;
-                    btnChangeCurrency.innerHTML = `
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        Change Currency
-                    `;
+        const floatingBar = container.querySelector('#settings-floating-bar');
+        const btnSave = container.querySelector('#btn-save-settings');
+        const btnDiscard = container.querySelector('#btn-discard-settings');
+
+        const checkDirty = () => {
+            const curVending = Boolean(container.querySelector('#set-vending')?.checked);
+            const curSymbol = (currencyInput?.value || '$').trim().substring(0, 3) || '$';
+            const curName = (container.querySelector('#set-name')?.value || '').trim();
+            const curEmail = (container.querySelector('#set-email')?.value || '').trim();
+            const curPhone = (container.querySelector('#set-phone')?.value || '').trim();
+            const curAddress = (container.querySelector('#set-address')?.value || '').trim();
+            const curShop = (container.querySelector('#set-shop-name')?.value || '').trim();
+            const curEndMsg = (container.querySelector('#set-end-msg')?.value || '').trim();
+            const curCustName = Boolean(container.querySelector('#set-show-cust-name')?.checked);
+            const curCustPhone = Boolean(container.querySelector('#set-show-cust-num')?.checked);
+
+            const isDirty = (
+                curVending !== savedSnapshot.enableVending ||
+                curSymbol !== savedSnapshot.currencySymbol ||
+                curName !== savedSnapshot.name ||
+                curEmail !== savedSnapshot.email ||
+                curPhone !== savedSnapshot.phone ||
+                curAddress !== savedSnapshot.address ||
+                curShop !== savedSnapshot.shopName ||
+                curEndMsg !== savedSnapshot.endMessage ||
+                curCustName !== savedSnapshot.customerName ||
+                curCustPhone !== savedSnapshot.customerNumber
+            );
+
+            if (floatingBar) {
+                if (isDirty) {
+                    floatingBar.style.opacity = '1';
+                    floatingBar.style.pointerEvents = 'auto';
+                    floatingBar.style.transform = 'translateX(-50%) translateY(0)';
+                } else {
+                    floatingBar.style.opacity = '0';
+                    floatingBar.style.pointerEvents = 'none';
+                    floatingBar.style.transform = 'translateX(-50%) translateY(100px)';
                 }
-            });
-        }
+            }
+        };
 
-        // Attach dirty checking to all general and receipt inputs
         ['#set-name', '#set-email', '#set-phone', '#set-address', '#set-shop-name', '#set-end-msg'].forEach(sel => {
-            const el = contentArea.querySelector(sel);
-            if (el) el.addEventListener('input', checkGeneralSettingsDirty);
+            container.querySelector(sel)?.addEventListener('input', checkDirty);
         });
         ['#set-show-cust-name', '#set-show-cust-num'].forEach(sel => {
-            const el = contentArea.querySelector(sel);
-            if (el) el.addEventListener('change', checkGeneralSettingsDirty);
+            container.querySelector(sel)?.addEventListener('change', checkDirty);
         });
 
-        // Save handler
-        if (btnSave) {
-            btnSave.addEventListener('click', async () => {
-                btnSave.disabled = true;
-                btnSave.textContent = 'Saving...';
+        // Discard Handler
+        btnDiscard?.addEventListener('click', () => {
+            if (container.querySelector('#set-name')) container.querySelector('#set-name').value = savedSnapshot.name;
+            if (container.querySelector('#set-email')) container.querySelector('#set-email').value = savedSnapshot.email;
+            if (container.querySelector('#set-phone')) container.querySelector('#set-phone').value = savedSnapshot.phone;
+            if (container.querySelector('#set-address')) container.querySelector('#set-address').value = savedSnapshot.address;
+            if (container.querySelector('#set-shop-name')) container.querySelector('#set-shop-name').value = savedSnapshot.shopName;
+            if (container.querySelector('#set-end-msg')) container.querySelector('#set-end-msg').value = savedSnapshot.endMessage;
+            if (container.querySelector('#set-show-cust-name')) container.querySelector('#set-show-cust-name').checked = savedSnapshot.customerName;
+            if (container.querySelector('#set-show-cust-num')) container.querySelector('#set-show-cust-num').checked = savedSnapshot.customerNumber;
+            if (currencyInput) currencyInput.value = savedSnapshot.currencySymbol;
+            if (vendingInput) vendingInput.checked = savedSnapshot.enableVending;
+            if (vendingLabel) {
+                vendingLabel.textContent = savedSnapshot.enableVending ? 'ENABLED' : 'DISABLED';
+                vendingLabel.style.color = savedSnapshot.enableVending ? '#059669' : 'var(--text-muted)';
+            }
+            updateCurrencyPreview(savedSnapshot.currencySymbol);
+            updateTicketPreview();
+            checkDirty();
+            showAlert.info("Changes reverted back to saved settings.");
+        });
 
-                try {
-                    const updatedPayload = {
-                        enableVending: Boolean(contentArea.querySelector('#set-vending')?.checked),
-                        currency: (contentArea.querySelector('#set-currency')?.value || '$').trim().substring(0, 3) || '$',
-                        currencySymbol: (contentArea.querySelector('#set-currency')?.value || '$').trim().substring(0, 3) || '$',
-                        name: contentArea.querySelector('#set-name')?.value.trim() || '',
-                        email: contentArea.querySelector('#set-email')?.value.trim() || '',
-                        phone: contentArea.querySelector('#set-phone')?.value.trim() || '',
-                        address: contentArea.querySelector('#set-address')?.value.trim() || '',
-                        shopName: contentArea.querySelector('#set-shop-name')?.value.trim() || '',
-                        endMessage: contentArea.querySelector('#set-end-msg')?.value.trim() || '',
-                        customerName: Boolean(contentArea.querySelector('#set-show-cust-name')?.checked),
-                        customerNumber: Boolean(contentArea.querySelector('#set-show-cust-num')?.checked)
-                    };
+        // Save Settings Handler
+        btnSave?.addEventListener('click', async () => {
+            const updatedPayload = {
+                enableVending: Boolean(container.querySelector('#set-vending')?.checked),
+                currency: (currencyInput?.value || '$').trim().substring(0, 3) || '$',
+                currencySymbol: (currencyInput?.value || '$').trim().substring(0, 3) || '$',
+                name: (container.querySelector('#set-name')?.value || '').trim(),
+                email: (container.querySelector('#set-email')?.value || '').trim(),
+                phone: (container.querySelector('#set-phone')?.value || '').trim(),
+                address: (container.querySelector('#set-address')?.value || '').trim(),
+                shopName: (container.querySelector('#set-shop-name')?.value || '').trim(),
+                endMessage: (container.querySelector('#set-end-msg')?.value || '').trim(),
+                customerName: Boolean(container.querySelector('#set-show-cust-name')?.checked),
+                customerNumber: Boolean(container.querySelector('#set-show-cust-num')?.checked)
+            };
 
-                    await settingsService.saveWorkspaceSettings(updatedPayload);
-                    
-                    // Update snapshots
-                    savedCurrencyState = updatedPayload.currencySymbol;
-                    savedSettingsSnapshot = { ...updatedPayload };
-                    
-                    checkCurrencyButtonState();
-                    checkGeneralSettingsDirty();
-                    showAlert.success("Workspace settings & Currency preferences saved successfully!");
+            if (!updatedPayload.name) {
+                showAlert.warning("Workspace name cannot be empty.");
+                return;
+            }
+            if (!updatedPayload.email) {
+                showAlert.warning("Business email cannot be empty.");
+                return;
+            }
 
-                } catch (err) {
-                    console.error("Save settings error:", err);
-                    showAlert.error("Failed to save settings: " + (err.message || 'Unknown error'));
-                    btnSave.disabled = false;
-                    btnSave.textContent = 'Save Workspace Settings';
-                } finally {
-                    btnSave.textContent = 'Save Workspace Settings';
-                }
-            });
-        }
+            btnSave.disabled = true;
+            btnSave.innerHTML = `<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Saving...`;
 
-        // Data Management Button Handlers
-        const btnMarketInserter = contentArea.querySelector('#btn-settings-market-inserter');
-        if (btnMarketInserter) {
-            btnMarketInserter.addEventListener('click', () => {
-                window.location.hash = '#/market-inserter';
-            });
-        }
+            try {
+                await settingsService.saveWorkspaceSettings(updatedPayload);
+                savedSnapshot = { ...updatedPayload };
+                checkDirty();
+                showAlert.success("Workspace settings & currency saved successfully!");
+            } catch (err) {
+                console.error("Save settings error:", err);
+                showAlert.error("Failed to save settings: " + (err.message || 'Unknown error'));
+            } finally {
+                btnSave.disabled = false;
+                btnSave.textContent = 'Save Changes';
+            }
+        });
 
-        const btnHeaders = contentArea.querySelector('#btn-settings-headers-template');
-        if (btnHeaders) {
-            btnHeaders.addEventListener('click', () => downloadHeadersOnlyTemplate());
-        }
+        // Data Management Buttons
+        container.querySelector('#btn-settings-market-inserter')?.addEventListener('click', () => {
+            window.location.hash = '#/market-inserter';
+        });
+        container.querySelector('#btn-settings-headers-template')?.addEventListener('click', () => downloadHeadersOnlyTemplate());
+        container.querySelector('#btn-settings-sample-template')?.addEventListener('click', () => downloadExampleDataTemplate());
+        container.querySelector('#btn-settings-import-excel')?.addEventListener('click', () => {
+            openExcelImportModal(workspaceId, () => showAlert.success("Spreadsheet data successfully imported!"));
+        });
+        container.querySelector('#btn-settings-export-data')?.addEventListener('click', () => {
+            openExportModal(workspaceId, { workspaceInfo: wsData });
+        });
 
-        const btnSample = contentArea.querySelector('#btn-settings-sample-template');
-        if (btnSample) {
-            btnSample.addEventListener('click', () => downloadExampleDataTemplate());
-        }
+        // Delete Workspace Handler (Admin Only)
+        container.querySelector('#btn-delete-workspace')?.addEventListener('click', async () => {
+            const btnDel = container.querySelector('#btn-delete-workspace');
+            try {
+                btnDel.disabled = true;
+                btnDel.textContent = 'Checking active workers...';
 
-        const btnImport = contentArea.querySelector('#btn-settings-import-excel');
-        if (btnImport) {
-            btnImport.addEventListener('click', () => {
-                openExcelImportModal(workspaceId, () => {
-                    showAlert.success("Spreadsheet data successfully imported into workspace!");
+                const members = await firestoreService.getWorkspaceMembers(workspaceId);
+                const activeOthers = members.filter(m => {
+                    const mEmail = (m.email || '').toLowerCase();
+                    const isSelf = mEmail === (currentUser.email || '').toLowerCase() || m.workerUid === currentUser.uid;
+                    return !isSelf;
                 });
-            });
-        }
 
-        const btnExport = contentArea.querySelector('#btn-settings-export-data');
-        if (btnExport) {
-            btnExport.addEventListener('click', () => {
-                openExportModal(workspaceId, { workspaceInfo: wsData });
-            });
-        }
+                if (activeOthers.length > 0) {
+                    showAlert.error(`Cannot delete workspace. Remove all active workers (${activeOthers.length} active member(s) remaining) before deleting.`);
+                    btnDel.disabled = false;
+                    btnDel.textContent = 'Delete Entire Workspace';
+                    return;
+                }
 
-        // Workspace Deletion: Delete Workspace Handler (Admin Only)
-        const btnDeleteWs = contentArea.querySelector('#btn-delete-workspace');
-        if (btnDeleteWs) {
-            btnDeleteWs.addEventListener('click', async () => {
+                if (!await showAlert.confirm("WARNING: Are you sure you want to PERMANENTLY destroy this workspace? All catalog products, invoices, categories, client records, and cloud storage will be permanently wiped!")) {
+                    btnDel.disabled = false;
+                    btnDel.textContent = 'Delete Entire Workspace';
+                    return;
+                }
+
+                btnDel.textContent = 'Deleting all server data...';
+                await firestoreService.deleteEntireWorkspace(workspaceId, currentUser);
+                showAlert.success("Workspace and all associated server data successfully deleted.");
+                window.location.href = 'index.html';
+            } catch (err) {
+                console.error("Delete workspace error:", err);
+                showAlert.error(err.message || "Failed to delete workspace.");
+                if (btnDel) {
+                    btnDel.disabled = false;
+                    btnDel.textContent = 'Delete Entire Workspace';
+                }
+            }
+        });
+
+        // Leave Workspace Handler (Worker / Co-Admin)
+        container.querySelector('#btn-leave-workspace')?.addEventListener('click', async () => {
+            if (await showAlert.confirm("Are you sure you want to leave this workspace? You will lose access to its products and invoices.")) {
                 try {
-                    btnDeleteWs.disabled = true;
-                    btnDeleteWs.textContent = 'Checking workspace members...';
-
-                    const members = await firestoreService.getWorkspaceMembers(workspaceId);
-                    const activeOtherMembers = members.filter(m => {
-                        const mEmail = (m.email || '').toLowerCase();
-                        const isSelf = mEmail === (currentUser.email || '').toLowerCase() || m.workerUid === currentUser.uid;
-                        return !isSelf;
-                    });
-
-                    if (activeOtherMembers.length > 0) {
-                        showAlert.error(`Cannot delete workspace. Remove all active workers inside Workspace (${activeOtherMembers.length} active worker(s) remaining) before deleting.`);
-                        btnDeleteWs.disabled = false;
-                        btnDeleteWs.textContent = 'Delete Entire Workspace';
-                        return;
-                    }
-
-                    const confirmed = await showAlert.confirm("WARNING: Are you sure you want to PERMANENTLY delete this workspace? All products, sales, invoices, categories, client data, and image files will be wiped completely from the server!");
-                    if (!confirmed) {
-                        btnDeleteWs.disabled = false;
-                        btnDeleteWs.textContent = 'Delete Entire Workspace';
-                        return;
-                    }
-
-                    btnDeleteWs.textContent = 'Deleting all server data...';
-                    await firestoreService.deleteEntireWorkspace(workspaceId, currentUser);
-                    showAlert.success("Workspace and all associated server data successfully deleted.");
+                    await firestoreService.leaveWorkspace(workspaceId, currentUser);
+                    showAlert.success("You have successfully left the workspace.");
                     window.location.href = 'index.html';
                 } catch (err) {
-                    console.error("Delete workspace error:", err);
-                    showAlert.error(err.message || "Failed to delete workspace.");
-                    btnDeleteWs.disabled = false;
-                    btnDeleteWs.textContent = 'Delete Entire Workspace';
+                    showAlert.error("Failed to leave workspace: " + (err.message || 'Unknown error'));
                 }
-            });
-        }
-
-        // Workspace Deletion: Leave Workspace Handler (Worker/Co-Admin)
-        const btnLeaveWs = contentArea.querySelector('#btn-leave-workspace');
-        if (btnLeaveWs) {
-            btnLeaveWs.addEventListener('click', async () => {
-                if (await showAlert.confirm("Are you sure you want to leave this workspace? You will lose access to its products and invoices.")) {
-                    try {
-                        btnLeaveWs.disabled = true;
-                        btnLeaveWs.textContent = 'Leaving...';
-                        await firestoreService.leaveWorkspace(workspaceId, currentUser);
-                        showAlert.success("You have successfully left the workspace.");
-                        window.location.href = 'index.html';
-                    } catch (err) {
-                        console.error("Leave workspace error:", err);
-                        showAlert.error("Failed to leave workspace: " + (err.message || 'Unknown error'));
-                        btnLeaveWs.disabled = false;
-                        btnLeaveWs.textContent = 'Leave Workspace';
-                    }
-                }
-            });
-        }
+            }
+        });
 
     } catch (err) {
         console.error("Render settings error:", err);
