@@ -140,7 +140,8 @@ export const renderMarketInserter = async (container, workspaceId) => {
                             <strong id="mi-valid-count" style="color: var(--text-primary); font-size: 1rem;">0</strong> products ready to insert
                         </div>
                         <div id="mi-duplicate-warning-pill" style="display: none; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: #d97706; background: rgba(245, 158, 11, 0.12); padding: 0.3rem 0.65rem; border-radius: 6px; font-weight: 600; border: 1px solid rgba(245, 158, 11, 0.25);">
-                            <span>⚠️ <strong id="mi-dup-count">0</strong> potential duplicates</span>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <span><strong id="mi-dup-count">0</strong> potential duplicates</span>
                         </div>
                     </div>
 
@@ -371,8 +372,12 @@ export const renderMarketInserter = async (container, workspaceId) => {
                     <!-- 16. Actions -->
                     <td style="padding: 0.35rem 0.4rem; text-align: center;">
                         <div style="display:flex; justify-content:center; gap:0.25rem;">
-                            <button type="button" class="icon-btn mi-btn-dup" data-index="${idx}" style="width:26px; height:26px; font-size:12px; border:none; background:transparent; cursor:pointer;" title="Duplicate row">📋</button>
-                            <button type="button" class="icon-btn mi-btn-del" data-index="${idx}" style="width:26px; height:26px; font-size:12px; border:none; background:transparent; cursor:pointer; color:var(--danger);" title="Delete row">🗑️</button>
+                            <button type="button" class="icon-btn mi-btn-dup" data-index="${idx}" style="width:26px; height:26px; border:none; background:transparent; cursor:pointer; color:var(--text-secondary); display:flex; align-items:center; justify-content:center;" title="Duplicate row">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                            <button type="button" class="icon-btn mi-btn-del" data-index="${idx}" style="width:26px; height:26px; border:none; background:transparent; cursor:pointer; color:var(--danger); display:flex; align-items:center; justify-content:center;" title="Delete row">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
                         </div>
                     </td>
 
@@ -406,24 +411,105 @@ export const renderMarketInserter = async (container, workspaceId) => {
             });
         });
 
-        // Image pickers
+        // Image Compression Helper
+        const processMarketImageFile = async (file) => {
+            if (!file || !file.type.startsWith('image/')) return file;
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDimension = 640;
+
+                        if (width > maxDimension || height > maxDimension) {
+                            if (width > height) {
+                                height = Math.round((height * maxDimension) / width);
+                                width = maxDimension;
+                            } else {
+                                width = Math.round((width * maxDimension) / height);
+                                height = maxDimension;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob((blob) => {
+                            if (!blob) {
+                                resolve(file);
+                                return;
+                            }
+                            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                                type: "image/webp",
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        }, 'image/webp', 0.85);
+                    };
+                    img.onerror = () => resolve(file);
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        // Image pickers & Drag-Drop on spreadsheet cells
         tbody.querySelectorAll('.mi-image-box').forEach(box => {
+            const idx = parseInt(box.getAttribute('data-index'));
+
             box.addEventListener('click', (e) => {
                 if (e.target.classList.contains('mi-remove-img')) return;
-                const idx = parseInt(box.getAttribute('data-index'));
                 const fileInput = tbody.querySelector(`.mi-file-input[data-index="${idx}"]`);
                 if (fileInput) fileInput.click();
+            });
+
+            ['dragenter', 'dragover'].forEach(evtName => {
+                box.addEventListener(evtName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    box.style.borderColor = '#e11d48';
+                    box.style.background = 'rgba(225,29,72,0.15)';
+                    box.style.transform = 'scale(1.18)';
+                    box.style.boxShadow = '0 0 0 3px rgba(225,29,72,0.25)';
+                });
+            });
+
+            ['dragleave', 'dragend', 'drop'].forEach(evtName => {
+                box.addEventListener(evtName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    box.style.transform = 'none';
+                    box.style.boxShadow = 'none';
+                });
+            });
+
+            box.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const files = e.dataTransfer?.files;
+                if (files && files.length > 0 && rowDataList[idx]) {
+                    const processed = await processMarketImageFile(files[0]);
+                    rowDataList[idx].imageFile = processed;
+                    rowDataList[idx].previewUrl = URL.createObjectURL(processed);
+                    renderRows();
+                }
             });
         });
 
         // File input changes
         tbody.querySelectorAll('.mi-file-input').forEach(input => {
-            input.addEventListener('change', (e) => {
+            input.addEventListener('change', async (e) => {
                 const idx = parseInt(e.target.getAttribute('data-index'));
                 const file = e.target.files[0];
                 if (file && rowDataList[idx]) {
-                    rowDataList[idx].imageFile = file;
-                    rowDataList[idx].previewUrl = URL.createObjectURL(file);
+                    const processed = await processMarketImageFile(file);
+                    rowDataList[idx].imageFile = processed;
+                    rowDataList[idx].previewUrl = URL.createObjectURL(processed);
                     renderRows();
                 }
             });

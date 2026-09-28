@@ -1098,8 +1098,15 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
         // -------------------------------------------------------------------------
         const renderHighValueBusinesses = () => {
             const busStats = businesses.map(b => {
-                const linked = allInvoices.filter(inv => inv.businessId === b.uniqueId || inv.businessId === b.id || (inv.businessName && inv.businessName.toLowerCase() === (b.businessName || b.name || '').toLowerCase()));
-                const totalRev = linked.reduce((s, inv) => s + (Number(inv.totalPrice) || 0), 0);
+                const bName = (b.businessName || b.name || '').trim().toLowerCase();
+                const linked = allInvoices.filter(inv => {
+                    if (!inv) return false;
+                    const invBusId = (inv.businessId || '').trim();
+                    const invBusName = (inv.businessName || inv.issuerName || '').trim().toLowerCase();
+                    return (invBusId && (invBusId === b.uniqueId || invBusId === b.id)) ||
+                           (bName && invBusName && (invBusName === bName || invBusName.includes(bName) || bName.includes(invBusName)));
+                });
+                const totalRev = linked.reduce((s, inv) => s + (Number(inv.totalPrice || inv.total || inv.amount) || 0), 0);
                 return {
                     ...b,
                     name: b.businessName || b.name || 'Unnamed Business',
@@ -1169,8 +1176,15 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
         // -------------------------------------------------------------------------
         const renderHighValueClients = () => {
             const clientStats = customers.map(c => {
-                const linked = allInvoices.filter(inv => inv.clientId === c.uniqueId || inv.customerId === c.uniqueId || inv.clientId === c.id || (inv.clientName && inv.clientName.toLowerCase() === (c.name || '').toLowerCase()) || (inv.customerName && inv.customerName.toLowerCase() === (c.name || '').toLowerCase()));
-                const totalRev = linked.reduce((s, inv) => s + (Number(inv.totalPrice) || 0), 0);
+                const cName = (c.name || '').trim().toLowerCase();
+                const linked = allInvoices.filter(inv => {
+                    if (!inv) return false;
+                    const invCliId = (inv.clientId || inv.customerId || '').trim();
+                    const invCliName = (inv.clientName || inv.customerName || inv.name || '').trim().toLowerCase();
+                    return (invCliId && (invCliId === c.uniqueId || invCliId === c.id)) ||
+                           (cName && invCliName && (invCliName === cName || invCliName.includes(cName) || cName.includes(invCliName)));
+                });
+                const totalRev = linked.reduce((s, inv) => s + (Number(inv.totalPrice || inv.total || inv.amount) || 0), 0);
                 return {
                     ...c,
                     name: c.name || 'Unnamed Client',

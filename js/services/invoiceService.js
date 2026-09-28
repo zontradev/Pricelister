@@ -14,15 +14,21 @@ export const getInvoiceService = (workspaceId) => {
 
     return {
         getAllInvoices: async (isBusiness = false) => {
-            const repo = isBusiness ? businessInvoiceRepo : customerInvoiceRepo;
-            const all = await repo.getAll();
-            return all.filter(inv => !inv.isArchive);
+            try {
+                const repo = isBusiness ? businessInvoiceRepo : customerInvoiceRepo;
+                const all = (await repo.getAll()) || [];
+                return all.filter(inv => inv && !inv.isArchive);
+            } catch (e) {
+                console.warn("getAllInvoices error:", e);
+                return [];
+            }
         },
 
         listenInvoices: (isBusiness, callback) => {
             const repo = isBusiness ? businessInvoiceRepo : customerInvoiceRepo;
             return repo.listenAll(data => {
-                callback(data.filter(inv => !inv.isArchive));
+                const list = Array.isArray(data) ? data : [];
+                callback(list.filter(inv => inv && !inv.isArchive));
             });
         },
 

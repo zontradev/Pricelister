@@ -341,9 +341,22 @@ export const renderCategories = async (container, workspaceId) => {
         formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
+    const isCatFormDirty = () => {
+        if (!formContainer || formContainer.style.display === 'none') return false;
+        const nameVal = (container.querySelector('#cat-name')?.value || '').trim();
+        const colorVal = container.querySelector('#cat-color')?.value || '#4a90e2';
+        const isEdit = Boolean(container.querySelector('#cat-id')?.value);
+
+        if (isEdit) {
+            if (!initialCatSnapshot) return false;
+            return nameVal !== initialCatSnapshot.name || colorVal !== initialCatSnapshot.color;
+        } else {
+            return Boolean(nameVal);
+        }
+    };
+
     const handleCloseCatForm = async () => {
-        const submitBtn = container.querySelector('#cat-submit-btn');
-        if (submitBtn && !submitBtn.disabled) {
+        if (isCatFormDirty()) {
             const leave = await showAlert.confirmUnsavedChanges();
             if (!leave) return;
         }

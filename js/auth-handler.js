@@ -724,7 +724,7 @@ export const initAuthHandler = (pageType) => {
         const wsCurrPreview = document.getElementById('ws-currency-preview');
         const btnWsFindCurrency = document.getElementById('btn-ws-find-currency');
 
-        // Workspace Logo File Picking & Preview Box
+        // Workspace Logo File Picking & Drag & Drop Zone
         let selectedWsLogoFile = null;
         let wsLogoDataUrl = '';
         const wsLogoFileInput = document.getElementById('ws-logo-file-input');
@@ -733,47 +733,170 @@ export const initAuthHandler = (pageType) => {
         const wsLogoImgPreview = document.getElementById('ws-logo-img-preview');
         const wsLogoEmptyState = document.getElementById('ws-logo-empty-state');
         const wsLogoBox = document.getElementById('ws-logo-preview-box');
+        const wsLogoDropzone = document.getElementById('ws-logo-dropzone');
+        const dropPrompt = document.getElementById('ws-logo-drop-prompt');
 
+        const processWorkspaceLogoFile = (file) => {
+            return new Promise((resolve, reject) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    reject(new Error('Please select a valid image file (PNG, JPG, WEBP).'));
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const maxDim = 800;
+                        let w = img.width;
+                        let h = img.height;
+
+                        if (w > maxDim || h > maxDim) {
+                            if (w > h) {
+                                h = Math.round((h * maxDim) / w);
+                                w = maxDim;
+                            } else {
+                                w = Math.round((w * maxDim) / h);
+                                h = maxDim;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+                        canvas.toBlob((blob) => {
+                            if (blob) {
+                                const optimizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                                    type: 'image/jpeg',
+                                    lastModified: Date.now()
+                                });
+                                resolve({ file: optimizedFile, dataUrl });
+                            } else {
+                                resolve({ file, dataUrl: e.target.result });
+                            }
+                        }, 'image/jpeg', 0.88);
+                    };
+                    img.onerror = () => {
+                        resolve({ file, dataUrl: e.target.result });
+                    };
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        };
+
+        const handleFileSelection = async (file) => {
+            if (!file) return;
+            try {
+                if (dropPrompt) dropPrompt.innerHTML = `<strong>Processing image...</strong>`;
+                const { file: optimizedFile, dataUrl } = await processWorkspaceLogoFile(file);
+                selectedWsLogoFile = optimizedFile;
+                wsLogoDataUrl = dataUrl;
+
+                if (wsLogoImgPreview) {
+                    wsLogoImgPreview.src = wsLogoDataUrl;
+                    wsLogoImgPreview.style.display = 'block';
+                }
+                if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'none';
+                if (btnWsRemoveLogo) btnWsRemoveLogo.style.display = 'inline-block';
+                if (btnWsChooseLogo) btnWsChooseLogo.textContent = 'Change File';
+                if (dropPrompt) dropPrompt.innerHTML = `<strong>Logo selected:</strong> ${file.name} (${(optimizedFile.size / 1024).toFixed(1)} KB)`;
+                if (wsLogoDropzone) {
+                    wsLogoDropzone.style.borderColor = '#10b981';
+                    wsLogoDropzone.style.background = 'rgba(16, 185, 129, 0.04)';
+                }
+            } catch (err) {
+                console.error("Logo processing error:", err);
+                showAlert.error(err.message || 'Failed to process image file.');
+                if (dropPrompt) dropPrompt.innerHTML = `<strong>Drag & drop image here</strong>, or click to browse.`;
+            }
+        };
+
+        // Click Triggers for File Picker
         if (btnWsChooseLogo && wsLogoFileInput) {
-            btnWsChooseLogo.addEventListener('click', () => {
+            btnWsChooseLogo.addEventListener('click', (e) => {
+                e.stopPropagation();
                 wsLogoFileInput.click();
             });
         }
 
         if (wsLogoBox && wsLogoFileInput) {
-            wsLogoBox.addEventListener('click', () => {
+            wsLogoBox.addEventListener('click', (e) => {
+                e.stopPropagation();
                 wsLogoFileInput.click();
             });
-            wsLogoBox.style.cursor = 'pointer';
         }
 
-        if (wsLogoFileInput) {
-            wsLogoFileInput.addEventListener('change', (e) => {
-                const file = e.target.files && e.target.files[0];
-                if (file) {
-                    if (!file.type.startsWith('image/')) {
-                        showAlert.error('Please choose a valid image file (PNG, JPG, WEBP).');
-                        return;
-                    }
-                    selectedWsLogoFile = file;
-                    const reader = new FileReader();
-                    reader.onload = (re) => {
-                        wsLogoDataUrl = re.target.result;
-                        if (wsLogoImgPreview) {
-                            wsLogoImgPreview.src = wsLogoDataUrl;
-                            wsLogoImgPreview.style.display = 'block';
-                        }
-                        if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'none';
-                        if (btnWsRemoveLogo) btnWsRemoveLogo.style.display = 'inline-block';
-                        if (btnWsChooseLogo) btnWsChooseLogo.textContent = 'Change File';
-                    };
-                    reader.readAsDataURL(file);
+        if (wsLogoDropzone && wsLogoFileInput) {
+            wsLogoDropzone.addEventListener('click', (e) => {
+                if (e.target !== btnWsRemoveLogo && !btnWsRemoveLogo.contains(e.target)) {
+                    wsLogoFileInput.click();
                 }
             });
         }
 
+        // File Input Change Listener
+        if (wsLogoFileInput) {
+            wsLogoFileInput.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (file) {
+                    handleFileSelection(file);
+                }
+            });
+        }
+
+        // Drag & Drop Listeners
+        const dropTargets = [wsLogoDropzone, wsLogoBox].filter(Boolean);
+        dropTargets.forEach(target => {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                target.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                target.addEventListener(eventName, () => {
+                    if (wsLogoDropzone) {
+                        wsLogoDropzone.style.borderColor = '#e11d48';
+                        wsLogoDropzone.style.background = 'rgba(225, 29, 72, 0.06)';
+                        wsLogoDropzone.style.transform = 'scale(1.01)';
+                    }
+                });
+            });
+
+            ['dragleave'].forEach(eventName => {
+                target.addEventListener(eventName, () => {
+                    if (wsLogoDropzone) {
+                        wsLogoDropzone.style.transform = 'scale(1)';
+                        if (!selectedWsLogoFile) {
+                            wsLogoDropzone.style.borderColor = '#cbd5e1';
+                            wsLogoDropzone.style.background = 'var(--surface-50)';
+                        }
+                    }
+                });
+            });
+
+            target.addEventListener('drop', (e) => {
+                if (wsLogoDropzone) {
+                    wsLogoDropzone.style.transform = 'scale(1)';
+                }
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    handleFileSelection(dt.files[0]);
+                }
+            });
+        });
+
+        // Remove Logo Button
         if (btnWsRemoveLogo) {
-            btnWsRemoveLogo.addEventListener('click', () => {
+            btnWsRemoveLogo.addEventListener('click', (e) => {
+                e.stopPropagation();
                 selectedWsLogoFile = null;
                 wsLogoDataUrl = '';
                 if (wsLogoFileInput) wsLogoFileInput.value = '';
@@ -783,10 +906,19 @@ export const initAuthHandler = (pageType) => {
                 }
                 if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'flex';
                 btnWsRemoveLogo.style.display = 'none';
-                if (btnWsChooseLogo) btnWsChooseLogo.innerHTML = `
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    Choose File
-                `;
+                if (wsLogoDropzone) {
+                    wsLogoDropzone.style.borderColor = '#cbd5e1';
+                    wsLogoDropzone.style.background = 'var(--surface-50)';
+                }
+                if (dropPrompt) {
+                    dropPrompt.innerHTML = `<strong>Drag & drop image here</strong>, or click to browse (PNG, JPG, WEBP).`;
+                }
+                if (btnWsChooseLogo) {
+                    btnWsChooseLogo.innerHTML = `
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Choose File
+                    `;
+                }
             });
         }
 

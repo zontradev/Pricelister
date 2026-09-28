@@ -903,10 +903,22 @@ const createGlobalSearchModalDOM = () => {
                     <div class="palette-empty-title">No matching results <span class="palette-empty-query"></span></div>
                     <p class="palette-empty-desc">Try searching for <strong>Import</strong>, <strong>Export</strong>, <strong>Add Product</strong>, <strong>Currency</strong>, <strong>Profile</strong>, or an item name.</p>
                     <div class="palette-quick-suggestions">
-                        <button type="button" class="palette-suggestion-chip" data-query="import">📥 Import Products</button>
-                        <button type="button" class="palette-suggestion-chip" data-query="export">📤 Export Pricelist</button>
-                        <button type="button" class="palette-suggestion-chip" data-query="currency">💱 Currency</button>
-                        <button type="button" class="palette-suggestion-chip" data-query="add product">➕ Add Product</button>
+                        <button type="button" class="palette-suggestion-chip" data-query="import" style="display:inline-flex; align-items:center; gap:5px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            Import Products
+                        </button>
+                        <button type="button" class="palette-suggestion-chip" data-query="export" style="display:inline-flex; align-items:center; gap:5px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            Export Pricelist
+                        </button>
+                        <button type="button" class="palette-suggestion-chip" data-query="currency" style="display:inline-flex; align-items:center; gap:5px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                            Currency
+                        </button>
+                        <button type="button" class="palette-suggestion-chip" data-query="add product" style="display:inline-flex; align-items:center; gap:5px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Add Product
+                        </button>
                     </div>
                 </div>
             </div>

@@ -12,6 +12,7 @@ import { getCategoryService } from '../services/categoryService.js';
 import { showAlert } from '../alert-handler.js';
 import { getAppCurrencySymbol } from '../utilities.js';
 import { VALID_DEPLOY_COUNTRIES, VALID_BRANDING_MODES } from '../schemas/customerPanelSchema.js';
+import { draftManager } from '../services/draftManager.js';
 
 export const BENCHMARK_EXCHANGE_RATES = {
     'US': { rate: 1.00, currency: 'USD', symbol: '$' },
@@ -116,14 +117,14 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
     if (!isAuthorized) {
         container.innerHTML = `
             <div class="card" style="text-align: center; padding: 3rem 1.5rem; max-width: 550px; margin: 2rem auto; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); background: #ffffff;">
-                <div style="width:64px; height:64px; border-radius:16px; background:linear-gradient(135deg, rgba(225,29,72,0.1), rgba(190,18,60,0.15)); border:1px solid rgba(225,29,72,0.25); display:inline-flex; align-items:center; justify-content:center; color:#e11d48; margin-bottom:1.25rem;">
+                <div style="width:64px; height:64px; border-radius:16px; background:#f4f4f5; border:1px solid #e4e4e7; display:inline-flex; align-items:center; justify-content:center; color:#18181b; margin-bottom:1.25rem;">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </div>
                 <h3 style="color: var(--text-primary); margin-bottom: 0.5rem; font-weight:800;">Access Restricted</h3>
                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size:0.92rem;">
                     Only Workspace Admins and Co-admins have permission to configure and publish the Customer Panel.
                 </p>
-                <button class="btn btn-primary" onclick="window.location.hash='#/overview'" style="background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); font-weight:700;">Return to Overview</button>
+                <button class="btn btn-primary" onclick="window.location.hash='#/overview'" style="background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; font-weight:700;">Return to Overview</button>
             </div>
         `;
         return;
@@ -148,7 +149,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         const isLive = Boolean(settings.isPublished || settings.enabled);
         const currentPortalUrl = computeCustomerUrl(settings);
         const brandingMode = settings.brandingMode || 'PRICELISTER';
-        
+
         // Selected Countries parsing
         let selectedCountriesList = [];
         if (Array.isArray(settings.deployCountries) && settings.deployCountries.length > 0) {
@@ -193,13 +194,13 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
             sidebarStatus.textContent = isLive ? 'Live' : 'Closed';
         }
 
-        const statusPillHtml = isLive 
+        const statusPillHtml = isLive
             ? `<span id="header-status-pill" style="display:inline-flex; align-items:center; gap:0.45rem; padding:0.35rem 0.85rem; border-radius:999px; background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-size:0.82rem; font-weight:700;">
                  <span style="width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 8px rgba(16,185,129,0.8); animation:cp-pulse-dot 1.8s infinite;"></span>
                  Published
-               </span>` 
-            : `<span id="header-status-pill" style="display:inline-flex; align-items:center; gap:0.45rem; padding:0.35rem 0.85rem; border-radius:999px; background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; font-size:0.82rem; font-weight:700;">
-                 <span style="width:8px; height:8px; border-radius:50%; background:#e11d48;"></span>
+               </span>`
+            : `<span id="header-status-pill" style="display:inline-flex; align-items:center; gap:0.45rem; padding:0.35rem 0.85rem; border-radius:999px; background:#f4f4f5; color:#52525b; border:1px solid #e4e4e7; font-size:0.82rem; font-weight:700;">
+                 <span style="width:8px; height:8px; border-radius:50%; background:#71717a;"></span>
                  Unpublished
                </span>`;
 
@@ -220,7 +221,8 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     </p>
                 </div>
 
-                <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+                <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;" id="cp-header-actions-wrap">
+                    <div id="cp-unsaved-pill-mount"></div>
                     <button type="button" id="btn-copy-customer-link" class="btn btn-secondary" style="font-weight:600; display:flex; align-items:center; gap:0.4rem;" title="Copy shareable customer portal link">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         Copy Link
@@ -229,15 +231,15 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     ${isLive ? `
                         <a href="${currentPortalUrl}" target="_blank" class="btn btn-secondary" style="font-weight:600; display:flex; align-items:center; gap:0.4rem; color:var(--text-primary);" title="Open customer catalog in a separate new browser tab">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                            Open Storefront ↗
+                            Open Storefront
                         </a>
-                        <button type="button" id="btn-unpublish-panel" class="btn" style="background:#ffffff; border:1px solid #fecdd3; color:#e11d48; font-weight:600; display:flex; align-items:center; gap:0.4rem; padding:0.5rem 0.9rem;" title="Temporarily unpublish or suspend customer access">
+                        <button type="button" id="btn-unpublish-panel" class="btn" style="background:#ffffff; border:1px solid #e4e4e7; color:#52525b; font-weight:600; display:flex; align-items:center; gap:0.4rem; padding:0.5rem 0.9rem;" title="Temporarily unpublish or suspend customer access">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                             Unpublish Portal
                         </button>
                     ` : ''}
 
-                    <button type="button" id="btn-trigger-launch-modal" class="btn btn-primary" style="font-weight:700; display:flex; align-items:center; gap:0.5rem; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35); padding:0.6rem 1.25rem;">
+                    <button type="button" id="btn-trigger-launch-modal" class="btn btn-primary" style="font-weight:700; display:flex; align-items:center; gap:0.5rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; box-shadow:0 4px 14px rgba(0,0,0,0.2); padding:0.6rem 1.25rem;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 9v-5s3.03.55 4 2c1.08 1.62 0 5 0 5"></path></svg>
                         ${isLive ? 'Re-Launch Updates' : 'Launch Customer Panel'}
                     </button>
@@ -246,20 +248,20 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
 
             <!-- UNPUBLISHED NOTICE BANNER (WHEN INACTIVE) -->
             ${!isLive ? `
-                <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border: 1px solid #fecdd3; border-left: 5px solid #e11d48; padding: 1.25rem 1.5rem;">
+                <div class="card" style="margin-bottom: 1.5rem; background: #fafaf9; border: 1px solid #e4e4e7; border-left: 5px solid #18181b; padding: 1.25rem 1.5rem;">
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                         <div style="display:flex; align-items:center; gap:1rem;">
-                            <div style="width:42px; height:42px; border-radius:50%; background:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(225,29,72,0.15); flex-shrink:0;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <div style="width:42px; height:42px; border-radius:50%; background:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid #e4e4e7; flex-shrink:0;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                             </div>
                             <div>
-                                <h4 style="margin:0 0 0.2rem 0; font-size:1rem; font-weight:700; color:#9f1239;">Storefront Is Currently Unpublished</h4>
-                                <p style="margin:0; font-size:0.85rem; color:#be123c;">
+                                <h4 style="margin:0 0 0.2rem 0; font-size:1rem; font-weight:700; color:#09090b;">Storefront Is Currently Unpublished</h4>
+                                <p style="margin:0; font-size:0.85rem; color:#71717a;">
                                     Until you click <strong>Launch Customer Panel</strong>, customer access remains closed and visitors will see your temporary closed notice.
                                 </p>
                             </div>
                         </div>
-                        <button type="button" id="btn-banner-launch" class="btn btn-primary" style="background:#e11d48; border-color:#e11d48; font-weight:700; padding:0.5rem 1.15rem; font-size:0.88rem; display:flex; align-items:center; gap:0.4rem;">
+                        <button type="button" id="btn-banner-launch" class="btn btn-primary" style="background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; font-weight:700; padding:0.5rem 1.15rem; font-size:0.88rem; display:flex; align-items:center; gap:0.4rem;">
                             Launch Now
                         </button>
                     </div>
@@ -388,11 +390,11 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     </div>
 
                     <!-- LOGO & BRANDING FIELDS DETAILS -->
-                    <div style="background:var(--surface-50); border:1px solid var(--border-color); border-radius:12px; padding:1.25rem; margin-top:1rem;">
+                    <div id="cp-logo-dropzone" style="background:var(--surface-50); border:1.5px dashed var(--border-color); border-radius:12px; padding:1.25rem; margin-top:1rem; transition:all 0.2s ease;" title="Click or Drag & Drop logo file here">
                         
                         <div style="display:flex; gap:1.25rem; align-items:center; flex-wrap:wrap; margin-bottom:1.25rem;">
                             <!-- Square-Rounded Elevated Logo Box -->
-                            <div id="cp-logo-elevated-box" style="width:72px; height:72px; border-radius:16px; background:#ffffff; border:1.5px solid var(--border-color); box-shadow:0 6px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                            <div id="cp-logo-elevated-box" style="width:76px; height:76px; border-radius:16px; background:#ffffff; border:1.5px solid var(--border-color); box-shadow:0 6px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; cursor:pointer; position:relative;" title="Click or drop logo image here">
                                 <img id="cp-logo-img-preview" src="${escapeHtml(displayLogoSrc)}" alt="Store Logo" style="width:100%; height:100%; object-fit:contain;" onerror="this.src='pricelister_org.png';">
                             </div>
 
@@ -400,7 +402,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                                 <div id="cp-logo-locked-notice" style="display:${brandingMode === 'PRICELISTER' ? 'block' : 'none'};">
                                     <strong style="font-size:0.9rem; color:var(--text-primary);">Official PriceLister Logo (Locked)</strong>
                                     <p style="margin:0.2rem 0 0 0; font-size:0.78rem; color:var(--text-secondary);">
-                                        Uses verified PriceLister emblem. Select <strong>Custom Branding</strong> above to upload your own store logo.
+                                        Uses verified PriceLister emblem. Select <strong>Custom Branding</strong> above or drop a logo image to customize.
                                     </p>
                                 </div>
 
@@ -409,7 +411,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                                     <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.4rem;">
                                         <button type="button" id="btn-cp-choose-logo" class="btn btn-secondary btn-sm" style="font-weight:600; font-size:0.85rem; padding:0.4rem 0.85rem; display:flex; align-items:center; gap:0.4rem; background:#ffffff;">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                            Choose File
+                                            Browse / Drop Logo
                                         </button>
                                         <button type="button" id="btn-cp-use-ws-logo" class="btn btn-xs btn-outline" style="font-size:0.78rem; padding:0.35rem 0.65rem;">
                                             Use Workspace Logo
@@ -419,12 +421,13 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                                         </button>
                                     </div>
                                     <input type="text" id="cp-store-logo-input" class="form-control" style="font-size:0.82rem; height:34px; padding:0 0.65rem;" value="${escapeHtml(storeLogo)}" placeholder="Or paste direct image URL (optional)">
+                                    <small style="font-size:0.73rem; color:var(--text-muted); margin-top:0.25rem; display:block;">Drag & drop PNG, JPG, or WEBP directly onto this area.</small>
                                 </div>
 
                                 <div id="cp-logo-workspace-notice" style="display:${brandingMode === 'WORKSPACE' ? 'block' : 'none'};">
                                     <strong style="font-size:0.9rem; color:var(--text-primary);">Workspace Broad Logo</strong>
                                     <p style="margin:0.2rem 0 0 0; font-size:0.78rem; color:var(--text-secondary);">
-                                        Automatically mirrors your Workspace Logo configured in settings.
+                                        Automatically mirrors your Workspace Logo. Drop a logo image here to switch to Custom Branding.
                                     </p>
                                 </div>
                             </div>
@@ -491,9 +494,9 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     <div id="cp-global-mode-alert" style="margin:0.85rem 0 0.5rem 0; padding:0.65rem 0.95rem; border-radius:10px; font-size:0.85rem; display:flex; align-items:center; gap:0.6rem; transition:all 0.2s ease; ${isGlobalSelected ? 'background:rgba(225,29,72,0.06); border:1px solid rgba(225,29,72,0.25); color:var(--primary);' : 'background:#f8fafc; border:1px solid #e2e8f0; color:var(--text-secondary);'}">
                         <span id="cp-global-mode-icon" style="display:inline-flex; align-items:center;">${isGlobalSelected ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>'}</span>
                         <span id="cp-global-mode-text">
-                            ${isGlobalSelected 
-                                ? '<strong>E-Commerce Website will globally publish:</strong> Accessible to visitors across all international countries.' 
-                                : '<strong>Regional Target Mode:</strong> E-Commerce catalog will publish to selected target countries.'}
+                            ${isGlobalSelected
+                ? '<strong>E-Commerce Website will globally publish:</strong> Accessible to visitors across all international countries.'
+                : '<strong>Regional Target Mode:</strong> E-Commerce catalog will publish to selected target countries.'}
                         </span>
                     </div>
 
@@ -506,11 +509,11 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     <!-- Flag Country Selection Grid (Category-Style Chips) -->
                     <div id="cp-country-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap:0.65rem; max-height:360px; overflow-y:auto; padding:0.35rem 0.15rem;">
                         ${DEPLOY_COUNTRY_LIST.map(country => {
-                            const isThisCountryGlobal = Boolean(country.isGlobal);
-                            const isChecked = isThisCountryGlobal ? isGlobalSelected : (!isGlobalSelected && selectedCountriesList.includes(country.name));
-                            const isDisabled = (!isThisCountryGlobal && isGlobalSelected);
+                    const isThisCountryGlobal = Boolean(country.isGlobal);
+                    const isChecked = isThisCountryGlobal ? isGlobalSelected : (!isGlobalSelected && selectedCountriesList.includes(country.name));
+                    const isDisabled = (!isThisCountryGlobal && isGlobalSelected);
 
-                            return `
+                    return `
                                 <label class="cp-country-card" data-country-name="${escapeHtml(country.name)}" data-is-global="${isThisCountryGlobal ? 'true' : 'false'}" style="display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.85rem; background:${isChecked ? 'rgba(225,29,72,0.04)' : '#ffffff'}; border:1.5px solid ${isChecked ? 'var(--primary)' : 'var(--border-color)'}; border-radius:10px; cursor:${isDisabled ? 'not-allowed' : 'pointer'}; opacity:${isDisabled ? '0.55' : '1'}; transition:all 0.15s ease; user-select:none; position:relative;">
                                     <input type="checkbox" class="cp-country-checkbox" value="${escapeHtml(country.name)}" data-is-global="${isThisCountryGlobal ? 'true' : 'false'}" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} style="width:16px; height:16px; accent-color:var(--primary); cursor:${isDisabled ? 'not-allowed' : 'pointer'};">
                                     
@@ -533,7 +536,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                                     </div>
                                 </label>
                             `;
-                        }).join('')}
+                }).join('')}
                     </div>
 
                     <div style="margin-top:0.75rem; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:var(--text-secondary);">
@@ -605,15 +608,15 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                         </div>
                         <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:0.6rem;">
                             ${allCategories.map(cat => {
-                                const isChecked = (settings.allowedCategories || []).includes(cat.name);
-                                return `
+                    const isChecked = (settings.allowedCategories || []).includes(cat.name);
+                    return `
                                     <label style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; background:#ffffff; border:1px solid var(--border-color); border-radius:6px; cursor:pointer;">
                                         <input type="checkbox" class="cp-cat-checkbox" value="${escapeHtml(cat.name)}" ${isChecked ? 'checked' : ''}>
                                         <span style="width:10px; height:10px; border-radius:50%; background:${cat.color || '#3b82f6'}; flex-shrink:0;"></span>
                                         <span style="font-size:0.85rem; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(cat.name)}</span>
                                     </label>
                                 `;
-                            }).join('')}
+                }).join('')}
                         </div>
                     </div>
                 </div>
@@ -741,7 +744,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                         <button type="submit" id="btn-save-customer-panel" disabled data-dirty="false" class="btn btn-secondary" style="padding:0.65rem 1.65rem; font-weight:700; font-size:0.95rem; opacity:0.55; cursor:not-allowed; transition:all 0.2s ease;">
                             Save Settings (No Changes)
                         </button>
-                        <button type="button" id="btn-bottom-launch" class="btn btn-primary" style="padding:0.65rem 1.75rem; font-weight:700; font-size:0.95rem; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35); display:flex; align-items:center; gap:0.5rem;">
+                        <button type="button" id="btn-bottom-launch" class="btn btn-primary" style="padding:0.65rem 1.75rem; font-weight:700; font-size:0.95rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; box-shadow:0 4px 14px rgba(0,0,0,0.2); display:flex; align-items:center; gap:0.5rem;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 9v-5s3.03.55 4 2c1.08 1.62 0 5 0 5"></path></svg>
                             ${isLive ? 'Re-Launch / Publish Updates' : 'Launch Customer Panel'}
                         </button>
@@ -763,7 +766,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         }
 
         const brandingMode = document.querySelector('input[name="cp-branding-mode"]:checked')?.value || 'PRICELISTER';
-        
+
         // Collect selected countries
         const globalCb = document.querySelector('.cp-country-checkbox[data-is-global="true"]');
         const isGlobal = Boolean(globalCb && globalCb.checked);
@@ -878,10 +881,10 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
 
         modalEl.innerHTML = `
             <div style="position:fixed; inset:0; background:rgba(15,23,42,0.8); backdrop-filter:blur(10px); z-index:9999; display:flex; align-items:center; justify-content:center; padding:1rem;">
-                <div class="card" style="background:#ffffff; border-radius:18px; max-width:540px; width:100%; box-shadow:0 25px 60px -15px rgba(0,0,0,0.5); overflow:hidden; border:1px solid rgba(225,29,72,0.2); animation:modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+                <div class="card" style="background:#ffffff; border-radius:18px; max-width:540px; width:100%; box-shadow:0 25px 60px -15px rgba(0,0,0,0.5); overflow:hidden; border:1px solid #e4e4e7; animation:modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
                     
                     <!-- MODAL HEADER -->
-                    <div style="background:linear-gradient(135deg, #881337 0%, #e11d48 50%, #be123c 100%); padding:1.75rem 1.75rem 1.5rem; text-align:center; color:#ffffff; position:relative; overflow:hidden;">
+                    <div style="background:linear-gradient(180deg, #27272a 0%, #18181b 100%); padding:1.75rem 1.75rem 1.5rem; text-align:center; color:#ffffff; position:relative; overflow:hidden;">
                         <div style="position:absolute; width:180px; height:180px; background:radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%); top:-50px; right:-50px; border-radius:50%;"></div>
                         <h3 style="margin:0 0 0.35rem 0; font-size:1.35rem; font-weight:800; letter-spacing:-0.01em; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
@@ -971,8 +974,8 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     width: 76px;
                     height: 76px;
                     border-radius: 50%;
-                    background: radial-gradient(circle at 35% 35%, #ff4b72, #e11d48 60%, #881337 100%);
-                    box-shadow: 0 10px 25px rgba(225, 29, 72, 0.5), inset 0 2px 4px rgba(255,255,255,0.4);
+                    background: radial-gradient(circle at 35% 35%, #3f3f46, #18181b 60%, #09090b 100%);
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35), inset 0 2px 4px rgba(255,255,255,0.4);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -995,7 +998,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     width: 100px;
                     height: 100px;
                     border-radius: 50%;
-                    border: 2px solid rgba(225, 29, 72, 0.4);
+                    border: 2px solid rgba(24, 24, 27, 0.25);
                     animation: orbRipple 1.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
                 }
                 .cp-pulse-ring-2 {
@@ -1003,7 +1006,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     width: 130px;
                     height: 130px;
                     border-radius: 50%;
-                    border: 2px solid rgba(225, 29, 72, 0.2);
+                    border: 2px solid rgba(24, 24, 27, 0.15);
                     animation: orbRipple 1.8s cubic-bezier(0.25, 1, 0.5, 1) 0.6s infinite;
                 }
                 @keyframes orbRipple {
@@ -1021,8 +1024,8 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     transition: all 0.3s ease;
                 }
                 .launch-step-active {
-                    background: #fff1f2;
-                    border-color: #fecdd3;
+                    background: #f4f4f5;
+                    border-color: #d4d4d8;
                 }
                 .launch-step-done {
                     background: #ecfdf5;
@@ -1042,8 +1045,8 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     color: #475569;
                 }
                 .launch-step-active .launch-step-icon {
-                    background: #ffe4e6;
-                    color: #e11d48;
+                    background: #18181b;
+                    color: #ffffff;
                 }
                 .launch-step-done .launch-step-icon {
                     background: #10b981;
@@ -1061,7 +1064,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                 .launch-spinner {
                     width: 14px;
                     height: 14px;
-                    border: 2px solid #e11d48;
+                    border: 2px solid #18181b;
                     border-top-color: transparent;
                     border-radius: 50%;
                     animation: spin 0.8s linear infinite;
@@ -1078,7 +1081,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
             if (subtitle && subEl) subEl.textContent = subtitle;
 
             if (state === 'done') {
-                iconEl.innerHTML = `✓`;
+                iconEl.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
             } else if (state === 'active') {
                 iconEl.innerHTML = `<div class="launch-spinner"></div>`;
             } else {
@@ -1253,15 +1256,35 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         const submitBtn = document.getElementById('btn-save-customer-panel');
         const unsavedBadge = document.getElementById('cp-unsaved-badge');
 
-        // Capture initial snapshot
-        initialFormSnapshot = JSON.stringify(collectFormData());
-        isFormDirty = false;
+        // Mount Smart Unsaved Changes Indicator
+        const pillMount = document.getElementById('cp-unsaved-pill-mount');
+        const unsavedIndicator = draftManager.mountUnsavedIndicator(pillMount, {
+            formType: 'edit',
+            onSave: () => {
+                if (submitBtn && !submitBtn.disabled) submitBtn.click();
+            }
+        });
+
+        // Register form for Anti-Reload Protection
+        draftManager.registerForm('customer_panel', () => {
+            const cpForm = document.getElementById('customer-panel-form');
+            if (!cpForm || !document.body.contains(cpForm)) return false;
+            return isFormDirty;
+        });
 
         // Dirty State Checker & Update Button Controller
         const checkDirtyState = () => {
             const currentSnapshot = JSON.stringify(collectFormData());
-            const hasChanged = (currentSnapshot !== initialFormSnapshot) || (selectedCustomLogoFile !== null);
+            const hasChanged = (Boolean(initialFormSnapshot) && currentSnapshot !== initialFormSnapshot) || (selectedCustomLogoFile !== null);
             isFormDirty = hasChanged;
+
+            unsavedIndicator.update(isFormDirty);
+
+            if (isFormDirty) {
+                draftManager.saveDraft('customer_panel', collectFormData());
+            } else {
+                draftManager.clearDraft('customer_panel');
+            }
 
             if (submitBtn) {
                 if (isFormDirty) {
@@ -1403,7 +1426,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                 if (logoLockedNotice) logoLockedNotice.style.display = 'none';
                 if (logoEditableControls) logoEditableControls.style.display = 'block';
                 if (logoWorkspaceNotice) logoWorkspaceNotice.style.display = 'none';
-                
+
                 const customLogoVal = (document.getElementById('cp-store-logo-input')?.value || '').trim();
                 if (logoImgPreview) {
                     logoImgPreview.src = customLogoVal || wsLogo || 'pricelister_org.png';
@@ -1447,6 +1470,72 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
         const btnUseWsLogo = document.getElementById('btn-cp-use-ws-logo');
         const btnRemoveLogo = document.getElementById('btn-cp-remove-logo');
         const storeLogoInput = document.getElementById('cp-store-logo-input');
+        const logoElevatedBox = document.getElementById('cp-logo-elevated-box');
+
+        const processCustomLogoFile = async (file) => {
+            if (!file || !file.type.startsWith('image/')) {
+                showAlert.warning("Please select a valid image file (PNG, JPG, WEBP, SVG).");
+                return;
+            }
+
+            // Client-side compression using Canvas
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDimension = 512;
+
+                        if (width > maxDimension || height > maxDimension) {
+                            if (width > height) {
+                                height = Math.round((height * maxDimension) / width);
+                                width = maxDimension;
+                            } else {
+                                width = Math.round((width * maxDimension) / height);
+                                height = maxDimension;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob((blob) => {
+                            if (!blob) {
+                                selectedCustomLogoFile = file;
+                                if (logoImgPreview) logoImgPreview.src = e.target.result;
+                                if (storeLogoInput) storeLogoInput.value = '';
+                                checkDirtyState();
+                                resolve(file);
+                                return;
+                            }
+                            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                                type: "image/webp",
+                                lastModified: Date.now()
+                            });
+                            selectedCustomLogoFile = compressedFile;
+                            if (logoImgPreview) logoImgPreview.src = canvas.toDataURL('image/webp', 0.88);
+                            if (storeLogoInput) storeLogoInput.value = '';
+                            checkDirtyState();
+                            resolve(compressedFile);
+                        }, 'image/webp', 0.88);
+                    };
+                    img.onerror = () => {
+                        selectedCustomLogoFile = file;
+                        if (logoImgPreview) logoImgPreview.src = e.target.result;
+                        if (storeLogoInput) storeLogoInput.value = '';
+                        checkDirtyState();
+                        resolve(file);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        };
 
         if (btnChooseLogo && storeLogoFileInput) {
             btnChooseLogo.addEventListener('click', () => {
@@ -1454,18 +1543,82 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
             });
         }
 
+        const cpLogoDropzone = document.getElementById('cp-logo-dropzone');
+        const dropTargets = [logoElevatedBox, cpLogoDropzone].filter(Boolean);
+
+        if (storeLogoFileInput && dropTargets.length > 0) {
+            if (logoElevatedBox) {
+                logoElevatedBox.style.cursor = 'pointer';
+                logoElevatedBox.title = 'Click or Drag & Drop logo image here';
+
+                logoElevatedBox.addEventListener('click', () => {
+                    const currentBranding = document.querySelector('input[name="cp-branding-mode"]:checked')?.value;
+                    if (currentBranding !== 'CUSTOM') {
+                        const customRadio = document.querySelector('input[name="cp-branding-mode"][value="CUSTOM"]');
+                        if (customRadio) {
+                            customRadio.checked = true;
+                            customRadio.dispatchEvent(new Event('change'));
+                        }
+                    }
+                    storeLogoFileInput.click();
+                });
+            }
+
+            dropTargets.forEach(target => {
+                ['dragenter', 'dragover'].forEach(evtName => {
+                    target.addEventListener(evtName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (cpLogoDropzone) {
+                            cpLogoDropzone.style.borderColor = '#18181b';
+                            cpLogoDropzone.style.background = '#f4f4f5';
+                            cpLogoDropzone.style.boxShadow = '0 0 0 2px rgba(24,24,27,0.12)';
+                        }
+                        if (logoElevatedBox) {
+                            logoElevatedBox.style.borderColor = '#18181b';
+                            logoElevatedBox.style.transform = 'scale(1.05)';
+                        }
+                    });
+                });
+
+                ['dragleave', 'dragend', 'drop'].forEach(evtName => {
+                    target.addEventListener(evtName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (cpLogoDropzone) {
+                            cpLogoDropzone.style.borderColor = 'var(--border-color)';
+                            cpLogoDropzone.style.background = 'var(--surface-50)';
+                            cpLogoDropzone.style.boxShadow = 'none';
+                        }
+                        if (logoElevatedBox) {
+                            logoElevatedBox.style.borderColor = 'var(--border-color)';
+                            logoElevatedBox.style.transform = 'none';
+                        }
+                    });
+                });
+
+                target.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const files = e.dataTransfer?.files;
+                    if (files && files.length > 0) {
+                        const customRadio = document.querySelector('input[name="cp-branding-mode"][value="CUSTOM"]');
+                        if (customRadio && !customRadio.checked) {
+                            customRadio.checked = true;
+                            customRadio.dispatchEvent(new Event('change'));
+                        }
+                        await processCustomLogoFile(files[0]);
+                        showAlert.success("Store logo loaded! Click Save to apply changes.");
+                    }
+                });
+            });
+        }
+
         if (storeLogoFileInput) {
-            storeLogoFileInput.addEventListener('change', (e) => {
+            storeLogoFileInput.addEventListener('change', async (e) => {
                 const file = e.target.files && e.target.files[0];
                 if (file) {
-                    selectedCustomLogoFile = file;
-                    const reader = new FileReader();
-                    reader.onload = (re) => {
-                        if (logoImgPreview) logoImgPreview.src = re.target.result;
-                        if (storeLogoInput) storeLogoInput.value = '';
-                    };
-                    reader.readAsDataURL(file);
-                    checkDirtyState();
+                    await processCustomLogoFile(file);
                 }
             });
         }
@@ -1525,13 +1678,13 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                 globalModeAlert.style.color = isGlobalActive ? 'var(--primary)' : 'var(--text-secondary)';
             }
             if (globalModeIcon) {
-                globalModeIcon.innerHTML = isGlobalActive 
+                globalModeIcon.innerHTML = isGlobalActive
                     ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>'
                     : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>';
             }
             if (globalModeText) {
-                globalModeText.innerHTML = isGlobalActive 
-                    ? '<strong>E-Commerce Website will globally publish:</strong> Accessible to visitors across all international countries.' 
+                globalModeText.innerHTML = isGlobalActive
+                    ? '<strong>E-Commerce Website will globally publish:</strong> Accessible to visitors across all international countries.'
                     : '<strong>Regional Target Mode:</strong> E-Commerce catalog will publish to selected target countries.';
             }
 
@@ -1916,10 +2069,12 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
 
                     await settingsService.saveCustomerPanelSettings(updatedData);
 
-                    // Reset Dirty State
+                    // Reset Dirty State & Clear Saved Draft
                     isFormDirty = false;
                     initialFormSnapshot = JSON.stringify(updatedData);
                     selectedCustomLogoFile = null;
+                    draftManager.clearDraft('customer_panel');
+                    unsavedIndicator.update(false);
 
                     const sidebarStatus = document.getElementById('sidebar-customer-panel-status');
                     if (sidebarStatus) {
@@ -1940,8 +2095,11 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
             });
         }
 
-        // Initial sync of country cards state
+        // Initial sync of country cards state & pristine snapshot
         syncCountryCardsState();
+        initialFormSnapshot = JSON.stringify(collectFormData());
+        isFormDirty = false;
+        selectedCustomLogoFile = null;
         checkDirtyState();
     };
 

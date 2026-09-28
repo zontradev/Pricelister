@@ -12,12 +12,18 @@ export const getPeopleService = (workspaceId) => {
     return {
         // --- CUSTOMERS (Stored in ClientProfiles with isClient: false) ---
         getAllCustomers: async () => {
-            const all = await clientRepo.getAll();
-            return all.filter(c => c.isClient === false);
+            try {
+                const all = (await clientRepo.getAll()) || [];
+                return all.filter(c => c && c.isClient !== true);
+            } catch (e) {
+                console.warn("getAllCustomers error:", e);
+                return [];
+            }
         },
         listenCustomers: (callback) => {
             return clientRepo.listenAll(data => {
-                callback(data.filter(c => c.isClient === false));
+                const list = Array.isArray(data) ? data : [];
+                callback(list.filter(c => c && c.isClient !== true));
             });
         },
         addCustomer: async (data, creatorId) => {
@@ -120,12 +126,18 @@ export const getPeopleService = (workspaceId) => {
 
         // --- CLIENTS ---
         getAllClients: async () => {
-            const all = await clientRepo.getAll();
-            return all.filter(c => c.isClient !== false); // Explicitly filter for clients
+            try {
+                const all = (await clientRepo.getAll()) || [];
+                return all.filter(c => c && c.isClient === true);
+            } catch (e) {
+                console.warn("getAllClients error:", e);
+                return [];
+            }
         },
         listenClients: (callback) => {
             return clientRepo.listenAll(data => {
-                callback(data.filter(c => c.isClient !== false));
+                const list = Array.isArray(data) ? data : [];
+                callback(list.filter(c => c && c.isClient === true));
             });
         },
         addClient: async (data, creatorId) => {

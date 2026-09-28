@@ -539,20 +539,28 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;" id="export-format-group">
                         <div id="card-format-excel" class="export-format-card active" style="border: 2px solid var(--primary); background: rgba(16, 185, 129, 0.08); border-radius: 12px; padding: 1.1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);">
-                            <div class="format-check-pill" style="position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;">✓</div>
-                            <div style="font-size: 1.75rem; margin-bottom: 0.35rem;">📊</div>
+                            <div class="format-check-pill" style="position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <div style="margin-bottom: 0.5rem; display: flex; justify-content: center; color: #10b981;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>
+                            </div>
                             <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.2rem;">Excel (.XLSX)</strong>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">Spreadsheet workbook</span>
                         </div>
                         <div id="card-format-pdf" class="export-format-card" style="border: 1px solid var(--border-color); background: var(--surface-50); border-radius: 12px; padding: 1.1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; opacity: 0.75;">
                             <div class="format-check-pill" style="position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-color); display: none; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;"></div>
-                            <div style="font-size: 1.75rem; margin-bottom: 0.35rem;">📄</div>
+                            <div style="margin-bottom: 0.5rem; display: flex; justify-content: center; color: #e11d48;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15h6"></path></svg>
+                            </div>
                             <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.2rem;">Printable PDF</strong>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">Price list & catalog</span>
                         </div>
                         <div id="card-format-backup" class="export-format-card" style="border: 1px solid var(--border-color); background: var(--surface-50); border-radius: 12px; padding: 1.1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; opacity: 0.75;">
                             <div class="format-check-pill" style="position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-color); display: none; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;"></div>
-                            <div style="font-size: 1.75rem; margin-bottom: 0.35rem;">💾</div>
+                            <div style="margin-bottom: 0.5rem; display: flex; justify-content: center; color: #3b82f6;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            </div>
                             <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.2rem;">Full Backup (JSON)</strong>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">Full database (max 100MB)</span>
                         </div>

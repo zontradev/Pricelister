@@ -192,8 +192,9 @@ export const renderOrders = async (container, workspaceId) => {
                                                         </a>
                                                     ` : ''}
                                                 </div>
-                                                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.25rem; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(order.customerAddress)}">
-                                                    📍 ${escapeHtml(order.customerAddress)}
+                                                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.25rem; max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:4px;" title="${escapeHtml(order.customerAddress)}">
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                                    <span>${escapeHtml(order.customerAddress)}</span>
                                                 </div>
                                                 ${order.orderNote ? `
                                                     <div style="font-size:0.75rem; color:#b45309; background:#fef3c7; padding:0.15rem 0.45rem; border-radius:4px; margin-top:0.3rem; display:inline-block; max-width:240px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(order.orderNote)}">
@@ -232,12 +233,12 @@ export const renderOrders = async (container, workspaceId) => {
                                             <!-- Status Dropdown -->
                                             <td style="padding:1rem; text-align:center; vertical-align:top;">
                                                 <select class="form-control order-status-select" data-order-id="${order.id || order.uniqueId}" style="font-size:0.78rem; font-weight:700; padding:0.3rem 0.6rem; border-radius:6px; display:inline-block; width:auto; text-align:center; cursor:pointer;">
-                                                    <option value="PENDING" ${order.status === 'PENDING' ? 'selected' : ''}>🟡 Pending</option>
-                                                    <option value="CONFIRMED" ${order.status === 'CONFIRMED' ? 'selected' : ''}>🔵 Confirmed</option>
-                                                    <option value="PROCESSING" ${order.status === 'PROCESSING' ? 'selected' : ''}>🟣 Processing</option>
-                                                    <option value="SHIPPED" ${order.status === 'SHIPPED' ? 'selected' : ''}>🚚 Shipped</option>
-                                                    <option value="COMPLETED" ${order.status === 'COMPLETED' ? 'selected' : ''}>🟢 Completed</option>
-                                                    <option value="CANCELLED" ${order.status === 'CANCELLED' ? 'selected' : ''}>🔴 Cancelled</option>
+                                                    <option value="PENDING" ${order.status === 'PENDING' ? 'selected' : ''}>Pending</option>
+                                                    <option value="CONFIRMED" ${order.status === 'CONFIRMED' ? 'selected' : ''}>Confirmed</option>
+                                                    <option value="PROCESSING" ${order.status === 'PROCESSING' ? 'selected' : ''}>Processing</option>
+                                                    <option value="SHIPPED" ${order.status === 'SHIPPED' ? 'selected' : ''}>Shipped</option>
+                                                    <option value="COMPLETED" ${order.status === 'COMPLETED' ? 'selected' : ''}>Completed</option>
+                                                    <option value="CANCELLED" ${order.status === 'CANCELLED' ? 'selected' : ''}>Cancelled</option>
                                                 </select>
                                             </td>
 
@@ -408,9 +409,14 @@ export const renderOrders = async (container, workspaceId) => {
                         <!-- Customer Details Box -->
                         <div style="background:var(--surface-50); border-radius:10px; padding:0.9rem; margin-bottom:1.25rem; border:1px solid var(--border-color);">
                             <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:0.35rem;">Customer Information</span>
-                            <div style="font-weight:700; color:var(--text-primary); font-size:0.95rem;">${escapeHtml(order.customerName)}</div>
-                            <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.2rem;">📞 ${escapeHtml(order.customerPhone)}</div>
-                            <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.2rem;">📍 ${escapeHtml(order.customerAddress)}</div>
+                            <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.2rem; display:flex; align-items:center; gap:5px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                <span>${escapeHtml(order.customerPhone)}</span>
+                            </div>
+                            <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.2rem; display:flex; align-items:center; gap:5px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                <span>${escapeHtml(order.customerAddress)}</span>
+                            </div>
                             ${order.orderNote ? `
                                 <div style="font-size:0.8rem; color:#b45309; background:#fef3c7; padding:0.25rem 0.5rem; border-radius:6px; margin-top:0.4rem;">
                                     <strong>Note:</strong> ${escapeHtml(order.orderNote)}

@@ -335,8 +335,8 @@
 }
 
 .pricing-card.featured {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 1px var(--primary), 0 12px 24px -8px rgba(225, 29, 72, 0.2);
+    border-color: #18181b;
+    box-shadow: 0 0 0 1px #18181b, 0 16px 32px -8px rgba(0, 0, 0, 0.12);
 }
 
 .pricing-badge {
@@ -344,14 +344,14 @@
     top: -12px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, #ff3366, #e11d48);
+    background: #18181b;
     color: white;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     padding: 0.25rem 0.85rem;
     border-radius: 999px;
-    letter-spacing: 0.02em;
-    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.35);
+    letter-spacing: 0.04em;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .pricing-card h3 {
@@ -438,7 +438,7 @@
 .find-form input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+    box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.12);
 }
 
 .find-form .btn {

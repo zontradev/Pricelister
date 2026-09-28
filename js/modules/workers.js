@@ -76,17 +76,33 @@ export const renderWorkers = async (container, workspaceId) => {
     const adminNameDisp = wsInfo.adminName || (adminEmailDisp ? adminEmailDisp.split('@')[0] : 'Workspace Admin');
     const wsTagline = wsInfo.description || wsInfo.address || 'Build • Manage • Sell • Scale Together';
     
-    // Format established date
+    // Format established / founded date
     let establishedStr = 'Recent';
-    if (wsInfo.timestamp || wsInfo.createdAt) {
+    let foundedExactStr = '';
+    const rawTs = wsInfo.createdTimestamp || wsInfo.createdAt || wsInfo.timestamp;
+    if (rawTs) {
         try {
-            const rawTs = wsInfo.timestamp || wsInfo.createdAt;
             const dateObj = typeof rawTs === 'number' ? new Date(rawTs) : (rawTs.toDate ? rawTs.toDate() : new Date(rawTs));
             establishedStr = dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            foundedExactStr = dateObj.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         } catch (e) {
             establishedStr = 'Verified';
+            foundedExactStr = 'Verified';
         }
     }
+
+    // Format last updated audit info
+    let lastUpdatedStr = 'Live';
+    const rawUpTs = wsInfo.updatedTimestamp || wsInfo.updatedAt || wsInfo.lastModified;
+    if (rawUpTs) {
+        try {
+            const upObj = typeof rawUpTs === 'number' ? new Date(rawUpTs) : (rawUpTs.toDate ? rawUpTs.toDate() : new Date(rawUpTs));
+            lastUpdatedStr = upObj.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } catch (e) {
+            lastUpdatedStr = 'Live';
+        }
+    }
+    const updatorEmailDisp = wsInfo.updatedByEmail || wsInfo.updatorEmail || wsInfo.lastUpdatedBy || adminEmailDisp;
 
     const isStoreLive = Boolean(panelSettings.isPublished || panelSettings.enabled);
     const storeUrl = window.location.origin + window.location.pathname.replace('app.html', 'customer.html') + `?ws=${encodeURIComponent(workspaceId)}`;
@@ -97,11 +113,11 @@ export const renderWorkers = async (container, workspaceId) => {
             <!-- ======================================================== -->
             <!-- 1. TOP HERO COVER BANNER (RED & WHITE GRADIENT GLASS UI) -->
             <!-- ======================================================== -->
-            <div class="ws-hero-banner" style="position:relative; border-radius: 20px; overflow: hidden; background: linear-gradient(135deg, #4c0519 0%, #881337 40%, #e11d48 85%, #be123c 100%); color: #ffffff; box-shadow: 0 15px 35px -10px rgba(225, 29, 72, 0.35); margin-bottom: 1.75rem;">
+            <div class="ws-hero-banner" style="position:relative; border-radius: 20px; overflow: hidden; background: linear-gradient(135deg, #09090b 0%, #18181b 45%, #27272a 100%); color: #ffffff; box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 1.75rem;">
                 
                 <!-- Ambient Glow Orbs -->
-                <div style="position:absolute; width: 350px; height: 350px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%); top: -100px; right: -80px; pointer-events:none;"></div>
-                <div style="position:absolute; width: 250px; height: 250px; border-radius: 50%; background: radial-gradient(circle, rgba(244, 63, 94, 0.4) 0%, transparent 70%); bottom: -60px; left: 10%; pointer-events:none;"></div>
+                <div style="position:absolute; width: 350px; height: 350px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%); top: -100px; right: -80px; pointer-events:none;"></div>
+                <div style="position:absolute; width: 250px; height: 250px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%); bottom: -60px; left: 10%; pointer-events:none;"></div>
 
                 <!-- Main Hero Body -->
                 <div style="padding: 2.25rem 2.25rem 1.75rem; position:relative; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem;">
@@ -264,7 +280,7 @@ export const renderWorkers = async (container, workspaceId) => {
 
                 <div style="display: flex; align-items: center; gap: 1.5rem; max-width: 760px;">
                     <!-- Graphical Tech Node Icon -->
-                    <div style="width: 58px; height: 58px; border-radius: 16px; background: linear-gradient(135deg, rgba(225,29,72,0.1), rgba(190,18,60,0.15)); border: 1.5px solid rgba(225,29,72,0.25); display: flex; align-items: center; justify-content: center; color: #e11d48; flex-shrink: 0; box-shadow: 0 6px 16px rgba(225,29,72,0.1);">
+                    <div style="width: 58px; height: 58px; border-radius: 16px; background: #f4f4f5; border: 1.5px solid #e4e4e7; display: flex; align-items: center; justify-content: center; color: #18181b; flex-shrink: 0; box-shadow: 0 6px 16px rgba(0,0,0,0.06);">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                     </div>
 
@@ -279,7 +295,7 @@ export const renderWorkers = async (container, workspaceId) => {
                 </div>
 
                 ${canManageWorkers ? `
-                    <button type="button" id="btn-trigger-invite-hub" class="btn btn-primary" style="background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff; font-weight: 700; font-size: 0.9rem; padding: 0.75rem 1.4rem; border-radius: 10px; border: none; box-shadow: 0 6px 18px rgba(225,29,72,0.3); display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s ease;">
+                    <button type="button" id="btn-trigger-invite-hub" class="btn btn-primary" style="background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; font-weight: 700; font-size: 0.9rem; padding: 0.75rem 1.4rem; border-radius: 10px; border: 1px solid #18181b; box-shadow: 0 4px 14px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s ease;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         <span>Invite Member</span>
                     </button>
@@ -455,47 +471,79 @@ export const renderWorkers = async (container, workspaceId) => {
                             ${escapeHtml(wsInfo.description || 'This workspace is configured for catalog management, stock control, and collaborative team sales.')}
                         </p>
 
-                        <!-- Key Details List -->
-                        <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.84rem;">
+                        <!-- Key Details List (Enterprise Large-Scale) -->
+                        <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.84rem;">
                             
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border-color);">
                                 <span style="color: var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                     Workspace ID:
                                 </span>
-                                <span style="font-family: monospace; font-weight: 700; color: var(--text-primary); font-size: 0.8rem;">${escapeHtml(wsIdString)}</span>
+                                <span style="font-family: monospace; font-weight: 700; color: var(--text-primary); font-size: 0.82rem; background: var(--surface-50); padding: 0.15rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color);">${escapeHtml(wsIdString)}</span>
                             </div>
 
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span style="color: var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                    Admin:
+                                    Founder / Admin:
                                 </span>
-                                <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(adminNameDisp)}</span>
+                                <span style="font-weight: 700; color: var(--text-primary);">${escapeHtml(adminNameDisp)}</span>
                             </div>
 
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span style="color: var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                                    Admin Email:
+                                    Contact Email:
                                 </span>
-                                <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(adminEmailDisp)}</span>
+                                <span style="font-weight: 600; color: var(--text-primary); font-size: 0.82rem;">${escapeHtml(adminEmailDisp)}</span>
                             </div>
 
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span style="color: var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                    Established:
+                                    Founded / Established:
                                 </span>
-                                <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(establishedStr)}</span>
+                                <span style="font-weight: 700; color: var(--text-primary);" title="${escapeHtml(foundedExactStr)}">${escapeHtml(establishedStr)}</span>
                             </div>
 
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span style="color: var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></line></svg>
-                                    Currency Symbol:
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                    Last Modified:
                                 </span>
-                                <span style="font-weight: 700; color: var(--primary); font-family: monospace;">${escapeHtml(wsInfo.currencySymbol || '$')}</span>
+                                <span style="font-weight: 600; color: var(--text-primary); font-size: 0.8rem;">${escapeHtml(lastUpdatedStr)}</span>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                                    Updated By:
+                                </span>
+                                <span style="font-weight: 600; color: var(--text-primary); font-size: 0.8rem;">${escapeHtml(updatorEmailDisp)}</span>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.6rem; border-top: 1px solid var(--border-color);">
+                                <span style="color: var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                    Architecture / Schema:
+                                </span>
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #059669; font-weight: 700; font-size: 0.75rem; border: 1px solid rgba(16, 185, 129, 0.25);">v2.0.0 Enterprise</span>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    Security & Encryption:
+                                </span>
+                                <span class="badge" style="background: rgba(225, 29, 72, 0.08); color: #e11d48; font-weight: 700; font-size: 0.75rem; border: 1px solid rgba(225, 29, 72, 0.2);">AES-256 Cloud</span>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                    Base Currency:
+                                </span>
+                                <span style="font-weight: 800; color: var(--primary); font-family: monospace; font-size: 0.95rem;">${escapeHtml(wsInfo.currencySymbol || '$')}</span>
                             </div>
 
                         </div>
@@ -542,9 +590,9 @@ export const renderWorkers = async (container, workspaceId) => {
             <!-- 5. INVITE WORKER MODAL / DRAWER                          -->
             <!-- ======================================================== -->
             <div id="add-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
-                <div class="card" style="background: #ffffff; border-radius: 18px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); overflow: hidden; border: 1.5px solid rgba(225, 29, 72, 0.2); animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+                <div class="card" style="background: #ffffff; border-radius: 18px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); overflow: hidden; border: 1.5px solid #e4e4e7; animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
                     
-                    <div style="background: linear-gradient(135deg, #881337 0%, #e11d48 100%); color: #ffffff; padding: 1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; padding: 1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
                         <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display:flex; align-items:center; gap:0.4rem;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             Invite Team Member
@@ -568,7 +616,7 @@ export const renderWorkers = async (container, workspaceId) => {
                         </div>
                         
                         <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
-                            <button type="submit" id="btn-submit-worker" class="btn btn-primary" style="flex:1; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); font-weight:700;">Send Invitation</button>
+                            <button type="submit" id="btn-submit-worker" class="btn btn-primary" style="flex:1; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; font-weight:700;">Send Invitation</button>
                             <button type="button" id="btn-cancel-worker" class="btn btn-secondary" style="font-weight:600;">Cancel</button>
                         </div>
                     </form>
@@ -623,7 +671,7 @@ export const renderWorkers = async (container, workspaceId) => {
                         </div>
                         
                         <div style="display:flex; gap:0.75rem; margin-top:0.5rem; flex-wrap:wrap;">
-                            <button type="submit" id="btn-save-manage" class="btn btn-primary" style="flex:1; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); font-weight:700;">Save Changes</button>
+                            <button type="submit" id="btn-save-manage" class="btn btn-primary" style="flex:1; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; font-weight:700;">Save Changes</button>
                             <button type="button" id="btn-remove-worker" class="btn btn-outline" style="color: var(--error); border-color: var(--error); font-weight:600;">Remove</button>
                             <button type="button" id="btn-cancel-manage" class="btn btn-secondary" style="font-weight:600;">Cancel</button>
                         </div>
@@ -680,7 +728,12 @@ export const renderWorkers = async (container, workspaceId) => {
         }
     };
 
-    const closeInviteModal = () => {
+    const closeInviteModal = async () => {
+        const email = (container.querySelector('#worker-email')?.value || '').trim();
+        if (email) {
+            const leave = await showAlert.confirmUnsavedChanges();
+            if (!leave) return;
+        }
         if (addContainer) {
             addContainer.style.display = 'none';
             if (addForm) addForm.reset();
@@ -692,10 +745,19 @@ export const renderWorkers = async (container, workspaceId) => {
     container.querySelector('#qa-invite-worker')?.addEventListener('click', openInviteModal);
     container.querySelector('#btn-close-invite-modal')?.addEventListener('click', closeInviteModal);
     container.querySelector('#btn-cancel-worker')?.addEventListener('click', closeInviteModal);
+    container.querySelector('#btn-hero-edit-workspace')?.addEventListener('click', () => {
+        window.location.hash = '#/settings';
+    });
 
     // 4. Close Manage Modal
-    const closeManageModal = () => {
+    const closeManageModal = async () => {
+        const btnSave = container.querySelector('#btn-save-manage');
+        if (btnSave && !btnSave.disabled) {
+            const leave = await showAlert.confirmUnsavedChanges();
+            if (!leave) return;
+        }
         if (manageContainer) manageContainer.style.display = 'none';
+        initialManageSnapshot = null;
     };
     container.querySelector('#btn-close-manage-modal')?.addEventListener('click', closeManageModal);
     container.querySelector('#btn-cancel-manage')?.addEventListener('click', closeManageModal);
@@ -737,13 +799,13 @@ export const renderWorkers = async (container, workspaceId) => {
             let rolePillColor = '#475569';
             let rolePillBorder = '#e2e8f0';
             if (isCreator) {
-                rolePillBg = 'linear-gradient(135deg, #e11d48, #be123c)';
+                rolePillBg = '#18181b';
                 rolePillColor = '#ffffff';
-                rolePillBorder = 'transparent';
+                rolePillBorder = '#18181b';
             } else if (rUpper === 'ADMIN') {
-                rolePillBg = '#fff1f2';
-                rolePillColor = '#e11d48';
-                rolePillBorder = '#fecdd3';
+                rolePillBg = '#f4f4f5';
+                rolePillColor = '#18181b';
+                rolePillBorder = '#e4e4e7';
             } else if (rUpper === 'CO_ADMIN' || rUpper === 'CO-ADMIN') {
                 rolePillBg = '#eff6ff';
                 rolePillColor = '#2563eb';

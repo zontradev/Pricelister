@@ -5,6 +5,7 @@ import { showAlert } from '../alert-handler.js';
 import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { storageService } from '../../supabase/storage.js';
+import { draftManager } from '../services/draftManager.js';
 
 export const renderPeople = async (container, workspaceId, defaultTab = 'customers') => {
     const peopleService = getPeopleService(workspaceId);
@@ -42,7 +43,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     };
 
     // Fetch invoices to link real transaction data
-    const fetchInvoices = async () => {
+    async function fetchInvoices() {
         try {
             const [custInvs, busInvs] = await Promise.all([
                 invoiceService.getAllInvoices(false).catch(() => []),
@@ -53,29 +54,42 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             console.warn("Could not fetch invoices:", e);
             allInvoices = [];
         }
-    };
+    }
 
     // Calculate invoice stats for a person
-    const getPersonStats = (person) => {
+    function getPersonStats(person) {
         if (!person) return { count: 0, totalSpent: 0, lastDate: null, due: 0, invoices: [] };
         const uId = person.uniqueId || person.id;
-        const name = (person.name || '').trim().toLowerCase();
-        const phone = (person.phone || '').trim();
+        const pId = person.id;
+        const name = (person.name || person.businessName || '').trim().toLowerCase();
+        const phone = (person.phone || '').trim().toLowerCase();
         const email = (person.email || '').trim().toLowerCase();
 
         const matchedInvoices = allInvoices.filter(inv => {
+            if (!inv) return false;
             if (currentTab === 'businesses' || isBusinessMode) {
-                return (inv.businessId && (inv.businessId === uId || inv.businessId === person.id)) ||
-                       (inv.businessName && inv.businessName.trim().toLowerCase() === name);
+                const bId = (inv.businessId || '').trim();
+                const bName = (inv.businessName || inv.issuerName || '').trim().toLowerCase();
+                return (bId && (bId === uId || bId === pId)) ||
+                       (name && bName && (bName === name || bName.includes(name) || name.includes(bName)));
             } else if (currentTab === 'clients') {
-                return (inv.clientId && (inv.clientId === uId || inv.clientId === person.id)) ||
-                       (email && inv.clientEmail && inv.clientEmail.trim().toLowerCase() === email) ||
-                       (phone && inv.clientPhone && inv.clientPhone.trim() === phone) ||
-                       (inv.clientName && inv.clientName.trim().toLowerCase() === name);
+                const cId = (inv.clientId || '').trim();
+                const cEmail = (inv.clientEmail || inv.email || '').trim().toLowerCase();
+                const cPhone = (inv.clientPhone || inv.phone || '').trim().toLowerCase();
+                const cName = (inv.clientName || inv.name || '').trim().toLowerCase();
+                return (cId && (cId === uId || cId === pId)) ||
+                       (email && cEmail && cEmail === email) ||
+                       (phone && cPhone && cPhone === phone) ||
+                       (name && cName && (cName === name || cName.includes(name) || name.includes(cName)));
             } else {
-                return (inv.customerId && (inv.customerId === uId || inv.customerId === person.id)) ||
-                       (inv.customerName && inv.customerName.trim().toLowerCase() === name) ||
-                       (phone && inv.customerNumber && inv.customerNumber.trim() === phone);
+                const custId = (inv.customerId || inv.recipientId || '').trim();
+                const custName = (inv.customerName || inv.recipientName || inv.name || '').trim().toLowerCase();
+                const custPhone = (inv.customerNumber || inv.customerPhone || inv.phone || '').trim().toLowerCase();
+                const custEmail = (inv.customerEmail || inv.email || '').trim().toLowerCase();
+                return (custId && (custId === uId || custId === pId)) ||
+                       (name && custName && (custName === name || custName.includes(name) || name.includes(custName))) ||
+                       (phone && custPhone && custPhone === phone) ||
+                       (email && custEmail && custEmail === email);
             }
         });
 
@@ -96,17 +110,19 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         const lastInv = matchedInvoices[0];
         const lastDate = lastInv ? (lastInv.timestamp ? new Date(lastInv.timestamp).toLocaleDateString() : 'Recent') : 'No Orders Yet';
 
+        const computedCount = Math.max(matchedInvoices.length, Number(person.invoiceCount) || 0);
+
         return {
-            count: matchedInvoices.length,
+            count: computedCount,
             totalSpent,
             due,
             lastDate,
             invoices: matchedInvoices
         };
-    };
+    }
 
     // Calculate time-filtered chart data
-    const getFilteredChartData = (invoices, filterMode, customVal = '') => {
+    function getFilteredChartData(invoices, filterMode, customVal = '') {
         const now = new Date();
         let slots = [];
 
@@ -161,33 +177,37 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         });
 
         return slots;
-    };
+    }
 
-    const escapeHtml = (str) => {
+    function escapeHtml(str) {
         return String(str || '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
-    };
+    }
 
     // -------------------------------------------------------------
     // RENDER MAIN VIEW (List or Details)
     // -------------------------------------------------------------
-    const render = () => {
+    function render() {
         if (activePersonDetail) {
             renderDedicatedDetailView();
         } else {
             renderListView();
             renderRealtimeList(dataList);
         }
-    };
+    }
 
     // -------------------------------------------------------------
     // LIST VIEW
     // -------------------------------------------------------------
-    const renderListView = () => {
+    function renderListView() {
         const typeTitle = isBusinessMode ? 'Businesses & Issuers' : (currentTab === 'clients' ? 'Client Directory' : 'Customer Directory');
+        const count = dataList.length;
+        const countLabel = isBusinessMode 
+            ? (count === 1 ? 'Business' : 'Businesses') 
+            : (currentTab === 'clients' ? (count === 1 ? 'Client' : 'Clients') : (count === 1 ? 'Customer' : 'Customers'));
 
         container.innerHTML = `
             <div class="people-module-container" style="animation: fadeIn 0.25s ease;">
@@ -196,8 +216,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     <div>
                         <div style="display:flex; align-items:center; gap:0.6rem;">
                             <h2 style="margin:0; font-size:1.75rem; font-weight:800; color:var(--text-primary);">${typeTitle}</h2>
-                            <span class="badge" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; font-weight:700; font-size:0.8rem; padding:0.25rem 0.65rem; border-radius:999px;">
-                                ${dataList.length} ${isBusinessMode ? 'Businesses' : (currentTab === 'clients' ? 'Clients' : 'Customers')}
+                            <span class="badge" id="people-count-badge" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; font-weight:700; font-size:0.8rem; padding:0.25rem 0.65rem; border-radius:999px;">
+                                ${count} ${countLabel}
                             </span>
                         </div>
                         <p style="margin:0.25rem 0 0 0; font-size:0.88rem; color:var(--text-secondary);">
@@ -238,7 +258,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         <input type="hidden" id="person-id">
                         
                         <!-- AVATAR / PHOTO UPLOAD SECTION -->
-                        <div style="display:flex; align-items:center; gap:1.25rem; background:var(--surface-50); padding:1rem; border-radius:12px; border:1px dashed var(--border-color); flex-wrap:wrap;">
+                        <div id="person-avatar-dropzone" style="display:flex; align-items:center; gap:1.25rem; background:var(--surface-50); padding:1rem; border-radius:12px; border:1.5px dashed var(--border-color); flex-wrap:wrap; transition:all 0.2s ease; cursor:pointer;" title="Click or Drag & Drop image here">
                             <div style="position:relative; width:68px; height:68px; border-radius:50%; overflow:hidden; background:#ffffff; border:2px solid #fecdd3; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
                                 <img id="person-avatar-preview" src="" alt="Avatar" style="width:100%; height:100%; object-fit:cover; display:none;">
                                 <div id="person-avatar-placeholder" style="color:#e11d48; display:flex; align-items:center; justify-content:center;">
@@ -246,7 +266,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 </div>
                             </div>
                             <div style="flex:1; min-width:220px;">
-                                <label style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:block; margin-bottom:0.25rem;">Profile Image / Logo</label>
+                                <label style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:block; margin-bottom:0.25rem;">Profile Image / Logo (Drag & Drop or Browse)</label>
                                 <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
                                     <label class="btn btn-secondary" style="cursor:pointer; font-size:0.82rem; padding:0.35rem 0.75rem; margin:0; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
                                         ${ICONS.camera} Choose Photo File
@@ -254,7 +274,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                     </label>
                                     <input type="url" id="person-image-url" placeholder="or paste Image URL (https://...)" class="form-control" style="flex:1; min-width:180px; font-size:0.82rem; padding:0.35rem 0.6rem;">
                                 </div>
-                                <small style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem; display:block;">Supported formats: JPG, PNG, WEBP, SVG. Appears in directory and invoice slips.</small>
+                                <small style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem; display:block;">Drag & drop JPG, PNG, WEBP directly onto this area, or browse files.</small>
                             </div>
                         </div>
 
@@ -381,7 +401,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     // -------------------------------------------------------------
     // DEDICATED INFORMATIVE & LARGE DETAIL VIEW
     // -------------------------------------------------------------
-    const renderDedicatedDetailView = () => {
+    function renderDedicatedDetailView() {
         const p = activePersonDetail;
         if (!p) {
             renderListView();
@@ -887,7 +907,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     // -------------------------------------------------------------
     // ATTACH LIST EVENTS
     // -------------------------------------------------------------
-    const bindListEvents = () => {
+    function bindListEvents() {
         const formContainer = container.querySelector('#person-form-container');
         const form = container.querySelector('#person-form');
         const title = container.querySelector('#person-form-title');
@@ -895,39 +915,269 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         const btnCancel = container.querySelector('#person-cancel-btn');
         const btnCancelX = container.querySelector('#person-cancel-x');
 
+        const avatarDropzone = container.querySelector('#person-avatar-dropzone');
         const avatarPreview = container.querySelector('#person-avatar-preview');
         const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
         const imageFileInput = container.querySelector('#person-image-file');
         const imageUrlInput = container.querySelector('#person-image-url');
 
+        let pendingPersonAvatarFile = null;
+
+        const processPersonFile = async (file) => {
+            if (!file || !file.type.startsWith('image/')) {
+                showAlert.warning("Please provide a valid image file.");
+                return;
+            }
+
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDimension = 512;
+
+                        if (width > maxDimension || height > maxDimension) {
+                            if (width > height) {
+                                height = Math.round((height * maxDimension) / width);
+                                width = maxDimension;
+                            } else {
+                                width = Math.round((width * maxDimension) / height);
+                                height = maxDimension;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob((blob) => {
+                            if (!blob) {
+                                pendingPersonAvatarFile = file;
+                                if (avatarPreview) {
+                                    avatarPreview.src = e.target.result;
+                                    avatarPreview.style.display = 'block';
+                                }
+                                if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                                resolve(file);
+                                return;
+                            }
+                            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                                type: "image/webp",
+                                lastModified: Date.now()
+                            });
+                            pendingPersonAvatarFile = compressedFile;
+                            if (avatarPreview) {
+                                avatarPreview.src = canvas.toDataURL('image/webp', 0.88);
+                                avatarPreview.style.display = 'block';
+                            }
+                            if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                            if (imageUrlInput) imageUrlInput.value = '';
+                            resolve(compressedFile);
+                        }, 'image/webp', 0.88);
+                    };
+                    img.onerror = () => {
+                        pendingPersonAvatarFile = file;
+                        if (avatarPreview) {
+                            avatarPreview.src = e.target.result;
+                            avatarPreview.style.display = 'block';
+                        }
+                        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                        resolve(file);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        if (avatarDropzone && imageFileInput) {
+            avatarDropzone.addEventListener('click', (e) => {
+                if (e.target.closest('input') || e.target.closest('label')) return;
+                imageFileInput.click();
+            });
+
+            ['dragenter', 'dragover'].forEach(evtName => {
+                avatarDropzone.addEventListener(evtName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    avatarDropzone.style.borderColor = '#e11d48';
+                    avatarDropzone.style.background = 'rgba(225,29,72,0.06)';
+                    avatarDropzone.style.boxShadow = '0 0 0 2px rgba(225,29,72,0.2)';
+                });
+            });
+
+            ['dragleave', 'dragend', 'drop'].forEach(evtName => {
+                avatarDropzone.addEventListener(evtName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    avatarDropzone.style.borderColor = 'var(--border-color)';
+                    avatarDropzone.style.background = 'var(--surface-50)';
+                    avatarDropzone.style.boxShadow = 'none';
+                });
+            });
+
+            avatarDropzone.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const files = e.dataTransfer?.files;
+                if (files && files.length > 0) {
+                    await processPersonFile(files[0]);
+                    showAlert.info("Image selected. Ready to save.");
+                }
+            });
+        }
+
+        // Unsaved changes state & snapshot helpers
+        let personUnsavedIndicator = null;
+        let initialPersonSnapshot = null;
+
+        const getPersonFormSnapshot = () => {
+            return JSON.stringify({
+                id: container.querySelector('#person-id')?.value || '',
+                name: container.querySelector('#person-name')?.value?.trim() || '',
+                phone: container.querySelector('#person-phone')?.value?.trim() || '',
+                email: container.querySelector('#person-email')?.value?.trim() || '',
+                address: container.querySelector('#person-address')?.value?.trim() || '',
+                tags: container.querySelector('#person-tags')?.value?.trim() || '',
+                status: container.querySelector('#person-status')?.value || 'Active',
+                notes: container.querySelector('#person-notes')?.value?.trim() || '',
+                image: container.querySelector('#person-image-url')?.value?.trim() || ''
+            });
+        };
+
+        const isPersonFormDirty = () => {
+            const formContainer = container.querySelector('#person-form-container');
+            if (!formContainer || formContainer.style.display === 'none') return false;
+
+            const id = container.querySelector('#person-id')?.value;
+            if (id) {
+                if (!initialPersonSnapshot) return false;
+                return getPersonFormSnapshot() !== initialPersonSnapshot;
+            } else {
+                const name = container.querySelector('#person-name')?.value?.trim() || '';
+                const phone = container.querySelector('#person-phone')?.value?.trim() || '';
+                const email = container.querySelector('#person-email')?.value?.trim() || '';
+                const address = container.querySelector('#person-address')?.value?.trim() || '';
+                const notes = container.querySelector('#person-notes')?.value?.trim() || '';
+                const img = container.querySelector('#person-image-url')?.value?.trim() || '';
+                return Boolean(name || phone || email || address || notes || img || pendingPersonAvatarFile);
+            }
+        };
+
+        const checkPersonDirty = () => {
+            const isDirty = isPersonFormDirty();
+            if (personUnsavedIndicator) {
+                personUnsavedIndicator.update(isDirty);
+            }
+            const id = container.querySelector('#person-id')?.value || 'new';
+            const draftKey = `person_${currentTab}_${id}`;
+            if (isDirty) {
+                draftManager.saveDraft(draftKey, getPersonFormSnapshot());
+                draftManager.registerActiveForm('person_form', isPersonFormDirty);
+            } else {
+                draftManager.clearDraft(draftKey);
+                draftManager.unregisterActiveForm('person_form');
+            }
+        };
+
+        const restorePersonDraftIfAny = (targetId = 'new') => {
+            const draftKey = `person_${currentTab}_${targetId}`;
+            const draft = draftManager.getDraft(draftKey);
+            if (!draft) return false;
+            try {
+                const data = typeof draft === 'string' ? JSON.parse(draft) : draft;
+                if (data.name !== undefined && container.querySelector('#person-name')) container.querySelector('#person-name').value = data.name;
+                if (data.phone !== undefined && container.querySelector('#person-phone')) container.querySelector('#person-phone').value = data.phone;
+                if (data.email !== undefined && container.querySelector('#person-email')) container.querySelector('#person-email').value = data.email;
+                if (data.address !== undefined && container.querySelector('#person-address')) container.querySelector('#person-address').value = data.address;
+                if (data.tags !== undefined && container.querySelector('#person-tags')) container.querySelector('#person-tags').value = data.tags;
+                if (data.status !== undefined && container.querySelector('#person-status')) container.querySelector('#person-status').value = data.status;
+                if (data.notes !== undefined && container.querySelector('#person-notes')) container.querySelector('#person-notes').value = data.notes;
+                if (data.image && container.querySelector('#person-image-url')) {
+                    container.querySelector('#person-image-url').value = data.image;
+                    const avatarPreview = container.querySelector('#person-avatar-preview');
+                    const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
+                    if (avatarPreview) {
+                        avatarPreview.src = data.image;
+                        avatarPreview.style.display = 'block';
+                    }
+                    if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                }
+                return true;
+            } catch (e) {
+                console.warn("Could not parse person draft:", e);
+                return false;
+            }
+        };
+
+        // Mount Unsaved Indicator
+        const formHeaderRow = title?.parentElement;
+        if (formHeaderRow && !personUnsavedIndicator) {
+            personUnsavedIndicator = draftManager.mountUnsavedIndicator(formHeaderRow, {
+                formType: isBusinessMode ? 'Business Profile' : (currentTab === 'clients' ? 'Client Profile' : 'Customer Profile'),
+                onSave: () => {
+                    const submitBtn = container.querySelector('#person-submit-btn');
+                    if (submitBtn && !submitBtn.disabled) {
+                        form.requestSubmit();
+                    } else {
+                        showAlert.info("Please fill required name field (*) before saving.");
+                    }
+                }
+            });
+        }
+
+        form?.querySelectorAll('input, select, textarea').forEach(el => {
+            el.addEventListener('input', checkPersonDirty);
+            el.addEventListener('change', checkPersonDirty);
+        });
+
         if (btnAdd) {
             btnAdd.addEventListener('click', () => {
                 form.reset();
+                pendingPersonAvatarFile = null;
                 container.querySelector('#person-id').value = '';
                 if (avatarPreview) avatarPreview.style.display = 'none';
                 if (avatarPlaceholder) avatarPlaceholder.style.display = 'block';
                 title.textContent = `New ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}`;
+                
+                initialPersonSnapshot = null;
+                const restored = restorePersonDraftIfAny('new');
+                if (restored) {
+                    showAlert.info("Restored progressive unsaved draft.");
+                }
+
+                checkPersonDirty();
                 formContainer.style.display = 'block';
                 formContainer.scrollIntoView({ behavior: 'smooth' });
             });
         }
 
-        if (btnCancel) btnCancel.addEventListener('click', () => formContainer.style.display = 'none');
-        if (btnCancelX) btnCancelX.addEventListener('click', () => formContainer.style.display = 'none');
+        const handleCancelPersonForm = async () => {
+            if (isPersonFormDirty()) {
+                const leave = await showAlert.confirmUnsavedChanges();
+                if (!leave) return;
+            }
+            const id = container.querySelector('#person-id')?.value || 'new';
+            const draftKey = `person_${currentTab}_${id}`;
+            draftManager.clearDraft(draftKey);
+            draftManager.unregisterActiveForm('person_form');
+            if (personUnsavedIndicator) personUnsavedIndicator.update(false);
+            formContainer.style.display = 'none';
+        };
+
+        if (btnCancel) btnCancel.addEventListener('click', handleCancelPersonForm);
+        if (btnCancelX) btnCancelX.addEventListener('click', handleCancelPersonForm);
 
         if (imageFileInput) {
-            imageFileInput.addEventListener('change', (e) => {
+            imageFileInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (re) => {
-                        if (avatarPreview) {
-                            avatarPreview.src = re.target.result;
-                            avatarPreview.style.display = 'block';
-                        }
-                        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                    };
-                    reader.readAsDataURL(file);
+                    await processPersonFile(file);
+                    checkPersonDirty();
                 }
             });
         }
@@ -935,6 +1185,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         if (imageUrlInput) {
             imageUrlInput.addEventListener('input', () => {
                 const val = imageUrlInput.value.trim();
+                pendingPersonAvatarFile = null;
                 if (val) {
                     if (avatarPreview) {
                         avatarPreview.src = val;
@@ -942,6 +1193,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     }
                     if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
                 }
+                checkPersonDirty();
             });
         }
 
@@ -973,7 +1225,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     const id = container.querySelector('#person-id').value;
                     let finalImageUrl = imageUrlInput ? imageUrlInput.value.trim() : '';
 
-                    const file = imageFileInput?.files?.[0];
+                    const file = pendingPersonAvatarFile || imageFileInput?.files?.[0];
                     if (file) {
                         try {
                             finalImageUrl = await storageService.uploadImage(file, workspaceId);
@@ -1006,6 +1258,12 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         showAlert.success("Profile created successfully!");
                     }
 
+                    const curId = id || 'new';
+                    const draftKey = `person_${currentTab}_${curId}`;
+                    draftManager.clearDraft(draftKey);
+                    draftManager.unregisterActiveForm('person_form');
+                    if (personUnsavedIndicator) personUnsavedIndicator.update(false);
+
                     formContainer.style.display = 'none';
                 } catch (err) {
                     console.error("Save error:", err);
@@ -1023,7 +1281,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     // -------------------------------------------------------------
     // ATTACH DETAIL EVENTS
     // -------------------------------------------------------------
-    const bindDetailEvents = () => {
+    function bindDetailEvents() {
         const btnBack = container.querySelector('#btn-back-to-people');
         if (btnBack) {
             btnBack.addEventListener('click', () => {
@@ -1155,28 +1413,34 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         }
 
+        const handleDirectAvatarUpload = async (file) => {
+            if (!file || !activePersonDetail) return;
+            try {
+                showAlert.info("Uploading profile picture...");
+                const uploadedUrl = await storageService.uploadImage(file, workspaceId);
+                const id = activePersonDetail.id;
+
+                if (currentTab === 'customers') await peopleService.updateCustomer(id, { imageUrl: uploadedUrl, imageUri: uploadedUrl });
+                else if (currentTab === 'businesses') await peopleService.updateBusiness(id, { imageUrl: uploadedUrl, imageUri: uploadedUrl });
+                else if (currentTab === 'clients') await peopleService.updateClient(id, { imageUrl: uploadedUrl, imageUri: uploadedUrl });
+
+                activePersonDetail.imageUrl = uploadedUrl;
+                activePersonDetail.imageUri = uploadedUrl;
+                showAlert.success("Profile photo updated!");
+                renderDedicatedDetailView();
+            } catch (err) {
+                showAlert.error("Photo upload failed: " + err.message);
+            }
+        };
+
         const triggerAvatarModal = async () => {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.accept = 'image/*';
             fileInput.onchange = async () => {
                 const file = fileInput.files[0];
-                if (!file || !activePersonDetail) return;
-                try {
-                    showAlert.info("Uploading profile picture...");
-                    const uploadedUrl = await storageService.uploadImage(file, workspaceId);
-                    const id = activePersonDetail.id;
-
-                    if (currentTab === 'customers') await peopleService.updateCustomer(id, { imageUrl: uploadedUrl, imageUri: uploadedUrl });
-                    else if (currentTab === 'businesses') await peopleService.updateBusiness(id, { imageUrl: uploadedUrl, imageUri: uploadedUrl });
-                    else if (currentTab === 'clients') await peopleService.updateClient(id, { imageUrl: uploadedUrl, imageUri: uploadedUrl });
-
-                    activePersonDetail.imageUrl = uploadedUrl;
-                    activePersonDetail.imageUri = uploadedUrl;
-                    showAlert.success("Profile photo updated!");
-                    renderDedicatedDetailView();
-                } catch (err) {
-                    showAlert.error("Photo upload failed: " + err.message);
+                if (file) {
+                    await handleDirectAvatarUpload(file);
                 }
             };
             fileInput.click();
@@ -1184,16 +1448,58 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
         const btnAvatar1 = container.querySelector('#btn-quick-avatar-upload');
         const btnAvatar2 = container.querySelector('#btn-quick-avatar-upload-2');
-        if (btnAvatar1) btnAvatar1.addEventListener('click', triggerAvatarModal);
+        if (btnAvatar1) {
+            btnAvatar1.addEventListener('click', triggerAvatarModal);
+
+            // Drag and Drop support on hero avatar
+            ['dragenter', 'dragover'].forEach(evtName => {
+                btnAvatar1.addEventListener(evtName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    btnAvatar1.style.borderColor = '#ffffff';
+                    btnAvatar1.style.boxShadow = '0 0 0 4px #e11d48, 0 8px 24px rgba(225,29,72,0.4)';
+                    btnAvatar1.style.transform = 'scale(1.08)';
+                });
+            });
+
+            ['dragleave', 'dragend', 'drop'].forEach(evtName => {
+                btnAvatar1.addEventListener(evtName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    btnAvatar1.style.borderColor = '#e11d48';
+                    btnAvatar1.style.boxShadow = '0 4px 14px rgba(225,29,72,0.2)';
+                    btnAvatar1.style.transform = 'none';
+                });
+            });
+
+            btnAvatar1.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const files = e.dataTransfer?.files;
+                if (files && files.length > 0) {
+                    await handleDirectAvatarUpload(files[0]);
+                }
+            });
+        }
         if (btnAvatar2) btnAvatar2.addEventListener('click', triggerAvatarModal);
     };
 
     // -------------------------------------------------------------
     // REALTIME LIST RENDERER
     // -------------------------------------------------------------
-    const renderRealtimeList = (data) => {
-        dataList = data;
+    function renderRealtimeList(data) {
+        dataList = data || [];
         
+        // Update header count badge dynamically
+        const countBadge = container.querySelector('#people-count-badge');
+        if (countBadge) {
+            const count = dataList.length;
+            const label = isBusinessMode 
+                ? (count === 1 ? 'Business' : 'Businesses') 
+                : (currentTab === 'clients' ? (count === 1 ? 'Client' : 'Clients') : (count === 1 ? 'Customer' : 'Customers'));
+            countBadge.textContent = `${count} ${label}`;
+        }
+
         if (activePersonDetail) {
             const updatedObj = dataList.find(x => x.id === activePersonDetail.id);
             if (updatedObj) activePersonDetail = updatedObj;
@@ -1213,7 +1519,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
         tbody.innerHTML = dataList.map(person => {
             const stats = getPersonStats(person);
-            const count = Math.max(stats.count, person.invoiceCount || 0);
+            const count = stats.count;
             const img = person.imageUrl || person.imageUri;
 
             const avatarFallback = currentTab === 'clients' 
@@ -1253,8 +1559,12 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     </td>
                     <td style="padding:0.9rem 1.25rem; text-align:right;">
                         <div style="display:inline-flex; gap:0.4rem; align-items:center;">
-                            <button type="button" class="btn btn-sm btn-primary view-person-detail" data-id="${person.id}" style="background:#e11d48; border-color:#e11d48; font-weight:600; font-size:0.78rem; padding:0.25rem 0.75rem;">
-                                View Details
+                            <button type="button" class="btn btn-sm btn-primary add-invoice-for-person" data-id="${person.id}" style="background:linear-gradient(135deg, #e11d48, #be123c); border:none; font-weight:700; font-size:0.78rem; padding:0.25rem 0.65rem; display:inline-flex; align-items:center; gap:3px;" title="Create new invoice for ${escapeHtml(person.name)}">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                + Invoice
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary view-person-detail" data-id="${person.id}" style="font-weight:600; font-size:0.78rem; padding:0.25rem 0.65rem;">
+                                View
                             </button>
                             <button type="button" class="btn btn-sm btn-secondary edit-person" data-id="${person.id}" style="font-size:0.78rem; padding:0.25rem 0.65rem;">
                                 Edit
@@ -1267,6 +1577,28 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 </tr>
             `;
         }).join('');
+
+        container.querySelectorAll('.add-invoice-for-person').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.getAttribute('data-id');
+                const p = dataList.find(x => x.id === id);
+                if (p) {
+                    const isBus = isBusinessMode || currentTab === 'businesses' || (p.isClient && currentTab === 'clients');
+                    window.__preselectedInvoiceRecipient = {
+                        mode: currentTab === 'clients' ? 'client' : (currentTab === 'businesses' ? 'business' : 'customer'),
+                        id: p.id,
+                        uniqueId: p.uniqueId || p.id,
+                        name: p.name,
+                        phone: p.phone || '',
+                        email: p.email || '',
+                        address: p.address || '',
+                        imageUrl: p.imageUrl || p.imageUri || ''
+                    };
+                    window.location.hash = `#/${isBus ? 'invoices/business' : 'invoices/customer'}`;
+                }
+            });
+        });
 
         container.querySelectorAll('.view-person-detail').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -1367,15 +1699,45 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     // DATA LOADER & REALTIME LISTENER
     // -------------------------------------------------------------
     let unsubscribe = null;
+    let unsubscribeCustInvs = null;
+    let unsubscribeBusInvs = null;
 
-    const loadData = async () => {
+    async function loadData() {
         if (unsubscribe) {
             unsubscribe();
             unsubscribe = null;
         }
+        if (unsubscribeCustInvs) {
+            unsubscribeCustInvs();
+            unsubscribeCustInvs = null;
+        }
+        if (unsubscribeBusInvs) {
+            unsubscribeBusInvs();
+            unsubscribeBusInvs = null;
+        }
 
         renderListView();
         await fetchInvoices();
+
+        // Listen for invoice changes so invoice pill counts update in real-time
+        try {
+            unsubscribeCustInvs = invoiceService.listenInvoices(false, () => {
+                fetchInvoices().then(() => {
+                    if (dataList && dataList.length > 0 && !activePersonDetail) {
+                        renderRealtimeList(dataList);
+                    }
+                });
+            });
+            unsubscribeBusInvs = invoiceService.listenInvoices(true, () => {
+                fetchInvoices().then(() => {
+                    if (dataList && dataList.length > 0 && !activePersonDetail) {
+                        renderRealtimeList(dataList);
+                    }
+                });
+            });
+        } catch (e) {
+            console.warn("Invoice listeners warning:", e);
+        }
 
         try {
             if (isBusinessMode || currentTab === 'businesses') {

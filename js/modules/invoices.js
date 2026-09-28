@@ -12,6 +12,7 @@ import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { openInvoiceDetailsModal } from './invoiceDetailsModal.js';
 import { storageService } from '../../supabase/storage.js';
+import { draftManager } from '../services/draftManager.js';
 
 export const renderInvoices = async (container, workspaceId, isBusinessInvoice) => {
     const invoiceService = getInvoiceService(workspaceId);
@@ -20,9 +21,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const settingsService = getSettingsService(workspaceId);
     const categoryService = getCategoryService(workspaceId);
     const currentUser = authService.getCurrentUser();
-    
+
     const typeLabel = isBusinessInvoice ? 'Business Invoice' : 'Customer Invoice';
-    
+
     let allProducts = [];
     let allCategories = [];
     let allBusinesses = [];
@@ -466,13 +467,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 </div>
                 <form id="quick-add-form" style="display:flex; flex-direction:column; gap:1rem;">
                     
-                    <!-- Avatar Upload / URL with Live Round Preview -->
-                    <div style="display:flex; align-items:center; gap:1rem; background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color);">
-                        <div id="qa-avatar-preview" style="width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #e11d48, #be123c); display:flex; align-items:center; justify-content:center; color:white; font-size:1.5rem; font-weight:700; flex-shrink:0; overflow:hidden; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <!-- Avatar Upload / URL with Live Round Preview & Drag-Drop -->
+                    <div id="qa-avatar-dropzone" style="display:flex; align-items:center; gap:1rem; background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1.5px dashed var(--border-color); cursor:pointer; transition:all 0.2s ease;" title="Click or Drag & Drop photo here">
+                        <div id="qa-avatar-preview" style="width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #e11d48, #be123c); display:flex; align-items:center; justify-content:center; color:white; font-size:1.5rem; font-weight:700; flex-shrink:0; overflow:hidden; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.1); pointer-events:none;">
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
                         </div>
                         <div style="flex:1;">
-                            <label style="font-size:0.8rem; font-weight:600; margin-bottom:0.25rem; display:block; color:var(--text-primary);">Photo / Avatar (Optional)</label>
+                            <label style="font-size:0.8rem; font-weight:600; margin-bottom:0.25rem; display:block; color:var(--text-primary);">Photo / Avatar (Drag & Drop or Browse)</label>
                             <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                                 <label class="btn btn-sm btn-secondary" style="cursor:pointer; font-size:0.75rem; padding:0.25rem 0.6rem; display:inline-flex; align-items:center; gap:4px;">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
@@ -587,8 +588,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Helper: Generate Random Invoice ID
     function generateRandomInvoiceId(isBus = false) {
-        const random6Digits = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-        return isBus ? `BusInv-${random6Digits}` : `INV-${random6Digits}`;
+        const prefix = isBus ? 'BUS' : 'INV';
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        return `${prefix}-${year}${month}${day}-${rand}`;
     }
 
     // Helper: Safe Date Parsing
@@ -598,7 +604,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (!ts) return 0;
         if (typeof ts === 'number') return ts;
         if (typeof ts.toDate === 'function') {
-            try { return ts.toDate().getTime(); } catch (e) {}
+            try { return ts.toDate().getTime(); } catch (e) { }
         }
         if (typeof ts.seconds === 'number') {
             return ts.seconds * 1000;
@@ -640,10 +646,69 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     };
 
     let initialInvoiceFormSnapshot = null;
+    let invUnsavedIndicator = null;
+
+    const getInvoiceDraftData = () => {
+        return {
+            editingInvoiceId,
+            recipientMode,
+            businessId: container.querySelector('#inv-business')?.value || '',
+            customerId: container.querySelector('#inv-customer')?.value || '',
+            clientId: container.querySelector('#inv-client')?.value || '',
+            customerName: container.querySelector('#inv-customer-name')?.value || '',
+            customerPhone: container.querySelector('#inv-customer-phone')?.value || '',
+            customerEmail: container.querySelector('#inv-customer-email')?.value || '',
+            customerAddress: container.querySelector('#inv-customer-address')?.value || '',
+            title: container.querySelector('#inv-title')?.value || '',
+            invNumber: container.querySelector('#inv-number-input')?.value || '',
+            discount: container.querySelector('#inv-discount')?.value || '0',
+            addCut: container.querySelector('#inv-add-cut')?.value || '0',
+            tax: container.querySelector('#inv-tax')?.value || '0',
+            shipping: container.querySelector('#inv-shipping')?.value || '0',
+            status: container.querySelector('#inv-status')?.value || 'Paid',
+            note: container.querySelector('#inv-note')?.value || '',
+            items: invoiceItems
+        };
+    };
+
+    const restoreInvoiceDraftIfAny = (draftKey) => {
+        const draft = draftManager.getDraft(draftKey);
+        if (!draft) return false;
+        try {
+            const data = typeof draft === 'string' ? JSON.parse(draft) : draft;
+            if (data.businessId && container.querySelector('#inv-business')) container.querySelector('#inv-business').value = data.businessId;
+            if (data.recipientMode) setRecipientMode(data.recipientMode);
+            if (data.customerId && container.querySelector('#inv-customer')) container.querySelector('#inv-customer').value = data.customerId;
+            if (data.clientId && container.querySelector('#inv-client')) container.querySelector('#inv-client').value = data.clientId;
+            if (data.customerName !== undefined && container.querySelector('#inv-customer-name')) container.querySelector('#inv-customer-name').value = data.customerName;
+            if (data.customerPhone !== undefined && container.querySelector('#inv-customer-phone')) container.querySelector('#inv-customer-phone').value = data.customerPhone;
+            if (data.customerEmail !== undefined && container.querySelector('#inv-customer-email')) container.querySelector('#inv-customer-email').value = data.customerEmail;
+            if (data.customerAddress !== undefined && container.querySelector('#inv-customer-address')) container.querySelector('#inv-customer-address').value = data.customerAddress;
+            if (data.title !== undefined && container.querySelector('#inv-title')) container.querySelector('#inv-title').value = data.title;
+            if (data.invNumber !== undefined && container.querySelector('#inv-number-input')) container.querySelector('#inv-number-input').value = data.invNumber;
+            if (data.discount !== undefined && container.querySelector('#inv-discount')) container.querySelector('#inv-discount').value = data.discount;
+            if (data.addCut !== undefined && container.querySelector('#inv-add-cut')) container.querySelector('#inv-add-cut').value = data.addCut;
+            if (data.tax !== undefined && container.querySelector('#inv-tax')) container.querySelector('#inv-tax').value = data.tax;
+            if (data.shipping !== undefined && container.querySelector('#inv-shipping')) container.querySelector('#inv-shipping').value = data.shipping;
+            if (data.status !== undefined && container.querySelector('#inv-status')) container.querySelector('#inv-status').value = data.status;
+            if (data.note !== undefined && container.querySelector('#inv-note')) container.querySelector('#inv-note').value = data.note;
+            if (Array.isArray(data.items)) {
+                invoiceItems = data.items;
+            }
+            updateBusinessPreview();
+            updateRecipientPreview();
+            renderItemsList();
+            updateLiveTotals();
+            return true;
+        } catch (e) {
+            console.warn("Error restoring invoice draft:", e);
+            return false;
+        }
+    };
 
     const isInvoiceFormDirty = () => {
         if (!editorView || editorView.style.display === 'none') return false;
-        
+
         if (editingInvoiceId) {
             if (!initialInvoiceFormSnapshot) return false;
             return getInvoiceFormSnapshot() !== initialInvoiceFormSnapshot;
@@ -665,7 +730,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const busSelected = Boolean(container.querySelector('#inv-business')?.value);
         const hasTitle = Boolean((container.querySelector('#inv-title')?.value || '').trim());
         const hasInvNum = Boolean((container.querySelector('#inv-number-input')?.value || '').trim());
-        
+
         let recipientValid = false;
         if (recipientMode === 'customer') {
             recipientValid = Boolean(container.querySelector('#inv-customer')?.value || (container.querySelector('#inv-customer-name')?.value || '').trim());
@@ -679,13 +744,24 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         if (!validRequired) {
             btnSubmit.disabled = true;
-            return;
-        }
-
-        if (editingInvoiceId) {
+        } else if (editingInvoiceId) {
             btnSubmit.disabled = !isInvoiceFormDirty();
         } else {
             btnSubmit.disabled = false;
+        }
+
+        const isDirty = isInvoiceFormDirty();
+        if (invUnsavedIndicator) {
+            invUnsavedIndicator.update(isDirty);
+        }
+
+        const draftKey = 'inv_' + (isBusinessInvoice ? 'bus_' : 'cust_') + (editingInvoiceId || 'new');
+        if (isDirty) {
+            draftManager.saveDraft(draftKey, getInvoiceDraftData());
+            draftManager.registerActiveForm('invoice_editor', isInvoiceFormDirty);
+        } else {
+            draftManager.clearDraft(draftKey);
+            draftManager.unregisterActiveForm('invoice_editor');
         }
     };
 
@@ -699,6 +775,21 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (editorView) editorView.style.display = 'block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
+        const titleRow = container.querySelector('#inv-form-title')?.parentElement;
+        if (titleRow && !invUnsavedIndicator) {
+            invUnsavedIndicator = draftManager.mountUnsavedIndicator(titleRow, {
+                formType: typeLabel,
+                onSave: () => {
+                    const submitBtn = container.querySelector('#btn-submit-invoice');
+                    if (submitBtn && !submitBtn.disabled) {
+                        submitBtn.click();
+                    } else {
+                        showAlert.info("Please fill all required invoice fields (*) and add at least 1 product.");
+                    }
+                }
+            });
+        }
+
         if (isEdit && invoice) {
             editingInvoiceId = invoice.id;
             editingInvoiceUniqueId = invoice.uniqueId || generateUniqueId();
@@ -707,6 +798,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             if (btnSubmit) btnSubmit.textContent = 'Update Invoice';
             populateFormForEdit(invoice);
             initialInvoiceFormSnapshot = getInvoiceFormSnapshot();
+
+            const editDraftKey = 'inv_' + (isBusinessInvoice ? 'bus_' : 'cust_') + invoice.id;
+            restoreInvoiceDraftIfAny(editDraftKey);
+
             updateInvoiceSubmitState();
         } else {
             editingInvoiceId = null;
@@ -715,6 +810,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             if (btnSubmit) btnSubmit.textContent = 'Save Invoice';
             resetForm();
             initialInvoiceFormSnapshot = getInvoiceFormSnapshot();
+
+            const newDraftKey = 'inv_' + (isBusinessInvoice ? 'bus_' : 'cust_') + 'new';
+            const restored = restoreInvoiceDraftIfAny(newDraftKey);
+            if (restored) {
+                showAlert.info("Restored progressive unsaved invoice draft.");
+            }
+
             updateInvoiceSubmitState();
         }
     };
@@ -722,6 +824,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const showListView = () => {
         if (editorView) editorView.style.display = 'none';
         if (listView) listView.style.display = 'block';
+
+        const draftKey = 'inv_' + (isBusinessInvoice ? 'bus_' : 'cust_') + (editingInvoiceId || 'new');
+        draftManager.unregisterActiveForm('invoice_editor');
+        if (invUnsavedIndicator) invUnsavedIndicator.update(false);
+
         editingInvoiceId = null;
         editingInvoiceUniqueId = null;
         initialInvoiceFormSnapshot = null;
@@ -732,6 +839,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const allowLeave = await showAlert.confirmUnsavedChanges();
             if (!allowLeave) return;
         }
+        const draftKey = 'inv_' + (isBusinessInvoice ? 'bus_' : 'cust_') + (editingInvoiceId || 'new');
+        draftManager.clearDraft(draftKey);
         showListView();
     };
 
@@ -743,12 +852,12 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const busSelect = container.querySelector('#inv-business');
         const previewEl = container.querySelector('#inv-business-preview-card');
         if (!previewEl || !busSelect) return;
-        
+
         const b = allBusinesses.find(x => x.id === busSelect.value);
         if (b) {
             previewEl.style.display = 'block';
             const imgUrl = b.imageUrl || b.imageUri;
-            const avatarHtml = imgUrl 
+            const avatarHtml = imgUrl
                 ? `<img src="${imgUrl}" alt="${b.name}" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid #e11d48; box-shadow:0 2px 6px rgba(0,0,0,0.1);">`
                 : `<div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, #e11d48, #be123c); display:flex; align-items:center; justify-content:center; color:white; font-size:1.25rem; font-weight:700; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 10h.01M6 14h.01M6 18h.01M10 10h.01M10 14h.01M10 18h.01M14 10h.01M14 14h.01M14 18h.01M18 10h.01M18 14h.01M18 18h.01M6 3h12v4H6z"/></svg>
@@ -798,13 +907,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (profile) {
             previewEl.style.display = 'block';
             const imgUrl = profile.imageUrl || profile.imageUri;
-            const avatarHtml = imgUrl 
+            const avatarHtml = imgUrl
                 ? `<img src="${imgUrl}" alt="${profile.name}" style="width:46px; height:46px; border-radius:50%; object-fit:cover; border:2px solid #e11d48; box-shadow:0 2px 6px rgba(0,0,0,0.1);">`
                 : `<div style="width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg, #475569, #334155); display:flex; align-items:center; justify-content:center; color:white; font-size:1.15rem; font-weight:700; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-                    ${recipientMode === 'client' 
-                        ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 10h.01M6 14h.01M6 18h.01M10 10h.01M10 14h.01M10 18h.01M14 10h.01M14 14h.01M14 18h.01M18 10h.01M18 14h.01M18 18h.01M6 3h12v4H6z"/></svg>`
-                        : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
-                    }
+                    ${recipientMode === 'client'
+                    ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 10h.01M6 14h.01M6 18h.01M10 10h.01M10 14h.01M10 18h.01M14 10h.01M14 14h.01M14 18h.01M18 10h.01M18 14h.01M18 18h.01M6 3h12v4H6z"/></svg>`
+                    : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
+                }
                    </div>`;
 
             // Auto-fill hidden/manual fields
@@ -950,7 +1059,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (container.querySelector('#inv-add-cut')) container.querySelector('#inv-add-cut').value = inv.additionalCut || 0;
         if (container.querySelector('#inv-tax')) container.querySelector('#inv-tax').value = inv.taxPercent || 0;
         if (container.querySelector('#inv-shipping')) container.querySelector('#inv-shipping').value = inv.shippingCost || 0;
-        
+
         // Status & Note
         const statusEl = container.querySelector('#inv-status');
         if (statusEl) {
@@ -979,7 +1088,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         const invNumInput = container.querySelector('#inv-number-input');
         if (invNumInput) invNumInput.value = generateRandomInvoiceId(isBusinessInvoice);
-        
+
         const titleEl = container.querySelector('#inv-title');
         if (titleEl) titleEl.value = 'Invoice';
 
@@ -1041,8 +1150,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 pickerBtnSelectAll.disabled = true;
             } else {
                 pickerBtnSelectAll.disabled = false;
-                pickerBtnSelectAll.textContent = allVisibleSelected 
-                    ? `Deselect All Visible (${selectableVisible.length})` 
+                pickerBtnSelectAll.textContent = allVisibleSelected
+                    ? `Deselect All Visible (${selectableVisible.length})`
                     : `Select All Visible (${selectableVisible.length})`;
             }
         }
@@ -1068,7 +1177,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             }
             categoryMap.get(uId).count += 1;
         });
-        
+
         const allCatsList = Array.from(categoryMap.values());
         const hasProducts = allCatsList.some(c => c.count > 0);
         const categories = (hasProducts ? allCatsList.filter(c => c.count > 0) : allCatsList)
@@ -1115,7 +1224,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const sizeLabel = p.sizeWeight || 'Standard';
             const categoryDisplayName = getCategoryName(p.category);
 
-            const imgHtml = p.imageUri 
+            const imgHtml = p.imageUri
                 ? `<img src="${p.imageUri}" class="picker-img" alt="${p.name}" loading="lazy">`
                 : `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted); opacity:0.35;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>`;
 
@@ -1345,7 +1454,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const renderItemsList = () => {
         const list = container.querySelector('#invoice-items-list');
         const countBadge = container.querySelector('#summary-items-count');
-        
+
         if (countBadge) {
             const totalUnits = invoiceItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
             countBadge.textContent = `${invoiceItems.length} products (${totalUnits} units)`;
@@ -1546,11 +1655,14 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const countPaidEl = container.querySelector('#count-paid');
         const countUnpaidEl = container.querySelector('#count-unpaid');
 
-        if (countAllEl) countAllEl.textContent = rawInvoices.length;
-        if (countPaidEl) countPaidEl.textContent = rawInvoices.filter(i => (i.status || '').toUpperCase() === 'PAID').length;
-        if (countUnpaidEl) countUnpaidEl.textContent = rawInvoices.filter(i => (i.status || '').toUpperCase() !== 'PAID').length;
+        const validRaw = (rawInvoices || []).filter(Boolean);
 
-        let filtered = rawInvoices.filter(inv => {
+        if (countAllEl) countAllEl.textContent = validRaw.length;
+        if (countPaidEl) countPaidEl.textContent = validRaw.filter(i => (i.status || '').toUpperCase() === 'PAID').length;
+        if (countUnpaidEl) countUnpaidEl.textContent = validRaw.filter(i => (i.status || '').toUpperCase() !== 'PAID').length;
+
+        let filtered = validRaw.filter(inv => {
+            if (!inv) return false;
             const s = (inv.status || 'Draft').toUpperCase();
             if (activeStatus === 'PAID') return s === 'PAID';
             if (activeStatus === 'UNPAID') return s !== 'PAID';
@@ -1560,7 +1672,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (activeDateFilter !== 'ALL') {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-            
+
             filtered = filtered.filter(inv => {
                 const invTime = getInvoiceTime(inv);
                 if (activeDateFilter === 'TODAY') {
@@ -1623,7 +1735,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const isPaid = (inv.status || '').toUpperCase() === 'PAID';
             const badgeClass = isPaid ? 'badge-paid' : 'badge-unpaid';
             const statusLabel = isPaid ? 'PAID' : (inv.status || 'UNPAID');
-            
+
             const entityDisplay = `
                 <div style="display:flex; align-items:center; gap:8px;">
                     <div>
@@ -1668,13 +1780,70 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         attachInvoiceItemEvents(filtered);
     };
 
+    // Reload Entity Dropdowns
+    const reloadBusinesses = async (selectedId = null) => {
+        try {
+            allBusinesses = (await peopleService.getAllBusinesses()) || [];
+        } catch (e) {
+            console.warn("reloadBusinesses error:", e);
+            allBusinesses = [];
+        }
+        const busSelect = container.querySelector('#inv-business');
+        if (!busSelect) return;
+        busSelect.innerHTML = '<option value="">Select Business (Issuer)...</option>' +
+            allBusinesses.map(b => `<option value="${b.id}">${b.name}${b.phone ? ` (${b.phone})` : ''}</option>`).join('');
+
+        if (selectedId) {
+            busSelect.value = selectedId;
+        } else if (allBusinesses.length === 1 && !busSelect.value) {
+            busSelect.value = allBusinesses[0].id;
+        }
+        updateBusinessPreview();
+    };
+
+    const reloadClients = async (selectedId = null) => {
+        try {
+            allClients = (await peopleService.getAllClients()) || [];
+        } catch (e) {
+            console.warn("reloadClients error:", e);
+            allClients = [];
+        }
+        const cliSelect = container.querySelector('#inv-client');
+        if (!cliSelect) return;
+        cliSelect.innerHTML = '<option value="">Select saved client...</option>' +
+            allClients.map(c => `<option value="${c.id}">${c.name}${c.phone ? ` (${c.phone})` : ''}</option>`).join('');
+        if (selectedId) {
+            cliSelect.value = selectedId;
+            setRecipientMode('client');
+        }
+        updateRecipientPreview();
+    };
+
+    const reloadCustomers = async (selectedId = null) => {
+        try {
+            allCustomers = (await peopleService.getAllCustomers()) || [];
+        } catch (e) {
+            console.warn("reloadCustomers error:", e);
+            allCustomers = [];
+        }
+        const custSelect = container.querySelector('#inv-customer');
+        if (!custSelect) return;
+        custSelect.innerHTML = '<option value="">Select saved customer...</option>' +
+            allCustomers.map(c => `<option value="${c.id}">${c.name}${c.phone ? ` (${c.phone})` : ''}</option>`).join('');
+        if (selectedId) {
+            custSelect.value = selectedId;
+            setRecipientMode('customer');
+        }
+        updateRecipientPreview();
+    };
+
     // Load Data
     const loadData = async () => {
         try {
             renderSkeleton();
 
             try {
-                allCategories = await categoryService.getAllCategories();
+                allCategories = (await categoryService.getAllCategories()) || [];
             } catch (catErr) {
                 console.warn("Could not load categories:", catErr);
                 allCategories = [];
@@ -1703,7 +1872,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             }
 
             try {
-                allProducts = await productService.getAllActiveProducts();
+                allProducts = (await productService.getAllActiveProducts()) || [];
             } catch (prodErr) {
                 console.warn("Could not load products:", prodErr);
                 allProducts = [];
@@ -1711,7 +1880,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
             const prodSelect = container.querySelector('#inv-add-product-select');
             if (prodSelect) {
-                prodSelect.innerHTML = '<option value="">Select a product...</option>' + 
+                prodSelect.innerHTML = '<option value="">Select a product...</option>' +
                     allProducts.map(p => {
                         const catName = getCategoryName(p.category);
                         const catBadge = catName ? ` [${catName}]` : '';
@@ -1719,12 +1888,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     }).join('');
             }
 
-            renderPickerCategories();
+            try {
+                renderPickerCategories();
+            } catch (pickerErr) {
+                console.warn("renderPickerCategories error:", pickerErr);
+            }
 
             // Load businesses, clients & customers
-            await reloadBusinesses();
-            await reloadClients();
-            await reloadCustomers();
+            try { await reloadBusinesses(); } catch (bErr) { console.warn("reloadBusinesses error:", bErr); }
+            try { await reloadClients(); } catch (cErr) { console.warn("reloadClients error:", cErr); }
+            try { await reloadCustomers(); } catch (custErr) { console.warn("reloadCustomers error:", custErr); }
 
             // Auto-select if directed from People / Directory "Create Invoice"
             if (window.__preselectedInvoiceRecipient) {
@@ -1758,13 +1931,19 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             if (container._invoiceUnsubscribe) {
                 try {
                     container._invoiceUnsubscribe();
-                } catch (e) {}
+                } catch (e) { }
             }
-            
-            container._invoiceUnsubscribe = invoiceService.listenInvoices(isBusinessInvoice, (invoices) => {
-                rawInvoices = invoices || [];
+
+            try {
+                container._invoiceUnsubscribe = invoiceService.listenInvoices(isBusinessInvoice, (invoices) => {
+                    rawInvoices = Array.isArray(invoices) ? invoices : [];
+                    applyFiltersAndRender();
+                });
+            } catch (listenErr) {
+                console.warn("listenInvoices fallback to getAllInvoices:", listenErr);
+                rawInvoices = (await invoiceService.getAllInvoices(isBusinessInvoice)) || [];
                 applyFiltersAndRender();
-            });
+            }
 
             renderItemsList();
             updateLiveTotals();
@@ -1774,67 +1953,20 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
     };
 
-    // Reload Entity Dropdowns
-    const reloadBusinesses = async (selectedId = null) => {
-        try {
-            allBusinesses = (await peopleService.getAllBusinesses()) || [];
-        } catch (e) {
-            console.warn("reloadBusinesses error:", e);
-            allBusinesses = [];
-        }
-        const busSelect = container.querySelector('#inv-business');
-        if (!busSelect) return;
-        busSelect.innerHTML = '<option value="">Select Business (Issuer)...</option>' + 
-            allBusinesses.map(b => `<option value="${b.id}">${b.name}${b.phone ? ` (${b.phone})` : ''}</option>`).join('');
-        
-        if (selectedId) {
-            busSelect.value = selectedId;
-        } else if (allBusinesses.length === 1 && !busSelect.value) {
-            busSelect.value = allBusinesses[0].id;
-        }
-        updateBusinessPreview();
-    };
-
-    const reloadClients = async (selectedId = null) => {
-        try {
-            allClients = (await peopleService.getAllClients()) || [];
-        } catch (e) {
-            console.warn("reloadClients error:", e);
-            allClients = [];
-        }
-        const cliSelect = container.querySelector('#inv-client');
-        if (!cliSelect) return;
-        cliSelect.innerHTML = '<option value="">Select saved client...</option>' + 
-            allClients.map(c => `<option value="${c.id}">${c.name}${c.phone ? ` (${c.phone})` : ''}</option>`).join('');
-        if (selectedId) {
-            cliSelect.value = selectedId;
-            setRecipientMode('client');
-        }
-        updateRecipientPreview();
-    };
-
-    const reloadCustomers = async (selectedId = null) => {
-        try {
-            allCustomers = (await peopleService.getAllCustomers()) || [];
-        } catch (e) {
-            console.warn("reloadCustomers error:", e);
-            allCustomers = [];
-        }
-        const custSelect = container.querySelector('#inv-customer');
-        if (!custSelect) return;
-        custSelect.innerHTML = '<option value="">Select saved customer...</option>' + 
-            allCustomers.map(c => `<option value="${c.id}">${c.name}${c.phone ? ` (${c.phone})` : ''}</option>`).join('');
-        if (selectedId) {
-            custSelect.value = selectedId;
-            setRecipientMode('customer');
-        }
-        updateRecipientPreview();
-    };
-
     // Listen to changes on Entity Dropdowns & Pills
     container.querySelector('#inv-business')?.addEventListener('change', updateBusinessPreview);
     container.querySelector('#inv-client')?.addEventListener('change', updateRecipientPreview);
     container.querySelector('#inv-customer')?.addEventListener('change', updateRecipientPreview);
+
+    // Re-generate / Re-roll Invoice Number
+    container.querySelector('#btn-regen-inv-id')?.addEventListener('click', () => {
+        const invNumInput = container.querySelector('#inv-number-input');
+        if (invNumInput) {
+            invNumInput.value = generateRandomInvoiceId(isBusinessInvoice);
+            updateInvoiceSubmitState();
+            checkInvoiceDirty();
+        }
+    });
 
     container.querySelectorAll('#recipient-type-pills button').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1849,11 +1981,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         quickAddForm.reset();
         quickAddPreviewImgUrl = '';
         if (qaAvatarPreview) {
-            qaAvatarPreview.innerHTML = type === 'customer' 
+            qaAvatarPreview.innerHTML = type === 'customer'
                 ? `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
                 : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`;
         }
-        
+
         const submitBtn = container.querySelector('#btn-save-quick-add');
         if (submitBtn) {
             submitBtn.disabled = true;
@@ -1884,20 +2016,122 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     btnCloseQuickAdd?.addEventListener('click', closeQuickAddModal);
     btnCancelQuickAdd?.addEventListener('click', closeQuickAddModal);
 
-    // Live Avatar Preview for Quick Add (File or URL)
-    qaPhotoFileInput?.addEventListener('change', (e) => {
-        const file = e.target.files?.[0];
-        if (file && qaAvatarPreview) {
+    // Live Avatar Preview & Drag-and-Drop for Quick Add (File or URL)
+    let pendingQaPhotoFile = null;
+
+    const processQaPhotoFile = async (file) => {
+        if (!file || !file.type.startsWith('image/')) {
+            showAlert.warning("Please provide a valid image file.");
+            return;
+        }
+
+        return new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onload = (re) => {
-                qaAvatarPreview.innerHTML = `<img src="${re.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDimension = 512;
+
+                    if (width > maxDimension || height > maxDimension) {
+                        if (width > height) {
+                            height = Math.round((height * maxDimension) / width);
+                            width = maxDimension;
+                        } else {
+                            width = Math.round((width * maxDimension) / height);
+                            height = maxDimension;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            pendingQaPhotoFile = file;
+                            if (qaAvatarPreview) {
+                                qaAvatarPreview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                            }
+                            resolve(file);
+                            return;
+                        }
+                        const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                            type: "image/webp",
+                            lastModified: Date.now()
+                        });
+                        pendingQaPhotoFile = compressedFile;
+                        if (qaAvatarPreview) {
+                            qaAvatarPreview.innerHTML = `<img src="${canvas.toDataURL('image/webp', 0.88)}" style="width:100%; height:100%; object-fit:cover;">`;
+                        }
+                        if (qaPhotoUrlInput) qaPhotoUrlInput.value = '';
+                        resolve(compressedFile);
+                    }, 'image/webp', 0.88);
+                };
+                img.onerror = () => {
+                    pendingQaPhotoFile = file;
+                    if (qaAvatarPreview) {
+                        qaAvatarPreview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                    }
+                    resolve(file);
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
+        });
+    };
+
+    const qaAvatarDropzone = container.querySelector('#qa-avatar-dropzone');
+    if (qaAvatarDropzone && qaPhotoFileInput) {
+        qaAvatarDropzone.addEventListener('click', (e) => {
+            if (e.target.closest('input') || e.target.closest('label')) return;
+            qaPhotoFileInput.click();
+        });
+
+        ['dragenter', 'dragover'].forEach(evtName => {
+            qaAvatarDropzone.addEventListener(evtName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                qaAvatarDropzone.style.borderColor = '#e11d48';
+                qaAvatarDropzone.style.background = 'rgba(225,29,72,0.06)';
+                qaAvatarDropzone.style.boxShadow = '0 0 0 2px rgba(225,29,72,0.2)';
+            });
+        });
+
+        ['dragleave', 'dragend', 'drop'].forEach(evtName => {
+            qaAvatarDropzone.addEventListener(evtName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                qaAvatarDropzone.style.borderColor = 'var(--border-color)';
+                qaAvatarDropzone.style.background = 'var(--surface-50)';
+                qaAvatarDropzone.style.boxShadow = 'none';
+            });
+        });
+
+        qaAvatarDropzone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+                await processQaPhotoFile(files[0]);
+                showAlert.info("Photo loaded for entry.");
+            }
+        });
+    }
+
+    qaPhotoFileInput?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            await processQaPhotoFile(file);
         }
     });
 
     qaPhotoUrlInput?.addEventListener('input', (e) => {
         const url = e.target.value.trim();
+        pendingQaPhotoFile = null;
         if (url && qaAvatarPreview) {
             const fallbackSvg = quickAddTargetType === 'customer'
                 ? `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
@@ -1913,7 +2147,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         submitBtn.textContent = 'Saving...';
 
         let finalImageUrl = qaPhotoUrlInput?.value?.trim() || '';
-        const file = qaPhotoFileInput?.files?.[0];
+        const file = pendingQaPhotoFile || qaPhotoFileInput?.files?.[0];
 
         if (file) {
             try {
@@ -2055,7 +2289,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
             renderItemsList();
             updateLiveTotals();
-            
+
             container.querySelector('#inv-add-product-select').value = '';
             container.querySelector('#inv-add-qty').value = 1;
         }
@@ -2135,7 +2369,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 // Shared Issuer Data
                 const bSelect = container.querySelector('#inv-business');
                 if (!bSelect || !bSelect.value) throw new Error("Please select the issuing Business.");
-                
+
                 const bus = allBusinesses.find(b => b.id === bSelect.value);
                 if (bus) {
                     invoiceData.businessId = bus.uniqueId || bus.id;
@@ -2193,7 +2427,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 const invTitle = (container.querySelector('#inv-title')?.value || '').trim();
                 if (!invTitle) throw new Error("Invoice Title is required.");
                 invoiceData.title = invTitle;
-                
+
                 const invNumber = (container.querySelector('#inv-number-input')?.value || '').trim();
                 if (!invNumber) throw new Error("Invoice Number is required.");
                 invoiceData.invoiceNumber = invNumber;
@@ -2208,6 +2442,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     await invoiceService.createInvoice(invoiceData, invoiceItems, currentUser?.uid || '', isVendingActive);
                     showAlert.success(`Invoice ${invoiceData.invoiceNumber} created successfully! ${isVendingActive ? '(Stock deducted in Vending Mode)' : ''}`);
                 }
+
+                const draftKey = 'inv_' + (isBusinessInvoice ? 'bus_' : 'cust_') + (editingInvoiceId || 'new');
+                draftManager.clearDraft(draftKey);
+                draftManager.unregisterActiveForm('invoice_editor');
+                if (invUnsavedIndicator) invUnsavedIndicator.update(false);
 
                 showListView();
                 await loadData();

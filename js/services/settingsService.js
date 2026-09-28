@@ -53,6 +53,7 @@ export const getSettingsService = (workspaceId) => {
                     email: wsData.email || '',
                     currencySymbol: resolvedCurrency,
                     currency: resolvedCurrency,
+                    logoUrl: wsData.logoUrl || wsData.logo || receiptData["Logo Url"] || '',
 
                     // Creation & Audit Trail Data Model
                     createdAt: wsData.createdAt || null,
@@ -120,6 +121,10 @@ export const getSettingsService = (workspaceId) => {
                 "last_updated": now
             };
 
+            if (settings.logoUrl !== undefined) {
+                receiptPayload["Logo Url"] = settings.logoUrl;
+            }
+
             const wsPayload = {
                 name: settings.name || settings.shopName || '',
                 email: settings.email || '',
@@ -138,6 +143,11 @@ export const getSettingsService = (workspaceId) => {
                 updatorName: updatorName,
                 updatorRole: settings.userRole || 'ADMIN'
             };
+
+            if (settings.logoUrl !== undefined) {
+                wsPayload.logoUrl = settings.logoUrl;
+                wsPayload.logo = settings.logoUrl;
+            }
 
             await Promise.all([
                 setDoc(receiptRef, receiptPayload, { merge: true }),

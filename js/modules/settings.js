@@ -3,6 +3,7 @@ import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 import { getRoleBadgeHtml } from '../auth-handler.js';
 import { getSettingsService } from '../services/settingsService.js';
+import { storageService } from '../../supabase/storage.js';
 import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
@@ -77,7 +78,7 @@ export const renderSettings = async (container, workspaceId) => {
         if (!canAccessSettings) {
             container.innerHTML = `
                 <div style="max-width: 560px; margin: 3rem auto; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 20px; padding: 2.5rem; text-align: center; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.06);">
-                    <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(225, 29, 72, 0.08); color: #e11d48; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
+                    <div style="width: 56px; height: 56px; border-radius: 14px; background: #f4f4f5; color: #18181b; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     </div>
                     <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">Access Restricted</h3>
@@ -121,7 +122,7 @@ export const renderSettings = async (container, workspaceId) => {
         const isVendingActive = Boolean(currentSettings.enableVending);
         const printCustName = Boolean(currentSettings.customerName);
         const printCustPhone = Boolean(currentSettings.customerNumber);
-        const logoUrl = wsData.logoUrl || '';
+        const logoUrl = currentSettings.logoUrl || wsData.logoUrl || wsData.logo || '';
 
         const wsCreatedDate = currentSettings.createdDate || (wsData.createdAt ? new Date(wsData.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent');
         const wsCreatedTimestamp = currentSettings.createdTimestamp || (wsData.createdAt ? new Date(wsData.createdAt).toISOString() : '');
@@ -138,7 +139,7 @@ export const renderSettings = async (container, workspaceId) => {
                 <!-- TOP HEADER HERO -->
                 <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 20px; padding: 1.75rem 2rem; margin-bottom: 1.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem; box-shadow: 0 8px 30px -5px rgba(0,0,0,0.03);">
                     <div style="display: flex; align-items: center; gap: 1.15rem;">
-                        <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; font-weight: 800; box-shadow: 0 6px 18px rgba(225, 29, 72, 0.25); flex-shrink: 0;">
+                        <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; font-weight: 800; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); flex-shrink: 0;">
                             ${escapeHtml((wsDisplayName.charAt(0) || 'W').toUpperCase())}
                         </div>
                         <div>
@@ -199,13 +200,59 @@ export const renderSettings = async (container, workspaceId) => {
                         <!-- Card: Identity & Details -->
                         <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
                             <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(225, 29, 72, 0.08); color: #e11d48; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: #f4f4f5; color: #18181b; display: flex; align-items: center; justify-content: center;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                 </div>
                                 <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">Workspace Credentials</h3>
                             </div>
 
                             <form id="settings-general-form" style="display: flex; flex-direction: column; gap: 1.15rem;">
+                                <!-- WORKSPACE LOGO (CHANGE OR ENTER) -->
+                                <div class="form-group" style="background: var(--surface-50); border: 1.5px solid var(--border-color); border-radius: 14px; padding: 1.25rem;">
+                                    <label style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between;">
+                                        <span style="display: flex; align-items: center; gap: 0.45rem;">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                            Workspace Logo
+                                        </span>
+                                        <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">PNG, JPG, WEBP, or SVG</span>
+                                    </label>
+                                    
+                                    <div style="display: flex; gap: 1.15rem; align-items: center; flex-wrap: wrap;">
+                                        <!-- Logo Box / Dropzone -->
+                                        <div id="ws-logo-dropzone" style="width: 82px; height: 82px; border-radius: 16px; background: #ffffff; border: 2px dashed var(--border-color); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; cursor: pointer; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.2s ease;" title="Click or Drag & Drop to change workspace logo">
+                                            <img id="ws-logo-preview-img" src="${escapeHtml(logoUrl)}" alt="Workspace Logo" style="width: 100%; height: 100%; object-fit: contain; padding: 4px; ${logoUrl ? '' : 'display: none;'}">
+                                            <div id="ws-logo-placeholder" style="display: ${logoUrl ? 'none' : 'flex'}; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; font-size: 1.75rem; font-weight: 800;">
+                                                ${escapeHtml((wsDisplayName.charAt(0) || 'W').toUpperCase())}
+                                            </div>
+                                            <div id="ws-logo-overlay-hint" style="position: absolute; inset: 0; background: rgba(0,0,0,0.55); color: #ffffff; display: none; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700; text-align: center; padding: 4px;">
+                                                Change
+                                            </div>
+                                        </div>
+
+                                        <!-- Upload Controls & Remove -->
+                                        <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.5rem;">
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                                <input type="file" id="set-logo-file" accept="image/png, image/jpeg, image/webp, image/svg+xml" style="display: none;">
+                                                <button type="button" id="btn-upload-ws-logo" class="btn btn-sm btn-secondary" style="font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.9rem; display: flex; align-items: center; gap: 0.35rem;">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                                    <span>Upload Logo</span>
+                                                </button>
+                                                <button type="button" id="btn-clear-ws-logo" class="btn btn-sm btn-outline" style="font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.75rem; color: var(--danger); border-color: rgba(239,68,68,0.3); display: ${logoUrl ? 'inline-flex' : 'none'}; align-items: center; gap: 0.3rem;" title="Remove current logo and restore monogram initial">
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                                    <span>Remove</span>
+                                                </button>
+                                            </div>
+                                            <small style="color: var(--text-muted); font-size: 0.75rem;">Square 256x256 or 512x512 pixels recommended with transparent or white background.</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Direct URL input -->
+                                    <div style="margin-top: 0.85rem;">
+                                        <label style="font-weight: 600; font-size: 0.76rem; color: var(--text-muted); margin-bottom: 0.25rem; display: block;">Or enter direct image URL:</label>
+                                        <input type="url" id="set-logo-url" class="form-control" value="${escapeHtml(logoUrl)}" placeholder="https://example.com/logo.png" style="border-radius: 8px; font-size: 0.82rem; padding: 0.45rem 0.65rem;">
+                                    </div>
+                                </div>
+
                                 <div class="form-group">
                                     <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Workspace Name *</label>
                                     <input type="text" id="set-name" class="form-control" value="${escapeHtml(wsDisplayName)}" required style="border-radius: 8px; font-weight: 600;">
@@ -261,13 +308,13 @@ export const renderSettings = async (container, workspaceId) => {
                                     </div>
                                     <div style="border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
                                         <strong style="color: var(--text-primary);">Last Modified By:</strong>
-                                        <span style="font-weight:600; color:#e11d48;"> ${escapeHtml(wsUpdatorEmail || 'Admin')}</span>
+                                        <span style="font-weight:600; color:var(--text-primary);"> ${escapeHtml(wsUpdatorEmail || 'Admin')}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div style="background: rgba(225, 29, 72, 0.04); border: 1px solid rgba(225, 29, 72, 0.15); border-radius: 10px; padding: 0.85rem 1rem; margin-top: 1.5rem; display: flex; align-items: center; gap: 0.65rem;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                            <div style="background: #fafaf9; border: 1px solid #e4e4e7; border-radius: 10px; padding: 0.85rem 1rem; margin-top: 1.5rem; display: flex; align-items: center; gap: 0.65rem;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                                 <span style="font-size: 0.8rem; color: var(--text-secondary);">Enterprise multi-tenant isolation with real-time Firestore sync.</span>
                             </div>
                         </div>
@@ -283,16 +330,16 @@ export const renderSettings = async (container, workspaceId) => {
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
                             <div>
                                 <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                                     Workspace Currency Configuration
                                 </h3>
                                 <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.88rem;">Select a country currency standard or type custom symbol characters (max 3 letters).</p>
                             </div>
 
                             <!-- Live Sample Badge -->
-                            <div style="background: rgba(225, 29, 72, 0.06); border: 1.5px solid rgba(225, 29, 72, 0.2); padding: 0.55rem 1.15rem; border-radius: 12px; display: flex; align-items: center; gap: 0.6rem;">
-                                <span style="font-size: 0.78rem; font-weight: 700; color: #be123c; text-transform: uppercase;">Live Sample:</span>
-                                <strong id="currency-live-preview" style="color: #e11d48; font-family: monospace; font-size: 1.15rem; font-weight: 800;">${escapeHtml(wsCurrency)} 1,450.00</strong>
+                            <div style="background: #fafaf9; border: 1.5px solid #e4e4e7; padding: 0.55rem 1.15rem; border-radius: 12px; display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="font-size: 0.78rem; font-weight: 700; color: #52525b; text-transform: uppercase;">Live Sample:</span>
+                                <strong id="currency-live-preview" style="color: #09090b; font-family: monospace; font-size: 1.15rem; font-weight: 800;">${escapeHtml(wsCurrency)} 1,450.00</strong>
                             </div>
                         </div>
 
@@ -616,14 +663,14 @@ export const renderSettings = async (container, workspaceId) => {
                 <!-- ======================================================== -->
                 <div id="settings-floating-bar" style="position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 9999px; padding: 0.65rem 1.25rem 0.65rem 1.5rem; box-shadow: 0 15px 35px -5px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1.25rem; z-index: 1000; transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); opacity: 0; pointer-events: none;">
                     <div style="display: flex; align-items: center; gap: 0.65rem;">
-                        <span style="width: 9px; height: 9px; border-radius: 50%; background: #e11d48; box-shadow: 0 0 8px rgba(225, 29, 72, 0.6); display: inline-block;"></span>
+                        <span style="width: 9px; height: 9px; border-radius: 50%; background: #18181b; box-shadow: 0 0 8px rgba(0, 0, 0, 0.4); display: inline-block;"></span>
                         <span style="font-size: 0.86rem; font-weight: 700; color: var(--text-primary);">Unsaved Changes</span>
                     </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <button type="button" id="btn-discard-settings" class="btn btn-sm btn-secondary" style="font-size: 0.82rem; font-weight: 700; border-radius: 9999px; padding: 0.4rem 0.9rem;">
                             Discard
                         </button>
-                        <button type="button" id="btn-save-settings" class="btn btn-sm btn-primary" style="font-size: 0.82rem; font-weight: 700; border-radius: 9999px; padding: 0.4rem 1.25rem; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);">
+                        <button type="button" id="btn-save-settings" class="btn btn-sm btn-primary" style="font-size: 0.82rem; font-weight: 700; border-radius: 9999px; padding: 0.4rem 1.25rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); border: 1px solid #18181b; color: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.2);">
                             Save Changes
                         </button>
                     </div>
@@ -751,6 +798,129 @@ export const renderSettings = async (container, workspaceId) => {
             }
         });
 
+        // Workspace Logo Interactive Controls
+        let selectedWsLogoFile = null;
+
+        const logoFileInput = container.querySelector('#set-logo-file');
+        const logoUrlInput = container.querySelector('#set-logo-url');
+        const btnUploadLogo = container.querySelector('#btn-upload-ws-logo');
+        const btnClearLogo = container.querySelector('#btn-clear-ws-logo');
+        const logoPreviewImg = container.querySelector('#ws-logo-preview-img');
+        const logoPlaceholder = container.querySelector('#ws-logo-placeholder');
+        const logoDropzone = container.querySelector('#ws-logo-dropzone');
+        const logoOverlayHint = container.querySelector('#ws-logo-overlay-hint');
+
+        const updateLogoDisplay = (srcUrl) => {
+            if (srcUrl) {
+                if (logoPreviewImg) {
+                    logoPreviewImg.src = srcUrl;
+                    logoPreviewImg.style.display = 'block';
+                }
+                if (logoPlaceholder) logoPlaceholder.style.display = 'none';
+                if (btnClearLogo) btnClearLogo.style.display = 'inline-flex';
+            } else {
+                if (logoPreviewImg) {
+                    logoPreviewImg.src = '';
+                    logoPreviewImg.style.display = 'none';
+                }
+                if (logoPlaceholder) {
+                    logoPlaceholder.style.display = 'flex';
+                    const curName = (container.querySelector('#set-name')?.value || wsDisplayName || 'W').trim();
+                    logoPlaceholder.textContent = (curName.charAt(0) || 'W').toUpperCase();
+                }
+                if (btnClearLogo) btnClearLogo.style.display = 'none';
+            }
+        };
+
+        const handleLogoFile = (file) => {
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showAlert.error("Please choose a valid image file (PNG, JPG, WEBP, or SVG).");
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                showAlert.warning("Logo image exceeds 5MB. Please choose a smaller image.");
+                return;
+            }
+            selectedWsLogoFile = file;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const dataUrl = ev.target?.result;
+                updateLogoDisplay(dataUrl);
+                if (logoUrlInput) {
+                    logoUrlInput.value = dataUrl;
+                }
+                checkDirty();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        btnUploadLogo?.addEventListener('click', () => logoFileInput?.click());
+        logoDropzone?.addEventListener('click', () => logoFileInput?.click());
+
+        logoFileInput?.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) handleLogoFile(file);
+        });
+
+        logoUrlInput?.addEventListener('input', (e) => {
+            selectedWsLogoFile = null;
+            const urlVal = e.target.value.trim();
+            updateLogoDisplay(urlVal);
+            checkDirty();
+        });
+
+        btnClearLogo?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedWsLogoFile = null;
+            if (logoFileInput) logoFileInput.value = '';
+            if (logoUrlInput) logoUrlInput.value = '';
+            updateLogoDisplay('');
+            checkDirty();
+        });
+
+        // Dropzone drag-and-drop
+        if (logoDropzone) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                logoDropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    logoDropzone.style.borderColor = 'var(--primary)';
+                    logoDropzone.style.background = '#f4f4f5';
+                    if (logoOverlayHint) logoOverlayHint.style.display = 'flex';
+                });
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                logoDropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    logoDropzone.style.borderColor = 'var(--border-color)';
+                    logoDropzone.style.background = '#ffffff';
+                    if (logoOverlayHint) logoOverlayHint.style.display = 'none';
+                });
+            });
+            logoDropzone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer && e.dataTransfer.files;
+                if (files && files.length > 0) {
+                    handleLogoFile(files[0]);
+                }
+            });
+            logoDropzone.addEventListener('mouseenter', () => {
+                if (logoOverlayHint) logoOverlayHint.style.display = 'flex';
+            });
+            logoDropzone.addEventListener('mouseleave', () => {
+                if (logoOverlayHint) logoOverlayHint.style.display = 'none';
+            });
+        }
+
+        // Live Workspace Name monogram initial sync
+        container.querySelector('#set-name')?.addEventListener('input', () => {
+            if (!logoPreviewImg?.src || logoPreviewImg.style.display === 'none') {
+                const curName = (container.querySelector('#set-name')?.value || wsDisplayName || 'W').trim();
+                if (logoPlaceholder) logoPlaceholder.textContent = (curName.charAt(0) || 'W').toUpperCase();
+            }
+        });
+
         // Snapshot & Dirty Checking for Floating Bar
         let savedSnapshot = {
             enableVending: isVendingActive,
@@ -762,7 +932,8 @@ export const renderSettings = async (container, workspaceId) => {
             shopName: wsShopName,
             endMessage: wsEndMsg,
             customerName: printCustName,
-            customerNumber: printCustPhone
+            customerNumber: printCustPhone,
+            logoUrl: logoUrl
         };
 
         const floatingBar = container.querySelector('#settings-floating-bar');
@@ -780,6 +951,9 @@ export const renderSettings = async (container, workspaceId) => {
             const curEndMsg = (container.querySelector('#set-end-msg')?.value || '').trim();
             const curCustName = Boolean(container.querySelector('#set-show-cust-name')?.checked);
             const curCustPhone = Boolean(container.querySelector('#set-show-cust-num')?.checked);
+            const curLogoUrl = (container.querySelector('#set-logo-url')?.value || '').trim();
+
+            const isLogoDirty = Boolean(selectedWsLogoFile) || (curLogoUrl !== (savedSnapshot.logoUrl || ''));
 
             const isDirty = (
                 curVending !== savedSnapshot.enableVending ||
@@ -791,7 +965,8 @@ export const renderSettings = async (container, workspaceId) => {
                 curShop !== savedSnapshot.shopName ||
                 curEndMsg !== savedSnapshot.endMessage ||
                 curCustName !== savedSnapshot.customerName ||
-                curCustPhone !== savedSnapshot.customerNumber
+                curCustPhone !== savedSnapshot.customerNumber ||
+                isLogoDirty
             );
 
             if (floatingBar) {
@@ -807,7 +982,7 @@ export const renderSettings = async (container, workspaceId) => {
             }
         };
 
-        ['#set-name', '#set-email', '#set-phone', '#set-address', '#set-shop-name', '#set-end-msg'].forEach(sel => {
+        ['#set-name', '#set-email', '#set-phone', '#set-address', '#set-shop-name', '#set-end-msg', '#set-logo-url'].forEach(sel => {
             container.querySelector(sel)?.addEventListener('input', checkDirty);
         });
         ['#set-show-cust-name', '#set-show-cust-num'].forEach(sel => {
@@ -816,6 +991,7 @@ export const renderSettings = async (container, workspaceId) => {
 
         // Discard Handler
         btnDiscard?.addEventListener('click', () => {
+            selectedWsLogoFile = null;
             if (container.querySelector('#set-name')) container.querySelector('#set-name').value = savedSnapshot.name;
             if (container.querySelector('#set-email')) container.querySelector('#set-email').value = savedSnapshot.email;
             if (container.querySelector('#set-phone')) container.querySelector('#set-phone').value = savedSnapshot.phone;
@@ -824,6 +1000,9 @@ export const renderSettings = async (container, workspaceId) => {
             if (container.querySelector('#set-end-msg')) container.querySelector('#set-end-msg').value = savedSnapshot.endMessage;
             if (container.querySelector('#set-show-cust-name')) container.querySelector('#set-show-cust-name').checked = savedSnapshot.customerName;
             if (container.querySelector('#set-show-cust-num')) container.querySelector('#set-show-cust-num').checked = savedSnapshot.customerNumber;
+            if (container.querySelector('#set-logo-file')) container.querySelector('#set-logo-file').value = '';
+            if (container.querySelector('#set-logo-url')) container.querySelector('#set-logo-url').value = savedSnapshot.logoUrl || '';
+            updateLogoDisplay(savedSnapshot.logoUrl || '');
             if (currencyInput) currencyInput.value = savedSnapshot.currencySymbol;
             if (vendingInput) vendingInput.checked = savedSnapshot.enableVending;
             if (vendingLabel) {
@@ -838,6 +1017,19 @@ export const renderSettings = async (container, workspaceId) => {
 
         // Save Settings Handler
         btnSave?.addEventListener('click', async () => {
+            let finalLogoUrl = (container.querySelector('#set-logo-url')?.value || '').trim();
+
+            if (selectedWsLogoFile) {
+                btnSave.disabled = true;
+                btnSave.innerHTML = `<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Uploading Logo...`;
+                try {
+                    finalLogoUrl = await storageService.uploadImage(selectedWsLogoFile, workspaceId);
+                } catch (uploadErr) {
+                    console.warn("Storage logo upload failed:", uploadErr);
+                    showAlert.warning("Logo upload had an issue. Saving local entered logo instead.");
+                }
+            }
+
             const updatedPayload = {
                 enableVending: Boolean(container.querySelector('#set-vending')?.checked),
                 currency: (currencyInput?.value || '$').trim().substring(0, 3) || '$',
@@ -849,7 +1041,8 @@ export const renderSettings = async (container, workspaceId) => {
                 shopName: (container.querySelector('#set-shop-name')?.value || '').trim(),
                 endMessage: (container.querySelector('#set-end-msg')?.value || '').trim(),
                 customerName: Boolean(container.querySelector('#set-show-cust-name')?.checked),
-                customerNumber: Boolean(container.querySelector('#set-show-cust-num')?.checked)
+                customerNumber: Boolean(container.querySelector('#set-show-cust-num')?.checked),
+                logoUrl: finalLogoUrl
             };
 
             if (!updatedPayload.name) {
@@ -866,9 +1059,26 @@ export const renderSettings = async (container, workspaceId) => {
 
             try {
                 await settingsService.saveWorkspaceSettings(updatedPayload);
+                selectedWsLogoFile = null;
                 savedSnapshot = { ...updatedPayload };
+                if (container.querySelector('#set-logo-url')) {
+                    container.querySelector('#set-logo-url').value = finalLogoUrl;
+                }
+                updateLogoDisplay(finalLogoUrl);
                 checkDirty();
-                showAlert.success("Workspace settings & currency saved successfully!");
+
+                // Live UI sync for workspace logos & names
+                if (window.__activeWorkspace) {
+                    window.__activeWorkspace.logoUrl = finalLogoUrl;
+                    window.__activeWorkspace.logo = finalLogoUrl;
+                    window.__activeWorkspace.name = updatedPayload.name;
+                }
+                const sidebarLogo = document.querySelector('.sidebar-logo');
+                if (sidebarLogo && finalLogoUrl) {
+                    sidebarLogo.src = finalLogoUrl;
+                }
+
+                showAlert.success("Workspace credentials & settings saved successfully!");
             } catch (err) {
                 console.error("Save settings error:", err);
                 showAlert.error("Failed to save settings: " + (err.message || 'Unknown error'));

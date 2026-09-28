@@ -20,6 +20,7 @@ import { authService } from '../firebase/auth.js';
 import { firestoreService } from '../firebase/firestore.js';
 
 import { showAlert } from './alert-handler.js';
+import { draftManager } from './services/draftManager.js';
 
 // Placeholders for remaining modules
 const renderPlaceholder = (container, title) => {
@@ -35,18 +36,28 @@ const renderPlaceholder = (container, title) => {
  */
 export const hasUnsavedChanges = () => {
     try {
-        // 1. Settings Module: Save Workspace Settings or Change Currency buttons enabled
-        const btnSaveSettings = document.getElementById('btn-save-settings');
-        const btnChangeCurr = document.getElementById('btn-change-currency');
-        if ((btnSaveSettings && !btnSaveSettings.disabled) || (btnChangeCurr && !btnChangeCurr.disabled)) {
+        if (draftManager && typeof draftManager.hasActiveUnsavedChanges === 'function') {
+            if (draftManager.hasActiveUnsavedChanges()) return true;
+        }
+
+        // 1. Settings Module: Floating bar active when user modified settings
+        const floatingBar = document.getElementById('settings-floating-bar');
+        if (floatingBar && (floatingBar.style.opacity === '1' || floatingBar.style.pointerEvents === 'auto')) {
             return true;
         }
 
-        // 2. Product Form: Form open with unsaved product edits or new input
+        // 2. Product Form: Check if open with unsaved changes
         const prdFormContainer = document.getElementById('product-form-container');
-        const prdSubmitBtn = document.getElementById('prd-submit-btn');
         if (prdFormContainer && prdFormContainer.style.display !== 'none') {
-            if (prdSubmitBtn && !prdSubmitBtn.disabled) return true;
+            const prdId = document.getElementById('prd-id')?.value;
+            if (!prdId) {
+                const name = document.getElementById('prd-name')?.value?.trim();
+                const sale = document.getElementById('prd-sale-price')?.value?.trim();
+                const cost = document.getElementById('prd-cost-price')?.value?.trim();
+                const note = document.getElementById('prd-note')?.value?.trim();
+                const upc = document.getElementById('prd-upc')?.value?.trim();
+                if (name || sale || cost || note || upc) return true;
+            }
         }
 
         // 3. Invoice Editor: Editor open with unsaved modifications or items
@@ -57,11 +68,12 @@ export const hasUnsavedChanges = () => {
             }
         }
 
-        // 4. Category Form: Form open with unsaved changes
+        // 4. Category Form: Form open with non-empty input
         const catFormContainer = document.getElementById('category-form-container');
-        const catSubmitBtn = document.getElementById('cat-submit-btn');
         if (catFormContainer && catFormContainer.style.display !== 'none') {
-            if (catSubmitBtn && !catSubmitBtn.disabled) return true;
+            const catName = document.getElementById('cat-name')?.value?.trim();
+            const catSubmitBtn = document.getElementById('cat-submit-btn');
+            if (catSubmitBtn && !catSubmitBtn.disabled && catName) return true;
         }
 
         // 5. Worker Permissions Manage Form: Form open with modified permissions
@@ -71,7 +83,7 @@ export const hasUnsavedChanges = () => {
             if (workerSaveBtn && !workerSaveBtn.disabled) return true;
         }
 
-        // 6. Market Inserter: Open grid with pending rows
+        // 6. Market Inserter: Open grid with pending rows containing user input
         const miGrid = document.getElementById('mi-grid-body');
         if (miGrid) {
             const miRows = miGrid.querySelectorAll('tr.mi-grid-row');

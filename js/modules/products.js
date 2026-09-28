@@ -7,20 +7,21 @@ import { storageService } from '../../supabase/storage.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
 import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
+import { draftManager } from '../services/draftManager.js';
 
 export const renderProducts = async (container, workspaceId) => {
     const productService = getProductService(workspaceId);
     const categoryService = getCategoryService(workspaceId);
     const invoiceService = getInvoiceService(workspaceId);
     const currentUser = authService.getCurrentUser();
-    
+
     let categoriesList = [];
     let activeProducts = [];
     let allInvoices = [];
     let activeProductDetail = null; // When set, renders dedicated analytical Product Detail View
 
     // Fetch all historical invoices to power real product sales analytics
-    const fetchAllInvoices = async () => {
+    async function fetchAllInvoices() {
         try {
             const [custInvs, busInvs] = await Promise.all([
                 invoiceService.getAllInvoices(false).catch(() => []),
@@ -31,10 +32,10 @@ export const renderProducts = async (container, workspaceId) => {
             console.warn("Could not fetch invoices for product analytics:", e);
             allInvoices = [];
         }
-    };
+    }
 
     // Calculate detailed real-time analytics for a specific product
-    const calculateProductAnalytics = (product, timeRange = '6_MONTHS') => {
+    function calculateProductAnalytics(product, timeRange = '6_MONTHS') {
         if (!product) return null;
 
         const pId = String(product.id || '');
@@ -66,8 +67,8 @@ export const renderProducts = async (container, workspaceId) => {
                     const unitPrice = Number(item.unitPrice) || Number(product.salePrice) || 0;
                     const unitCost = Number(item.unitCost) || Number(product.price) || 0;
                     const lineTotal = Number(item.totalPrice) || (qty * unitPrice);
-                    const lineProfit = (item.itemProfit !== undefined && item.itemProfit !== null) 
-                        ? Number(item.itemProfit) 
+                    const lineProfit = (item.itemProfit !== undefined && item.itemProfit !== null)
+                        ? Number(item.itemProfit)
                         : (lineTotal - (qty * unitCost));
 
                     invUnitsForProd += qty;
@@ -324,12 +325,12 @@ export const renderProducts = async (container, workspaceId) => {
                 
                 <!-- Grid Lines -->
                 <line x1="${padding.left}" y1="${padding.top}" x2="${width - padding.right}" y2="${padding.top}" stroke="rgba(0,0,0,0.06)" stroke-dasharray="4" />
-                <line x1="${padding.left}" y1="${padding.top + chartH/2}" x2="${width - padding.right}" y2="${padding.top + chartH/2}" stroke="rgba(0,0,0,0.06)" stroke-dasharray="4" />
+                <line x1="${padding.left}" y1="${padding.top + chartH / 2}" x2="${width - padding.right}" y2="${padding.top + chartH / 2}" stroke="rgba(0,0,0,0.06)" stroke-dasharray="4" />
                 <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="rgba(0,0,0,0.12)" />
 
                 <!-- Y-Axis Values -->
                 <text x="${padding.left - 8}" y="${padding.top + 4}" font-size="10" fill="#94a3b8" text-anchor="end" font-weight="600">${formatCurrency(maxRev)}</text>
-                <text x="${padding.left - 8}" y="${padding.top + chartH/2 + 4}" font-size="10" fill="#94a3b8" text-anchor="end">${formatCurrency(maxRev/2)}</text>
+                <text x="${padding.left - 8}" y="${padding.top + chartH / 2 + 4}" font-size="10" fill="#94a3b8" text-anchor="end">${formatCurrency(maxRev / 2)}</text>
                 <text x="${padding.left - 8}" y="${height - padding.bottom + 4}" font-size="10" fill="#94a3b8" text-anchor="end">0</text>
 
                 <!-- Area Fill -->
@@ -351,7 +352,7 @@ export const renderProducts = async (container, workspaceId) => {
     };
 
     // Render Dedicated Product Detail View
-    const renderProductDetailView = (prd, activeTrendRange = '6_MONTHS') => {
+    function renderProductDetailView(prd, activeTrendRange = '6_MONTHS') {
         activeProductDetail = prd;
         const analytics = calculateProductAnalytics(prd, activeTrendRange);
         const catName = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category)?.name || prd.category || 'General';
@@ -385,12 +386,12 @@ export const renderProducts = async (container, workspaceId) => {
                     <div style="display:flex; gap:1.5rem; align-items:flex-start; flex-wrap:wrap;">
                         <!-- Product Image Box + Instant Upload Button -->
                         <div style="position:relative; width:115px; height:115px; flex-shrink:0;">
-                            ${prd.imageUri 
-                                ? `<img id="detail-prd-avatar" src="${prd.imageUri}" style="width:100%; height:100%; object-fit:cover; border-radius:14px; border:2px solid var(--border-color); box-shadow:0 4px 12px rgba(0,0,0,0.06);">`
-                                : `<div id="detail-prd-avatar-placeholder" style="width:100%; height:100%; border-radius:14px; background:linear-gradient(135deg, #fce7f3 0%, #ffe4e6 100%); color:#e11d48; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid rgba(225,29,72,0.15);">
+                            ${prd.imageUri
+                ? `<img id="detail-prd-avatar" src="${prd.imageUri}" style="width:100%; height:100%; object-fit:cover; border-radius:14px; border:2px solid var(--border-color); box-shadow:0 4px 12px rgba(0,0,0,0.06);">`
+                : `<div id="detail-prd-avatar-placeholder" style="width:100%; height:100%; border-radius:14px; background:linear-gradient(135deg, #fce7f3 0%, #ffe4e6 100%); color:#e11d48; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid rgba(225,29,72,0.15);">
                                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                                    </div>`
-                            }
+            }
                             <label for="detail-img-file-input" style="position:absolute; bottom:-6px; right:-6px; width:34px; height:34px; border-radius:50%; background:#e11d48; color:#ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 3px 8px rgba(225,29,72,0.4); border:2px solid #ffffff; transition:transform 0.2s;" title="Upload or change product photo">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                                 <input type="file" id="detail-img-file-input" accept="image/*" style="display:none;">
@@ -772,22 +773,66 @@ export const renderProducts = async (container, workspaceId) => {
             });
         }
 
-        // 1-Click Photo Upload directly from detail hero
+        // 1-Click Photo Upload directly from detail hero + Drag & Drop
         const imgInput = container.querySelector('#detail-img-file-input');
+        const detailAvatarWrap = container.querySelector('#detail-prd-avatar')?.parentElement || container.querySelector('#detail-prd-avatar-placeholder')?.parentElement;
+
+        const handleDetailImageUpload = async (file) => {
+            if (!file || !file.type.startsWith('image/')) {
+                showAlert.error('Please drop or select a valid image file (PNG, JPG, WEBP).');
+                return;
+            }
+            try {
+                showAlert.info('Uploading product photo...');
+                const url = await storageService.uploadImage(file, workspaceId);
+                await productService.updateProduct(prd.id, { imageUri: url });
+                prd.imageUri = url;
+                showAlert.success('Photo updated successfully!');
+                renderProductDetailView(prd);
+            } catch (err) {
+                showAlert.error('Image upload failed: ' + err.message);
+            }
+        };
+
         if (imgInput) {
             imgInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
+                const file = e.target.files && e.target.files[0];
                 if (file) {
-                    try {
-                        showAlert.info('Uploading product photo...');
-                        const url = await storageService.uploadImage(file, workspaceId);
-                        await productService.updateProduct(prd.id, { imageUri: url });
-                        prd.imageUri = url;
-                        showAlert.success('Photo updated successfully!');
-                        renderProductDetailView(prd);
-                    } catch (err) {
-                        showAlert.error('Image upload failed: ' + err.message);
-                    }
+                    await handleDetailImageUpload(file);
+                }
+            });
+        }
+
+        if (detailAvatarWrap) {
+            detailAvatarWrap.style.cursor = 'pointer';
+            detailAvatarWrap.setAttribute('title', 'Click or Drag & Drop to update photo');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evtName => {
+                detailAvatarWrap.addEventListener(evtName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+
+            ['dragenter', 'dragover'].forEach(evtName => {
+                detailAvatarWrap.addEventListener(evtName, () => {
+                    detailAvatarWrap.style.transform = 'scale(1.04)';
+                    detailAvatarWrap.style.outline = '3px dashed #e11d48';
+                    detailAvatarWrap.style.outlineOffset = '2px';
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(evtName => {
+                detailAvatarWrap.addEventListener(evtName, () => {
+                    detailAvatarWrap.style.transform = 'scale(1)';
+                    detailAvatarWrap.style.outline = 'none';
+                });
+            });
+
+            detailAvatarWrap.addEventListener('drop', async (e) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    await handleDetailImageUpload(dt.files[0]);
                 }
             });
         }
@@ -807,7 +852,7 @@ export const renderProducts = async (container, workspaceId) => {
     };
 
     // Main Product View Layout (List + Form + Modals)
-    const renderProductMainView = () => {
+    function renderProductMainView() {
         container.innerHTML = `
             <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:1rem;">
                 <div>
@@ -1204,13 +1249,13 @@ export const renderProducts = async (container, workspaceId) => {
         renderProductList();
     };
 
-    const renderProductList = () => {
+    function renderProductList() {
         const tbody = container.querySelector('#product-list-body');
         if (!tbody) return;
 
         const sortVal = container.querySelector('#filter-sort')?.value || 'recent_created';
         const catVal = container.querySelector('#filter-category')?.value || 'all';
-        
+
         let filtered = activeProducts.slice();
 
         if (catVal !== 'all') {
@@ -1221,7 +1266,7 @@ export const renderProducts = async (container, workspaceId) => {
         }
 
         filtered.sort((a, b) => {
-            switch(sortVal) {
+            switch (sortVal) {
                 case 'recent_created':
                     return (b.timestamp || 0) - (a.timestamp || 0);
                 case 'recent_updated':
@@ -1250,22 +1295,22 @@ export const renderProducts = async (container, workspaceId) => {
             tbody.innerHTML = `<tr><td colspan="6" style="padding:2.5rem; text-align:center; color: var(--text-muted);">No products found.</td></tr>`;
             return;
         }
-        
+
         tbody.innerHTML = filtered.map(prd => {
             const catName = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category)?.name || prd.category || 'General';
             const isCreatorSelf = prd.creatorId && (prd.creatorId === currentUser.uid || prd.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase());
-            const creatorTag = prd.creatorId 
-                ? (isCreatorSelf 
-                    ? `<span class="badge" style="background:rgba(16,185,129,0.12); color:#059669; font-size:0.72rem; padding:0.1rem 0.45rem; border-radius:4px; font-weight:600;" title="Created by you">By You</span>` 
+            const creatorTag = prd.creatorId
+                ? (isCreatorSelf
+                    ? `<span class="badge" style="background:rgba(16,185,129,0.12); color:#059669; font-size:0.72rem; padding:0.1rem 0.45rem; border-radius:4px; font-weight:600;" title="Created by you">By You</span>`
                     : `<span class="badge" style="background:rgba(100,116,139,0.1); color:#64748b; font-size:0.72rem; padding:0.1rem 0.45rem; border-radius:4px;" title="Creator ID: ${prd.creatorId}">Creator: ${prd.creatorId.substring(0, 8)}</span>`)
                 : '';
 
             return `
                 <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.15s ease;">
                     <td style="padding:1rem;">
-                        ${prd.imageUri 
-                            ? `<img src="${prd.imageUri}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; cursor:pointer;" class="view-prd-img" data-id="${prd.id}">` 
-                            : `<div style="width: 44px; height: 44px; background: var(--surface-200); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.7rem; cursor:pointer;" class="view-prd-img" data-id="${prd.id}">None</div>`}
+                        ${prd.imageUri
+                    ? `<img src="${prd.imageUri}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; cursor:pointer;" class="view-prd-img" data-id="${prd.id}">`
+                    : `<div style="width: 44px; height: 44px; background: var(--surface-200); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.7rem; cursor:pointer;" class="view-prd-img" data-id="${prd.id}">None</div>`}
                     </td>
                     <td style="padding:1rem;">
                         <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.2rem;">
@@ -1291,11 +1336,11 @@ export const renderProducts = async (container, workspaceId) => {
                     </td>
                 </tr>
             `}).join('');
-            
+
         attachListEvents();
     };
 
-    const attachListEvents = () => {
+    function attachListEvents() {
         // Dedicated View Panel Trigger
         const openDetail = (id) => {
             const prd = activeProducts.find(p => p.id === id);
@@ -1321,24 +1366,24 @@ export const renderProducts = async (container, workspaceId) => {
                     container.querySelector('#prd-id').value = prd.id;
                     container.querySelector('#prd-image').value = prd.imageUri || '';
                     updateImagePreview(prd.imageUri || '');
-                    
+
                     container.querySelector('#prd-name').value = prd.name || '';
                     container.querySelector('#prd-size').value = prd.sizeWeight || '';
                     const matchedCat = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category);
                     container.querySelector('#prd-category').value = matchedCat ? (matchedCat.uniqueId || matchedCat.id) : (prd.category || '');
                     container.querySelector('#prd-upc').value = prd.upcCode || '';
                     container.querySelector('#prd-note').value = prd.note || '';
-                    
+
                     container.querySelector('#prd-qty').value = prd.quantity || 0;
-                    
+
                     container.querySelector('#prd-cost-price').value = prd.price !== undefined && prd.price !== null ? prd.price : '';
                     container.querySelector('#prd-sale-price').value = prd.salePrice !== undefined && prd.salePrice !== null ? prd.salePrice : '';
                     container.querySelector('#prd-base-price').value = prd.basePrice !== undefined && prd.basePrice !== null ? prd.basePrice : '';
                     container.querySelector('#prd-mrp').value = prd.mrp !== undefined && prd.mrp !== null ? prd.mrp : '';
-                    
+
                     container.querySelector('#prd-mfg-date').value = prd.mfgDate || '';
                     container.querySelector('#prd-exp-date').value = prd.expDate || '';
-                    
+
                     // Populate Variations
                     clearVariations();
                     if (Array.isArray(prd.variations)) {
@@ -1353,13 +1398,13 @@ export const renderProducts = async (container, workspaceId) => {
                             if (Array.isArray(parsed)) {
                                 parsed.forEach(v => addVariationRow(v.sizeFlavor || '', v.upcCode || ''));
                             }
-                        } catch(e) {}
+                        } catch (e) { }
                     }
-                    
+
                     const badgeEl = container.querySelector('#prd-form-badge');
                     if (badgeEl) badgeEl.textContent = 'Edit Product Mode';
                     container.querySelector('#prd-form-title').textContent = 'Edit Product Details';
-                    
+
                     const submitBtn = container.querySelector('#prd-submit-btn');
                     if (submitBtn) {
                         submitBtn.innerHTML = `
@@ -1367,13 +1412,14 @@ export const renderProducts = async (container, workspaceId) => {
                             <span>Update Product</span>
                         `;
                     }
-                    
+
                     formContainer.style.display = 'block';
                     container.querySelector('#product-list-container').style.display = 'none';
                     formContainer.scrollIntoView({ behavior: 'smooth' });
 
                     updateLiveProfitSummary();
                     initialProductSnapshot = getProductFormSnapshot();
+                    restoreProductDraftIfAny(prd.id);
                     checkProductDirty();
                 }
             });
@@ -1521,8 +1567,9 @@ export const renderProducts = async (container, workspaceId) => {
 
     // Product Smart Button State & Snapshot Helper
     let initialProductSnapshot = null;
+    let prdUnsavedIndicator = null;
 
-    const getProductFormSnapshot = () => {
+    function getProductFormSnapshot() {
         const variations = [];
         container.querySelectorAll('.prd-variation-item-row').forEach(row => {
             variations.push({
@@ -1547,46 +1594,92 @@ export const renderProducts = async (container, workspaceId) => {
             exp: container.querySelector('#prd-exp-date')?.value || '',
             variations
         });
-    };
+    }
 
-    const checkProductDirty = () => {
-        const submitBtn = container.querySelector('#prd-submit-btn');
-        if (!submitBtn) return;
+    function isProductFormDirty() {
+        const formContainer = container.querySelector('#product-form-container');
+        if (!formContainer || formContainer.style.display === 'none') return false;
 
-        const name = container.querySelector('#prd-name')?.value.trim();
-        const category = container.querySelector('#prd-category')?.value;
-        const salePrice = container.querySelector('#prd-sale-price')?.value;
         const isEditMode = Boolean(container.querySelector('#prd-id')?.value);
-
-        const hasRequired = Boolean(name && category && salePrice !== '' && !isNaN(parseFloat(salePrice)));
-
-        if (!hasRequired) {
-            submitBtn.disabled = true;
-            return;
-        }
-
-        if (isEditMode && initialProductSnapshot) {
-            const currentSnap = getProductFormSnapshot();
-            submitBtn.disabled = (currentSnap === initialProductSnapshot);
+        if (isEditMode) {
+            if (!initialProductSnapshot) return false;
+            return getProductFormSnapshot() !== initialProductSnapshot;
         } else {
-            submitBtn.disabled = false;
+            const name = container.querySelector('#prd-name')?.value?.trim() || '';
+            const size = container.querySelector('#prd-size')?.value?.trim() || '';
+            const cat = container.querySelector('#prd-category')?.value || '';
+            const upc = container.querySelector('#prd-upc')?.value?.trim() || '';
+            const note = container.querySelector('#prd-note')?.value?.trim() || '';
+            const sale = container.querySelector('#prd-sale-price')?.value?.trim() || '';
+            const cost = container.querySelector('#prd-cost-price')?.value?.trim() || '';
+            const variations = container.querySelectorAll('.prd-variation-item-row');
+            return Boolean(name || size || cat || upc || note || sale || cost || variations.length > 0);
         }
-    };
+    }
 
-    const checkVariationsEmpty = () => {
+    function checkProductDirty() {
+        const isDirty = isProductFormDirty();
+        if (prdUnsavedIndicator) {
+            prdUnsavedIndicator.update(isDirty);
+        }
+
+        const curId = container.querySelector('#prd-id')?.value || 'new';
+        if (isDirty) {
+            draftManager.saveDraft(`product_${curId}`, getProductFormSnapshot());
+            draftManager.registerActiveForm('product_form', isProductFormDirty);
+        } else {
+            draftManager.clearDraft(`product_${curId}`);
+            draftManager.unregisterActiveForm('product_form');
+        }
+    }
+
+    function restoreProductDraftIfAny(targetId = 'new') {
+        const draft = draftManager.getDraft(`product_${targetId}`);
+        if (!draft) return false;
+        try {
+            const data = typeof draft === 'string' ? JSON.parse(draft) : draft;
+            if (data.name !== undefined) container.querySelector('#prd-name').value = data.name;
+            if (data.size !== undefined) container.querySelector('#prd-size').value = data.size;
+            if (data.category !== undefined) container.querySelector('#prd-category').value = data.category;
+            if (data.upc !== undefined) container.querySelector('#prd-upc').value = data.upc;
+            if (data.note !== undefined) container.querySelector('#prd-note').value = data.note;
+            if (data.qty !== undefined) container.querySelector('#prd-qty').value = data.qty;
+            if (data.cost !== undefined) container.querySelector('#prd-cost-price').value = data.cost || '';
+            if (data.sale !== undefined) container.querySelector('#prd-sale-price').value = data.sale || '';
+            if (data.base !== undefined) container.querySelector('#prd-base-price').value = data.base || '';
+            if (data.mrp !== undefined) container.querySelector('#prd-mrp').value = data.mrp || '';
+            if (data.mfg !== undefined) container.querySelector('#prd-mfg-date').value = data.mfg || '';
+            if (data.exp !== undefined) container.querySelector('#prd-exp-date').value = data.exp || '';
+            if (data.image) {
+                container.querySelector('#prd-image').value = data.image;
+                updateImagePreview(data.image);
+            }
+            if (Array.isArray(data.variations)) {
+                clearVariations();
+                data.variations.forEach(v => addVariationRow(v.size || v.sizeFlavor || '', v.upc || v.upcCode || ''));
+            }
+            updateLiveProfitSummary();
+            return true;
+        } catch (e) {
+            console.warn("Could not parse product draft:", e);
+            return false;
+        }
+    }
+
+    function checkVariationsEmpty() {
         const varListEl = container.querySelector('#prd-variations-list');
         const varEmptyMsg = container.querySelector('#prd-no-variations-msg');
         if (!varListEl || !varEmptyMsg) return;
         varEmptyMsg.style.display = varListEl.children.length === 0 ? 'block' : 'none';
-    };
+    }
 
-    const clearVariations = () => {
+    function clearVariations() {
         const varListEl = container.querySelector('#prd-variations-list');
         if (varListEl) varListEl.innerHTML = '';
         checkVariationsEmpty();
-    };
+    }
 
-    const addVariationRow = (sizeFlavor = '', upcCode = '') => {
+    function addVariationRow(sizeFlavor = '', upcCode = '') {
         const varListEl = container.querySelector('#prd-variations-list');
         if (!varListEl) return;
         const row = document.createElement('div');
@@ -1615,21 +1708,21 @@ export const renderProducts = async (container, workspaceId) => {
         varListEl.appendChild(row);
         checkVariationsEmpty();
         checkProductDirty();
-    };
+    }
 
-    const setupMainViewEvents = () => {
+    function setupMainViewEvents() {
         const formContainer = container.querySelector('#product-form-container');
         const form = container.querySelector('#product-form');
         const catSelect = container.querySelector('#prd-category');
 
         // Populate Category Dropdowns
         if (catSelect) {
-            catSelect.innerHTML = '<option value="">Select Category</option>' + 
+            catSelect.innerHTML = '<option value="">Select Category</option>' +
                 categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
         }
         const filterCat = container.querySelector('#filter-category');
         if (filterCat) {
-            filterCat.innerHTML = '<option value="all">All Categories</option>' + 
+            filterCat.innerHTML = '<option value="all">All Categories</option>' +
                 categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
         }
 
@@ -1656,17 +1749,33 @@ export const renderProducts = async (container, workspaceId) => {
             });
         });
 
+        // Mount Smart Unsaved Changes Indicator on form header
+        const titleBadgeRow = container.querySelector('#prd-form-title')?.parentElement;
+        if (titleBadgeRow) {
+            prdUnsavedIndicator = draftManager.mountUnsavedIndicator(titleBadgeRow, {
+                formType: 'Product Form',
+                onSave: () => {
+                    const submitBtn = container.querySelector('#prd-submit-btn');
+                    if (submitBtn && !submitBtn.disabled) {
+                        form.requestSubmit();
+                    } else {
+                        showAlert.info("Please complete all required fields (*) before saving.");
+                    }
+                }
+            });
+        }
+
         // Add Product Click
         container.querySelector('#btn-add-product')?.addEventListener('click', () => {
             form.reset();
             clearVariations();
             container.querySelector('#prd-id').value = '';
             updateImagePreview('');
-            
+
             const badgeEl = container.querySelector('#prd-form-badge');
             if (badgeEl) badgeEl.textContent = 'New Catalog Entry';
             container.querySelector('#prd-form-title').textContent = 'Add New Product';
-            
+
             const submitBtn = container.querySelector('#prd-submit-btn');
             if (submitBtn) {
                 submitBtn.innerHTML = `
@@ -1674,9 +1783,15 @@ export const renderProducts = async (container, workspaceId) => {
                     <span>Save Product</span>
                 `;
             }
-            
+
             updateLiveProfitSummary();
             initialProductSnapshot = null;
+
+            const restored = restoreProductDraftIfAny('new');
+            if (restored) {
+                showAlert.info("Restored your progressive unsaved product draft.");
+            }
+
             checkProductDirty();
             formContainer.style.display = 'block';
             container.querySelector('#product-list-container').style.display = 'none';
@@ -1726,28 +1841,86 @@ export const renderProducts = async (container, workspaceId) => {
                 }
             });
         });
-        // Image Upload Handler
-        container.querySelector('#prd-image-file')?.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                try {
-                    const uploadLabel = container.querySelector('#prd-upload-label-text');
-                    if (uploadLabel) uploadLabel.textContent = 'Uploading...';
-                    
-                    const url = await storageService.uploadImage(file, workspaceId);
-                    
-                    container.querySelector('#prd-image').value = url;
-                    updateImagePreview(url);
-                    checkProductDirty();
-                    showAlert.success('Image uploaded successfully');
-                } catch (error) {
-                    showAlert.error('Image upload failed: ' + (error.message || 'Error'));
-                } finally {
-                    const uploadLabel = container.querySelector('#prd-upload-label-text');
-                    if (uploadLabel) uploadLabel.textContent = 'Upload Image';
-                }
+        // Image Upload Handler + Dropzone Integration
+        const prdFileInput = container.querySelector('#prd-image-file');
+        const prdDropzone = container.querySelector('#prd-media-dropzone');
+        const uploadLabel = container.querySelector('#prd-upload-label-text');
+
+        const handleProductImageFile = async (file) => {
+            if (!file || !file.type.startsWith('image/')) {
+                showAlert.error('Please select or drop a valid image file (PNG, JPG, WEBP).');
+                return;
             }
-        });
+            try {
+                if (uploadLabel) uploadLabel.textContent = 'Uploading...';
+                if (prdDropzone) {
+                    prdDropzone.style.opacity = '0.7';
+                }
+
+                const url = await storageService.uploadImage(file, workspaceId);
+
+                const prdImgInput = container.querySelector('#prd-image');
+                if (prdImgInput) prdImgInput.value = url;
+                updateImagePreview(url);
+                checkProductDirty();
+                showAlert.success('Image uploaded successfully');
+            } catch (error) {
+                showAlert.error('Image upload failed: ' + (error.message || 'Error'));
+            } finally {
+                if (uploadLabel) uploadLabel.textContent = 'Upload Image';
+                if (prdDropzone) prdDropzone.style.opacity = '1';
+            }
+        };
+
+        if (prdFileInput) {
+            prdFileInput.addEventListener('change', async (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (file) {
+                    await handleProductImageFile(file);
+                }
+            });
+        }
+
+        if (prdDropzone && prdFileInput) {
+            prdDropzone.style.cursor = 'pointer';
+            prdDropzone.setAttribute('title', 'Click or Drag & Drop product image here');
+
+            prdDropzone.addEventListener('click', (e) => {
+                if (!e.target.closest('#btn-clear-img')) {
+                    prdFileInput.click();
+                }
+            });
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evtName => {
+                prdDropzone.addEventListener(evtName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+
+            ['dragenter', 'dragover'].forEach(evtName => {
+                prdDropzone.addEventListener(evtName, () => {
+                    prdDropzone.style.borderColor = '#e11d48';
+                    prdDropzone.style.background = 'rgba(225, 29, 72, 0.05)';
+                    prdDropzone.style.transform = 'scale(1.01)';
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(evtName => {
+                prdDropzone.addEventListener(evtName, () => {
+                    prdDropzone.style.borderColor = 'var(--border-color)';
+                    prdDropzone.style.background = 'var(--surface-50)';
+                    prdDropzone.style.transform = 'scale(1)';
+                });
+            });
+
+            prdDropzone.addEventListener('drop', async (e) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    await handleProductImageFile(dt.files[0]);
+                }
+            });
+        }
 
         // Direct Image URL Input Handler
         container.querySelector('#prd-image')?.addEventListener('input', (e) => {
@@ -1806,7 +1979,7 @@ export const renderProducts = async (container, workspaceId) => {
         btnSaveCat?.addEventListener('click', async () => {
             const catName = catNameInput.value;
             const catColor = catColorInput.value;
-            
+
             if (!catName || catName.trim() === '') {
                 showAlert.error("Category name is required.");
                 return;
@@ -1818,14 +1991,14 @@ export const renderProducts = async (container, workspaceId) => {
             try {
                 await categoryService.addCategory({ name: catName.trim(), color: catColor }, currentUser.uid);
                 showAlert.success("Category added!");
-                
+
                 categoriesList = await categoryService.getAllCategories();
-                catSelect.innerHTML = '<option value="">Select Category</option>' + 
+                catSelect.innerHTML = '<option value="">Select Category</option>' +
                     categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
-                
+
                 const newCat = categoriesList.find(c => c.name.toLowerCase() === catName.trim().toLowerCase());
                 if (newCat) catSelect.value = newCat.uniqueId || newCat.id;
-                
+
                 catModal.style.display = 'none';
                 checkProductDirty();
             } catch (err) {
@@ -1838,11 +2011,15 @@ export const renderProducts = async (container, workspaceId) => {
 
         // Cancel Form (both top and bottom triggers)
         const handleCancelForm = async () => {
-            const submitBtn = container.querySelector('#prd-submit-btn');
-            if (submitBtn && !submitBtn.disabled) {
+            if (isProductFormDirty()) {
                 const leave = await showAlert.confirmUnsavedChanges();
                 if (!leave) return;
             }
+            const curId = container.querySelector('#prd-id')?.value || 'new';
+            draftManager.clearDraft(`product_${curId}`);
+            draftManager.unregisterActiveForm('product_form');
+            if (prdUnsavedIndicator) prdUnsavedIndicator.update(false);
+
             formContainer.style.display = 'none';
             container.querySelector('#product-list-container').style.display = 'block';
             form.reset();
@@ -1858,8 +2035,30 @@ export const renderProducts = async (container, workspaceId) => {
         form?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = container.querySelector('#prd-submit-btn');
-            btn.disabled = true;
-            
+
+            const name = container.querySelector('#prd-name')?.value?.trim();
+            const category = container.querySelector('#prd-category')?.value;
+            const salePriceRaw = container.querySelector('#prd-sale-price')?.value;
+            const salePrice = parseFloat(salePriceRaw);
+
+            if (!name) {
+                showAlert.warning("Please enter a Product Name.");
+                container.querySelector('#prd-name')?.focus();
+                return;
+            }
+            if (!category) {
+                showAlert.warning("Please select a Category.");
+                container.querySelector('#prd-category')?.focus();
+                return;
+            }
+            if (salePriceRaw === '' || isNaN(salePrice) || salePrice < 0) {
+                showAlert.warning("Please enter a valid Sale Price.");
+                container.querySelector('#prd-sale-price')?.focus();
+                return;
+            }
+
+            if (btn) btn.disabled = true;
+
             const id = container.querySelector('#prd-id').value;
 
             const collectedVariations = [];
@@ -1873,25 +2072,25 @@ export const renderProducts = async (container, workspaceId) => {
 
             const data = {
                 imageUri: container.querySelector('#prd-image').value,
-                name: container.querySelector('#prd-name').value.trim(),
+                name: name,
                 sizeWeight: container.querySelector('#prd-size').value.trim(),
-                category: container.querySelector('#prd-category').value,
+                category: category,
                 upcCode: container.querySelector('#prd-upc').value.trim(),
                 note: container.querySelector('#prd-note').value.trim(),
-                
+
                 quantity: parseInt(container.querySelector('#prd-qty').value || 0, 10),
-                
+
                 price: container.querySelector('#prd-cost-price').value ? parseFloat(container.querySelector('#prd-cost-price').value) : 0,
-                salePrice: parseFloat(container.querySelector('#prd-sale-price').value),
+                salePrice: salePrice,
                 basePrice: container.querySelector('#prd-base-price').value ? parseFloat(container.querySelector('#prd-base-price').value) : 0,
                 mrp: container.querySelector('#prd-mrp').value ? parseFloat(container.querySelector('#prd-mrp').value) : 0,
-                
+
                 mfgDate: container.querySelector('#prd-mfg-date').value,
                 expDate: container.querySelector('#prd-exp-date').value,
-                
+
                 variations: collectedVariations
             };
-            
+
             try {
                 if (id) {
                     await productService.updateProduct(id, data);
@@ -1900,6 +2099,13 @@ export const renderProducts = async (container, workspaceId) => {
                     await productService.addProduct(data, currentUser.uid);
                     showAlert.success('Product added');
                 }
+
+                // Clear draft and active form
+                const curId = id || 'new';
+                draftManager.clearDraft(`product_${curId}`);
+                draftManager.unregisterActiveForm('product_form');
+                if (prdUnsavedIndicator) prdUnsavedIndicator.update(false);
+
                 formContainer.style.display = 'none';
                 container.querySelector('#product-list-container').style.display = 'block';
                 await loadData();
@@ -1932,7 +2138,7 @@ export const renderProducts = async (container, workspaceId) => {
         });
     };
 
-    const loadData = async () => {
+    async function loadData() {
         try {
             const [cats, prods] = await Promise.all([
                 categoryService.getAllCategories().catch(() => []),
@@ -1941,7 +2147,7 @@ export const renderProducts = async (container, workspaceId) => {
             ]);
             categoriesList = cats;
             activeProducts = prods;
-            
+
             if (activeProductDetail) {
                 // If viewing a detail, refresh it
                 const refreshed = activeProducts.find(p => p.id === activeProductDetail.id);
