@@ -175,8 +175,14 @@ export const firestoreService = {
             const wsDocData = {
                 workspaceId: newWorkspaceId,
                 name: (workspaceData.name || "").trim(),
-                description: (workspaceData.description || "Main").trim(),
+                tradeName: (workspaceData.tradeName || workspaceData.shopName || workspaceData.name || "").trim(),
+                industry: workspaceData.industry || "General",
+                tagline: (workspaceData.tagline || workspaceData.description || "").trim(),
+                description: (workspaceData.description || workspaceData.tagline || "Main").trim(),
+                website: (workspaceData.website || "").trim(),
+                taxId: (workspaceData.taxId || "").trim(),
                 phone: workspaceData.phone || "",
+                supportPhone: workspaceData.supportPhone || "",
                 address: workspaceData.address || "",
                 email: workspaceData.email || email || "",
                 adminEmail: email || workspaceData.adminEmail || "",
@@ -216,7 +222,9 @@ export const firestoreService = {
                 currency: (workspaceData.currency || workspaceData.currencySymbol || "$").trim().substring(0, 3) || "$",
                 currencySymbol: (workspaceData.currencySymbol || workspaceData.currency || "$").trim().substring(0, 3) || "$",
                 logoUrl: workspaceData.logoUrl || workspaceData.logo || "",
-                logo: workspaceData.logoUrl || workspaceData.logo || ""
+                logo: workspaceData.logoUrl || workspaceData.logo || "",
+                bannerUrl: workspaceData.bannerUrl || workspaceData.banner || "",
+                banner: workspaceData.bannerUrl || workspaceData.banner || ""
             };
 
             await setDoc(workspaceRef, wsDocData);
@@ -225,7 +233,7 @@ export const firestoreService = {
             const receiptRef = doc(db, 'ReceiptData', documentId);
             await setDoc(receiptRef, {
                 "Vending": false,
-                "Shop Name": (workspaceData.name || "").trim(),
+                "Shop Name": (workspaceData.tradeName || workspaceData.name || "").trim(),
                 "Address / Subtitle": workspaceData.address || "",
                 "Phone Number": workspaceData.phone || "",
                 "End Massage": "",
@@ -233,6 +241,7 @@ export const firestoreService = {
                 "Customer number": true,
                 "Currency": (workspaceData.currency || workspaceData.currencySymbol || "$").trim().substring(0, 3) || "$",
                 "Logo Url": workspaceData.logoUrl || workspaceData.logo || "",
+                "Banner Url": workspaceData.bannerUrl || workspaceData.banner || "",
                 "created_timestamp": nowIso,
                 "created_date": nowFormatted,
                 "updated_timestamp": nowIso,

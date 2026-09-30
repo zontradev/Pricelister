@@ -2297,6 +2297,47 @@ section:hover::-webkit-scrollbar-thumb {
     gap: 1.5rem;
 }
 
+.dash-container > .dash-header-row,
+.dash-container > .dash-kpi-grid,
+.dash-container > .dash-charts-grid,
+.dash-container > div:nth-child(4),
+.dash-kpi-card,
+.dash-charts-grid > .dash-card,
+.dash-container > div:nth-child(4) > .dash-card {
+    animation: dashboardRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.dash-container > .dash-kpi-grid { animation-delay: 0.08s; }
+.dash-container > .dash-charts-grid { animation-delay: 0.16s; }
+.dash-container > div:nth-child(4) { animation-delay: 0.24s; }
+
+.dash-kpi-card:nth-child(2),
+.dash-charts-grid > .dash-card:nth-child(2),
+.dash-container > div:nth-child(4) > .dash-card:nth-child(2) {
+    animation-delay: 0.08s;
+}
+
+.dash-kpi-card:nth-child(3),
+.dash-container > div:nth-child(4) > .dash-card:nth-child(3) {
+    animation-delay: 0.16s;
+}
+
+.dash-kpi-card:nth-child(4) {
+    animation-delay: 0.24s;
+}
+
+@keyframes dashboardRise {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Dashboard Header Row */
 .dash-header-row {
     display: flex;

@@ -111,9 +111,9 @@ export const renderWorkers = async (container, workspaceId) => {
         <div class="workspace-view-wrapper" style="max-width: 1320px; margin: 0 auto; padding-bottom: 3.5rem;">
 
             <!-- ======================================================== -->
-            <!-- 1. TOP HERO COVER BANNER (RED & WHITE GRADIENT GLASS UI) -->
+            <!-- 1. TOP HERO COVER BANNER (DYNAMIC BANNER & GLASS UI)     -->
             <!-- ======================================================== -->
-            <div class="ws-hero-banner" style="position:relative; border-radius: 20px; overflow: hidden; background: linear-gradient(135deg, #09090b 0%, #18181b 45%, #27272a 100%); color: #ffffff; box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 1.75rem;">
+            <div class="ws-hero-banner" style="position:relative; border-radius: 20px; overflow: hidden; ${wsInfo.bannerUrl || wsInfo.banner ? `background: linear-gradient(180deg, rgba(9, 9, 11, 0.45) 0%, rgba(9, 9, 11, 0.88) 100%), url('${wsInfo.bannerUrl || wsInfo.banner}') center/cover no-repeat;` : `background: linear-gradient(135deg, #09090b 0%, #18181b 45%, #27272a 100%);`} color: #ffffff; box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.12); margin-bottom: 1.75rem;">
                 
                 <!-- Ambient Glow Orbs -->
                 <div style="position:absolute; width: 350px; height: 350px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%); top: -100px; right: -80px; pointer-events:none;"></div>
@@ -125,10 +125,10 @@ export const renderWorkers = async (container, workspaceId) => {
                     <!-- Left: Avatar + Title + Tagline -->
                     <div style="display: flex; gap: 1.35rem; align-items: center; max-width: 780px;">
                         
-                        <!-- Workspace Avatar / Badge -->
+                        <!-- Workspace Avatar / Badge (1:1 Aspect Ratio) -->
                         <div class="ws-hero-avatar" style="width: 82px; height: 82px; border-radius: 18px; background: rgba(255, 255, 255, 0.18); backdrop-filter: blur(12px); border: 2px solid rgba(255, 255, 255, 0.4); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.25); flex-shrink: 0; overflow:hidden;">
-                            ${wsInfo.logoUrl ? `
-                                <img src="${wsInfo.logoUrl}" alt="${escapeHtml(wsDisplayName)}" style="width:100%; height:100%; object-fit:cover;">
+                            ${(wsInfo.logoUrl || wsInfo.logo) ? `
+                                <img src="${wsInfo.logoUrl || wsInfo.logo}" alt="${escapeHtml(wsDisplayName)}" style="width:100%; height:100%; object-fit:cover;">
                             ` : `
                                 <span style="font-size: 2.4rem; font-weight: 800; color: #ffffff; letter-spacing: -1px; text-shadow: 0 2px 8px rgba(0,0,0,0.3);">
                                     ${escapeHtml((wsDisplayName.charAt(0) || 'W').toUpperCase())}
@@ -145,8 +145,18 @@ export const renderWorkers = async (container, workspaceId) => {
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                                     ${escapeHtml(roleUpper.replace('_', ' '))}
                                 </span>
+                                ${wsInfo.industry ? `
+                                    <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; border-radius: 999px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); font-size: 0.72rem; font-weight: 600; backdrop-filter: blur(8px); color: #f4f4f5;">
+                                        ${escapeHtml(wsInfo.industry)}
+                                    </span>
+                                ` : ''}
+                                ${wsInfo.tradeName && wsInfo.tradeName !== wsDisplayName ? `
+                                    <span style="font-size: 0.78rem; opacity: 0.85; font-weight: 500;">
+                                        (${escapeHtml(wsInfo.tradeName)})
+                                    </span>
+                                ` : ''}
                             </div>
-                            <p style="margin: 0.35rem 0 0 0; font-size: 0.95rem; opacity: 0.92; font-weight: 400; line-height: 1.4; color: #ffe4e6;">
+                            <p style="margin: 0.35rem 0 0 0; font-size: 0.95rem; opacity: 0.92; font-weight: 400; line-height: 1.4; color: #f4f4f5;">
                                 ${escapeHtml(wsTagline)}
                             </p>
                         </div>
@@ -155,7 +165,7 @@ export const renderWorkers = async (container, workspaceId) => {
                     <!-- Right Top Actions: Edit Workspace & Quick Nav -->
                     <div style="display: flex; gap: 0.65rem; align-items: center;">
                         ${isAdmin ? `
-                            <button type="button" id="btn-hero-edit-workspace" class="btn" style="background: rgba(255, 255, 255, 0.95); color: #881337; font-weight: 700; font-size: 0.85rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: none; box-shadow: 0 4px 14px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.45rem; cursor: pointer; transition: all 0.2s ease;">
+                            <button type="button" id="btn-hero-edit-workspace" class="btn" onclick="window.location.hash='#/settings'" style="background: rgba(255, 255, 255, 0.95); color: #18181b; font-weight: 700; font-size: 0.85rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: none; box-shadow: 0 4px 14px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.45rem; cursor: pointer; transition: all 0.2s ease;">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 <span>Edit Workspace</span>
                             </button>

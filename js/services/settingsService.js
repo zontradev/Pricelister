@@ -6,22 +6,63 @@ import { authService } from '../../firebase/auth.js';
 const db = getFirestore(firebaseApp);
 
 export const getSettingsService = (workspaceId) => {
+    const isMock = !workspaceId || 
+                   workspaceId === 'ws_dev_mock' || 
+                   workspaceId === 'demo' || 
+                   workspaceId === 'dev-mock-uid' || 
+                   Boolean(localStorage.getItem('mock_dev_session'));
+
     return {
         getWorkspaceSettings: async () => {
-            if (workspaceId === 'ws_dev_mock') {
-                setAppCurrencySymbol('$');
-                return {
+            if (isMock) {
+                let mockSaved = {};
+                try {
+                    const raw = localStorage.getItem('pricelister_mock_settings');
+                    if (raw) mockSaved = JSON.parse(raw) || {};
+                } catch (e) {}
+
+                const baseCurrency = mockSaved.currencySymbol || mockSaved.currency || '$';
+                setAppCurrencySymbol(baseCurrency);
+
+                const defaultDemoSettings = {
                     enableVending: true,
                     shopName: 'PriceLister Demo Enterprise',
-                    address: '100 Silicon Way, Suite 400, San Jose, CA',
-                    phone: '+1 (555) 019-2834',
+                    tradeName: 'PriceLister Global Commerce',
+                    country: 'United Kingdom',
+                    operatedCountry: 'United Kingdom',
+                    industry: 'Retail & Commerce',
+                    tagline: 'Leading Wholesale and Retail Supply Ecosystem',
+                    description: 'Leading Wholesale and Retail Supply Ecosystem',
+                    website: 'https://pricelister.app',
+                    taxId: 'TAX-UK-GB9948201',
+                    address: '100 Regent Street, London W1B 5SR, United Kingdom',
+                    phone: '+44 20 7946 0912',
+                    supportPhone: '+44 20 7946 0915',
                     endMessage: 'Thank you for choosing PriceLister Enterprise!',
                     customerName: true,
                     customerNumber: true,
                     name: 'PriceLister Demo Enterprise',
                     email: 'developer@local.test',
-                    currencySymbol: '$',
-                    currency: '$'
+                    currencySymbol: '€',
+                    currency: 'EUR',
+                    logoUrl: '',
+                    bannerUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1920&q=80',
+                    createdAt: Date.now() - 86400000 * 30,
+                    createdTimestamp: new Date(Date.now() - 86400000 * 30).toISOString(),
+                    createdDate: '1 month ago',
+                    creatorEmail: 'developer@local.test',
+                    creatorName: 'Demo Admin',
+                    updatedAt: Date.now(),
+                    updateTimestamp: new Date().toISOString(),
+                    updatedDate: 'Just now',
+                    updatorEmail: 'developer@local.test',
+                    updatorName: 'Demo Admin',
+                    updatorRole: 'CREATOR_ADMIN'
+                };
+
+                return {
+                    ...defaultDemoSettings,
+                    ...mockSaved
                 };
             }
 
@@ -37,15 +78,31 @@ export const getSettingsService = (workspaceId) => {
                 const receiptData = receiptSnap && receiptSnap.exists() ? receiptSnap.data() : {};
                 const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
 
+                // Check local offline fallback if Firestore had no data
+                let localOffline = {};
+                try {
+                    const rawOff = localStorage.getItem(`pricelister_offline_settings_${workspaceId}`);
+                    if (rawOff) localOffline = JSON.parse(rawOff) || {};
+                } catch (e) {}
+
                 const localCurrency = localStorage.getItem('pricelister_currency_symbol') || '$';
                 const resolvedCurrency = receiptData["Currency"] || wsData.currency || wsData.currencySymbol || localCurrency;
                 setAppCurrencySymbol(resolvedCurrency);
 
                 return {
                     enableVending: receiptData["Vending"] !== undefined ? Boolean(receiptData["Vending"]) : (wsData.enableVending !== undefined ? Boolean(wsData.enableVending) : false),
-                    shopName: receiptData["Shop Name"] || wsData.name || '',
+                    shopName: receiptData["Shop Name"] || wsData.tradeName || wsData.shopName || wsData.name || '',
+                    tradeName: wsData.tradeName || receiptData["Shop Name"] || wsData.name || '',
+                    country: wsData.country || wsData.operatedCountry || receiptData["Country"] || 'United States',
+                    operatedCountry: wsData.operatedCountry || wsData.country || receiptData["Country"] || 'United States',
+                    industry: wsData.industry || wsData.category || 'General',
+                    tagline: wsData.tagline || wsData.description || '',
+                    description: wsData.description || wsData.tagline || 'Main',
+                    website: wsData.website || '',
+                    taxId: wsData.taxId || wsData.vatNumber || receiptData["Tax Id"] || '',
                     address: receiptData["Address / Subtitle"] || wsData.address || '',
                     phone: receiptData["Phone Number"] || wsData.phone || '',
+                    supportPhone: wsData.supportPhone || '',
                     endMessage: receiptData["End Massage"] || '',
                     customerName: receiptData["Customer Name"] !== undefined ? receiptData["Customer Name"] : true,
                     customerNumber: receiptData["Customer number"] !== undefined ? receiptData["Customer number"] : true,
@@ -54,6 +111,7 @@ export const getSettingsService = (workspaceId) => {
                     currencySymbol: resolvedCurrency,
                     currency: resolvedCurrency,
                     logoUrl: wsData.logoUrl || wsData.logo || receiptData["Logo Url"] || '',
+                    bannerUrl: wsData.bannerUrl || wsData.banner || receiptData["Banner Url"] || '',
 
                     // Creation & Audit Trail Data Model
                     createdAt: wsData.createdAt || null,
@@ -74,15 +132,23 @@ export const getSettingsService = (workspaceId) => {
                 return {
                     enableVending: false,
                     shopName: '',
+                    tradeName: '',
+                    industry: 'General',
+                    tagline: '',
+                    website: '',
+                    taxId: '',
                     address: '',
                     phone: '',
+                    supportPhone: '',
                     endMessage: '',
                     customerName: true,
                     customerNumber: true,
                     name: '',
                     email: '',
                     currencySymbol: localStorage.getItem('pricelister_currency_symbol') || '$',
-                    currency: localStorage.getItem('pricelister_currency_symbol') || '$'
+                    currency: localStorage.getItem('pricelister_currency_symbol') || '$',
+                    logoUrl: '',
+                    bannerUrl: ''
                 };
             }
         },
@@ -91,7 +157,47 @@ export const getSettingsService = (workspaceId) => {
             const cleanCurrency = (settings.currencySymbol || settings.currency || '$').trim().substring(0, 3) || '$';
             setAppCurrencySymbol(cleanCurrency);
 
-            if (workspaceId === 'ws_dev_mock') {
+            if (isMock) {
+                let existing = {};
+                try {
+                    const raw = localStorage.getItem('pricelister_mock_settings');
+                    if (raw) existing = JSON.parse(raw) || {};
+                } catch (e) {}
+
+                const updatedMock = {
+                    ...existing,
+                    ...settings,
+                    name: settings.name || settings.shopName || existing.name || 'PriceLister Demo Enterprise',
+                    shopName: settings.shopName || settings.tradeName || settings.name || existing.shopName || 'PriceLister Demo Enterprise',
+                    tradeName: settings.tradeName || settings.shopName || settings.name || existing.tradeName || 'PriceLister Global Commerce',
+                    industry: settings.industry || existing.industry || 'Retail & Commerce',
+                    tagline: settings.tagline || settings.description || existing.tagline || '',
+                    description: settings.description || settings.tagline || existing.description || 'Main',
+                    website: settings.website || existing.website || '',
+                    taxId: settings.taxId || existing.taxId || '',
+                    address: settings.address || existing.address || '',
+                    phone: settings.phone || existing.phone || '',
+                    supportPhone: settings.supportPhone || existing.supportPhone || '',
+                    logoUrl: settings.logoUrl !== undefined ? settings.logoUrl : (existing.logoUrl || ''),
+                    bannerUrl: settings.bannerUrl !== undefined ? settings.bannerUrl : (existing.bannerUrl || ''),
+                    currency: cleanCurrency,
+                    currencySymbol: cleanCurrency,
+                    updatedAt: Date.now(),
+                    updateTimestamp: new Date().toISOString(),
+                    updatedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    updatorEmail: 'developer@local.test',
+                    updatorName: 'Demo Admin',
+                    updatorRole: 'CREATOR_ADMIN'
+                };
+
+                try {
+                    localStorage.setItem('pricelister_mock_settings', JSON.stringify(updatedMock));
+                    localStorage.setItem('pricelister_currency_symbol', cleanCurrency);
+                } catch (e) {}
+
+                if (window.__activeWorkspace) {
+                    Object.assign(window.__activeWorkspace, updatedMock);
+                }
                 return true;
             }
 
@@ -109,7 +215,7 @@ export const getSettingsService = (workspaceId) => {
 
             const receiptPayload = {
                 "Vending": Boolean(settings.enableVending),
-                "Shop Name": settings.shopName || '',
+                "Shop Name": settings.shopName || settings.tradeName || settings.name || '',
                 "Address / Subtitle": settings.address || '',
                 "Phone Number": settings.phone || '',
                 "End Massage": settings.endMessage || '',
@@ -121,14 +227,27 @@ export const getSettingsService = (workspaceId) => {
                 "last_updated": now
             };
 
+            if (settings.taxId !== undefined) {
+                receiptPayload["Tax Id"] = settings.taxId;
+            }
             if (settings.logoUrl !== undefined) {
                 receiptPayload["Logo Url"] = settings.logoUrl;
+            }
+            if (settings.bannerUrl !== undefined) {
+                receiptPayload["Banner Url"] = settings.bannerUrl;
             }
 
             const wsPayload = {
                 name: settings.name || settings.shopName || '',
+                tradeName: settings.tradeName || settings.shopName || settings.name || '',
+                industry: settings.industry || 'General',
+                tagline: settings.tagline || settings.description || '',
+                description: settings.description || settings.tagline || 'Main',
+                website: settings.website || '',
+                taxId: settings.taxId || '',
                 email: settings.email || '',
                 phone: settings.phone || '',
+                supportPhone: settings.supportPhone || '',
                 address: settings.address || '',
                 currency: cleanCurrency,
                 currencySymbol: cleanCurrency,
@@ -148,17 +267,35 @@ export const getSettingsService = (workspaceId) => {
                 wsPayload.logoUrl = settings.logoUrl;
                 wsPayload.logo = settings.logoUrl;
             }
+            if (settings.bannerUrl !== undefined) {
+                wsPayload.bannerUrl = settings.bannerUrl;
+                wsPayload.banner = settings.bannerUrl;
+            }
 
-            await Promise.all([
-                setDoc(receiptRef, receiptPayload, { merge: true }),
-                setDoc(wsRef, wsPayload, { merge: true })
-            ]);
+            // Save local cache mirror immediately
+            try {
+                localStorage.setItem(`pricelister_offline_settings_${workspaceId}`, JSON.stringify({ ...receiptPayload, ...wsPayload }));
+                localStorage.setItem('pricelister_currency_symbol', cleanCurrency);
+            } catch (e) {}
+
+            if (window.__activeWorkspace) {
+                Object.assign(window.__activeWorkspace, wsPayload);
+            }
+
+            try {
+                await Promise.all([
+                    setDoc(receiptRef, receiptPayload, { merge: true }),
+                    setDoc(wsRef, wsPayload, { merge: true })
+                ]);
+            } catch (cloudErr) {
+                console.warn("Firestore settings cloud write warning (stored in local storage mirror):", cloudErr);
+            }
 
             return true;
         },
 
         isVendingEnabled: async () => {
-            if (workspaceId === 'ws_dev_mock') return true;
+            if (isMock) return true;
             try {
                 const receiptRef = doc(db, 'ReceiptData', workspaceId);
                 const snap = await getDoc(receiptRef);
@@ -177,7 +314,7 @@ export const getSettingsService = (workspaceId) => {
         },
 
         getCustomerPanelSettings: async (overrideUid = null) => {
-            if (workspaceId === 'ws_dev_mock') {
+            if (isMock) {
                 return {
                     isPublished: true,
                     enabled: true,
@@ -348,7 +485,7 @@ export const getSettingsService = (workspaceId) => {
                 console.warn("Could not save customer panel to localStorage cache:", e);
             }
 
-            if (workspaceId === 'ws_dev_mock') {
+            if (isMock) {
                 return true;
             }
 

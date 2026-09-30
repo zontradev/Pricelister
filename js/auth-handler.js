@@ -6,6 +6,7 @@ import { CONFIG } from '../config.js';
 import { initRouter } from './router.js';
 import { setAppCurrencySymbol } from './utilities.js';
 import { openCurrencyPickerModal } from './modules/currencyModal.js';
+import { openBannerPickerModal } from './modules/bannerModal.js';
 import { initGlobalSearch } from './modules/globalSearch.js';
 
 let routerInitialized = false;
@@ -724,10 +725,11 @@ export const initAuthHandler = (pageType) => {
         const wsCurrPreview = document.getElementById('ws-currency-preview');
         const btnWsFindCurrency = document.getElementById('btn-ws-find-currency');
 
-        // Workspace Logo File Picking & Drag & Drop Zone
+        // Workspace Logo Handling
         let selectedWsLogoFile = null;
         let wsLogoDataUrl = '';
         const wsLogoFileInput = document.getElementById('ws-logo-file-input');
+        const wsLogoUrlInput = document.getElementById('ws-logo-url-input');
         const btnWsChooseLogo = document.getElementById('btn-ws-choose-logo');
         const btnWsRemoveLogo = document.getElementById('btn-ws-remove-logo');
         const wsLogoImgPreview = document.getElementById('ws-logo-img-preview');
@@ -736,7 +738,18 @@ export const initAuthHandler = (pageType) => {
         const wsLogoDropzone = document.getElementById('ws-logo-dropzone');
         const dropPrompt = document.getElementById('ws-logo-drop-prompt');
 
-        const processWorkspaceLogoFile = (file) => {
+        // Workspace Banner Handling
+        let selectedWsBannerFile = null;
+        let wsBannerDataUrl = '';
+        const wsBannerFileInput = document.getElementById('ws-banner-file-input');
+        const wsBannerUrlInput = document.getElementById('ws-banner-url-input');
+        const btnWsChooseBanner = document.getElementById('btn-ws-choose-banner');
+        const btnWsRemoveBanner = document.getElementById('btn-ws-remove-banner');
+        const btnWsPickInternetBanner = document.getElementById('btn-ws-pick-internet-banner');
+        const wsBannerDropzone = document.getElementById('ws-banner-dropzone');
+        const bannerDropPrompt = document.getElementById('ws-banner-drop-prompt');
+
+        const processImageFile = (file, maxDim = 1200) => {
             return new Promise((resolve, reject) => {
                 if (!file || !file.type.startsWith('image/')) {
                     reject(new Error('Please select a valid image file (PNG, JPG, WEBP).'));
@@ -747,7 +760,6 @@ export const initAuthHandler = (pageType) => {
                 reader.onload = (e) => {
                     const img = new Image();
                     img.onload = () => {
-                        const maxDim = 800;
                         let w = img.width;
                         let h = img.height;
 
@@ -790,11 +802,11 @@ export const initAuthHandler = (pageType) => {
             });
         };
 
-        const handleFileSelection = async (file) => {
+        const handleLogoSelection = async (file) => {
             if (!file) return;
             try {
-                if (dropPrompt) dropPrompt.innerHTML = `<strong>Processing image...</strong>`;
-                const { file: optimizedFile, dataUrl } = await processWorkspaceLogoFile(file);
+                if (dropPrompt) dropPrompt.innerHTML = `<strong>Processing logo...</strong>`;
+                const { file: optimizedFile, dataUrl } = await processImageFile(file, 800);
                 selectedWsLogoFile = optimizedFile;
                 wsLogoDataUrl = dataUrl;
 
@@ -804,123 +816,121 @@ export const initAuthHandler = (pageType) => {
                 }
                 if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'none';
                 if (btnWsRemoveLogo) btnWsRemoveLogo.style.display = 'inline-block';
-                if (btnWsChooseLogo) btnWsChooseLogo.textContent = 'Change File';
-                if (dropPrompt) dropPrompt.innerHTML = `<strong>Logo selected:</strong> ${file.name} (${(optimizedFile.size / 1024).toFixed(1)} KB)`;
-                if (wsLogoDropzone) {
-                    wsLogoDropzone.style.borderColor = '#10b981';
-                    wsLogoDropzone.style.background = 'rgba(16, 185, 129, 0.04)';
-                }
+                if (btnWsChooseLogo) btnWsChooseLogo.textContent = 'Change';
+                if (dropPrompt) dropPrompt.innerHTML = `<strong>Logo selected:</strong> ${file.name}`;
+                if (wsLogoUrlInput) wsLogoUrlInput.value = '';
             } catch (err) {
                 console.error("Logo processing error:", err);
-                showAlert.error(err.message || 'Failed to process image file.');
-                if (dropPrompt) dropPrompt.innerHTML = `<strong>Drag & drop image here</strong>, or click to browse.`;
+                showAlert.error(err.message || 'Failed to process logo.');
             }
         };
 
-        // Click Triggers for File Picker
-        if (btnWsChooseLogo && wsLogoFileInput) {
-            btnWsChooseLogo.addEventListener('click', (e) => {
-                e.stopPropagation();
-                wsLogoFileInput.click();
-            });
-        }
+        const handleBannerSelection = async (file) => {
+            if (!file) return;
+            try {
+                if (bannerDropPrompt) bannerDropPrompt.innerHTML = `<strong>Processing banner...</strong>`;
+                const { file: optimizedFile, dataUrl } = await processImageFile(file, 1920);
+                selectedWsBannerFile = optimizedFile;
+                wsBannerDataUrl = dataUrl;
 
-        if (wsLogoBox && wsLogoFileInput) {
-            wsLogoBox.addEventListener('click', (e) => {
-                e.stopPropagation();
-                wsLogoFileInput.click();
-            });
-        }
-
-        if (wsLogoDropzone && wsLogoFileInput) {
-            wsLogoDropzone.addEventListener('click', (e) => {
-                if (e.target !== btnWsRemoveLogo && !btnWsRemoveLogo.contains(e.target)) {
-                    wsLogoFileInput.click();
+                if (wsBannerDropzone) {
+                    wsBannerDropzone.style.background = `url('${dataUrl}') center/cover no-repeat, #18181b`;
                 }
-            });
-        }
+                if (btnWsRemoveBanner) btnWsRemoveBanner.style.display = 'inline-block';
+                if (btnWsChooseBanner) btnWsChooseBanner.textContent = 'Change';
+                if (bannerDropPrompt) bannerDropPrompt.innerHTML = `<strong>Banner selected:</strong> ${file.name}`;
+                if (wsBannerUrlInput) wsBannerUrlInput.value = '';
+            } catch (err) {
+                console.error("Banner processing error:", err);
+                showAlert.error(err.message || 'Failed to process banner.');
+            }
+        };
 
-        // File Input Change Listener
-        if (wsLogoFileInput) {
-            wsLogoFileInput.addEventListener('change', (e) => {
-                const file = e.target.files && e.target.files[0];
-                if (file) {
-                    handleFileSelection(file);
+        // Logo File Picker Events
+        btnWsChooseLogo?.addEventListener('click', (e) => { e.stopPropagation(); wsLogoFileInput?.click(); });
+        wsLogoBox?.addEventListener('click', (e) => { e.stopPropagation(); wsLogoFileInput?.click(); });
+        wsLogoFileInput?.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) handleLogoSelection(file);
+        });
+
+        wsLogoUrlInput?.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val) {
+                selectedWsLogoFile = null;
+                wsLogoDataUrl = val;
+                if (wsLogoImgPreview) {
+                    wsLogoImgPreview.src = val;
+                    wsLogoImgPreview.style.display = 'block';
                 }
-            });
-        }
+                if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'none';
+                if (btnWsRemoveLogo) btnWsRemoveLogo.style.display = 'inline-block';
+            }
+        });
 
-        // Drag & Drop Listeners
-        const dropTargets = [wsLogoDropzone, wsLogoBox].filter(Boolean);
-        dropTargets.forEach(target => {
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                target.addEventListener(eventName, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                });
-            });
+        btnWsRemoveLogo?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedWsLogoFile = null;
+            wsLogoDataUrl = '';
+            if (wsLogoFileInput) wsLogoFileInput.value = '';
+            if (wsLogoUrlInput) wsLogoUrlInput.value = '';
+            if (wsLogoImgPreview) {
+                wsLogoImgPreview.src = '';
+                wsLogoImgPreview.style.display = 'none';
+            }
+            if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'flex';
+            btnWsRemoveLogo.style.display = 'none';
+            if (btnWsChooseLogo) btnWsChooseLogo.textContent = 'Upload File';
+            if (dropPrompt) dropPrompt.innerHTML = 'Drag & drop square logo, or enter URL below.';
+        });
 
-            ['dragenter', 'dragover'].forEach(eventName => {
-                target.addEventListener(eventName, () => {
-                    if (wsLogoDropzone) {
-                        wsLogoDropzone.style.borderColor = '#e11d48';
-                        wsLogoDropzone.style.background = 'rgba(225, 29, 72, 0.06)';
-                        wsLogoDropzone.style.transform = 'scale(1.01)';
-                    }
-                });
-            });
+        // Banner File & Presets Picker Events
+        btnWsChooseBanner?.addEventListener('click', (e) => { e.stopPropagation(); wsBannerFileInput?.click(); });
+        wsBannerFileInput?.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) handleBannerSelection(file);
+        });
 
-            ['dragleave'].forEach(eventName => {
-                target.addEventListener(eventName, () => {
-                    if (wsLogoDropzone) {
-                        wsLogoDropzone.style.transform = 'scale(1)';
-                        if (!selectedWsLogoFile) {
-                            wsLogoDropzone.style.borderColor = '#cbd5e1';
-                            wsLogoDropzone.style.background = 'var(--surface-50)';
-                        }
-                    }
-                });
-            });
-
-            target.addEventListener('drop', (e) => {
-                if (wsLogoDropzone) {
-                    wsLogoDropzone.style.transform = 'scale(1)';
+        btnWsPickInternetBanner?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openBannerPickerModal(wsBannerUrlInput?.value || wsBannerDataUrl, (chosenUrl) => {
+                selectedWsBannerFile = null;
+                wsBannerDataUrl = chosenUrl;
+                if (wsBannerUrlInput) wsBannerUrlInput.value = chosenUrl;
+                if (wsBannerDropzone) {
+                    wsBannerDropzone.style.background = `url('${chosenUrl}') center/cover no-repeat, #18181b`;
                 }
-                const dt = e.dataTransfer;
-                if (dt && dt.files && dt.files.length > 0) {
-                    handleFileSelection(dt.files[0]);
-                }
+                if (btnWsRemoveBanner) btnWsRemoveBanner.style.display = 'inline-block';
+                if (bannerDropPrompt) bannerDropPrompt.innerHTML = `<strong>Preset selected:</strong> Ready for workspace`;
+                showAlert.success("Preset banner applied!");
             });
         });
 
-        // Remove Logo Button
-        if (btnWsRemoveLogo) {
-            btnWsRemoveLogo.addEventListener('click', (e) => {
-                e.stopPropagation();
-                selectedWsLogoFile = null;
-                wsLogoDataUrl = '';
-                if (wsLogoFileInput) wsLogoFileInput.value = '';
-                if (wsLogoImgPreview) {
-                    wsLogoImgPreview.src = '';
-                    wsLogoImgPreview.style.display = 'none';
+        wsBannerUrlInput?.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val) {
+                selectedWsBannerFile = null;
+                wsBannerDataUrl = val;
+                if (wsBannerDropzone) {
+                    wsBannerDropzone.style.background = `url('${val}') center/cover no-repeat, #18181b`;
                 }
-                if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'flex';
-                btnWsRemoveLogo.style.display = 'none';
-                if (wsLogoDropzone) {
-                    wsLogoDropzone.style.borderColor = '#cbd5e1';
-                    wsLogoDropzone.style.background = 'var(--surface-50)';
-                }
-                if (dropPrompt) {
-                    dropPrompt.innerHTML = `<strong>Drag & drop image here</strong>, or click to browse (PNG, JPG, WEBP).`;
-                }
-                if (btnWsChooseLogo) {
-                    btnWsChooseLogo.innerHTML = `
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        Choose File
-                    `;
-                }
-            });
-        }
+                if (btnWsRemoveBanner) btnWsRemoveBanner.style.display = 'inline-block';
+            }
+        });
+
+        btnWsRemoveBanner?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedWsBannerFile = null;
+            wsBannerDataUrl = '';
+            if (wsBannerFileInput) wsBannerFileInput.value = '';
+            if (wsBannerUrlInput) wsBannerUrlInput.value = '';
+            if (wsBannerDropzone) {
+                wsBannerDropzone.style.background = 'linear-gradient(135deg, #18181b 0%, #27272a 100%)';
+            }
+            btnWsRemoveBanner.style.display = 'none';
+            if (btnWsChooseBanner) btnWsChooseBanner.textContent = 'Upload';
+            if (bannerDropPrompt) bannerDropPrompt.innerHTML = '<span style="font-size:0.74rem; font-weight:700;">Drag & drop banner or choose from library</span>';
+        });
 
         const updateWsCurrPreview = (val) => {
             const sym = (val || '$').trim().substring(0, 3) || '$';
@@ -963,10 +973,15 @@ export const initAuthHandler = (pageType) => {
             btn.disabled = true;
             btn.textContent = 'Creating Workspace...';
             
+            const wsName = (document.getElementById('ws-name')?.value || "").trim();
+            const wsTradeName = (document.getElementById('ws-trade-name')?.value || wsName).trim();
+            const wsIndustry = (document.getElementById('ws-industry')?.value || "General Commercial").trim();
             const descInput = document.getElementById('ws-desc');
             const chosenCurrency = (document.getElementById('ws-currency')?.value || "$").trim().substring(0, 3) || "$";
 
-            let finalLogoUrl = wsLogoDataUrl || '';
+            let finalLogoUrl = (wsLogoUrlInput?.value || wsLogoDataUrl || '').trim();
+            let finalBannerUrl = (wsBannerUrlInput?.value || wsBannerDataUrl || '').trim();
+
             if (selectedWsLogoFile) {
                 try {
                     btn.textContent = 'Uploading Workspace Logo...';
@@ -977,18 +992,36 @@ export const initAuthHandler = (pageType) => {
                 }
             }
 
+            if (selectedWsBannerFile) {
+                try {
+                    btn.textContent = 'Uploading Workspace Banner...';
+                    finalBannerUrl = await storageService.uploadImage(selectedWsBannerFile, currentUser.uid);
+                } catch (uploadErr) {
+                    console.warn("Banner storage upload failed, saving local data url:", uploadErr);
+                    finalBannerUrl = wsBannerDataUrl || '';
+                }
+            }
+
             const workspaceData = {
-                name: (document.getElementById('ws-name')?.value || "").trim(),
+                name: wsName,
+                tradeName: wsTradeName,
+                industry: wsIndustry,
+                tagline: (descInput?.value || "Build • Manage • Sell • Scale").trim(),
                 description: (descInput?.value || "Main").trim(),
                 phone: (document.getElementById('ws-phone')?.value || "").trim(),
+                supportPhone: (document.getElementById('ws-support-phone')?.value || "").trim(),
+                website: (document.getElementById('ws-website')?.value || "").trim(),
+                taxId: (document.getElementById('ws-tax-id')?.value || "").trim(),
                 address: (document.getElementById('ws-address')?.value || "").trim(),
                 email: (document.getElementById('ws-email')?.value || currentUser.email || "").trim(),
-                adminName: currentUser.displayName || (document.getElementById('ws-name')?.value || "Eycon Contact").trim(),
+                adminName: currentUser.displayName || wsName || "Admin",
                 adminEmail: currentUser.email || "",
                 currency: chosenCurrency,
                 currencySymbol: chosenCurrency,
                 logoUrl: finalLogoUrl,
-                logo: finalLogoUrl
+                logo: finalLogoUrl,
+                bannerUrl: finalBannerUrl,
+                banner: finalBannerUrl
             };
             
             try {
@@ -1001,7 +1034,7 @@ export const initAuthHandler = (pageType) => {
                 console.error("Create Workspace Error:", error);
                 showAlert.error('Failed to create workspace. Please try again.');
                 btn.disabled = false;
-                btn.textContent = 'Create Workspace →';
+                btn.textContent = 'Initialize Workspace & Launch Console →';
             }
         });
     }

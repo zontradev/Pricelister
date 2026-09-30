@@ -426,6 +426,7 @@ const loadStoreSettings = async () => {
         storeName: storeName,
         storeSubtitle: storeSubtitle,
         storeLogo: merged.storeLogo || '',
+        storeBanner: merged.storeBanner || merged.bannerUrl || wsData.bannerUrl || receiptData["Banner Url"] || '',
         workspaceLogo: merged.workspaceLogo || wsData.logoUrl || wsData.imageUri || receiptData["Logo Url"] || '',
         customSlug: merged.customSlug || '',
         deployCountry: merged.deployCountry || 'Global',
@@ -728,6 +729,23 @@ const renderCustomerCatalogUI = () => {
                     ${storeSettings.termsAndConditions ? `
                         <button type="button" id="cp-open-terms-btn" class="cp-terms-btn">Terms & Conditions</button>
                     ` : ''}
+                </div>
+            </div>
+        ` : ''}
+
+        <!-- STOREFRONT HERO BANNER (16:9 / 1920x1080 Aspect Compatible) -->
+        ${storeSettings.storeBanner ? `
+            <div class="cp-storefront-hero" style="max-width: 1280px; margin: 1rem auto 0 auto; padding: 0 1.25rem;">
+                <div style="position:relative; border-radius: 18px; overflow: hidden; height: 220px; background: linear-gradient(180deg, rgba(15,23,42,0.3) 0%, rgba(15,23,42,0.85) 100%), url('${escapeHtml(storeSettings.storeBanner)}') center/cover no-repeat; display: flex; align-items: flex-end; padding: 1.75rem; color: #ffffff; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.12);">
+                    <div style="display: flex; align-items: center; gap: 1.25rem; z-index: 2;">
+                        <div style="width: 64px; height: 64px; border-radius: 14px; background: #ffffff; padding: 4px; box-shadow: 0 8px 20px rgba(0,0,0,0.25); flex-shrink: 0; overflow:hidden; border: 2px solid rgba(255,255,255,0.8);">
+                            <img src="${escapeHtml(brandLogoSrc)}" alt="${escapeHtml(storeSettings.storeName)}" style="width:100%; height:100%; object-fit:contain;" onerror="this.src='pricelister_org.png';">
+                        </div>
+                        <div>
+                            <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0; color: #ffffff; letter-spacing: -0.02em; text-shadow: 0 2px 10px rgba(0,0,0,0.4);">${escapeHtml(storeSettings.storeName)}</h2>
+                            <p style="margin: 0.25rem 0 0 0; font-size: 0.88rem; opacity: 0.95; color: #f8fafc; text-shadow: 0 1px 4px rgba(0,0,0,0.4);">${escapeHtml(brandTagline)}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         ` : ''}

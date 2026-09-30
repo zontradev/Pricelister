@@ -232,7 +232,7 @@ export const renderOverview = async (container, workspaceId) => {
 
     // Initial Dashboard Layout
     container.innerHTML = `
-        <div class="dash-container" style="display:flex; flex-direction:column; gap:1.5rem; animation:fadeIn 0.25s ease;">
+        <div class="dash-container" style="display:flex; flex-direction:column; gap:1.5rem;">
             
             <!-- EXECUTIVE TOP HEADER ROW -->
             <div class="dash-header-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
@@ -646,6 +646,7 @@ export const renderOverview = async (container, workspaceId) => {
     let cachedBusInvoices = [];
     let cachedCategories = [];
     let cachedCustomers = [];
+    const chartLineAnimationBaselines = new WeakMap();
 
     const formatCurr = (val) => formatCurrency(val);
     const formatNum = (val) => Number(val || 0).toLocaleString();
@@ -931,6 +932,36 @@ export const renderOverview = async (container, workspaceId) => {
         if (elRevLine) elRevLine.setAttribute('d', revLinePath);
         if (elProfitLine) elProfitLine.setAttribute('d', profitLinePath);
         if (elCostLine) elCostLine.setAttribute('d', costLinePath);
+
+        const animateChartLine = (line) => {
+            if (!line || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            const pathLength = line.getTotalLength();
+            if (!chartLineAnimationBaselines.has(line)) {
+                chartLineAnimationBaselines.set(line, {
+                    dashArray: line.getAttribute('stroke-dasharray'),
+                    dashOffset: line.getAttribute('stroke-dashoffset')
+                });
+            }
+            const baseline = chartLineAnimationBaselines.get(line);
+            line.getAnimations().forEach(animation => animation.cancel());
+            line.setAttribute('stroke-dasharray', pathLength);
+            line.setAttribute('stroke-dashoffset', pathLength);
+
+            const animation = line.animate(
+                [{ strokeDashoffset: pathLength }, { strokeDashoffset: 0 }],
+                { duration: 1100, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+            );
+            animation.onfinish = () => {
+                if (baseline.dashArray === null) line.removeAttribute('stroke-dasharray');
+                else line.setAttribute('stroke-dasharray', baseline.dashArray);
+                if (baseline.dashOffset === null) line.removeAttribute('stroke-dashoffset');
+                else line.setAttribute('stroke-dashoffset', baseline.dashOffset);
+                animation.cancel();
+            };
+        };
+
+        [elRevLine, elProfitLine, elCostLine].forEach(animateChartLine);
 
         if (elXLabels) {
             elXLabels.innerHTML = monthData.map((d, i) => {

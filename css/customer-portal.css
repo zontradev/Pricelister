@@ -1220,4 +1220,9 @@ body {
     .cp-qv-grid {
         grid-template-columns: 1fr;
     }
+
+    .cp-storefront-hero > div {
+        height: 160px !important;
+        padding: 1.15rem !important;
+    }
 }
