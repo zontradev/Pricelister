@@ -5,9 +5,10 @@ import { showAlert } from './alert-handler.js';
 import { CONFIG } from '../config.js';
 import { initRouter } from './router.js';
 import { setAppCurrencySymbol } from './utilities.js';
-import { openCurrencyPickerModal } from './modules/currencyModal.js';
 import { openBannerPickerModal } from './modules/bannerModal.js';
 import { initGlobalSearch } from './modules/globalSearch.js';
+import { CURRENCY_LIST, getCurrencyByCode } from './utils/currencyData.js';
+import { COUNTRIES_LIST, WORKSPACE_ROLES, getRoleLevel, getRoleMeta } from '../DataModel.js';
 
 let routerInitialized = false;
 let roleListenerUnsub = null;
@@ -16,42 +17,71 @@ let roleListenerUnsub = null;
  * Universal Role Badge Configurations
  * Admin: Green-glow gradient
  * Co-admin: Green text, subtle green/grey accent
+ * Manager: Deep slate/navy with subtle border
  * Worker: Black text, grey accent
- * No pink or blue colors!
+ * Visitor: Warm amber badge
  */
-export const getRoleBadgeConfig = (role) => {
-    const raw = (role || 'WORKER').toUpperCase();
-    if (raw === 'CREATOR_ADMIN' || raw === 'ADMIN' || raw === 'CREATOR') {
-        return {
-            text: 'Admin',
-            className: 'badge-role badge-role-admin',
-            style: 'background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(16, 185, 129, 0.45); border: 1px solid rgba(5, 150, 105, 0.8) !important; font-weight: 700;'
-        };
-    } else if (raw === 'CO_ADMIN' || raw === 'CO-ADMIN') {
-        return {
-            text: 'Co-admin',
-            className: 'badge-role badge-role-coadmin',
-            style: 'background: rgba(22, 163, 74, 0.12) !important; color: #16a34a !important; border: 1px solid rgba(22, 163, 74, 0.35) !important; font-weight: 600;'
-        };
-    } else {
-        return {
-            text: 'Worker',
-            className: 'badge-role badge-role-worker',
-            style: 'background: #f1f5f9 !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important; font-weight: 600;'
-        };
+export const getRoleBadgeConfig = (role, customTag = null) => {
+    const level = getRoleLevel(role);
+    const meta = WORKSPACE_ROLES[level] || WORKSPACE_ROLES[3];
+    const label = (customTag && typeof customTag === 'string' && customTag.trim()) ? customTag.trim() : meta.defaultTag;
+
+    switch (level) {
+        case 0:
+            return {
+                level: 0,
+                text: label,
+                className: 'badge-role badge-role-admin',
+                style: 'background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(16, 185, 129, 0.45); border: 1px solid rgba(5, 150, 105, 0.8) !important; font-weight: 700;'
+            };
+        case 1:
+            return {
+                level: 1,
+                text: label,
+                className: 'badge-role badge-role-coadmin',
+                style: 'background: rgba(22, 163, 74, 0.12) !important; color: #16a34a !important; border: 1px solid rgba(22, 163, 74, 0.35) !important; font-weight: 700;'
+            };
+        case 2:
+            return {
+                level: 2,
+                text: label,
+                className: 'badge-role badge-role-manager',
+                style: 'background: rgba(59, 130, 246, 0.12) !important; color: #1d4ed8 !important; border: 1px solid rgba(59, 130, 246, 0.35) !important; font-weight: 700;'
+            };
+        case 3:
+            return {
+                level: 3,
+                text: label,
+                className: 'badge-role badge-role-worker',
+                style: 'background: #f1f5f9 !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important; font-weight: 600;'
+            };
+        case 4:
+            return {
+                level: 4,
+                text: label,
+                className: 'badge-role badge-role-visitor',
+                style: 'background: rgba(245, 158, 11, 0.12) !important; color: #b45309 !important; border: 1px solid rgba(245, 158, 11, 0.35) !important; font-weight: 600;'
+            };
+        default:
+            return {
+                level: 3,
+                text: label,
+                className: 'badge-role badge-role-worker',
+                style: 'background: #f1f5f9 !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important; font-weight: 600;'
+            };
     }
 };
 
-export const formatRoleBadge = (role, element) => {
+export const formatRoleBadge = (role, element, customTag = null) => {
     if (!element) return;
-    const config = getRoleBadgeConfig(role);
+    const config = getRoleBadgeConfig(role, customTag);
     element.textContent = config.text;
     element.className = config.className;
     element.style = config.style;
 };
 
-export const getRoleBadgeHtml = (role) => {
-    const config = getRoleBadgeConfig(role);
+export const getRoleBadgeHtml = (role, customTag = null) => {
+    const config = getRoleBadgeConfig(role, customTag);
     return `<span class="${config.className}" style="${config.style}">${config.text}</span>`;
 };
 
@@ -157,6 +187,7 @@ export const openAccountSwitcherModal = (currentUser) => {
                 window.location.reload();
             } catch (err) {
                 console.error("Account switch failed:", err);
+                showAlert.error('Could not connect to the selected Google account. Please try again.');
                 addBtn.disabled = false;
                 addBtn.innerHTML = '+ Add / Switch with Another Google Account';
             }
@@ -174,6 +205,7 @@ export const openAccountSwitcherModal = (currentUser) => {
                 overlay.remove();
                 window.location.reload();
             } catch (err) {
+                showAlert.error('Account switch failed. Please try again.');
                 btn.disabled = false;
                 btn.textContent = 'Switch';
             }
@@ -723,7 +755,38 @@ export const initAuthHandler = (pageType) => {
     if (setupForm) {
         const wsCurrInput = document.getElementById('ws-currency');
         const wsCurrPreview = document.getElementById('ws-currency-preview');
-        const btnWsFindCurrency = document.getElementById('btn-ws-find-currency');
+        const wsCountrySelect = document.getElementById('ws-country');
+        const wsRegionInput = document.getElementById('ws-region');
+        const wsCurrencySelect = document.getElementById('ws-currency-select');
+
+        // Populate Countries (Name, Flag, Code)
+        if (wsCountrySelect) {
+            wsCountrySelect.innerHTML = '<option value="">Select country...</option>';
+            COUNTRIES_LIST.forEach(country => {
+                const opt = document.createElement('option');
+                opt.value = country.name;
+                opt.textContent = `${country.flag} ${country.name} (${country.code})`;
+                opt.dataset.countryCode = country.code;
+                opt.dataset.defaultCurrency = country.defaultCurrency;
+                opt.dataset.defaultSymbol = country.defaultSymbol;
+                opt.dataset.region = country.region || '';
+                wsCountrySelect.appendChild(opt);
+            });
+        }
+
+        // Populate Currencies (Code, Full Name, Symbol, Flag)
+        if (wsCurrencySelect) {
+            wsCurrencySelect.innerHTML = '<option value="">Select currency...</option>';
+            CURRENCY_LIST.forEach(curr => {
+                const opt = document.createElement('option');
+                opt.value = curr.code;
+                opt.textContent = `${curr.flag} ${curr.code} — ${curr.name} (${curr.symbol})`;
+                opt.dataset.currencyCode = curr.code;
+                opt.dataset.currencyName = curr.name;
+                opt.dataset.currencySymbol = curr.symbol;
+                wsCurrencySelect.appendChild(opt);
+            });
+        }
 
         // Workspace Logo Handling
         let selectedWsLogoFile = null;
@@ -933,36 +996,63 @@ export const initAuthHandler = (pageType) => {
         });
 
         const updateWsCurrPreview = (val) => {
-            const sym = (val || '$').trim().substring(0, 3) || '$';
+            const sym = (val || '€').trim().substring(0, 4) || '€';
             if (wsCurrPreview) {
                 const separator = /^[A-Za-z]+$/.test(sym) ? ' ' : '';
                 wsCurrPreview.textContent = `${sym}${separator}1,250.00`;
             }
         };
 
+        // Initialize Defaults (Example: United Kingdom country + EUR currency)
+        if (wsCountrySelect) {
+            const ukOption = Array.from(wsCountrySelect.options).find(o => o.value === 'United Kingdom');
+            if (ukOption) {
+                wsCountrySelect.value = 'United Kingdom';
+                if (wsRegionInput && !wsRegionInput.value) {
+                    wsRegionInput.value = 'England';
+                }
+            } else if (wsCountrySelect.options.length > 1) {
+                wsCountrySelect.selectedIndex = 1;
+            }
+
+            wsCountrySelect.addEventListener('change', () => {
+                const selectedOpt = wsCountrySelect.options[wsCountrySelect.selectedIndex];
+                if (!selectedOpt) return;
+                const defReg = selectedOpt.dataset.region || '';
+                if (wsRegionInput && !wsRegionInput.value && defReg) {
+                    wsRegionInput.value = defReg;
+                }
+            });
+        }
+
+        if (wsCurrencySelect) {
+            // Default currency EUR per explicit user prompt requirement
+            const eurOption = Array.from(wsCurrencySelect.options).find(o => o.value === 'EUR');
+            if (eurOption) {
+                wsCurrencySelect.value = 'EUR';
+                if (wsCurrInput) wsCurrInput.value = '€';
+                updateWsCurrPreview('€');
+            } else if (wsCurrencySelect.options.length > 1) {
+                wsCurrencySelect.selectedIndex = 1;
+                const opt = wsCurrencySelect.options[wsCurrencySelect.selectedIndex];
+                if (wsCurrInput) wsCurrInput.value = opt.dataset.currencySymbol || '$';
+                updateWsCurrPreview(opt.dataset.currencySymbol || '$');
+            }
+
+            wsCurrencySelect.addEventListener('change', () => {
+                const opt = wsCurrencySelect.options[wsCurrencySelect.selectedIndex];
+                if (opt && opt.dataset.currencySymbol && wsCurrInput) {
+                    wsCurrInput.value = opt.dataset.currencySymbol;
+                    updateWsCurrPreview(opt.dataset.currencySymbol);
+                }
+            });
+        }
+
         if (wsCurrInput) {
             wsCurrInput.addEventListener('input', (e) => {
                 updateWsCurrPreview(e.target.value);
             });
         }
-
-        if (btnWsFindCurrency) {
-            btnWsFindCurrency.addEventListener('click', () => {
-                openCurrencyPickerModal(wsCurrInput?.value || '$', (selectedSymbol) => {
-                    const cleanSymbol = (selectedSymbol || '$').trim().substring(0, 3) || '$';
-                    if (wsCurrInput) wsCurrInput.value = cleanSymbol;
-                    updateWsCurrPreview(cleanSymbol);
-                });
-            });
-        }
-
-        setupForm.querySelectorAll('.btn-ws-curr-preset').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const sym = (btn.getAttribute('data-symbol') || '$').substring(0, 3);
-                if (wsCurrInput) wsCurrInput.value = sym;
-                updateWsCurrPreview(sym);
-            });
-        });
 
         setupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -977,7 +1067,20 @@ export const initAuthHandler = (pageType) => {
             const wsTradeName = (document.getElementById('ws-trade-name')?.value || wsName).trim();
             const wsIndustry = (document.getElementById('ws-industry')?.value || "General Commercial").trim();
             const descInput = document.getElementById('ws-desc');
-            const chosenCurrency = (document.getElementById('ws-currency')?.value || "$").trim().substring(0, 3) || "$";
+            
+            // Country & Region (Independent)
+            const selectedCountryName = wsCountrySelect?.value || "United Kingdom";
+            const matchedCountry = COUNTRIES_LIST.find(c => c.name === selectedCountryName) || {
+                code: 'GB', name: 'United Kingdom', flag: '🇬🇧', region: 'England'
+            };
+            const regionVal = (document.getElementById('ws-region')?.value || matchedCountry.region || "").trim();
+
+            // Currency & Symbol (Independent)
+            const selectedCurrCode = wsCurrencySelect?.value || "EUR";
+            const matchedCurr = CURRENCY_LIST.find(c => c.code === selectedCurrCode) || {
+                code: 'EUR', name: 'Euro', symbol: '€'
+            };
+            const chosenSymbol = (wsCurrInput?.value || matchedCurr.symbol || "€").trim().substring(0, 4) || "€";
 
             let finalLogoUrl = (wsLogoUrlInput?.value || wsLogoDataUrl || '').trim();
             let finalBannerUrl = (wsBannerUrlInput?.value || wsBannerDataUrl || '').trim();
@@ -1013,11 +1116,30 @@ export const initAuthHandler = (pageType) => {
                 website: (document.getElementById('ws-website')?.value || "").trim(),
                 taxId: (document.getElementById('ws-tax-id')?.value || "").trim(),
                 address: (document.getElementById('ws-address')?.value || "").trim(),
+                businessAddress: (document.getElementById('ws-address')?.value || "").trim(),
                 email: (document.getElementById('ws-email')?.value || currentUser.email || "").trim(),
                 adminName: currentUser.displayName || wsName || "Admin",
                 adminEmail: currentUser.email || "",
-                currency: chosenCurrency,
-                currencySymbol: chosenCurrency,
+                
+                // Explicit Country and Region
+                country: selectedCountryName,
+                countryName: selectedCountryName,
+                countryCode: matchedCountry.code,
+                operatedCountry: selectedCountryName,
+                region: regionVal,
+
+                // Explicit Currency fields
+                currencyCode: matchedCurr.code,
+                currencyName: matchedCurr.name,
+                currencySymbol: chosenSymbol,
+                currency: chosenSymbol,
+
+                // Authority System: Role 0 ADMIN
+                workspaceRole: 0,
+                role: 'CREATOR_ADMIN',
+                roleTag: 'Founder',
+                workspaceStatus: 'Active',
+
                 logoUrl: finalLogoUrl,
                 logo: finalLogoUrl,
                 bannerUrl: finalBannerUrl,
@@ -1026,7 +1148,7 @@ export const initAuthHandler = (pageType) => {
             
             try {
                 btn.textContent = 'Finalizing Workspace...';
-                setAppCurrencySymbol(chosenCurrency);
+                setAppCurrencySymbol(chosenSymbol);
                 await firestoreService.createWorkspace(currentUser.uid, currentUser.email, workspaceData);
                 showAlert.success('Workspace created successfully!');
                 window.location.href = 'app.html';
@@ -1065,6 +1187,9 @@ export const initAuthHandler = (pageType) => {
                     e.preventDefault();
                     e.stopPropagation();
                     const user = authService.getCurrentUser();
+                    if (btn.id === 'setup-change-account-btn') {
+                        showAlert.info('Choose an account to switch to.');
+                    }
                     openAccountSwitcherModal(user);
                 };
             }

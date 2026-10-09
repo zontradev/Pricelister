@@ -42,6 +42,14 @@
             position: relative;
         }
 
+        #workspace-setup-form .setup-example-field:not(:focus)::placeholder {
+            color: transparent;
+        }
+
+        #workspace-setup-form .setup-example-field:focus::placeholder {
+            color: #94a3b8;
+        }
+
         #auth-container {
             position: relative;
             z-index: 2;
@@ -4749,7 +4757,7 @@
             <form id="workspace-setup-form">
 
                 <div
-                    style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:1.5rem;margin-bottom:1.75rem;">
+                    style="display:grid;grid-template-columns:repeat(auto-fit, minmax(min(100%, 360px), 1fr));gap:1.5rem;margin-bottom:1.75rem;">
 
                     <!-- LEFT COLUMN: Identity, Logo & Banner -->
                     <div
@@ -4816,7 +4824,7 @@
                                     </p>
                                 </div>
                             </div>
-                            <input type="url" id="ws-logo-url-input" placeholder="Or enter direct logo image URL..." style="width:100%; margin-top:0.4rem; padding:0.45rem 0.65rem; border-radius:7px; border:1px solid #cbd5e1; font-size:0.78rem; background:#ffffff;">
+                            <input type="url" id="ws-logo-url-input" class="setup-example-field" placeholder="Or enter direct logo image URL..." style="width:100%; margin-top:0.4rem; padding:0.45rem 0.65rem; border-radius:7px; border:1px solid #cbd5e1; font-size:0.78rem; background:#ffffff;">
                         </div>
 
                         <!-- 2. Workspace Cover Banner (16:9 / 1920x1080) -->
@@ -4851,7 +4859,7 @@
                                     Clear
                                 </button>
                             </div>
-                            <input type="url" id="ws-banner-url-input" placeholder="Or enter direct banner image URL..." style="width:100%; margin-top:0.4rem; padding:0.45rem 0.65rem; border-radius:7px; border:1px solid #cbd5e1; font-size:0.78rem; background:#ffffff;">
+                            <input type="url" id="ws-banner-url-input" class="setup-example-field" placeholder="Or enter direct banner image URL..." style="width:100%; margin-top:0.4rem; padding:0.45rem 0.65rem; border-radius:7px; border:1px solid #cbd5e1; font-size:0.78rem; background:#ffffff;">
                         </div>
 
                         <!-- Name & Classification -->
@@ -4859,7 +4867,7 @@
                             <label for="ws-name"
                                 style="font-weight:700;font-size:0.82rem;margin-bottom:0.35rem;display:block;color:var(--text-primary);">Organization
                                 / Workspace Display Name <span style="color:#e11d48;">*</span></label>
-                            <input type="text" id="ws-name" required placeholder="e.g. Apex Global Distributors Ltd."
+                            <input type="text" id="ws-name" class="setup-example-field" required placeholder="e.g. Apex Global Distributors Ltd."
                                 style="width:100%;padding:0.55rem 0.8rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.88rem;font-weight:600;background:#ffffff;">
                         </div>
 
@@ -4867,7 +4875,7 @@
                             <label for="ws-trade-name"
                                 style="font-weight:700;font-size:0.82rem;margin-bottom:0.35rem;display:block;color:var(--text-primary);">Commercial
                                 Trade / Storefront Name</label>
-                            <input type="text" id="ws-trade-name" placeholder="e.g. Apex Superstore &amp; Wholesale"
+                            <input type="text" id="ws-trade-name" class="setup-example-field" placeholder="e.g. Apex Superstore &amp; Wholesale"
                                 style="width:100%;padding:0.55rem 0.8rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.88rem;background:#ffffff;">
                         </div>
 
@@ -4898,58 +4906,70 @@
                             <label for="ws-desc"
                                 style="font-weight:700;font-size:0.82rem;margin-bottom:0.35rem;display:block;color:var(--text-primary);">Workspace
                                 Slogan / Tagline</label>
-                            <input type="text" id="ws-desc" value="Build • Manage • Sell • Scale" placeholder="e.g. Build • Manage • Sell • Scale"
+                            <input type="text" id="ws-desc" class="setup-example-field" placeholder="e.g. Build • Manage • Sell • Scale"
                                 style="width:100%;padding:0.55rem 0.8rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.88rem;background:#ffffff;">
                         </div>
 
-                        <!-- Workspace Currency Selection Group -->
+                        <!-- Workspace Country and Currency Selection (Independent Preferences) -->
                         <div
-                            style="background: #ffffff; padding: 0.85rem; border-radius: 10px; border: 1px solid #cbd5e1;">
+                            style="background: #ffffff; padding: 1rem; border-radius: 12px; border: 1.5px solid #cbd5e1; display:flex; flex-direction:column; gap:0.75rem;">
                             <div
-                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.4rem; flex-wrap: wrap; gap: 0.4rem;">
-                                <label for="ws-currency"
-                                    style="font-weight:700;font-size:0.82rem;margin:0;display:block; color:var(--text-primary);">
-                                    Accounting Currency <span style="color:#e11d48;">*</span>
+                                style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 0.4rem; border-bottom:1px solid #f1f5f9; padding-bottom:0.4rem;">
+                                <label
+                                    style="font-weight:800;font-size:0.84rem;margin:0;display:flex; align-items:center; gap:0.35rem; color:var(--text-primary);">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                    Operated Country &amp; Accounting Currency
                                 </label>
                                 <div
-                                    style="background:#f8fafc; border:1px solid #e2e8f0; padding:0.2rem 0.55rem; border-radius:6px; font-size:0.75rem; display:flex; align-items:center; gap:0.3rem;">
-                                    <span style="color:var(--text-muted);">Preview:</span>
+                                    style="background:#f8fafc; border:1px solid #e2e8f0; padding:0.25rem 0.6rem; border-radius:6px; font-size:0.75rem; display:flex; align-items:center; gap:0.35rem;">
+                                    <span style="color:var(--text-muted); font-weight:600;">Sample:</span>
                                     <strong id="ws-currency-preview"
-                                        style="color:var(--primary); font-family:monospace; font-size:0.88rem;">$
-                                        1,250.00</strong>
+                                        style="color:var(--primary); font-family:monospace; font-size:0.9rem; font-weight:800;">€ 1,250.00</strong>
                                 </div>
                             </div>
 
-                            <div style="display:flex; gap:0.4rem; align-items:center; margin-bottom:0.5rem;">
-                                <input type="text" id="ws-currency" maxlength="3" value="$" placeholder="$"
-                                    style="width:85px; text-align:center; padding:0.45rem 0.55rem; border-radius:8px; border:1px solid #cbd5e1; font-size:1.05rem; font-weight:700; font-family:monospace; letter-spacing:1px; background:#ffffff;">
-                                <button type="button" id="btn-ws-find-currency" class="btn btn-secondary btn-sm"
-                                    style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; padding:0.45rem 0.85rem; font-weight:600; white-space:nowrap;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2">
-                                        <circle cx="11" cy="11" r="8"></circle>
-                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                    </svg>
-                                    Find Currency
-                                </button>
+                            <!-- 1. Country Selection -->
+                            <div>
+                                <label for="ws-country" style="font-weight:700; font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.25rem; display:block;">
+                                    Workspace Operated Country <span style="color:#e11d48;">*</span>
+                                </label>
+                                <select id="ws-country" required aria-describedby="ws-country-help"
+                                    style="width:100%;padding:0.55rem 0.75rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.86rem;font-weight:600;background:#ffffff;cursor:pointer;">
+                                    <option value="">Select country...</option>
+                                </select>
                             </div>
 
-                            <!-- Quick preset shortcuts -->
-                            <div style="display:flex; gap:0.3rem; flex-wrap:wrap;" id="ws-currency-presets">
-                                <button type="button" class="btn-ws-curr-preset" data-symbol="$"
-                                    style="padding:0.2rem 0.45rem; font-size:0.74rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">USD ($)</button>
-                                <button type="button" class="btn-ws-curr-preset" data-symbol="৳"
-                                    style="padding:0.2rem 0.45rem; font-size:0.74rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">BDT (৳)</button>
-                                <button type="button" class="btn-ws-curr-preset" data-symbol="€"
-                                    style="padding:0.2rem 0.45rem; font-size:0.74rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">EUR (€)</button>
-                                <button type="button" class="btn-ws-curr-preset" data-symbol="£"
-                                    style="padding:0.2rem 0.45rem; font-size:0.74rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">GBP (£)</button>
-                                <button type="button" class="btn-ws-curr-preset" data-symbol="₹"
-                                    style="padding:0.2rem 0.45rem; font-size:0.74rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">INR (₹)</button>
-                                <button type="button" class="btn-ws-curr-preset" data-symbol="AED"
-                                    style="padding:0.2rem 0.45rem; font-size:0.74rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">AED</button>
-                                <button type="button" class="btn-ws-curr-preset" data-symbol="¥"
-                                    style="padding:0.2rem 0.45rem; font-size:0.74rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; cursor:pointer;">JPY (¥)</button>
+                            <!-- 2. Region / State / Province -->
+                            <div>
+                                <label for="ws-region" style="font-weight:700; font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.25rem; display:block;">
+                                    Workspace Region / State / Province
+                                </label>
+                                <input type="text" id="ws-region" class="setup-example-field" placeholder="e.g. England, Greater London, California, Dhaka"
+                                    style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.85rem;background:#ffffff;">
+                            </div>
+
+                            <!-- 3. Currency (Independent from Country) & Currency Symbol -->
+                            <div style="display:grid; grid-template-columns: 1fr 100px; gap:0.6rem; align-items:flex-end;">
+                                <div>
+                                    <label for="ws-currency-select" style="font-weight:700; font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.25rem; display:block;">
+                                        Accounting Currency (Code &amp; Name) <span style="color:#e11d48;">*</span>
+                                    </label>
+                                    <select id="ws-currency-select" required
+                                        style="width:100%;padding:0.55rem 0.65rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.84rem;font-weight:600;background:#ffffff;cursor:pointer;">
+                                        <option value="">Select currency...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="ws-currency" style="font-weight:700; font-size:0.78rem; color:var(--text-secondary); margin-bottom:0.25rem; display:block;">
+                                        Symbol <span style="color:#e11d48;">*</span>
+                                    </label>
+                                    <input type="text" id="ws-currency" maxlength="4" value="€" placeholder="€"
+                                        style="width:100%; text-align:center; padding:0.5rem 0.4rem; border-radius:8px; border:1px solid #cbd5e1; font-size:1.1rem; font-weight:800; font-family:monospace; background:#ffffff; color:var(--primary);">
+                                </div>
+                            </div>
+                            
+                            <div id="ws-country-help" style="font-size:0.72rem;color:var(--text-muted);line-height:1.35;margin-top:0.1rem;">
+                                💡 Country and currency operate independently. For example, your workspace can operate in <strong>England (United Kingdom)</strong> with accounts in <strong>EUR (€)</strong> or <strong>GBP (£)</strong>.
                             </div>
                         </div>
                     </div>
@@ -4973,7 +4993,7 @@
                                 <label for="ws-email"
                                     style="font-weight:700;font-size:0.82rem;margin-bottom:0.35rem;display:block;color:var(--text-primary);">Official
                                     Business Contact Email <span style="color:#e11d48;">*</span></label>
-                                <input type="email" id="ws-email" required placeholder="e.g. contact@business.com"
+                                <input type="email" id="ws-email" class="setup-example-field" required placeholder="e.g. contact@business.com"
                                     style="width:100%;padding:0.55rem 0.8rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.88rem;background:#ffffff;">
                             </div>
 
@@ -4981,7 +5001,7 @@
                                 <label for="ws-phone"
                                     style="font-weight:700;font-size:0.82rem;margin-bottom:0.35rem;display:block;color:var(--text-primary);">Headquarters
                                     / Primary Phone</label>
-                                <input type="text" id="ws-phone" placeholder="e.g. +1 (555) 019-2834"
+                                <input type="text" id="ws-phone" class="setup-example-field" placeholder="e.g. +1 (555) 019-2834"
                                     style="width:100%;padding:0.55rem 0.8rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.88rem;background:#ffffff;">
                             </div>
 
@@ -4989,7 +5009,7 @@
                                 <label for="ws-support-phone"
                                     style="font-weight:700;font-size:0.82rem;margin-bottom:0.35rem;display:block;color:var(--text-primary);">Secondary
                                     Support Hotline</label>
-                                <input type="text" id="ws-support-phone" placeholder="e.g. +1 (555) 019-2835"
+                                <input type="text" id="ws-support-phone" class="setup-example-field" placeholder="e.g. +1 (555) 019-2835"
                                     style="width:100%;padding:0.55rem 0.8rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.88rem;background:#ffffff;">
                             </div>
 
@@ -4997,7 +5017,7 @@
                                 <label for="ws-website"
                                     style="font-weight:700;font-size:0.82rem;margin-bottom:0.35rem;display:block;color:var(--text-primary);">Official
                                     Website URL</label>
-                                <input type="url" id="ws-website" placeholder="https://example.com"
+                                <input type="url" id="ws-website" class="setup-example-field" placeholder="https://example.com"
                                     style="width:100%;padding:0.55rem 0.8rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.88rem;background:#ffffff;">
                             </div>
 
@@ -5005,7 +5025,7 @@
                                 <label for="ws-tax-id"
                                     style="font-weight:700;font-size:0.82rem;margin-bottom:0.35rem;display:block;color:var(--text-primary);">Tax
                                     Registration / VAT / Trade License</label>
-                                <input type="text" id="ws-tax-id" placeholder="e.g. VAT-99482-TX"
+                                <input type="text" id="ws-tax-id" class="setup-example-field" placeholder="e.g. VAT-99482-TX"
                                     style="width:100%;padding:0.55rem 0.8rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.88rem;background:#ffffff;">
                             </div>
 
@@ -5013,7 +5033,7 @@
                                 <label for="ws-address"
                                     style="font-weight:700;font-size:0.82rem;margin-bottom:0.35rem;display:block;color:var(--text-primary);">Headquarters
                                     Physical Address</label>
-                                <textarea id="ws-address" rows="3"
+                                <textarea id="ws-address" class="setup-example-field" rows="3"
                                     placeholder="e.g. Suite 800, 5th Avenue, Commercial District, City, Country"
                                     style="width:100%;padding:0.55rem 0.8rem;border-radius:8px;border:1px solid #cbd5e1;font-size:0.88rem;resize:vertical;background:#ffffff;"></textarea>
                             </div>

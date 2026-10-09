@@ -10,6 +10,8 @@ import { openExcelImportModal, openExportModal } from './importExportModal.js';
 import { downloadHeadersOnlyTemplate, downloadExampleDataTemplate } from '../utils/exportEngine.js';
 import { openCurrencyPickerModal } from './currencyModal.js';
 import { openBannerPickerModal, CURATED_BANNER_PRESETS } from './bannerModal.js';
+import { COUNTRIES_LIST } from '../../DataModel.js';
+import { CURRENCY_LIST, getCurrencyByCode } from '../utils/currencyData.js';
 
 const db = getFirestore(firebaseApp);
 
@@ -179,6 +181,12 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         const wsShopName = currentSettings.shopName || wsTradeName;
         const wsEndMsg = currentSettings.endMessage || 'Thank you for choosing us!';
         const wsCurrency = (currentSettings.currencySymbol || '$').trim().substring(0, 3) || '$';
+        const wsCountry = currentSettings.country || currentSettings.countryName || wsData.country || 'United Kingdom';
+        const wsCountryCode = currentSettings.countryCode || wsData.countryCode || 'GB';
+        const wsRegion = currentSettings.region || wsData.region || 'England';
+        const wsCurrencyCode = (currentSettings.currencyCode || wsData.currencyCode || 'EUR').toUpperCase();
+        const wsCurrencyName = currentSettings.currencyName || wsData.currencyName || 'Euro';
+        const matchedCountry = COUNTRIES_LIST.find(c => c.name.toLowerCase() === wsCountry.toLowerCase() || c.code === wsCountryCode) || { flag: '🌐', name: wsCountry };
         const isVendingActive = Boolean(currentSettings.enableVending);
         const printCustName = Boolean(currentSettings.customerName);
         const printCustPhone = Boolean(currentSettings.customerNumber);
@@ -277,19 +285,28 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                         </div>
                     </div>
 
-                    <!-- Bottom Glass Info Strip -->
+                    <!-- Bottom Glass Info Strip (Separate Country, Region & Currency) -->
                     <div style="background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(14px); border-top: 1px solid rgba(255,255,255,0.15); padding: 0.75rem 2.25rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; font-size: 0.8rem; color: #f1f5f9;">
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
                             <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.04em;">Workspace ID:</span>
                             <code style="font-family: monospace; font-weight: 700; color: #ffffff; background: rgba(255,255,255,0.12); padding: 0.15rem 0.5rem; border-radius: 6px;">${escapeHtml(wsIdText)}</code>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
-                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.72rem;">Email:</span>
-                            <strong id="hero-live-email" style="color: #ffffff;">${escapeHtml(wsEmail)}</strong>
+                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.72rem;">Country:</span>
+                            <strong id="hero-live-country" style="color: #ffffff; display: flex; align-items: center; gap: 0.3rem;">
+                                <span>${escapeHtml(matchedCountry.flag || '🌐')}</span>
+                                <span>${escapeHtml(wsCountry)}</span>
+                            </strong>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.72rem;">Region:</span>
+                            <strong id="hero-live-region" style="color: #cbd5e1;">${escapeHtml(wsRegion || 'Global')}</strong>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
                             <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.72rem;">Currency:</span>
-                            <strong id="hero-live-currency" style="color: #6ee7b7; font-family: monospace; font-size: 0.95rem;">${escapeHtml(wsCurrency)}</strong>
+                            <strong id="hero-live-currency" style="color: #6ee7b7; font-family: monospace; font-size: 0.95rem;">
+                                ${escapeHtml(wsCurrencyCode)} (${escapeHtml(wsCurrency)})
+                            </strong>
                         </div>
                         <div style="margin-left: auto; display: flex; align-items: center; gap: 0.4rem; opacity: 0.85;">
                             <span>Est. ${escapeHtml(wsCreatedDate)}</span>
@@ -305,7 +322,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                     </button>
                     <button type="button" class="settings-tab-btn" data-tab="tab-currency" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                        <span>Currency &amp; Region</span>
+                        <span>Country &amp; Currency</span>
                     </button>
                     <button type="button" class="settings-tab-btn" data-tab="tab-receipts" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
@@ -542,57 +559,146 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 </div>
 
                 <!-- ======================================================== -->
-                <!-- TAB 2: CURRENCY & REGION -->
+                <!-- TAB 2: COUNTRY & CURRENCY SETTINGS                         -->
                 <!-- ======================================================== -->
                 <div class="settings-tab-pane" id="tab-currency" style="display: none;">
                     <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                        
+                        <!-- Top Header with Live Sample -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
                             <div>
-                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                                    Workspace Currency Configuration
+                                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.55rem;">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                    Country &amp; Currency Preferences
                                 </h3>
-                                <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.88rem;">Select a country currency standard or type custom symbol characters (max 3 letters).</p>
+                                <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.88rem;">
+                                    Country and accounting currency are two independent settings. The workspace can operate in one nation while using another nation's currency.
+                                </p>
                             </div>
 
                             <!-- Live Sample Badge -->
-                            <div style="background: #fafaf9; border: 1.5px solid #e4e4e7; padding: 0.55rem 1.15rem; border-radius: 12px; display: flex; align-items: center; gap: 0.6rem;">
-                                <span style="font-size: 0.78rem; font-weight: 700; color: #52525b; text-transform: uppercase;">Live Sample:</span>
-                                <strong id="currency-live-preview" style="color: #09090b; font-family: monospace; font-size: 1.15rem; font-weight: 800;">${escapeHtml(wsCurrency)} 1,450.00</strong>
+                            <div style="background: #fafaf9; border: 1.5px solid #e4e4e7; padding: 0.6rem 1.25rem; border-radius: 12px; display: flex; align-items: center; gap: 0.75rem;">
+                                <span style="font-size: 0.75rem; font-weight: 700; color: #52525b; text-transform: uppercase;">Live Ledger Preview:</span>
+                                <strong id="currency-live-preview" style="color: #09090b; font-family: monospace; font-size: 1.1rem; font-weight: 800;">
+                                    ${escapeHtml(matchedCountry.flag || '🌐')} ${escapeHtml(wsCountry)} • ${escapeHtml(wsCurrencyCode)} (${escapeHtml(wsCurrency)}) 1,450.00
+                                </strong>
                             </div>
                         </div>
 
-                        <!-- Input & Buttons Grid -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; align-items: flex-end; margin-bottom: 1.5rem;">
+                        <!-- Financial Accounting Advisory Notice -->
+                        <div style="background: rgba(245, 158, 11, 0.08); border: 1.5px solid rgba(245, 158, 11, 0.35); border-radius: 14px; padding: 1.1rem 1.35rem; margin-bottom: 1.75rem; display: flex; gap: 0.9rem; align-items: flex-start;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); color: #d97706; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            </div>
                             <div>
-                                <label style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); margin-bottom: 0.4rem; display: block;">
-                                    Custom Currency Symbol (Max 3 Chars)
-                                </label>
-                                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                                    <input type="text" id="set-currency" class="form-control" maxlength="3" value="${escapeHtml(wsCurrency)}" placeholder="$" style="font-family: monospace; font-weight: 800; font-size: 1.25rem; width: 110px; text-align: center; border-radius: 10px; color: var(--primary);">
-                                    <button type="button" id="btn-find-currency" class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.45rem; font-weight: 700; font-size: 0.85rem; padding: 0.65rem 1rem; border-radius: 10px;">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                        Find Country Symbol
-                                    </button>
+                                <strong style="color: #92400e; font-size: 0.9rem; display: block; margin-bottom: 0.25rem;">Financial Integrity Advisory</strong>
+                                <p style="color: #78350f; font-size: 0.83rem; margin: 0; line-height: 1.55;">
+                                    Currency codes and symbols are stored independently. Updating the workspace currency updates display formatting and future transaction ledgers. <strong>Historical financial records are preserved in their originally recorded amounts and will not be silently recalculated.</strong>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- 2-Column Independent Settings Grid -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.75rem;">
+                            
+                            <!-- Card 1: Country & Jurisdiction -->
+                            <div style="background: var(--surface-50); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.35rem; display: flex; flex-direction: column; gap: 1.15rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.65rem;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                    <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">1. Operating Jurisdiction</h4>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">
+                                        Workspace Country <span style="color:#e11d48;">*</span>
+                                    </label>
+                                    <select id="set-country" class="form-control" style="border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                        ${COUNTRIES_LIST.map(c => `
+                                            <option value="${escapeHtml(c.name)}" data-code="${escapeHtml(c.code)}" data-flag="${escapeHtml(c.flag)}" data-region="${escapeHtml(c.region || '')}" ${c.name.toLowerCase() === wsCountry.toLowerCase() || c.code === wsCountryCode ? 'selected' : ''}>
+                                                ${escapeHtml(c.flag)} ${escapeHtml(c.name)} (${escapeHtml(c.code)})
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                    <small style="color: var(--text-muted); font-size: 0.74rem; margin-top: 0.3rem; display: block;">
+                                        Official operating nation. Changing country does NOT alter your chosen currency.
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">
+                                        Workspace Region / State / Province
+                                    </label>
+                                    <input type="text" id="set-region" class="form-control" value="${escapeHtml(wsRegion)}" placeholder="e.g. England, California, Bavaria..." style="border-radius: 8px; font-weight: 600;">
+                                    <small style="color: var(--text-muted); font-size: 0.74rem; margin-top: 0.3rem; display: block;">
+                                        Sub-national jurisdiction displayed in the workspace header banner.
+                                    </small>
                                 </div>
                             </div>
 
-                            <!-- Popular Quick Presets -->
-                            <div>
-                                <label style="font-weight: 700; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.45rem; display: block;">
-                                    Instant 1-Click Presets:
-                                </label>
-                                <div style="display: flex; gap: 0.45rem; flex-wrap: wrap;" id="currency-presets-container">
-                                    <button type="button" class="btn-currency-quick" data-symbol="$" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">$ USD</button>
-                                    <button type="button" class="btn-currency-quick" data-symbol="৳" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">৳ BDT</button>
-                                    <button type="button" class="btn-currency-quick" data-symbol="€" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">€ EUR</button>
-                                    <button type="button" class="btn-currency-quick" data-symbol="£" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">£ GBP</button>
-                                    <button type="button" class="btn-currency-quick" data-symbol="₹" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">₹ INR</button>
-                                    <button type="button" class="btn-currency-quick" data-symbol="AED" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">AED</button>
-                                    <button type="button" class="btn-currency-quick" data-symbol="¥" style="padding: 0.4rem 0.75rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">¥ JPY</button>
+                            <!-- Card 2: Accounting Currency Standard -->
+                            <div style="background: var(--surface-50); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.35rem; display: flex; flex-direction: column; gap: 1.15rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.65rem;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                    <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">2. Monetary Currency (ISO 4217)</h4>
                                 </div>
+
+                                <div class="form-group">
+                                    <label style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">
+                                        Select Currency Code (ISO 4217) <span style="color:#e11d48;">*</span>
+                                    </label>
+                                    <select id="set-currency-code" class="form-control" style="border-radius: 8px; font-weight: 700; font-family: monospace; cursor: pointer;">
+                                        ${CURRENCY_LIST.map(c => `
+                                            <option value="${escapeHtml(c.code)}" data-name="${escapeHtml(c.name)}" data-symbol="${escapeHtml(c.symbol)}" ${c.code.toUpperCase() === wsCurrencyCode.toUpperCase() ? 'selected' : ''}>
+                                                ${escapeHtml(c.flag || '')} ${escapeHtml(c.code)} — ${escapeHtml(c.name)} (${escapeHtml(c.symbol)})
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                    <small style="color: var(--text-muted); font-size: 0.74rem; margin-top: 0.3rem; display: block;">
+                                        Standard ISO 4217 financial code stored independently from symbol.
+                                    </small>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 0.75rem;">
+                                    <div class="form-group">
+                                        <label style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">
+                                            Currency Full Name
+                                        </label>
+                                        <input type="text" id="set-currency-name" class="form-control" value="${escapeHtml(wsCurrencyName)}" placeholder="e.g. Euro, Pound Sterling" style="border-radius: 8px; font-weight: 600;">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">
+                                            Symbol (Max 3)
+                                        </label>
+                                        <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                            <input type="text" id="set-currency" class="form-control" maxlength="3" value="${escapeHtml(wsCurrency)}" placeholder="$" style="font-family: monospace; font-weight: 800; font-size: 1.15rem; text-align: center; border-radius: 8px; color: var(--primary);">
+                                            <button type="button" id="btn-find-currency" class="btn btn-secondary" title="Search World Currencies" style="padding: 0.5rem 0.65rem; border-radius: 8px;">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
+
+                        <!-- Popular Quick Presets Strip -->
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                            <label style="font-weight: 700; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.55rem; display: block;">
+                                Instant 1-Click Currency Presets:
+                            </label>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="currency-presets-container">
+                                <button type="button" class="btn-currency-quick" data-code="USD" data-name="US Dollar" data-symbol="$" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">💵 $ USD</button>
+                                <button type="button" class="btn-currency-quick" data-code="EUR" data-name="Euro" data-symbol="€" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">💶 € EUR</button>
+                                <button type="button" class="btn-currency-quick" data-code="GBP" data-name="British Pound" data-symbol="£" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">💷 £ GBP</button>
+                                <button type="button" class="btn-currency-quick" data-code="BDT" data-name="Bangladeshi Taka" data-symbol="৳" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">৳ BDT</button>
+                                <button type="button" class="btn-currency-quick" data-code="INR" data-name="Indian Rupee" data-symbol="₹" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">₹ INR</button>
+                                <button type="button" class="btn-currency-quick" data-code="AED" data-name="UAE Dirham" data-symbol="AED" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇦🇪 AED</button>
+                                <button type="button" class="btn-currency-quick" data-code="CAD" data-name="Canadian Dollar" data-symbol="CA$" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇨🇦 CA$</button>
+                                <button type="button" class="btn-currency-quick" data-code="JPY" data-name="Japanese Yen" data-symbol="¥" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">💴 ¥ JPY</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -945,25 +1051,80 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         if (setCustNum) setCustNum.addEventListener('change', () => { updateTicketPreview(); checkDirty(); });
 
         // Currency Picker & Quick Presets
+        // Country & Currency Preferences Controls
+        const countrySelect = container.querySelector('#set-country');
+        const regionInput = container.querySelector('#set-region');
+        const currencyCodeSelect = container.querySelector('#set-currency-code');
+        const currencyNameInput = container.querySelector('#set-currency-name');
         const currencyInput = container.querySelector('#set-currency');
         const currencyPreview = container.querySelector('#currency-live-preview');
         const previewTicketTotal = container.querySelector('#preview-ticket-total');
         const btnFindCurrency = container.querySelector('#btn-find-currency');
         const heroLiveCurrency = container.querySelector('#hero-live-currency');
+        const heroLiveCountry = container.querySelector('#hero-live-country');
+        const heroLiveRegion = container.querySelector('#hero-live-region');
 
-        const updateCurrencyPreview = (val) => {
-            const sym = (val || '$').trim().substring(0, 3) || '$';
-            if (currencyPreview) currencyPreview.textContent = `${sym} 1,450.00`;
+        const updateCurrencyPreview = () => {
+            const sym = (currencyInput?.value || '$').trim().substring(0, 3) || '$';
+            const code = (currencyCodeSelect?.value || 'EUR').toUpperCase();
+            const countryName = countrySelect?.value || wsCountry || 'United Kingdom';
+            const selectedOpt = countrySelect?.selectedOptions && countrySelect.selectedOptions[0];
+            const flag = (selectedOpt && selectedOpt.getAttribute('data-flag')) || matchedCountry.flag || '🌐';
+            const regionVal = (regionInput?.value || '').trim() || 'Global';
+
+            if (currencyPreview) {
+                currencyPreview.textContent = `${flag} ${countryName} • ${code} (${sym}) 1,450.00`;
+            }
             if (previewTicketTotal) previewTicketTotal.textContent = `${sym} 32.00`;
-            if (heroLiveCurrency) heroLiveCurrency.textContent = sym;
+            if (heroLiveCurrency) heroLiveCurrency.textContent = `${code} (${sym})`;
+            if (heroLiveCountry) {
+                heroLiveCountry.innerHTML = `<span>${escapeHtml(flag)}</span> <span>${escapeHtml(countryName)}</span>`;
+            }
+            if (heroLiveRegion) {
+                heroLiveRegion.textContent = regionVal;
+            }
         };
+
+        if (countrySelect) {
+            countrySelect.addEventListener('change', () => {
+                updateCurrencyPreview();
+                checkDirty();
+            });
+        }
+
+        if (regionInput) {
+            regionInput.addEventListener('input', () => {
+                updateCurrencyPreview();
+                checkDirty();
+            });
+        }
+
+        if (currencyCodeSelect) {
+            currencyCodeSelect.addEventListener('change', (e) => {
+                const opt = e.target.selectedOptions && e.target.selectedOptions[0];
+                if (opt) {
+                    const cName = opt.getAttribute('data-name');
+                    const cSym = opt.getAttribute('data-symbol');
+                    if (cName && currencyNameInput) currencyNameInput.value = cName;
+                    if (cSym && currencyInput) currencyInput.value = cSym.substring(0, 3);
+                }
+                updateCurrencyPreview();
+                checkDirty();
+            });
+        }
+
+        if (currencyNameInput) {
+            currencyNameInput.addEventListener('input', () => {
+                checkDirty();
+            });
+        }
 
         if (currencyInput) {
             currencyInput.addEventListener('input', (e) => {
                 if (e.target.value.length > 3) {
                     e.target.value = e.target.value.substring(0, 3);
                 }
-                updateCurrencyPreview(e.target.value);
+                updateCurrencyPreview();
                 checkDirty();
             });
         }
@@ -973,7 +1134,9 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 openCurrencyPickerModal(currencyInput?.value || '$', (selectedSymbol, code, name) => {
                     const cleanSymbol = selectedSymbol.substring(0, 3);
                     if (currencyInput) currencyInput.value = cleanSymbol;
-                    updateCurrencyPreview(cleanSymbol);
+                    if (currencyCodeSelect && code) currencyCodeSelect.value = code;
+                    if (currencyNameInput && name) currencyNameInput.value = name;
+                    updateCurrencyPreview();
                     checkDirty();
                     showAlert.success(`Currency selected: ${name} (${cleanSymbol})`);
                 });
@@ -983,8 +1146,12 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         container.querySelectorAll('.btn-currency-quick').forEach(btn => {
             btn.addEventListener('click', () => {
                 const sym = (btn.getAttribute('data-symbol') || '$').substring(0, 3);
+                const code = btn.getAttribute('data-code');
+                const name = btn.getAttribute('data-name');
                 if (currencyInput) currencyInput.value = sym;
-                updateCurrencyPreview(sym);
+                if (currencyCodeSelect && code) currencyCodeSelect.value = code;
+                if (currencyNameInput && name) currencyNameInput.value = name;
+                updateCurrencyPreview();
                 checkDirty();
             });
         });

@@ -59,32 +59,32 @@ export function generateWorkerId() {
 }
 
 export const COUNTRIES_LIST = [
-    { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', iso: 'gb', defaultCurrency: 'GBP', defaultSymbol: '£' },
-    { code: 'US', name: 'United States', flag: '🇺🇸', iso: 'us', defaultCurrency: 'USD', defaultSymbol: '$' },
-    { code: 'BD', name: 'Bangladesh', flag: '🇧🇩', iso: 'bd', defaultCurrency: 'BDT', defaultSymbol: '৳' },
-    { code: 'IN', name: 'India', flag: '🇮🇳', iso: 'in', defaultCurrency: 'INR', defaultSymbol: '₹' },
-    { code: 'DE', name: 'Germany', flag: '🇩🇪', iso: 'de', defaultCurrency: 'EUR', defaultSymbol: '€' },
-    { code: 'FR', name: 'France', flag: '🇫🇷', iso: 'fr', defaultCurrency: 'EUR', defaultSymbol: '€' },
-    { code: 'IT', name: 'Italy', flag: '🇮🇹', iso: 'it', defaultCurrency: 'EUR', defaultSymbol: '€' },
-    { code: 'ES', name: 'Spain', flag: '🇪🇸', iso: 'es', defaultCurrency: 'EUR', defaultSymbol: '€' },
-    { code: 'CA', name: 'Canada', flag: '🇨🇦', iso: 'ca', defaultCurrency: 'CAD', defaultSymbol: 'CA$' },
-    { code: 'AU', name: 'Australia', flag: '🇦🇺', iso: 'au', defaultCurrency: 'AUD', defaultSymbol: 'AU$' },
-    { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', iso: 'ae', defaultCurrency: 'AED', defaultSymbol: 'د.إ' },
-    { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦', iso: 'sa', defaultCurrency: 'SAR', defaultSymbol: '﷼' },
-    { code: 'SG', name: 'Singapore', flag: '🇸🇬', iso: 'sg', defaultCurrency: 'SGD', defaultSymbol: 'S$' },
-    { code: 'MY', name: 'Malaysia', flag: '🇲🇾', iso: 'my', defaultCurrency: 'MYR', defaultSymbol: 'RM' },
-    { code: 'JP', name: 'Japan', flag: '🇯🇵', iso: 'jp', defaultCurrency: 'JPY', defaultSymbol: '¥' },
-    { code: 'NL', name: 'Netherlands', flag: '🇳🇱', iso: 'nl', defaultCurrency: 'EUR', defaultSymbol: '€' },
-    { code: 'CH', name: 'Switzerland', flag: '🇨🇭', iso: 'ch', defaultCurrency: 'CHF', defaultSymbol: 'CHF' },
-    { code: 'TR', name: 'Turkey', flag: '🇹🇷', iso: 'tr', defaultCurrency: 'TRY', defaultSymbol: '₺' },
-    { code: 'PK', name: 'Pakistan', flag: '🇵🇰', iso: 'pk', defaultCurrency: 'PKR', defaultSymbol: '₨' },
-    { code: 'ID', name: 'Indonesia', flag: '🇮🇩', iso: 'id', defaultCurrency: 'IDR', defaultSymbol: 'Rp' },
-    { code: 'BR', name: 'Brazil', flag: '🇧🇷', iso: 'br', defaultCurrency: 'BRL', defaultSymbol: 'R$' },
-    { code: 'MX', name: 'Mexico', flag: '🇲🇽', iso: 'mx', defaultCurrency: 'MXN', defaultSymbol: 'MX$' },
-    { code: 'ZA', name: 'South Africa', flag: '🇿🇦', iso: 'za', defaultCurrency: 'ZAR', defaultSymbol: 'R' },
-    { code: 'SE', name: 'Sweden', flag: '🇸🇪', iso: 'se', defaultCurrency: 'SEK', defaultSymbol: 'kr' },
-    { code: 'QA', name: 'Qatar', flag: '🇶🇦', iso: 'qa', defaultCurrency: 'QAR', defaultSymbol: '﷼' },
-    { code: 'GL', name: 'Global / International', flag: '🌐', iso: 'un', defaultCurrency: 'USD', defaultSymbol: '$' }
+    { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', iso: 'gb', defaultCurrency: 'GBP', defaultCurrencyName: 'British Pound', defaultSymbol: '£', region: 'England' },
+    { code: 'US', name: 'United States', flag: '🇺🇸', iso: 'us', defaultCurrency: 'USD', defaultCurrencyName: 'US Dollar', defaultSymbol: '$', region: 'North America' },
+    { code: 'BD', name: 'Bangladesh', flag: '🇧🇩', iso: 'bd', defaultCurrency: 'BDT', defaultCurrencyName: 'Bangladeshi Taka', defaultSymbol: '৳', region: 'South Asia' },
+    { code: 'IN', name: 'India', flag: '🇮🇳', iso: 'in', defaultCurrency: 'INR', defaultCurrencyName: 'Indian Rupee', defaultSymbol: '₹', region: 'South Asia' },
+    { code: 'DE', name: 'Germany', flag: '🇩🇪', iso: 'de', defaultCurrency: 'EUR', defaultCurrencyName: 'Euro', defaultSymbol: '€', region: 'Europe' },
+    { code: 'FR', name: 'France', flag: '🇫🇷', iso: 'fr', defaultCurrency: 'EUR', defaultCurrencyName: 'Euro', defaultSymbol: '€', region: 'Europe' },
+    { code: 'IT', name: 'Italy', flag: '🇮🇹', iso: 'it', defaultCurrency: 'EUR', defaultCurrencyName: 'Euro', defaultSymbol: '€', region: 'Europe' },
+    { code: 'ES', name: 'Spain', flag: '🇪🇸', iso: 'es', defaultCurrency: 'EUR', defaultCurrencyName: 'Euro', defaultSymbol: '€', region: 'Europe' },
+    { code: 'CA', name: 'Canada', flag: '🇨🇦', iso: 'ca', defaultCurrency: 'CAD', defaultCurrencyName: 'Canadian Dollar', defaultSymbol: 'CA$', region: 'North America' },
+    { code: 'AU', name: 'Australia', flag: '🇦🇺', iso: 'au', defaultCurrency: 'AUD', defaultCurrencyName: 'Australian Dollar', defaultSymbol: 'AU$', region: 'Oceania' },
+    { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', iso: 'ae', defaultCurrency: 'AED', defaultCurrencyName: 'UAE Dirham', defaultSymbol: 'د.إ', region: 'Middle East' },
+    { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦', iso: 'sa', defaultCurrency: 'SAR', defaultCurrencyName: 'Saudi Riyal', defaultSymbol: '﷼', region: 'Middle East' },
+    { code: 'SG', name: 'Singapore', flag: '🇸🇬', iso: 'sg', defaultCurrency: 'SGD', defaultCurrencyName: 'Singapore Dollar', defaultSymbol: 'S$', region: 'Southeast Asia' },
+    { code: 'MY', name: 'Malaysia', flag: '🇲🇾', iso: 'my', defaultCurrency: 'MYR', defaultCurrencyName: 'Malaysian Ringgit', defaultSymbol: 'RM', region: 'Southeast Asia' },
+    { code: 'JP', name: 'Japan', flag: '🇯🇵', iso: 'jp', defaultCurrency: 'JPY', defaultCurrencyName: 'Japanese Yen', defaultSymbol: '¥', region: 'East Asia' },
+    { code: 'NL', name: 'Netherlands', flag: '🇳🇱', iso: 'nl', defaultCurrency: 'EUR', defaultCurrencyName: 'Euro', defaultSymbol: '€', region: 'Europe' },
+    { code: 'CH', name: 'Switzerland', flag: '🇨🇭', iso: 'ch', defaultCurrency: 'CHF', defaultCurrencyName: 'Swiss Franc', defaultSymbol: 'CHF', region: 'Europe' },
+    { code: 'TR', name: 'Turkey', flag: '🇹🇷', iso: 'tr', defaultCurrency: 'TRY', defaultCurrencyName: 'Turkish Lira', defaultSymbol: '₺', region: 'Eurasia' },
+    { code: 'PK', name: 'Pakistan', flag: '🇵🇰', iso: 'pk', defaultCurrency: 'PKR', defaultCurrencyName: 'Pakistani Rupee', defaultSymbol: '₨', region: 'South Asia' },
+    { code: 'ID', name: 'Indonesia', flag: '🇮🇩', iso: 'id', defaultCurrency: 'IDR', defaultCurrencyName: 'Indonesian Rupiah', defaultSymbol: 'Rp', region: 'Southeast Asia' },
+    { code: 'BR', name: 'Brazil', flag: '🇧🇷', iso: 'br', defaultCurrency: 'BRL', defaultCurrencyName: 'Brazilian Real', defaultSymbol: 'R$', region: 'South America' },
+    { code: 'MX', name: 'Mexico', flag: '🇲🇽', iso: 'mx', defaultCurrency: 'MXN', defaultCurrencyName: 'Mexican Peso', defaultSymbol: 'MX$', region: 'Latin America' },
+    { code: 'ZA', name: 'South Africa', flag: '🇿🇦', iso: 'za', defaultCurrency: 'ZAR', defaultCurrencyName: 'South African Rand', defaultSymbol: 'R', region: 'Africa' },
+    { code: 'SE', name: 'Sweden', flag: '🇸🇪', iso: 'se', defaultCurrency: 'SEK', defaultCurrencyName: 'Swedish Krona', defaultSymbol: 'kr', region: 'Scandinavia' },
+    { code: 'QA', name: 'Qatar', flag: '🇶🇦', iso: 'qa', defaultCurrency: 'QAR', defaultCurrencyName: 'Qatari Riyal', defaultSymbol: '﷼', region: 'Middle East' },
+    { code: 'GL', name: 'Global / International', flag: '🌐', iso: 'un', defaultCurrency: 'USD', defaultCurrencyName: 'US Dollar', defaultSymbol: '$', region: 'Global' }
 ];
 
 export const WORKSPACE_ROLE_LEVELS = {
@@ -93,6 +93,25 @@ export const WORKSPACE_ROLE_LEVELS = {
     MANAGER: 2,
     WORKER: 3,
     VISITOR: 4
+};
+
+export const PERMISSIONS = {
+    WORKSPACE_VIEW: 'workspace.view',
+    WORKSPACE_UPDATE_IDENTITY: 'workspace.update_identity',
+    WORKSPACE_UPDATE_COUNTRY_CURRENCY: 'workspace.update_country_currency',
+    WORKSPACE_MANAGE_MEMBERS: 'workspace.manage_members',
+    WORKSPACE_MANAGE_ROLE_TAGS: 'workspace.manage_role_tags',
+    WORKSPACE_PROMOTE_MEMBERS: 'workspace.promote_members',
+    WORKSPACE_DEMOTE_MEMBERS: 'workspace.demote_members',
+    BUSINESS_CREATE: 'business.create',
+    BUSINESS_EDIT: 'business.edit',
+    INVOICE_CREATE: 'invoice.create',
+    INVOICE_EDIT: 'invoice.edit',
+    INVOICE_DELETE: 'invoice.delete',
+    REPORTS_VIEW: 'reports.view',
+    REPORTS_VIEW_PROFIT: 'reports.view_profit',
+    DATA_EXPORT: 'data.export',
+    DATA_IMPORT: 'data.import'
 };
 
 export const WORKSPACE_ROLES = {
@@ -105,7 +124,27 @@ export const WORKSPACE_ROLES = {
         canBeRestricted: false,
         canManageMembers: true,
         canChangeSettings: true,
-        description: 'Supreme control over workspace, all members, promotions, demotions & settings.'
+        canViewProfit: true,
+        canCreateEdit: true,
+        description: 'Supreme authority over the workspace. Manages settings, identity, country, currency, invitations, promotions, demotions & role tags.',
+        permissions: [
+            PERMISSIONS.WORKSPACE_VIEW,
+            PERMISSIONS.WORKSPACE_UPDATE_IDENTITY,
+            PERMISSIONS.WORKSPACE_UPDATE_COUNTRY_CURRENCY,
+            PERMISSIONS.WORKSPACE_MANAGE_MEMBERS,
+            PERMISSIONS.WORKSPACE_MANAGE_ROLE_TAGS,
+            PERMISSIONS.WORKSPACE_PROMOTE_MEMBERS,
+            PERMISSIONS.WORKSPACE_DEMOTE_MEMBERS,
+            PERMISSIONS.BUSINESS_CREATE,
+            PERMISSIONS.BUSINESS_EDIT,
+            PERMISSIONS.INVOICE_CREATE,
+            PERMISSIONS.INVOICE_EDIT,
+            PERMISSIONS.INVOICE_DELETE,
+            PERMISSIONS.REPORTS_VIEW,
+            PERMISSIONS.REPORTS_VIEW_PROFIT,
+            PERMISSIONS.DATA_EXPORT,
+            PERMISSIONS.DATA_IMPORT
+        ]
     },
     1: {
         level: 1,
@@ -115,8 +154,26 @@ export const WORKSPACE_ROLES = {
         allowedTags: ['Co-Administration', 'Co-Founder', 'Head Manager', 'Vice President', 'Partner', 'Associate Director'],
         canBeRestricted: false,
         canManageMembers: true,
-        canChangeSettings: true,
-        description: 'Elevated management power. Handles visitors, workers, managers and full workspace operations.'
+        canChangeSettings: false, // Protected workspace ownership/identity restricted to Admin
+        canViewProfit: true,
+        canCreateEdit: true,
+        description: 'Elevated workspace administration. Handles Visitors, Workers, and Managers. Cannot modify Admin or protected workspace ownership.',
+        permissions: [
+            PERMISSIONS.WORKSPACE_VIEW,
+            PERMISSIONS.WORKSPACE_MANAGE_MEMBERS,
+            PERMISSIONS.WORKSPACE_MANAGE_ROLE_TAGS,
+            PERMISSIONS.WORKSPACE_PROMOTE_MEMBERS,
+            PERMISSIONS.WORKSPACE_DEMOTE_MEMBERS,
+            PERMISSIONS.BUSINESS_CREATE,
+            PERMISSIONS.BUSINESS_EDIT,
+            PERMISSIONS.INVOICE_CREATE,
+            PERMISSIONS.INVOICE_EDIT,
+            PERMISSIONS.INVOICE_DELETE,
+            PERMISSIONS.REPORTS_VIEW,
+            PERMISSIONS.REPORTS_VIEW_PROFIT,
+            PERMISSIONS.DATA_EXPORT,
+            PERMISSIONS.DATA_IMPORT
+        ]
     },
     2: {
         level: 2,
@@ -127,7 +184,18 @@ export const WORKSPACE_ROLES = {
         canBeRestricted: true,
         canManageMembers: false,
         canChangeSettings: false,
-        description: 'Operational manager. Handles invoices, catalog & sales. Cannot change workspace settings.'
+        canViewProfit: false, // Default: profit hidden unless explicitly authorized
+        canCreateEdit: true,
+        description: 'Operational manager. Handles invoices, catalog operations & sales floor. Cannot view profit by default or alter workspace settings.',
+        permissions: [
+            PERMISSIONS.WORKSPACE_VIEW,
+            PERMISSIONS.BUSINESS_CREATE,
+            PERMISSIONS.BUSINESS_EDIT,
+            PERMISSIONS.INVOICE_CREATE,
+            PERMISSIONS.INVOICE_EDIT,
+            PERMISSIONS.REPORTS_VIEW,
+            PERMISSIONS.DATA_EXPORT
+        ]
     },
     3: {
         level: 3,
@@ -138,7 +206,16 @@ export const WORKSPACE_ROLES = {
         canBeRestricted: true,
         canManageMembers: false,
         canChangeSettings: false,
-        description: 'Standard operator for sales and inventory. Can be restricted from add/update/delete.'
+        canViewProfit: false,
+        canCreateEdit: true,
+        description: 'Standard operator for sales and inventory. Can be restricted from add, update, or delete. Cannot view profit.',
+        permissions: [
+            PERMISSIONS.WORKSPACE_VIEW,
+            PERMISSIONS.INVOICE_CREATE,
+            PERMISSIONS.INVOICE_EDIT,
+            PERMISSIONS.BUSINESS_CREATE,
+            PERMISSIONS.BUSINESS_EDIT
+        ]
     },
     4: {
         level: 4,
@@ -150,12 +227,17 @@ export const WORKSPACE_ROLES = {
         isDefaultRestricted: true,
         canManageMembers: false,
         canChangeSettings: false,
-        description: 'Read-only observer. Restricted from editing/adding data and cannot see profit.'
+        canViewProfit: false,
+        canCreateEdit: false,
+        description: 'Read-only observer. Restricted from editing or adding data and strictly cannot view profit.',
+        permissions: [
+            PERMISSIONS.WORKSPACE_VIEW
+        ]
     }
 };
 
 export function getRoleLevel(role) {
-    if (typeof role === 'number') return Math.max(0, Math.min(4, role));
+    if (typeof role === 'number') return Math.max(0, Math.min(4, Math.floor(role)));
     const r = String(role || '').toUpperCase().trim();
     if (r === 'CREATOR_ADMIN' || r === 'ADMIN' || r === 'CREATOR' || r === 'FOUNDER' || r === '0') return 0;
     if (r === 'CO_ADMIN' || r === 'CO-ADMIN' || r === 'COADMIN' || r === '1') return 1;
@@ -170,14 +252,136 @@ export function getRoleMeta(role) {
     return WORKSPACE_ROLES[level] || WORKSPACE_ROLES[3];
 }
 
+/**
+ * Centralized authorization check
+ * @param {Object|number|string} userOrRole - Current member object, role level, or role string
+ * @param {string} permission - The required permission string from PERMISSIONS
+ * @returns {boolean}
+ */
+export function hasPermission(userOrRole, permission) {
+    if (!userOrRole && userOrRole !== 0) return false;
+    
+    let level = 3;
+    let memberData = null;
+    
+    if (typeof userOrRole === 'object') {
+        memberData = userOrRole;
+        level = memberData.workspaceRole !== undefined ? getRoleLevel(memberData.workspaceRole) : getRoleLevel(memberData.role);
+    } else {
+        level = getRoleLevel(userOrRole);
+    }
+
+    // Role 0 (Admin) has unrestricted power
+    if (level === 0) return true;
+
+    // Check base permissions of the role
+    const roleMeta = WORKSPACE_ROLES[level] || WORKSPACE_ROLES[3];
+    let granted = roleMeta.permissions.includes(permission);
+
+    // Apply specific member restrictions if present
+    if (memberData) {
+        // Profit view override
+        if (permission === PERMISSIONS.REPORTS_VIEW_PROFIT) {
+            if (memberData.canViewProfit === true) granted = true;
+            if (memberData.canViewProfit === false && level !== 0) granted = false;
+        }
+
+        // Action restriction overrides (disableAdd, disableUpdate, disableDelete)
+        if (memberData.disableAdd && (permission === PERMISSIONS.BUSINESS_CREATE || permission === PERMISSIONS.INVOICE_CREATE || permission === 'product.create')) {
+            granted = false;
+        }
+        if (memberData.disableUpdate && (permission === PERMISSIONS.BUSINESS_EDIT || permission === PERMISSIONS.INVOICE_EDIT || permission === 'product.edit')) {
+            granted = false;
+        }
+        if (memberData.disableDelete && (permission === PERMISSIONS.INVOICE_DELETE || permission === 'product.delete')) {
+            granted = false;
+        }
+        if (level === 4) {
+            // Visitors strictly cannot edit or add
+            if (permission !== PERMISSIONS.WORKSPACE_VIEW) granted = false;
+        }
+    }
+
+    return granted;
+}
+
+/**
+ * Hierarchy Authority Rule: Can the actor manage the target?
+ * - Role 0 (Admin) can manage anyone (except another action that removes the last admin).
+ * - Role 1 (Co-Admin) can manage roles 2, 3, 4. Cannot manage Role 0 or another Role 1.
+ * - Roles 2, 3, 4 cannot manage any member.
+ */
+export function canManageMember(actingRole, targetRole) {
+    const actorLevel = getRoleLevel(actingRole);
+    const targetLevel = getRoleLevel(targetRole);
+
+    if (actorLevel === 0) return true;
+    if (actorLevel === 1) {
+        return targetLevel > 1; // Can manage 2, 3, 4
+    }
+    return false;
+}
+
+/**
+ * Can the actor edit the target's role tag?
+ * - Members cannot change their own tag unless authorized:
+ *   - Admin can change their own and anyone else's tag.
+ *   - Co-Admin can change their own and roles 2, 3, 4 tags.
+ *   - Lower roles cannot change any tag.
+ */
+export function canChangeRoleTag(actingRole, targetRole, isSelf = false) {
+    const actorLevel = getRoleLevel(actingRole);
+    if (actorLevel === 0) return true;
+    if (actorLevel === 1) {
+        if (isSelf) return true;
+        const targetLevel = getRoleLevel(targetRole);
+        return targetLevel > 1;
+    }
+    return false;
+}
+
+/**
+ * Can the actor promote or demote a target to a target role level?
+ * - Actor level 0 (Admin): can set any level 1..4 (cannot demote last admin).
+ * - Actor level 1 (Co-Admin): can only promote/demote between 2, 3, 4. Cannot touch 0 or 1, and cannot promote anyone to 0 or 1.
+ * - Lower roles cannot promote/demote.
+ */
+export function canPromoteDemote(actingRole, fromRole, toRoleLevel) {
+    const actorLevel = getRoleLevel(actingRole);
+    const targetLevel = getRoleLevel(fromRole);
+    const newLevel = getRoleLevel(toRoleLevel);
+
+    if (actorLevel === 0) {
+        return newLevel >= 0 && newLevel <= 4;
+    }
+    if (actorLevel === 1) {
+        // Co-admin cannot modify role 0 or 1, and cannot promote to role 0 or 1
+        if (targetLevel <= 1) return false;
+        if (newLevel <= 1) return false;
+        return true;
+    }
+    return false;
+}
+
 export class WorkspaceInfo {
     constructor(data = {}) {
         this.workspaceId = data.workspaceId || generateWorkspaceId();
         this.name = data.name || "";
         this.tradeName = data.tradeName || data.shopName || "";
-        this.country = data.country || data.operatedCountry || "United States";
-        this.operatedCountry = data.operatedCountry || data.country || "United States";
-        this.industry = data.industry || data.category || "General";
+        
+        // Independent Country and Region
+        this.country = data.country || data.operatedCountry || "United Kingdom";
+        this.operatedCountry = data.operatedCountry || data.country || "United Kingdom";
+        this.countryCode = data.countryCode || "GB";
+        this.region = data.region || "";
+
+        // Independent Currency fields
+        this.currencyCode = data.currencyCode || "EUR";
+        this.currencyName = data.currencyName || "Euro";
+        this.currencySymbol = data.currencySymbol || data.currency || "€";
+        this.currency = this.currencySymbol;
+
+        this.industry = data.industry || data.category || "General Commercial";
         this.tagline = data.tagline || data.description || "";
         this.description = data.description || data.tagline || "Main";
         this.website = data.website || "";
@@ -185,17 +389,22 @@ export class WorkspaceInfo {
         this.phone = data.phone || "";
         this.supportPhone = data.supportPhone || "";
         this.email = data.email || data.adminEmail || "";
-        this.address = data.address || "";
+        this.address = data.address || data.businessAddress || "";
+        this.businessAddress = this.address;
         this.logoUrl = data.logoUrl || data.logo || "";
-        this.logo = data.logo || data.logoUrl || "";
+        this.logo = this.logoUrl;
         this.bannerUrl = data.bannerUrl || data.banner || "";
-        this.banner = data.banner || data.bannerUrl || "";
+        this.banner = this.bannerUrl;
         this.adminEmail = data.adminEmail || data.email || "";
         this.adminName = data.adminName || "";
         this.adminId = data.adminId || generateWorkerId();
+        
+        // System Role & Role Tag
         this.role = data.role || "CREATOR_ADMIN";
         this.workspaceRole = data.workspaceRole !== undefined ? Number(data.workspaceRole) : getRoleLevel(data.role);
-        this.roleTag = data.roleTag || data.customTag || "Founder";
+        this.roleTag = data.roleTag || data.customTag || (this.workspaceRole === 0 ? "Founder" : "Administrator");
+        this.workspaceStatus = data.workspaceStatus || "Active";
+        
         this.createdAt = Number(data.createdAt) || Date.now();
         this.workersCount = Number(data.workersCount) || 0;
         this.adminProductCount = Number(data.adminProductCount) || 0;
@@ -205,8 +414,6 @@ export class WorkspaceInfo {
         this.adminClientCount = Number(data.adminClientCount) || 0;
         this.adminTotalDeleted = Number(data.adminTotalDeleted) || 0;
         this.adminTotalDeletedCount = Number(data.adminTotalDeletedCount) || 0;
-        this.currency = data.currency || data.currencySymbol || "$";
-        this.currencySymbol = data.currencySymbol || data.currency || "$";
     }
 }
 
@@ -377,6 +584,30 @@ export class WorkerPermission {
         this.disableAdd = data.disableAdd || false;
         this.disableUpdate = data.disableUpdate || false;
         this.disableDelete = data.disableDelete || false;
+    }
+}
+
+export class WorkspaceMember {
+    constructor(data = {}) {
+        this.membershipId = data.membershipId || generateUniqueId();
+        this.workspaceId = data.workspaceId || "";
+        this.userId = data.userId || data.workerUid || "";
+        this.email = (data.email || "").toLowerCase();
+        this.name = data.name || (this.email ? this.email.split('@')[0] : "Member");
+        this.workspaceRole = data.workspaceRole !== undefined ? getRoleLevel(data.workspaceRole) : getRoleLevel(data.role || 3);
+        const roleMeta = getRoleMeta(this.workspaceRole);
+        this.role = roleMeta.id;
+        this.roleTag = data.roleTag || data.customTag || roleMeta.defaultTag;
+        this.membershipStatus = data.membershipStatus || data.status || "Joined";
+        this.status = this.membershipStatus;
+        this.isRestricted = Boolean(data.isRestricted);
+        this.disableAdd = Boolean(data.disableAdd);
+        this.disableUpdate = Boolean(data.disableUpdate);
+        this.disableDelete = Boolean(data.disableDelete);
+        this.canViewProfit = data.canViewProfit !== undefined ? Boolean(data.canViewProfit) : (this.workspaceRole <= 1);
+        this.invitedBy = data.invitedBy || data.adminEmail || "";
+        this.joinedAt = data.joinedAt || data.timestamp || Date.now();
+        this.updatedAt = data.updatedAt || Date.now();
     }
 }
 

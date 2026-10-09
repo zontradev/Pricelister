@@ -8,6 +8,7 @@ import { getAuth } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth
 import { CONFIG } from '../config.js';
 import { storageService } from '../supabase/storage.js';
 import { getInitialDemoData } from './demoData.js';
+import { WORKSPACE_ROLES, getRoleLevel, getRoleMeta } from '../DataModel.js';
 
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
@@ -184,10 +185,18 @@ export const firestoreService = {
                 phone: workspaceData.phone || "",
                 supportPhone: workspaceData.supportPhone || "",
                 address: workspaceData.address || "",
+                country: (workspaceData.country || workspaceData.countryName || "").trim(),
+                countryCode: (workspaceData.countryCode || "").trim(),
+                countryName: (workspaceData.countryName || workspaceData.country || "").trim(),
+                operatedCountry: (workspaceData.operatedCountry || workspaceData.countryName || workspaceData.country || "").trim(),
+                region: (workspaceData.region || "").trim(),
                 email: workspaceData.email || email || "",
                 adminEmail: email || workspaceData.adminEmail || "",
                 adminName: adminNameResolved,
                 adminId: workspaceData.adminId || adminWorkerId,
+                workspaceRole: 0,
+                roleTag: (workspaceData.roleTag || "Administrator").trim(),
+                workspaceStatus: "Active",
                 
                 // Creation Metadata
                 createdAt: nowEpoch,
@@ -211,7 +220,7 @@ export const firestoreService = {
                 securityVersion: 2,
                 isProtected: true,
 
-                workersCount: 0,
+                workersCount: 1,
                 adminProductCount: 0,
                 adminInvoiceCount: 0,
                 adminCategoryCount: 0,
@@ -219,6 +228,8 @@ export const firestoreService = {
                 adminClientCount: 0,
                 adminTotalDeleted: 0,
                 adminTotalDeletedCount: 0,
+                currencyCode: (workspaceData.currencyCode || "USD").trim().toUpperCase(),
+                currencyName: (workspaceData.currencyName || "").trim(),
                 currency: (workspaceData.currency || workspaceData.currencySymbol || "$").trim().substring(0, 3) || "$",
                 currencySymbol: (workspaceData.currencySymbol || workspaceData.currency || "$").trim().substring(0, 3) || "$",
                 logoUrl: workspaceData.logoUrl || workspaceData.logo || "",
@@ -228,8 +239,32 @@ export const firestoreService = {
             };
 
             await setDoc(workspaceRef, wsDocData);
+
+            // 2. Add Creator Member Record in Members subcollection
+            if (email) {
+                const adminMemberRef = doc(db, `Workspaces/${documentId}/Members`, email.toLowerCase());
+                await setDoc(adminMemberRef, {
+                    status: "Joined",
+                    workerUid: uid,
+                    appWorkerId: adminWorkerId,
+                    joinedAt: nowEpoch,
+                    name: adminNameResolved,
+                    email: email.toLowerCase(),
+                    role: "ADMIN",
+                    workspaceRole: 0,
+                    roleTag: (workspaceData.roleTag || "Administrator").trim(),
+                    isCreator: true,
+                    canViewProfit: true,
+                    isRestricted: false,
+                    disableDelete: false,
+                    disableUpdate: false,
+                    disableAdd: false,
+                    productAdded: 0,
+                    invoiceAdded: 0
+                }, { merge: true });
+            }
             
-            // 2. Initialize ReceiptData with Currency & Shop Details
+            // 3. Initialize ReceiptData with Currency & Shop Details
             const receiptRef = doc(db, 'ReceiptData', documentId);
             await setDoc(receiptRef, {
                 "Vending": false,
@@ -239,7 +274,10 @@ export const firestoreService = {
                 "End Massage": "",
                 "Customer Name": true,
                 "Customer number": true,
+                "Country": (workspaceData.country || workspaceData.countryName || "").trim(),
                 "Currency": (workspaceData.currency || workspaceData.currencySymbol || "$").trim().substring(0, 3) || "$",
+                "CurrencyCode": (workspaceData.currencyCode || "USD").trim().toUpperCase(),
+                "CurrencyName": (workspaceData.currencyName || "").trim(),
                 "Logo Url": workspaceData.logoUrl || workspaceData.logo || "",
                 "Banner Url": workspaceData.bannerUrl || workspaceData.banner || "",
                 "created_timestamp": nowIso,
@@ -249,11 +287,13 @@ export const firestoreService = {
                 "last_updated": now
             }, { merge: true });
 
-            // 3. Update User Profile in userCollection
+            // 4. Update User Profile in userCollection
             const userRef = doc(db, 'userCollection', uid);
             await setDoc(userRef, {
                 email: email,
                 role: 'CREATOR_ADMIN',
+                workspaceRole: 0,
+                roleTag: (workspaceData.roleTag || "Administrator").trim(),
                 createdAt: serverTimestamp()
             }, { merge: true });
             
@@ -332,12 +372,17 @@ export const firestoreService = {
     acceptWorkspaceInvite: async (invite, user) => {
         try {
             const workerId = user.uid.substring(0, 8); // Simple worker ID generation
-            
+            const roleLevel = invite.workspaceRole !== undefined ? Number(invite.workspaceRole) : getRoleLevel(invite.role || 'WORKER');
+            const roleMeta = getRoleMeta(roleLevel);
+            const roleTagResolved = invite.roleTag || roleMeta.defaultTag;
+
             // 1. Create Connection Document
             await setDoc(doc(db, 'Connections', user.uid), {
                 adminUid: invite.adminUid,
                 adminEmail: invite.adminEmail || '',
-                role: invite.role || 'WORKER'
+                role: roleMeta.id,
+                workspaceRole: roleLevel,
+                roleTag: roleTagResolved
             });
 
             // 2. Add User to Workspace Members Collection
@@ -348,11 +393,14 @@ export const firestoreService = {
                 joinedAt: Date.now(),
                 name: user.displayName || user.email,
                 email: user.email.toLowerCase(),
-                role: invite.role || "Worker",
-                isRestricted: false,
-                disableDelete: false,
-                disableUpdate: false,
-                disableAdd: false,
+                role: roleMeta.id,
+                workspaceRole: roleLevel,
+                roleTag: roleTagResolved,
+                canViewProfit: Boolean(invite.canViewProfit ?? roleMeta.canViewProfit),
+                isRestricted: Boolean(invite.isRestricted ?? roleMeta.isDefaultRestricted),
+                disableDelete: Boolean(invite.disableDelete),
+                disableUpdate: Boolean(invite.disableUpdate),
+                disableAdd: Boolean(invite.disableAdd),
                 productAdded: 0,
                 invoiceAdded: 0
             }, { merge: true });
@@ -503,23 +551,101 @@ export const firestoreService = {
     },
 
     getWorkspaceMembers: async (adminUid) => {
-        if (adminUid === 'ws_dev_mock' || adminUid === 'dev-mock-uid') {
-            return [
+        if (adminUid === 'ws_dev_mock' || adminUid === 'dev-mock-uid' || !adminUid) {
+            try {
+                const rawMock = localStorage.getItem('pricelister_mock_members');
+                if (rawMock) {
+                    const parsed = JSON.parse(rawMock);
+                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                }
+            } catch (e) {}
+
+            const defaultMockMembers = [
                 {
                     email: 'developer@local.test',
                     name: 'Demo Admin (Testing)',
-                    role: 'CREATOR_ADMIN',
+                    role: 'ADMIN',
+                    workspaceRole: 0,
+                    roleTag: 'Founder',
                     status: 'Joined',
-                    joinedAt: Date.now() - 86400000 * 30
+                    isCreator: true,
+                    canViewProfit: true,
+                    isRestricted: false,
+                    joinedAt: Date.now() - 86400000 * 30,
+                    productAdded: 14,
+                    invoiceAdded: 22,
+                    totalDeleted: 0
                 },
                 {
                     email: 'sarah.coadmin@pricelister.app',
                     name: 'Sarah Jenkins',
                     role: 'CO_ADMIN',
+                    workspaceRole: 1,
+                    roleTag: 'Co-Founder',
                     status: 'Joined',
-                    joinedAt: Date.now() - 86400000 * 15
+                    isCreator: false,
+                    canViewProfit: true,
+                    isRestricted: false,
+                    joinedAt: Date.now() - 86400000 * 15,
+                    productAdded: 8,
+                    invoiceAdded: 9,
+                    totalDeleted: 1
+                },
+                {
+                    email: 'marcus.manager@pricelister.app',
+                    name: 'Marcus Vance',
+                    role: 'MANAGER',
+                    workspaceRole: 2,
+                    roleTag: 'Store Manager',
+                    status: 'Joined',
+                    isCreator: false,
+                    canViewProfit: false,
+                    isRestricted: false,
+                    joinedAt: Date.now() - 86400000 * 10,
+                    productAdded: 5,
+                    invoiceAdded: 14,
+                    totalDeleted: 0
+                },
+                {
+                    email: 'alex.worker@pricelister.app',
+                    name: 'Alex Taylor',
+                    role: 'WORKER',
+                    workspaceRole: 3,
+                    roleTag: 'Staff',
+                    status: 'Joined',
+                    isCreator: false,
+                    canViewProfit: false,
+                    isRestricted: false,
+                    joinedAt: Date.now() - 86400000 * 5,
+                    productAdded: 2,
+                    invoiceAdded: 6,
+                    totalDeleted: 0
+                },
+                {
+                    email: 'olivia.visitor@pricelister.app',
+                    name: 'Olivia Guest',
+                    role: 'VISITOR',
+                    workspaceRole: 4,
+                    roleTag: 'Visitor',
+                    status: 'Joined',
+                    isCreator: false,
+                    canViewProfit: false,
+                    isRestricted: true,
+                    disableAdd: true,
+                    disableUpdate: true,
+                    disableDelete: true,
+                    joinedAt: Date.now() - 86400000 * 2,
+                    productAdded: 0,
+                    invoiceAdded: 0,
+                    totalDeleted: 0
                 }
             ];
+
+            try {
+                localStorage.setItem('pricelister_mock_members', JSON.stringify(defaultMockMembers));
+            } catch (e) {}
+
+            return defaultMockMembers;
         }
         try {
             const membersRef = collection(db, `Workspaces/${adminUid}/Members`);
