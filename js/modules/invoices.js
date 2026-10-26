@@ -707,7 +707,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     };
 
     const isInvoiceFormDirty = () => {
-        if (!editorView || editorView.style.display === 'none') return false;
+        if (!editorView || !document.body.contains(editorView) || editorView.style.display === 'none') return false;
 
         if (editingInvoiceId) {
             if (!initialInvoiceFormSnapshot) return false;

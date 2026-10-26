@@ -225,10 +225,15 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                         </div>
                     </div>
 
-                    <div style="display: flex; gap: 0.65rem; align-items: center;">
-                        <button type="button" class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; font-weight: 600; padding: 0.55rem 1rem; border-radius: 10px;">
+                    <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; font-weight: 600; padding: 0.6rem 1rem; border-radius: 10px;">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                             <span>Workspace Hub</span>
+                        </button>
+                        <button type="button" id="btn-header-save-settings" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; font-weight: 700; padding: 0.6rem 1.35rem; border-radius: 10px; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; transition: all 0.2s ease;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            <span class="btn-save-label">Save Settings</span>
+                            <span id="header-unsaved-dot" style="display: none; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 6px #f59e0b;"></span>
                         </button>
                     </div>
                 </div>
@@ -314,33 +319,9 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                     </div>
                 </div>
 
-                <!-- NAVIGATION TABS -->
-                <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1.5px solid var(--border-color);" id="settings-tabs-nav">
-                    <button type="button" class="settings-tab-btn active" data-tab="tab-general" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 12px; border: 1px solid var(--border-color); background: #ffffff; color: var(--text-primary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-                        <span>General, Brand &amp; Media</span>
-                    </button>
-                    <button type="button" class="settings-tab-btn" data-tab="tab-currency" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                        <span>Country &amp; Currency</span>
-                    </button>
-                    <button type="button" class="settings-tab-btn" data-tab="tab-receipts" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                        <span>Receipts &amp; Invoicing</span>
-                    </button>
-                    <button type="button" class="settings-tab-btn" data-tab="tab-vending" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
-                        <span>Automation &amp; Stock</span>
-                    </button>
-                    <button type="button" class="settings-tab-btn" data-tab="tab-data" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        <span>Data &amp; Excel Tools</span>
-                    </button>
-                    <button type="button" class="settings-tab-btn" data-tab="tab-security" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-size: 0.86rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                        <span>Security &amp; Danger Zone</span>
-                    </button>
-                </div>
+                <!-- MAIN SETTINGS SPLIT LAYOUT (PANE CONTENT + RIGHT FLOATING DIVER RAIL) -->
+                <div class="settings-layout-split">
+                    <div class="settings-main-column">
 
                 <!-- ======================================================== -->
                 <!-- TAB 1: GENERAL, BRAND & MEDIA -->
@@ -555,6 +536,21 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             </div>
                         </div>
 
+                        <!-- TAB 1 FOOTER ACTIONS -->
+                        <div style="margin-top: 1.5rem; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                            <div>
+                                <strong style="display: block; font-size: 0.92rem; color: var(--text-primary);">Save Brand &amp; Identity Settings</strong>
+                                <span style="font-size: 0.8rem; color: var(--text-secondary);">Updates your logo, cover banner, business registration, contact and location information.</span>
+                            </div>
+                            <div style="display: flex; gap: 0.65rem; align-items: center;">
+                                <button type="button" class="btn btn-secondary btn-tab-discard" style="border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.5rem 1rem;">Discard</button>
+                                <button type="button" class="btn btn-primary btn-tab-save" style="border-radius: 8px; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; cursor: pointer;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                    <span class="btn-save-label">Save Settings</span>
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -699,6 +695,21 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             </div>
                         </div>
 
+                        <!-- TAB 2 FOOTER ACTIONS -->
+                        <div style="margin-top: 1.5rem; background: #fafaf9; border: 1.5px solid #e4e4e7; border-radius: 16px; padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <div>
+                                <strong style="display: block; font-size: 0.92rem; color: var(--text-primary);">Save Currency &amp; Regional Preferences</strong>
+                                <span style="font-size: 0.8rem; color: var(--text-secondary);">Applies accounting currency, symbol, country ISO code and regional jurisdiction.</span>
+                            </div>
+                            <div style="display: flex; gap: 0.65rem; align-items: center;">
+                                <button type="button" class="btn btn-secondary btn-tab-discard" style="border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.5rem 1rem;">Discard</button>
+                                <button type="button" class="btn btn-primary btn-tab-save" style="border-radius: 8px; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; cursor: pointer;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                    <span class="btn-save-label">Save Settings</span>
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -783,6 +794,21 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             </div>
                         </div>
 
+                        <!-- TAB 3 FOOTER ACTIONS -->
+                        <div style="grid-column: 1 / -1; margin-top: 0.5rem; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                            <div>
+                                <strong style="display: block; font-size: 0.92rem; color: var(--text-primary);">Save Receipts &amp; Invoicing Template</strong>
+                                <span style="font-size: 0.8rem; color: var(--text-secondary);">Updates shop title header, customer details toggle, and return/warranty footer note.</span>
+                            </div>
+                            <div style="display: flex; gap: 0.65rem; align-items: center;">
+                                <button type="button" class="btn btn-secondary btn-tab-discard" style="border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.5rem 1rem;">Discard</button>
+                                <button type="button" class="btn btn-primary btn-tab-save" style="border-radius: 8px; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; cursor: pointer;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                    <span class="btn-save-label">Save Settings</span>
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -810,6 +836,21 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                                     ${isVendingActive ? 'ENABLED' : 'DISABLED'}
                                 </span>
                             </label>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4 FOOTER ACTIONS -->
+                    <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 1.5rem;">
+                        <div>
+                            <strong style="display: block; font-size: 0.92rem; color: var(--text-primary);">Save Automation &amp; Stock Configuration</strong>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">Updates real-time automatic stock inventory deduction settings for POS and invoicing.</span>
+                        </div>
+                        <div style="display: flex; gap: 0.65rem; align-items: center;">
+                            <button type="button" class="btn btn-secondary btn-tab-discard" style="border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.5rem 1rem;">Discard</button>
+                            <button type="button" class="btn btn-primary btn-tab-save" style="border-radius: 8px; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; cursor: pointer;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                <span class="btn-save-label">Save Settings</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -948,6 +989,71 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
 
                     </div>
                 </div>
+
+                    </div> <!-- End of settings-main-column -->
+
+                    <!-- ======================================================== -->
+                    <!-- RIGHT FLOATING DIVIDER / RAIL NAVIGATION DOCK            -->
+                    <!-- ======================================================== -->
+                    <aside class="settings-floating-rail" id="settings-floating-rail">
+                        <div class="settings-rail-card" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.25rem 1rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.04);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.25rem 0.5rem 0.75rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem;">
+                                <span style="font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                    Settings Sections
+                                </span>
+                                <span id="rail-unsaved-pill" style="display: none; font-size: 0.68rem; font-weight: 700; padding: 0.12rem 0.5rem; border-radius: 999px; background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3);">Unsaved</span>
+                            </div>
+
+                            <nav id="settings-rail-nav" style="display: flex; flex-direction: column; gap: 0.35rem;">
+                                <button type="button" class="settings-tab-btn settings-rail-btn active" data-tab="tab-general">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                                    <span>General, Brand &amp; Media</span>
+                                </button>
+                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-currency">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                    <span>Country &amp; Currency</span>
+                                </button>
+                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-receipts">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                    <span>Receipts &amp; Invoicing</span>
+                                </button>
+                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-vending">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                                    <span>Automation &amp; Stock</span>
+                                </button>
+                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-data">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    <span>Data &amp; Excel Tools</span>
+                                </button>
+                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-security">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                    <span>Security &amp; Danger Zone</span>
+                                </button>
+                            </nav>
+
+                            <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px dashed var(--border-color);">
+                                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                                    <span style="display: flex; align-items: center; gap: 0.4rem;">
+                                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);"></span>
+                                        Firestore &amp; Supabase
+                                    </span>
+                                    <strong style="color: #059669; font-weight: 700;">Live Sync</strong>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <button type="button" id="btn-rail-save-settings" class="btn btn-primary btn-tab-save btn-disabled" style="width: 100%; font-size: 0.84rem; font-weight: 700; padding: 0.6rem 1rem; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" disabled>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                        <span>Save Changes</span>
+                                    </button>
+                                    <button type="button" id="btn-rail-discard-settings" class="btn btn-secondary btn-tab-discard" style="width: 100%; font-size: 0.8rem; font-weight: 600; padding: 0.45rem 1rem; border-radius: 10px; display: none; align-items: center; justify-content: center; gap: 0.4rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                                        <span>Discard Changes</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                </div> <!-- End of settings-layout-split -->
 
                 <!-- ======================================================== -->
                 <!-- FLOATING SAVE / DISCARD ACTION BAR -->
@@ -1404,10 +1510,15 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             inp?.addEventListener('input', checkDirty);
         });
 
-        // Snapshot & Dirty Checking for Floating Bar
+        // Snapshot & Dirty Checking for All Save Buttons & Floating Bar
         let savedSnapshot = {
             enableVending: isVendingActive,
             currencySymbol: wsCurrency,
+            currencyCode: wsCurrencyCode,
+            currencyName: wsCurrencyName,
+            country: wsCountry,
+            countryCode: wsCountryCode,
+            region: wsRegion,
             name: wsDisplayName,
             tradeName: wsTradeName,
             industry: wsIndustry,
@@ -1426,13 +1537,40 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             bannerUrl: bannerUrl
         };
 
+        const btnHeaderSave = container.querySelector('#btn-header-save-settings');
+        const headerUnsavedDot = container.querySelector('#header-unsaved-dot');
         const floatingBar = container.querySelector('#settings-floating-bar');
-        const btnSave = container.querySelector('#btn-save-settings');
-        const btnDiscard = container.querySelector('#btn-discard-settings');
+        const btnFloatingSave = container.querySelector('#btn-save-settings');
+        const btnFloatingDiscard = container.querySelector('#btn-discard-settings');
+
+        const btnRailSave = container.querySelector('#btn-rail-save-settings');
+        const btnRailDiscard = container.querySelector('#btn-rail-discard-settings');
+        const railUnsavedPill = container.querySelector('#rail-unsaved-pill');
+
+        const getAllSaveButtons = () => {
+            return [
+                btnHeaderSave,
+                btnFloatingSave,
+                btnRailSave,
+                ...container.querySelectorAll('.btn-tab-save')
+            ].filter(Boolean);
+        };
+
+        const getAllDiscardButtons = () => {
+            return [
+                btnFloatingDiscard,
+                btnRailDiscard,
+                ...container.querySelectorAll('.btn-tab-discard')
+            ].filter(Boolean);
+        };
 
         const checkDirty = () => {
             const curVending = Boolean(vendingInput?.checked);
             const curSymbol = (currencyInput?.value || '$').trim().substring(0, 3) || '$';
+            const curCode = (currencyCodeSelect?.value || 'EUR').toUpperCase();
+            const curCurrName = (currencyNameInput?.value || '').trim();
+            const curCountry = (countrySelect?.value || wsCountry || '').trim();
+            const curRegion = (regionInput?.value || '').trim();
             const curName = (nameInput?.value || '').trim();
             const curTradeName = (tradeNameInput?.value || '').trim();
             const curIndustry = industrySelect?.value || 'General Commercial';
@@ -1454,26 +1592,75 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             const isBannerDirty = Boolean(selectedWsBannerFile) || (curBannerUrl !== (savedSnapshot.bannerUrl || ''));
 
             const isDirty = (
-                curVending !== savedSnapshot.enableVending ||
-                curSymbol !== savedSnapshot.currencySymbol ||
-                curName !== savedSnapshot.name ||
-                curTradeName !== savedSnapshot.tradeName ||
-                curIndustry !== savedSnapshot.industry ||
-                curTagline !== savedSnapshot.tagline ||
-                curWebsite !== savedSnapshot.website ||
-                curTaxId !== savedSnapshot.taxId ||
-                curEmail !== savedSnapshot.email ||
-                curPhone !== savedSnapshot.phone ||
-                curSupportPhone !== savedSnapshot.supportPhone ||
-                curAddress !== savedSnapshot.address ||
-                curShop !== savedSnapshot.shopName ||
-                curEndMsg !== savedSnapshot.endMessage ||
-                curCustName !== savedSnapshot.customerName ||
-                curCustPhone !== savedSnapshot.customerNumber ||
+                curVending !== Boolean(savedSnapshot.enableVending) ||
+                curSymbol !== (savedSnapshot.currencySymbol || '$') ||
+                curCode !== (savedSnapshot.currencyCode || 'EUR') ||
+                curCurrName !== (savedSnapshot.currencyName || '') ||
+                curCountry !== (savedSnapshot.country || '') ||
+                curRegion !== (savedSnapshot.region || '') ||
+                curName !== (savedSnapshot.name || '') ||
+                curTradeName !== (savedSnapshot.tradeName || '') ||
+                curIndustry !== (savedSnapshot.industry || 'General Commercial') ||
+                curTagline !== (savedSnapshot.tagline || '') ||
+                curWebsite !== (savedSnapshot.website || '') ||
+                curTaxId !== (savedSnapshot.taxId || '') ||
+                curEmail !== (savedSnapshot.email || '') ||
+                curPhone !== (savedSnapshot.phone || '') ||
+                curSupportPhone !== (savedSnapshot.supportPhone || '') ||
+                curAddress !== (savedSnapshot.address || '') ||
+                curShop !== (savedSnapshot.shopName || '') ||
+                curEndMsg !== (savedSnapshot.endMessage || '') ||
+                curCustName !== Boolean(savedSnapshot.customerName) ||
+                curCustPhone !== Boolean(savedSnapshot.customerNumber) ||
                 isLogoDirty ||
                 isBannerDirty
             );
 
+            // Save Buttons: strictly disabled and non-clickable unless isDirty is TRUE
+            const allSaveBtns = getAllSaveButtons();
+            allSaveBtns.forEach(btn => {
+                btn.disabled = !isDirty;
+                if (isDirty) {
+                    btn.removeAttribute('disabled');
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                    btn.style.pointerEvents = 'auto';
+                    btn.classList.remove('btn-disabled');
+                } else {
+                    btn.setAttribute('disabled', 'true');
+                    btn.style.opacity = '0.45';
+                    btn.style.cursor = 'not-allowed';
+                    btn.style.pointerEvents = 'none';
+                    btn.classList.add('btn-disabled');
+                }
+            });
+
+            // Discard Buttons: only shown when changes occurred
+            const allDiscardBtns = getAllDiscardButtons();
+            allDiscardBtns.forEach(btn => {
+                btn.style.display = isDirty ? 'inline-flex' : 'none';
+                btn.disabled = !isDirty;
+            });
+
+            // Unsaved status badges
+            if (headerUnsavedDot) {
+                headerUnsavedDot.style.display = isDirty ? 'inline-block' : 'none';
+            }
+            if (railUnsavedPill) {
+                railUnsavedPill.style.display = isDirty ? 'inline-block' : 'none';
+            }
+
+            if (btnHeaderSave) {
+                if (isDirty) {
+                    btnHeaderSave.style.boxShadow = '0 4px 18px rgba(245, 158, 11, 0.4)';
+                    btnHeaderSave.style.borderColor = '#f59e0b';
+                } else {
+                    btnHeaderSave.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.2)';
+                    btnHeaderSave.style.borderColor = '#18181b';
+                }
+            }
+
+            // Bottom Floating Bar: only reveals when unsaved changes exist
             if (floatingBar) {
                 if (isDirty) {
                     floatingBar.style.opacity = '1';
@@ -1487,8 +1674,11 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             }
         };
 
-        // Discard Handler
-        btnDiscard?.addEventListener('click', () => {
+        // Unified Discard Handler with Modal Safety
+        const performDiscard = async () => {
+            const confirmed = await showAlert.confirmDiscard("Discard all unsaved edits? All changes since your last save will be reverted.");
+            if (!confirmed) return;
+
             selectedWsLogoFile = null;
             selectedWsBannerFile = null;
             if (nameInput) nameInput.value = savedSnapshot.name;
@@ -1506,6 +1696,11 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             if (setCustName) setCustName.checked = savedSnapshot.customerName;
             if (setCustNum) setCustNum.checked = savedSnapshot.customerNumber;
             
+            if (countrySelect && savedSnapshot.country) countrySelect.value = savedSnapshot.country;
+            if (regionInput) regionInput.value = savedSnapshot.region || '';
+            if (currencyCodeSelect && savedSnapshot.currencyCode) currencyCodeSelect.value = savedSnapshot.currencyCode;
+            if (currencyNameInput) currencyNameInput.value = savedSnapshot.currencyName || '';
+
             if (logoFileInput) logoFileInput.value = '';
             if (logoUrlInput) logoUrlInput.value = savedSnapshot.logoUrl || '';
             updateLogoDisplay(savedSnapshot.logoUrl || '');
@@ -1533,19 +1728,28 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             if (heroEmail) heroEmail.textContent = savedSnapshot.email;
 
             checkDirty();
-            showAlert.info("Changes reverted back to saved settings.");
+            showAlert.info("Changes discarded. Reverted to previously saved settings.");
+        };
+
+        getAllDiscardButtons().forEach(btn => {
+            btn.addEventListener('click', performDiscard);
         });
 
-        // Save Settings Handler
-        btnSave?.addEventListener('click', async () => {
+        // Unified Save Handler
+        const performSave = async () => {
             let finalLogoUrl = (logoUrlInput?.value || '').trim();
             let finalBannerUrl = (bannerUrlInput?.value || '').trim();
 
-            btnSave.disabled = true;
-            btnSave.innerHTML = `<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Saving Changes...`;
+            const saveBtns = getAllSaveButtons();
+            saveBtns.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Saving...`;
+            });
 
             if (selectedWsLogoFile) {
-                btnSave.innerHTML = `<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Processing Logo...`;
+                saveBtns.forEach(btn => {
+                    btn.innerHTML = `<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Uploading Logo...`;
+                });
                 try {
                     if (isMock) {
                         finalLogoUrl = await new Promise((resolve) => {
@@ -1563,7 +1767,9 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             }
 
             if (selectedWsBannerFile) {
-                btnSave.innerHTML = `<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Processing Banner...`;
+                saveBtns.forEach(btn => {
+                    btn.innerHTML = `<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Uploading Banner...`;
+                });
                 try {
                     if (isMock) {
                         finalBannerUrl = await new Promise((resolve) => {
@@ -1580,10 +1786,23 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 }
             }
 
+            const chosenCountry = (countrySelect?.value || wsCountry || 'United Kingdom').trim();
+            const chosenCountryCode = countrySelect?.selectedOptions?.[0]?.getAttribute('data-code') || wsCountryCode || 'GB';
+            const chosenRegion = (regionInput?.value || wsRegion || '').trim();
+            const chosenCurrencyCode = (currencyCodeSelect?.value || wsCurrencyCode || 'EUR').toUpperCase();
+            const chosenCurrencyName = (currencyNameInput?.value || wsCurrencyName || 'Euro').trim();
+
             const updatedPayload = {
                 enableVending: Boolean(vendingInput?.checked),
                 currency: (currencyInput?.value || '$').trim().substring(0, 3) || '$',
                 currencySymbol: (currencyInput?.value || '$').trim().substring(0, 3) || '$',
+                currencyCode: chosenCurrencyCode,
+                currencyName: chosenCurrencyName,
+                country: chosenCountry,
+                countryCode: chosenCountryCode,
+                countryName: chosenCountry,
+                operatedCountry: chosenCountry,
+                region: chosenRegion,
                 name: (nameInput?.value || '').trim(),
                 tradeName: (tradeNameInput?.value || nameInput?.value || '').trim(),
                 industry: industrySelect?.value || 'General Commercial',
@@ -1603,16 +1822,24 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 bannerUrl: finalBannerUrl
             };
 
+            const resetSaveButtons = () => {
+                saveBtns.forEach(btn => {
+                    btn.disabled = false;
+                    btn.innerHTML = `
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        <span class="btn-save-label">Save Settings</span>
+                    `;
+                });
+            };
+
             if (!updatedPayload.name) {
                 showAlert.warning("Workspace name cannot be empty.");
-                btnSave.disabled = false;
-                btnSave.textContent = 'Save Changes';
+                resetSaveButtons();
                 return;
             }
             if (!updatedPayload.email) {
                 showAlert.warning("Business email cannot be empty.");
-                btnSave.disabled = false;
-                btnSave.textContent = 'Save Changes';
+                resetSaveButtons();
                 return;
             }
 
@@ -1627,6 +1854,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 
                 updateLogoDisplay(finalLogoUrl);
                 updateBannerDisplay(finalBannerUrl);
+                updateCurrencyPreview();
                 checkDirty();
 
                 // Live UI sync for workspace logos, banners & names across app
@@ -1638,6 +1866,10 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                     window.__activeWorkspace.name = updatedPayload.name;
                     window.__activeWorkspace.tradeName = updatedPayload.tradeName;
                     window.__activeWorkspace.industry = updatedPayload.industry;
+                    window.__activeWorkspace.country = updatedPayload.country;
+                    window.__activeWorkspace.region = updatedPayload.region;
+                    window.__activeWorkspace.currency = updatedPayload.currency;
+                    window.__activeWorkspace.currencySymbol = updatedPayload.currencySymbol;
                 }
                 const sidebarLogo = document.querySelector('.sidebar-logo');
                 if (sidebarLogo && finalLogoUrl) {
@@ -1649,10 +1881,16 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 console.error("Save settings error:", err);
                 showAlert.error("Failed to save settings: " + (err.message || 'Unknown error'));
             } finally {
-                btnSave.disabled = false;
-                btnSave.textContent = 'Save Changes';
+                resetSaveButtons();
             }
+        };
+
+        getAllSaveButtons().forEach(btn => {
+            btn.addEventListener('click', performSave);
         });
+
+        // Initial evaluation ensures Save Changes is strictly disabled until actual modifications happen
+        checkDirty();
 
         // Data Management Buttons
         container.querySelector('#btn-settings-market-inserter')?.addEventListener('click', () => {

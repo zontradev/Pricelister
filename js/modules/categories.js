@@ -342,7 +342,7 @@ export const renderCategories = async (container, workspaceId) => {
     });
 
     const isCatFormDirty = () => {
-        if (!formContainer || formContainer.style.display === 'none') return false;
+        if (!formContainer || !document.body.contains(formContainer) || formContainer.style.display === 'none') return false;
         const nameVal = (container.querySelector('#cat-name')?.value || '').trim();
         const colorVal = container.querySelector('#cat-color')?.value || '#4a90e2';
         const isEdit = Boolean(container.querySelector('#cat-id')?.value);

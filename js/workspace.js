@@ -265,6 +265,10 @@ export const renderOverview = async (container, workspaceId) => {
                     </div>
 
                     <!-- Quick Shortcuts -->
+                    <a href="#/schema-analyzer" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; padding:0.5rem 0.85rem; border-color:#6366f1; color:#4f46e5; background:rgba(99,102,241,0.06);" title="Relational Schema & Demand Analyzer">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                        Schema Analyzer
+                    </a>
                     <a href="#/invoices/customer" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; padding:0.5rem 1rem;">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
                         New Invoice

@@ -311,10 +311,24 @@ export const getSettingsService = (workspaceId) => {
                 Object.assign(window.__activeWorkspace, wsPayload);
             }
 
+            // Clean undefined values to prevent Firestore serialization crashes
+            const cleanFirestorePayload = (obj) => {
+                const res = {};
+                for (const [k, v] of Object.entries(obj)) {
+                    if (v !== undefined) {
+                        res[k] = v;
+                    }
+                }
+                return res;
+            };
+
+            const cleanReceiptPayload = cleanFirestorePayload(receiptPayload);
+            const cleanWsPayload = cleanFirestorePayload(wsPayload);
+
             try {
                 await Promise.all([
-                    setDoc(receiptRef, receiptPayload, { merge: true }),
-                    setDoc(wsRef, wsPayload, { merge: true })
+                    setDoc(receiptRef, cleanReceiptPayload, { merge: true }),
+                    setDoc(wsRef, cleanWsPayload, { merge: true })
                 ]);
             } catch (cloudErr) {
                 console.warn("Firestore settings cloud write warning (stored in local storage mirror):", cloudErr);

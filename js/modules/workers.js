@@ -5,6 +5,7 @@ import { getRoleBadgeHtml } from '../auth-handler.js';
 import { getProductService } from '../services/productService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { getSettingsService } from '../services/settingsService.js';
+import { openBannerPickerModal } from './bannerModal.js';
 import { getFirestore, doc, collection, getDoc, setDoc, deleteDoc, updateDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 
@@ -111,26 +112,26 @@ export const renderWorkers = async (container, workspaceId) => {
         <div class="workspace-view-wrapper" style="max-width: 1320px; margin: 0 auto; padding-bottom: 3.5rem;">
 
             <!-- ======================================================== -->
-            <!-- 1. TOP HERO COVER BANNER (DYNAMIC BANNER & GLASS UI)     -->
+            <!-- 1. TOP HERO COVER BANNER (LARGE BANNER & GLASS ARMATURE) -->
             <!-- ======================================================== -->
-            <div class="ws-hero-banner" style="position:relative; border-radius: 20px; overflow: hidden; ${wsInfo.bannerUrl || wsInfo.banner ? `background: linear-gradient(180deg, rgba(9, 9, 11, 0.45) 0%, rgba(9, 9, 11, 0.88) 100%), url('${wsInfo.bannerUrl || wsInfo.banner}') center/cover no-repeat;` : `background: linear-gradient(135deg, #09090b 0%, #18181b 45%, #27272a 100%);`} color: #ffffff; box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.12); margin-bottom: 1.75rem;">
+            <div class="ws-hero-banner" style="position:relative; border-radius: 22px; overflow: hidden; min-height: 270px; ${wsInfo.bannerUrl || wsInfo.banner ? `background: linear-gradient(180deg, rgba(9, 9, 11, 0.4) 0%, rgba(9, 9, 11, 0.88) 100%), url('${wsInfo.bannerUrl || wsInfo.banner}') center/cover no-repeat;` : `background: linear-gradient(135deg, #09090b 0%, #18181b 45%, #27272a 100%);`} color: #ffffff; box-shadow: 0 18px 45px -10px rgba(0, 0, 0, 0.35); border: 1.5px solid rgba(255, 255, 255, 0.14); margin-bottom: 1.75rem; transition: background 0.3s ease;">
                 
                 <!-- Ambient Glow Orbs -->
-                <div style="position:absolute; width: 350px; height: 350px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%); top: -100px; right: -80px; pointer-events:none;"></div>
-                <div style="position:absolute; width: 250px; height: 250px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%); bottom: -60px; left: 10%; pointer-events:none;"></div>
+                <div style="position:absolute; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.09) 0%, transparent 70%); top: -100px; right: -80px; pointer-events:none;"></div>
+                <div style="position:absolute; width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%); bottom: -60px; left: 10%; pointer-events:none;"></div>
 
                 <!-- Main Hero Body -->
-                <div style="padding: 2.25rem 2.25rem 1.75rem; position:relative; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem;">
+                <div style="padding: 2.5rem 2.25rem 2rem; position:relative; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem;">
                     
                     <!-- Left: Avatar + Title + Tagline -->
-                    <div style="display: flex; gap: 1.35rem; align-items: center; max-width: 780px;">
+                    <div style="display: flex; gap: 1.5rem; align-items: center; max-width: 800px;">
                         
                         <!-- Workspace Avatar / Badge (1:1 Aspect Ratio) -->
-                        <div class="ws-hero-avatar" style="width: 82px; height: 82px; border-radius: 18px; background: rgba(255, 255, 255, 0.18); backdrop-filter: blur(12px); border: 2px solid rgba(255, 255, 255, 0.4); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.25); flex-shrink: 0; overflow:hidden;">
+                        <div class="ws-hero-avatar" id="btn-hero-logo-box" title="Click to edit workspace settings" style="width: 88px; height: 88px; border-radius: 20px; background: rgba(255, 255, 255, 0.18); backdrop-filter: blur(12px); border: 2.5px solid rgba(255, 255, 255, 0.45); display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 30px rgba(0,0,0,0.3); flex-shrink: 0; overflow:hidden; cursor:pointer;">
                             ${(wsInfo.logoUrl || wsInfo.logo) ? `
-                                <img src="${wsInfo.logoUrl || wsInfo.logo}" alt="${escapeHtml(wsDisplayName)}" style="width:100%; height:100%; object-fit:cover;">
+                                <img src="${wsInfo.logoUrl || wsInfo.logo}" alt="${escapeHtml(wsDisplayName)}" style="width:100%; height:100%; object-fit:contain; padding:4px;">
                             ` : `
-                                <span style="font-size: 2.4rem; font-weight: 800; color: #ffffff; letter-spacing: -1px; text-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                                <span style="font-size: 2.5rem; font-weight: 800; color: #ffffff; letter-spacing: -1px; text-shadow: 0 2px 10px rgba(0,0,0,0.35);">
                                     ${escapeHtml((wsDisplayName.charAt(0) || 'W').toUpperCase())}
                                 </span>
                             `}
@@ -138,42 +139,46 @@ export const renderWorkers = async (container, workspaceId) => {
 
                         <div>
                             <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
-                                <h1 style="font-size: 1.85rem; font-weight: 800; margin: 0; letter-spacing: -0.02em; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+                                <h1 style="font-size: 2rem; font-weight: 800; margin: 0; letter-spacing: -0.025em; color: #ffffff; text-shadow: 0 2px 12px rgba(0,0,0,0.3);">
                                     ${escapeHtml(wsDisplayName)}
                                 </h1>
-                                <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.75rem; border-radius: 999px; background: rgba(255, 255, 255, 0.22); border: 1px solid rgba(255, 255, 255, 0.4); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; backdrop-filter: blur(8px);">
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.22rem 0.75rem; border-radius: 999px; background: rgba(16,185,129,0.25); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.4); font-size: 0.74rem; font-weight: 700; backdrop-filter: blur(8px);">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    Verified Workspace
+                                </span>
+                                <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.22rem 0.75rem; border-radius: 999px; background: rgba(255, 255, 255, 0.22); border: 1px solid rgba(255, 255, 255, 0.4); font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; backdrop-filter: blur(8px);">
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                                     ${escapeHtml(roleUpper.replace('_', ' '))}
                                 </span>
                                 ${wsInfo.industry ? `
-                                    <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; border-radius: 999px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); font-size: 0.72rem; font-weight: 600; backdrop-filter: blur(8px); color: #f4f4f5;">
+                                    <span style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.7rem; border-radius: 999px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); font-size: 0.74rem; font-weight: 600; backdrop-filter: blur(8px); color: #f4f4f5;">
                                         ${escapeHtml(wsInfo.industry)}
                                     </span>
                                 ` : ''}
                                 ${wsInfo.tradeName && wsInfo.tradeName !== wsDisplayName ? `
-                                    <span style="font-size: 0.78rem; opacity: 0.85; font-weight: 500;">
+                                    <span style="font-size: 0.82rem; opacity: 0.9; font-weight: 500;">
                                         (${escapeHtml(wsInfo.tradeName)})
                                     </span>
                                 ` : ''}
                             </div>
-                            <p style="margin: 0.35rem 0 0 0; font-size: 0.95rem; opacity: 0.92; font-weight: 400; line-height: 1.4; color: #f4f4f5;">
+                            <p style="margin: 0.45rem 0 0 0; font-size: 0.98rem; opacity: 0.92; font-weight: 400; line-height: 1.45; color: #f4f4f5;">
                                 ${escapeHtml(wsTagline)}
                             </p>
                         </div>
                     </div>
 
-                    <!-- Right Top Actions: Edit Workspace & Quick Nav -->
-                    <div style="display: flex; gap: 0.65rem; align-items: center;">
+                    <!-- Right Top Actions: Change Banner & Edit Workspace -->
+                    <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
                         ${isAdmin ? `
-                            <button type="button" id="btn-hero-edit-workspace" class="btn" onclick="window.location.hash='#/settings'" style="background: rgba(255, 255, 255, 0.95); color: #18181b; font-weight: 700; font-size: 0.85rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: none; box-shadow: 0 4px 14px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.45rem; cursor: pointer; transition: all 0.2s ease;">
+                            <button type="button" id="btn-hero-change-banner" class="btn" style="background: rgba(255, 255, 255, 0.95); color: #18181b; font-weight: 700; font-size: 0.84rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: none; box-shadow: 0 4px 14px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 0.45rem; cursor: pointer; transition: all 0.2s ease;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                <span>Change Cover Banner</span>
+                            </button>
+                            <button type="button" id="btn-hero-edit-workspace" class="btn" style="background: rgba(255, 255, 255, 0.2); color: #ffffff; font-weight: 700; font-size: 0.84rem; padding: 0.6rem 1.15rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); backdrop-filter: blur(8px); display: flex; align-items: center; gap: 0.45rem; cursor: pointer; transition: all 0.2s ease;">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                <span>Edit Workspace</span>
+                                <span>Workspace Settings</span>
                             </button>
                         ` : ''}
-                        
-                        <button type="button" id="btn-hero-quick-settings" class="btn" onclick="window.location.hash='#/settings'" title="Workspace Settings" style="background: rgba(255, 255, 255, 0.18); color: #ffffff; padding: 0.6rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(8px); cursor: pointer;">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                        </button>
                     </div>
                 </div>
 

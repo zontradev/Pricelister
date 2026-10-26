@@ -374,6 +374,10 @@ export const renderProducts = async (container, workspaceId) => {
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             Duplicate
                         </button>
+                        <button type="button" id="btn-detail-schema-analyze" class="btn btn-secondary" style="font-weight:600; display:inline-flex; align-items:center; gap:0.35rem; border-color:#6366f1; color:#4f46e5; background:rgba(99,102,241,0.06);" title="Analyze connections, demand velocity & affinity in Schema Analyzer">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                            Schema Analysis
+                        </button>
                         <button type="button" id="btn-detail-edit" class="btn btn-primary" style="font-weight:700; display:inline-flex; align-items:center; gap:0.4rem; background: linear-gradient(135deg, #ff3366 0%, #e11d48 55%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35);">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             Edit Product
@@ -722,6 +726,14 @@ export const renderProducts = async (container, workspaceId) => {
                     const editBtn = container.querySelector(`.edit-prd[data-id="${prd.id}"]`);
                     if (editBtn) editBtn.click();
                 }, 50);
+            });
+        }
+
+        // Schema Analyze from Detail View
+        const btnSchemaAnalyze = container.querySelector('#btn-detail-schema-analyze');
+        if (btnSchemaAnalyze) {
+            btnSchemaAnalyze.addEventListener('click', () => {
+                window.location.hash = `#/schema-analyzer/products?id=${prd.id || prd.uniqueId}`;
             });
         }
 
@@ -1598,7 +1610,7 @@ export const renderProducts = async (container, workspaceId) => {
 
     function isProductFormDirty() {
         const formContainer = container.querySelector('#product-form-container');
-        if (!formContainer || formContainer.style.display === 'none') return false;
+        if (!formContainer || !document.body.contains(formContainer) || formContainer.style.display === 'none') return false;
 
         const isEditMode = Boolean(container.querySelector('#prd-id')?.value);
         if (isEditMode) {

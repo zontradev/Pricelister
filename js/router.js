@@ -14,6 +14,7 @@ import { renderMembers } from './modules/members.js';
 import { renderProfile } from './modules/profile.js';
 import { renderMailbox } from './modules/mailbox.js';
 import { renderAnalyticsHub } from './modules/analyticsHub.js';
+import { renderSchemaAnalyzer } from './modules/schemaAnalyzer.js';
 import { renderCustomerPanelSetup } from './modules/customerPanelSetup.js';
 import { renderOrders } from './modules/orders.js';
 import { authService } from '../firebase/auth.js';
@@ -30,11 +31,43 @@ const renderPlaceholder = (container, title) => {
     `;
 };
 
+let isNavigatingAway = false;
+
+/**
+ * Reset and discard all active unsaved states across all modules
+ */
+export const discardActiveUnsavedChanges = () => {
+    try {
+        if (draftManager && typeof draftManager.clearAllActiveForms === 'function') {
+            draftManager.clearAllActiveForms();
+        }
+        const floatingBar = document.getElementById('settings-floating-bar');
+        if (floatingBar) {
+            floatingBar.style.opacity = '0';
+            floatingBar.style.pointerEvents = 'none';
+            floatingBar.style.transform = 'translateX(-50%) translateY(100px)';
+        }
+        const prdForm = document.getElementById('product-form-container');
+        if (prdForm) prdForm.style.display = 'none';
+        const invEditor = document.getElementById('invoice-editor-view');
+        if (invEditor) invEditor.style.display = 'none';
+        const catForm = document.getElementById('category-form-container');
+        if (catForm) catForm.style.display = 'none';
+        const manageWorker = document.getElementById('manage-worker-container');
+        if (manageWorker) manageWorker.style.display = 'none';
+        const addWorker = document.getElementById('add-worker-container');
+        if (addWorker) addWorker.style.display = 'none';
+    } catch (e) {
+        console.warn("Error discarding unsaved changes:", e);
+    }
+};
+
 /**
  * Universal Edit Safety / Unsaved Changes Detector
  * Detects whether any active view or modal form currently has unsaved modifications.
  */
 export const hasUnsavedChanges = () => {
+    if (isNavigatingAway) return false;
     try {
         if (draftManager && typeof draftManager.hasActiveUnsavedChanges === 'function') {
             if (draftManager.hasActiveUnsavedChanges()) return true;
@@ -42,13 +75,13 @@ export const hasUnsavedChanges = () => {
 
         // 1. Settings Module: Floating bar active when user modified settings
         const floatingBar = document.getElementById('settings-floating-bar');
-        if (floatingBar && (floatingBar.style.opacity === '1' || floatingBar.style.pointerEvents === 'auto')) {
+        if (floatingBar && document.body.contains(floatingBar) && (floatingBar.style.opacity === '1' || floatingBar.style.pointerEvents === 'auto')) {
             return true;
         }
 
         // 2. Product Form: Check if open with unsaved changes
         const prdFormContainer = document.getElementById('product-form-container');
-        if (prdFormContainer && prdFormContainer.style.display !== 'none') {
+        if (prdFormContainer && document.body.contains(prdFormContainer) && prdFormContainer.style.display !== 'none') {
             const prdId = document.getElementById('prd-id')?.value;
             if (!prdId) {
                 const name = document.getElementById('prd-name')?.value?.trim();
@@ -62,7 +95,7 @@ export const hasUnsavedChanges = () => {
 
         // 3. Invoice Editor: Editor open with unsaved modifications or items
         const invEditor = document.getElementById('invoice-editor-view');
-        if (invEditor && invEditor.style.display !== 'none') {
+        if (invEditor && document.body.contains(invEditor) && invEditor.style.display !== 'none') {
             if (typeof invEditor._isDirty === 'function') {
                 if (invEditor._isDirty()) return true;
             }
@@ -70,7 +103,7 @@ export const hasUnsavedChanges = () => {
 
         // 4. Category Form: Form open with non-empty input
         const catFormContainer = document.getElementById('category-form-container');
-        if (catFormContainer && catFormContainer.style.display !== 'none') {
+        if (catFormContainer && document.body.contains(catFormContainer) && catFormContainer.style.display !== 'none') {
             const catName = document.getElementById('cat-name')?.value?.trim();
             const catSubmitBtn = document.getElementById('cat-submit-btn');
             if (catSubmitBtn && !catSubmitBtn.disabled && catName) return true;
@@ -79,13 +112,13 @@ export const hasUnsavedChanges = () => {
         // 5. Worker Permissions Manage Form: Form open with modified permissions
         const workerSaveBtn = document.getElementById('btn-save-manage');
         const manageWorkerContainer = document.getElementById('manage-worker-container');
-        if (manageWorkerContainer && manageWorkerContainer.style.display !== 'none') {
+        if (manageWorkerContainer && document.body.contains(manageWorkerContainer) && manageWorkerContainer.style.display !== 'none') {
             if (workerSaveBtn && !workerSaveBtn.disabled) return true;
         }
 
         // 6. Market Inserter: Open grid with pending rows containing user input
         const miGrid = document.getElementById('mi-grid-body');
-        if (miGrid) {
+        if (miGrid && document.body.contains(miGrid)) {
             const miRows = miGrid.querySelectorAll('tr.mi-grid-row');
             if (miRows && miRows.length > 0) {
                 const hasData = Array.from(miRows).some(row => {
@@ -98,7 +131,7 @@ export const hasUnsavedChanges = () => {
 
         // 7. Customer Panel Setup: Form has unsaved modifications
         const btnSaveCustomerPanel = document.getElementById('btn-save-customer-panel');
-        if (btnSaveCustomerPanel && !btnSaveCustomerPanel.disabled && btnSaveCustomerPanel.getAttribute('data-dirty') === 'true') {
+        if (btnSaveCustomerPanel && document.body.contains(btnSaveCustomerPanel) && !btnSaveCustomerPanel.disabled && btnSaveCustomerPanel.getAttribute('data-dirty') === 'true') {
             return true;
         }
     } catch (e) {
@@ -110,6 +143,7 @@ export const hasUnsavedChanges = () => {
 const routes = {
     '/overview': { render: (c, w) => renderOverview(c, w), title: 'Workspace / Overview' },
     '/analytics': { render: (c, w, feat) => renderAnalyticsHub(c, w, feat), title: 'Workspace / Data Analytics' },
+    '/schema-analyzer': { render: (c, w, param) => renderSchemaAnalyzer(c, w, param), title: 'Workspace / Schema Analyzer' },
     '/members': { render: (c, w) => renderMembers(c, w), title: 'Workspace / Members & Contributions' },
     '/products': { render: (c, w) => renderProducts(c, w), title: 'Products / All Products' },
     '/market-inserter': { render: (c, w) => renderMarketInserter(c, w), title: 'Products / Market Inserter' },
@@ -129,6 +163,49 @@ const routes = {
 };
 
 
+/**
+ * Convert internal route path (e.g. '/overview', '/settings', '/members')
+ * to a clean public URL path (e.g. '/Workspace/overview', '/Workspace/settings')
+ * No .html and no # hash symbol in locator.
+ */
+export const getCleanUrlForRoute = (routePath = '/overview') => {
+    let clean = (routePath || '/overview').replace(/^#/, '').trim();
+    if (!clean.startsWith('/')) clean = '/' + clean;
+    if (clean === '/workers') clean = '/workspace';
+    return `/Workspace${clean}`;
+};
+
+/**
+ * Extract normalized internal route from the current window location
+ * Supports:
+ *   - /Workspace/overview, /Workspace/settings, /Workspace/members
+ *   - /overview, /settings, /members
+ *   - Legacy fallback: #/overview
+ */
+export const extractRouteFromUrl = () => {
+    // 1. Check hash fallback if user accessed via old bookmark
+    if (window.location.hash && window.location.hash.startsWith('#/')) {
+        return window.location.hash.substring(1);
+    }
+
+    // 2. Check clean path /Workspace/...
+    const pathname = window.location.pathname || '';
+    const wsMatch = pathname.match(/(?:\/|^)workspace(\/.*)?$/i);
+    if (wsMatch) {
+        const sub = (wsMatch[1] || '/overview').trim();
+        return sub.startsWith('/') ? sub : '/' + sub;
+    }
+
+    // 3. Check direct route path
+    for (const r of Object.keys(routes)) {
+        if (pathname.toLowerCase().endsWith(r.toLowerCase())) {
+            return r;
+        }
+    }
+
+    return '/overview';
+};
+
 export const initRouter = async (workspaceIdParam = null) => {
     // Resolve current workspace ID once for the router
     const user = authService.getCurrentUser();
@@ -144,56 +221,54 @@ export const initRouter = async (workspaceIdParam = null) => {
         }
     }
 
-    let currentRenderedHash = window.location.hash || '#/overview';
-    let isRevertingRoute = false;
+    let currentActiveRoute = null;
 
-    const handleRoute = async () => {
-        if (!currentWorkspaceId) return; // Wait for workspace
+    /**
+     * Core Route Execution Function
+     */
+    const executeRoute = async (targetPath) => {
+        if (!currentWorkspaceId) return;
 
-        if (isRevertingRoute) {
-            isRevertingRoute = false;
-            return;
-        }
-        
-        const hash = window.location.hash || '#/overview';
-
-        // Edit Safety Check: Intercept navigation if there are unsaved edits
-        if (hash !== currentRenderedHash && hasUnsavedChanges()) {
-            const allowLeave = await showAlert.confirmUnsavedChanges();
-            if (!allowLeave) {
-                // User chose "Stay & Save Changes" -> cancel navigation and revert hash
-                isRevertingRoute = true;
-                window.location.hash = currentRenderedHash;
-                return;
-            }
-        }
-
-        currentRenderedHash = hash;
-        const rawPath = hash.substring(1);
-        
-        let path = rawPath;
+        let path = targetPath || '/overview';
         let routeParam = null;
 
         // Support /analytics/:feature routes
-        if (rawPath.startsWith('/analytics/')) {
+        if (path.startsWith('/analytics/')) {
+            routeParam = path.replace('/analytics/', '');
             path = '/analytics';
-            routeParam = rawPath.replace('/analytics/', '');
         }
 
-        const route = routes[path];
-        
+        // Support /schema-analyzer/:param routes
+        if (path.startsWith('/schema-analyzer/')) {
+            routeParam = path.replace('/schema-analyzer/', '');
+            path = '/schema-analyzer';
+        } else if (path.startsWith('/schema-analyzer?')) {
+            routeParam = path.replace('/schema-analyzer?', '');
+            path = '/schema-analyzer';
+        }
+
+        let route = routes[path];
+        if (!route && (path === '/workspace' || path === '/workers')) {
+            route = routes['/workspace'] || routes['/workers'];
+        }
+
         if (route) {
+            currentActiveRoute = targetPath;
+
             // Update breadcrumbs
             const breadcrumbs = document.getElementById('breadcrumbs');
-            if (breadcrumbs) breadcrumbs.textContent = routeParam ? `${route.title} / ${routeParam.replace(/_/g, ' ')}` : route.title;
+            if (breadcrumbs) {
+                breadcrumbs.textContent = routeParam ? `${route.title} / ${routeParam.replace(/_/g, ' ')}` : route.title;
+            }
 
-            // Render fresh view to prevent stale cache, stock counts, and vending mode state
+            // Render fresh view
             const mainContainer = document.getElementById('workspace-container');
             const loader = document.getElementById('app-loader');
             const shell = document.getElementById('app-shell');
 
             try {
                 if (mainContainer) {
+                    discardActiveUnsavedChanges();
                     mainContainer.innerHTML = '';
                     const routeContainer = document.createElement('div');
                     routeContainer.className = 'route-view';
@@ -206,20 +281,22 @@ export const initRouter = async (workspaceIdParam = null) => {
                     mainContainer.innerHTML = `<div class="route-view" style="padding:2rem;"><div class="alert alert-danger">Error rendering page view: ${err.message || 'Unknown error'}</div></div>`;
                 }
             } finally {
-                // Hide the full-page loader and show app shell once the FIRST render is fully complete
+                isNavigatingAway = false;
                 if (loader) loader.style.display = 'none';
                 if (shell && shell.style.display === 'none') shell.style.display = 'flex';
                 document.body.classList.remove('app-loading');
             }
 
-
-            // Update active nav state
+            // Update active sidebar nav indicators
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            let activeNav = document.querySelector(`.nav-item[href="#${path}"]`);
+            let activeNav = document.querySelector(`.nav-item[href="#${path}"]`) || 
+                            document.querySelector(`.nav-item[data-route="${path.replace(/^\//, '')}"]`);
             if (!activeNav && (path === '/workers' || path === '/workspace')) {
                 activeNav = document.querySelector('.nav-item[data-route="workspace"]') || document.querySelector('.nav-item[data-route="workers"]');
             } else if (!activeNav && path.startsWith('/analytics')) {
                 activeNav = document.querySelector('.nav-item[data-route="analytics"]');
+            } else if (!activeNav && path.startsWith('/schema-analyzer')) {
+                activeNav = document.querySelector('.nav-item[data-route="schema-analyzer"]');
             }
             if (activeNav) activeNav.classList.add('active');
             
@@ -227,25 +304,68 @@ export const initRouter = async (workspaceIdParam = null) => {
             const contextPanel = document.getElementById('context-panel');
             if (contextPanel) contextPanel.classList.remove('open');
         } else {
-            // Default or Not Found
-            window.location.hash = '#/overview';
+            // Default Fallback
+            await navigateTo('/overview', true);
         }
     };
 
-    // Sidebar & Internal Navigation Link Click Interceptor for Instant Edit Safety
-    document.addEventListener('click', async (e) => {
-        const link = e.target.closest('a[href^="#/"]');
-        if (!link) return;
-        const targetHash = link.getAttribute('href');
-        if (targetHash && targetHash !== currentRenderedHash && hasUnsavedChanges()) {
-            e.preventDefault();
-            e.stopPropagation();
+    /**
+     * Programmatic Navigation Handler with Clean URL formatting
+     */
+    const navigateTo = async (targetRoute, replace = false) => {
+        const rawTarget = (targetRoute || '/overview').replace(/^#/, '').trim();
+        const normalizedTarget = rawTarget.startsWith('/') ? rawTarget : '/' + rawTarget;
+
+        if (normalizedTarget === currentActiveRoute && !replace) return;
+
+        // Edit Safety Check: Intercept navigation if there are unsaved edits
+        if (!isNavigatingAway && currentActiveRoute && currentActiveRoute !== normalizedTarget && hasUnsavedChanges()) {
             const allowLeave = await showAlert.confirmUnsavedChanges();
-            if (allowLeave) {
-                currentRenderedHash = targetHash;
-                window.location.hash = targetHash;
+            if (!allowLeave) {
+                return; // User cancelled navigation
+            } else {
+                isNavigatingAway = true;
+                discardActiveUnsavedChanges();
             }
         }
+
+        const cleanUrl = getCleanUrlForRoute(normalizedTarget);
+
+        try {
+            if (replace) {
+                window.history.replaceState({ route: normalizedTarget }, '', cleanUrl);
+            } else {
+                window.history.pushState({ route: normalizedTarget }, '', cleanUrl);
+            }
+        } catch (e) {
+            // In case of local strict origin restrictions, graceful fallback
+            console.debug("History API navigation state update:", cleanUrl);
+        }
+
+        await executeRoute(normalizedTarget);
+    };
+
+    // Expose programmatic navigation globally
+    window.navigateToRoute = navigateTo;
+
+    // Sidebar & Internal Navigation Link Click Interceptor for Clean URLs & Edit Safety
+    document.addEventListener('click', async (e) => {
+        const link = e.target.closest('a[href^="#/"], a[data-route], a[href*="/Workspace/"]');
+        if (!link) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        let targetRoute = '/overview';
+        if (link.getAttribute('data-route')) {
+            targetRoute = '/' + link.getAttribute('data-route');
+        } else if (link.getAttribute('href')?.startsWith('#/')) {
+            targetRoute = link.getAttribute('href').substring(1);
+        } else if (link.getAttribute('href')?.includes('/Workspace/')) {
+            targetRoute = link.getAttribute('href').split('/Workspace')[1] || '/overview';
+        }
+
+        await navigateTo(targetRoute);
     }, true);
 
     // Browser Refresh / Window Close Edit Safety Guard
@@ -256,8 +376,43 @@ export const initRouter = async (workspaceIdParam = null) => {
         }
     });
 
-    window.addEventListener('hashchange', handleRoute);
+    // Browser Back / Forward History PopState Listener
+    window.addEventListener('popstate', async (e) => {
+        const popRoute = e.state?.route || extractRouteFromUrl();
+        if (popRoute !== currentActiveRoute) {
+            if (!isNavigatingAway && hasUnsavedChanges()) {
+                const allowLeave = await showAlert.confirmUnsavedChanges();
+                if (!allowLeave) {
+                    // Revert URL forward
+                    if (currentActiveRoute) {
+                        window.history.pushState({ route: currentActiveRoute }, '', getCleanUrlForRoute(currentActiveRoute));
+                    }
+                    return;
+                } else {
+                    isNavigatingAway = true;
+                    discardActiveUnsavedChanges();
+                }
+            }
+            await executeRoute(popRoute);
+        }
+    });
+
+    // Hashchange Fallback (cleans up any legacy inline hash assignments immediately)
+    window.addEventListener('hashchange', async () => {
+        if (window.location.hash && window.location.hash.startsWith('#/')) {
+            const hRoute = window.location.hash.substring(1);
+            await navigateTo(hRoute, true);
+        }
+    });
     
-    // Initial load
-    await handleRoute();
+    // Initial load: Sanitize address bar to clean /Workspace/... locator immediately
+    const initialRoute = extractRouteFromUrl();
+    const initialCleanUrl = getCleanUrlForRoute(initialRoute);
+    try {
+        window.history.replaceState({ route: initialRoute }, '', initialCleanUrl);
+    } catch (e) {
+        console.debug("Initial URL clean replace:", initialCleanUrl);
+    }
+
+    await executeRoute(initialRoute);
 };

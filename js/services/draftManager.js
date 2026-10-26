@@ -77,6 +77,10 @@ class DraftManager {
         this.unregisterForm(id);
     }
 
+    clearAllActiveForms() {
+        this.registeredForms.clear();
+    }
+
     hasActiveUnsavedChanges() {
         return this.hasAnyUnsaved();
     }

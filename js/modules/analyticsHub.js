@@ -281,6 +281,19 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
                         <div class="pro-card-meta">COGS, Revenue & Net Profit</div>
                     </div>
 
+                    <!-- 13. Schema Analyzer -->
+                    <div class="pro-grid-card anim-fade-up anim-stagger-1" data-feature="SCHEMA_ANALYZER" style="border-left: 4px solid #6366F1;">
+                        <div class="pro-card-badge">PRO</div>
+                        <div class="pro-card-icon" style="color: #6366F1; background: rgba(99, 102, 241, 0.1);">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="8" height="6" rx="1.5"></rect><rect x="14" y="3" width="8" height="6" rx="1.5"></rect><rect x="8" y="15" width="8" height="6" rx="1.5"></rect><line x1="6" y1="9" x2="6" y2="12"></line><line x1="18" y1="9" x2="18" y2="12"></line><line x1="6" y1="12" x2="18" y2="12"></line><line x1="12" y1="12" x2="12" y2="15"></line></svg>
+                        </div>
+                        <div class="pro-card-content">
+                            <h3>Schema Analyzer</h3>
+                            <p>Relational connections & demand</p>
+                        </div>
+                        <div class="pro-card-meta">Product links & basket affinity</div>
+                    </div>
+
                 </div>
             `;
 
@@ -288,6 +301,10 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
             container.querySelectorAll('.pro-grid-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const feat = card.getAttribute('data-feature');
+                    if (feat === 'SCHEMA_ANALYZER') {
+                        window.location.hash = '#/schema-analyzer';
+                        return;
+                    }
                     currentFeature = feat;
                     drilldownState.type = null;
                     renderView();

@@ -1051,7 +1051,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
         const isPersonFormDirty = () => {
             const formContainer = container.querySelector('#person-form-container');
-            if (!formContainer || formContainer.style.display === 'none') return false;
+            if (!formContainer || !document.body.contains(formContainer) || formContainer.style.display === 'none') return false;
 
             const id = container.querySelector('#person-id')?.value;
             if (id) {
