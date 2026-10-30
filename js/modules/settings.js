@@ -48,8 +48,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
     const isMock = workspaceId === 'ws_dev_mock' || 
                    !workspaceId || 
                    workspaceId === 'demo' || 
-                   currentUser?.uid === 'dev-mock-uid' || 
-                   Boolean(localStorage.getItem('mock_dev_session'));
+                   (currentUser?.uid === 'dev-mock-uid' && (!workspaceId || workspaceId === 'ws_dev_mock'));
 
     if (!currentUser) {
         if (isMock) {
@@ -201,6 +200,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         const wsUpdatedDate = currentSettings.updatedDate || (wsData.updatedAt ? new Date(wsData.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent');
         const wsUpdateTimestamp = currentSettings.updateTimestamp || (wsData.updatedAt ? new Date(wsData.updatedAt).toISOString() : '');
         const wsUpdatorEmail = currentSettings.updatorEmail || wsData.updatorEmail || wsCreatorEmail;
+        const currentColorMode = localStorage.getItem('pricelister_color_mode') || 'light';
 
         // Render Advanced Settings Interface
         container.innerHTML = `
@@ -501,6 +501,87 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                                     <input type="text" id="set-tax-id" class="form-control" value="${escapeHtml(wsTaxId)}" placeholder="e.g. VAT-99482-TX" style="border-radius: 8px;">
                                 </div>
 
+                            </div>
+                        </div>
+
+                        <!-- SECTION: WORKSPACE APPEARANCE & COLOR THEME -->
+                        <div style="background: var(--bg-card, #ffffff); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(37, 99, 235, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                                    </div>
+                                    <div>
+                                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Appearance &amp; Theme Mode</h3>
+                                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Select your preferred workspace visual theme. Instant switch between Enterprise Light and Dark modes.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;" id="settings-theme-cards-container">
+                                <!-- Light Card -->
+                                <div class="settings-theme-card ${currentColorMode === 'light' ? 'active' : ''}" data-mode="light" style="border: 2px solid ${currentColorMode === 'light' ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; border-radius: 14px; padding: 1.25rem; background: #ffffff; cursor: pointer; transition: all 0.2s ease; position: relative;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: #f0f4fa; color: #2563eb; display: flex; align-items: center; justify-content: center;">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                                            </div>
+                                            <strong style="font-size: 0.95rem; color: #202431;">Enterprise Light</strong>
+                                        </div>
+                                        <span class="theme-status-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; background: ${currentColorMode === 'light' ? '#15803d' : '#e2e7ef'}; color: ${currentColorMode === 'light' ? '#ffffff' : '#687386'};">
+                                            ${currentColorMode === 'light' ? 'Active' : 'Select'}
+                                        </span>
+                                    </div>
+                                    <p style="font-size: 0.8rem; color: #687386; margin: 0; line-height: 1.4;">Crisp enterprise layout with #F5F7FA background, clean white cards, and #2563EB accent.</p>
+                                </div>
+
+                                <!-- Dark Card -->
+                                <div class="settings-theme-card ${currentColorMode === 'dark' ? 'active' : ''}" data-mode="dark" style="border: 2px solid ${currentColorMode === 'dark' ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; border-radius: 14px; padding: 1.25rem; background: #111827; cursor: pointer; transition: all 0.2s ease; position: relative;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: #1f2937; color: #60a5fa; display: flex; align-items: center; justify-content: center;">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                                            </div>
+                                            <strong style="font-size: 0.95rem; color: #f9fafb;">Enterprise Dark</strong>
+                                        </div>
+                                        <span class="theme-status-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; background: ${currentColorMode === 'dark' ? '#15803d' : '#374151'}; color: #ffffff;">
+                                            ${currentColorMode === 'dark' ? 'Active' : 'Select'}
+                                        </span>
+                                    </div>
+                                    <p style="font-size: 0.8rem; color: #9ca3af; margin: 0; line-height: 1.4;">Balanced dark workspace with #101010 background and #1C1C1C surfaces.</p>
+                                </div>
+
+                                <!-- Deep Dark Card -->
+                                <div class="settings-theme-card ${currentColorMode === 'deep-dark' ? 'active' : ''}" data-mode="deep-dark" style="border: 2px solid ${currentColorMode === 'deep-dark' ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; border-radius: 14px; padding: 1.25rem; background: #000000; cursor: pointer; transition: all 0.2s ease; position: relative;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: #0a0a0a; border: 1px solid #222222; color: #ffffff; display: flex; align-items: center; justify-content: center;">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="3"></rect></svg>
+                                            </div>
+                                            <strong style="font-size: 0.95rem; color: #ffffff;">Deep Dark Mode</strong>
+                                        </div>
+                                        <span class="theme-status-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; background: ${currentColorMode === 'deep-dark' ? '#15803d' : '#1a1a1a'}; color: #ffffff;">
+                                            ${currentColorMode === 'deep-dark' ? 'Active' : 'Select'}
+                                        </span>
+                                    </div>
+                                    <p style="font-size: 0.8rem; color: #888888; margin: 0; line-height: 1.4;">Pitch black OLED #000000 mode with #0A0A0A surfaces and ultra-crisp borders.</p>
+                                </div>
+
+                                <!-- System Auto Card -->
+                                <div class="settings-theme-card ${currentColorMode === 'system' ? 'active' : ''}" data-mode="system" style="border: 2px solid ${currentColorMode === 'system' ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; border-radius: 14px; padding: 1.25rem; background: var(--surface-50); cursor: pointer; transition: all 0.2s ease; position: relative;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--surface-100); color: var(--text-primary); display: flex; align-items: center; justify-content: center;">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                            </div>
+                                            <strong style="font-size: 0.95rem; color: var(--text-primary);">System Match</strong>
+                                        </div>
+                                        <span class="theme-status-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; background: ${currentColorMode === 'system' ? '#15803d' : 'var(--surface-200)'}; color: ${currentColorMode === 'system' ? '#ffffff' : 'var(--text-secondary)'};">
+                                            ${currentColorMode === 'system' ? 'Active' : 'Select'}
+                                        </span>
+                                    </div>
+                                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">Automatically syncs with your operating system light and dark color scheme.</p>
+                                </div>
                             </div>
                         </div>
 
@@ -1115,6 +1196,30 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 tabPanes.forEach(p => {
                     p.style.display = p.id === targetTab ? 'block' : 'none';
                     p.classList.toggle('active', p.id === targetTab);
+                });
+            });
+        });
+
+        // Appearance & Color Theme Mode Switcher
+        const themeCards = container.querySelectorAll('.settings-theme-card');
+        themeCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const mode = card.getAttribute('data-mode');
+                localStorage.setItem('pricelister_color_mode', mode);
+                document.documentElement.setAttribute('data-color-mode', mode);
+                document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : (localStorage.getItem('pricelister_theme') || 'enterprise'));
+                window.dispatchEvent(new CustomEvent('pricelister-color-mode-changed', { detail: { mode } }));
+                showAlert.success(`Switched to Enterprise ${mode === 'dark' ? 'Dark' : 'Light'} Mode.`);
+                
+                themeCards.forEach(c => {
+                    const isCardActive = c.getAttribute('data-mode') === mode;
+                    c.style.borderColor = isCardActive ? 'var(--primary, #2563eb)' : 'var(--border-color)';
+                    const badge = c.querySelector('.theme-status-badge');
+                    if (badge) {
+                        badge.textContent = isCardActive ? 'Active' : 'Select';
+                        badge.style.background = isCardActive ? '#15803d' : (c.getAttribute('data-mode') === 'dark' ? '#374151' : '#e2e7ef');
+                        badge.style.color = isCardActive ? '#ffffff' : (c.getAttribute('data-mode') === 'dark' ? '#ffffff' : '#687386');
+                    }
                 });
             });
         });
@@ -1824,12 +1929,12 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
 
             const resetSaveButtons = () => {
                 saveBtns.forEach(btn => {
-                    btn.disabled = false;
                     btn.innerHTML = `
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                         <span class="btn-save-label">Save Settings</span>
                     `;
                 });
+                checkDirty();
             };
 
             if (!updatedPayload.name) {

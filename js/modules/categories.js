@@ -2,11 +2,13 @@ import { getCategoryService } from '../services/categoryService.js';
 import { getProductService } from '../services/productService.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
+import { getUserRestrictions } from '../auth-handler.js';
 
 export const renderCategories = async (container, workspaceId) => {
     const categoryService = getCategoryService(workspaceId);
     const productService = getProductService(workspaceId);
     const currentUser = authService.getCurrentUser();
+    const userRestrictions = getUserRestrictions();
     
     let allCategories = [];
     let allProducts = [];
@@ -20,10 +22,12 @@ export const renderCategories = async (container, workspaceId) => {
                 <h2 style="margin:0 0 0.35rem 0;">Categories</h2>
                 <div style="font-size:0.9rem; color:var(--text-secondary);" id="cat-count-badge">Loading categories...</div>
             </div>
+            ${userRestrictions.disableAdd ? '' : `
             <button id="btn-add-category" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
                 Add Category
             </button>
+            `}
         </div>
 
 
@@ -177,6 +181,10 @@ export const renderCategories = async (container, workspaceId) => {
             ).length;
             const createdStr = cat.timestamp ? new Date(cat.timestamp).toLocaleDateString() : '-';
 
+            const isCreatorSelf = (cat.creatorId && (cat.creatorId === currentUser.uid || (currentUser.email && cat.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase()))) || (cat.createdBy && (cat.createdBy === currentUser.uid || (currentUser.email && cat.createdBy.toLowerCase() === (currentUser.email || '').toLowerCase())));
+            const canEdit = !userRestrictions.disableUpdate && (!userRestrictions.disableUpdateOthers || isCreatorSelf);
+            const canDelete = !userRestrictions.disableDelete && (!userRestrictions.disableDeleteOthers || isCreatorSelf);
+
             return `
                 <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;">
                     <td style="padding:1rem 1.25rem;">
@@ -194,8 +202,16 @@ export const renderCategories = async (container, workspaceId) => {
                     <td style="padding:1rem; color:var(--text-secondary); font-size:0.88rem;">${createdStr}</td>
                     <td style="padding:1rem 1.25rem;">
                         <div style="display:flex; gap:0.4rem;">
-                            <button class="btn btn-sm btn-secondary edit-cat" data-id="${cat.id}" style="padding:0.25rem 0.65rem; font-size:0.8rem;">Edit</button>
-                            <button class="btn btn-sm btn-outline del-cat" data-id="${cat.id}" style="padding:0.25rem 0.65rem; font-size:0.8rem; color:var(--danger);">Delete</button>
+                            ${canEdit ? `
+                                <button class="btn btn-sm btn-secondary edit-cat" data-id="${cat.id}" style="padding:0.25rem 0.65rem; font-size:0.8rem;">Edit</button>
+                            ` : (userRestrictions.disableUpdateOthers && !isCreatorSelf ? `
+                                <button class="btn btn-sm btn-secondary" disabled style="opacity:0.4; cursor:not-allowed; padding:0.25rem 0.65rem; font-size:0.8rem;" title="Restricted: Cannot edit data created by others">Locked</button>
+                            ` : '')}
+                            ${canDelete ? `
+                                <button class="btn btn-sm btn-outline del-cat" data-id="${cat.id}" style="padding:0.25rem 0.65rem; font-size:0.8rem; color:var(--danger);">Delete</button>
+                            ` : (userRestrictions.disableDeleteOthers && !isCreatorSelf ? `
+                                <button class="btn btn-sm btn-secondary" disabled style="opacity:0.4; cursor:not-allowed; padding:0.25rem 0.65rem; font-size:0.8rem;" title="Restricted: Cannot delete data created by others">Locked</button>
+                            ` : '')}
                         </div>
                     </td>
                 </tr>
@@ -205,9 +221,19 @@ export const renderCategories = async (container, workspaceId) => {
         // Attach event listeners
         container.querySelectorAll('.edit-cat').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const id = e.target.getAttribute('data-id');
+                const id = e.currentTarget.getAttribute('data-id');
                 const cat = allCategories.find(c => c.id === id);
                 if (cat) {
+                    const isCreatorSelf = (cat.creatorId && (cat.creatorId === currentUser.uid || (currentUser.email && cat.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase()))) || (cat.createdBy && (cat.createdBy === currentUser.uid || (currentUser.email && cat.createdBy.toLowerCase() === (currentUser.email || '').toLowerCase())));
+                    if (userRestrictions.disableUpdate) {
+                        showAlert.warning("You are restricted from updating category data.");
+                        return;
+                    }
+                    if (userRestrictions.disableUpdateOthers && !isCreatorSelf) {
+                        showAlert.warning("You are restricted from updating categories created by other members.");
+                        return;
+                    }
+
                     container.querySelector('#cat-id').value = cat.id;
                     container.querySelector('#cat-unique-id').value = cat.uniqueId || '';
                     container.querySelector('#cat-name').value = cat.name || '';
@@ -229,8 +255,20 @@ export const renderCategories = async (container, workspaceId) => {
 
         container.querySelectorAll('.del-cat').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const id = e.target.getAttribute('data-id');
+                const id = e.currentTarget.getAttribute('data-id');
                 const cat = allCategories.find(c => c.id === id);
+                if (!cat) return;
+
+                const isCreatorSelf = (cat.creatorId && (cat.creatorId === currentUser.uid || (currentUser.email && cat.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase()))) || (cat.createdBy && (cat.createdBy === currentUser.uid || (currentUser.email && cat.createdBy.toLowerCase() === (currentUser.email || '').toLowerCase())));
+                if (userRestrictions.disableDelete) {
+                    showAlert.warning("You are restricted from deleting categories.");
+                    return;
+                }
+                if (userRestrictions.disableDeleteOthers && !isCreatorSelf) {
+                    showAlert.warning("You are restricted from deleting categories created by other members.");
+                    return;
+                }
+
                 const uId = cat?.uniqueId || id;
                 const catName = (cat?.name || '').trim().toLowerCase();
                 const connectedProds = allProducts.filter(p => 
@@ -327,7 +365,7 @@ export const renderCategories = async (container, workspaceId) => {
     });
 
     // UI Toggles
-    container.querySelector('#btn-add-category').addEventListener('click', () => {
+    container.querySelector('#btn-add-category')?.addEventListener('click', () => {
         form.reset();
         container.querySelector('#cat-id').value = '';
         container.querySelector('#cat-unique-id').value = '';
@@ -385,6 +423,20 @@ export const renderCategories = async (container, workspaceId) => {
         
         try {
             if (!data.name) throw new Error("Category Name is required.");
+
+            if (!id && userRestrictions.disableAdd) {
+                throw new Error("You do not have permission to add new categories.");
+            }
+            if (id && userRestrictions.disableUpdate) {
+                throw new Error("You do not have permission to update categories.");
+            }
+            if (id && userRestrictions.disableUpdateOthers) {
+                const existing = allCategories.find(c => c.id === id);
+                const isCreatorSelf = existing && ((existing.creatorId && (existing.creatorId === currentUser?.uid || (currentUser?.email && existing.creatorId.toLowerCase() === (currentUser?.email || '').toLowerCase()))) || (existing.createdBy && (existing.createdBy === currentUser?.uid || (currentUser?.email && existing.createdBy.toLowerCase() === (currentUser?.email || '').toLowerCase()))));
+                if (!isCreatorSelf) {
+                    throw new Error("You are restricted from updating categories created by other members.");
+                }
+            }
 
             if (id) {
                 await categoryService.updateCategory(id, data);

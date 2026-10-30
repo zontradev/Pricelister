@@ -9,8 +9,17 @@ import { authService } from '../firebase/auth.js';
 import { openInvoiceViewerModal } from './modules/invoiceViewer.js';
 import { openInvoiceDetailsModal } from './modules/invoiceDetailsModal.js';
 import { showAlert } from './alert-handler.js';
+import { getUserRestrictions } from './auth-handler.js';
 
 export const initWorkspace = () => {
+    // Non-bypassable Security Guard: Eject blocked user
+    if (typeof window !== 'undefined' && window.__activeWorkspace?.isAccessBlocked) {
+        console.warn("[PriceLister Security] Direct access attempt by blocked worker. Ejecting.");
+        showAlert.error(`Access Blocked: Your access is suspended until ${window.__activeWorkspace.revokeEndFormatted || 'the duration expires'}.`);
+        window.location.href = 'index.html';
+        return;
+    }
+
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('toggle-sidebar');
     const shell = document.getElementById('app-shell');
@@ -238,8 +247,8 @@ export const renderOverview = async (container, workspaceId) => {
             <div class="dash-header-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                 <div class="dash-title-group">
                     <div style="display:flex; align-items:center; gap:0.6rem;">
-                        <h1 class="dash-title" style="margin:0; font-size:1.85rem; font-weight:800; letter-spacing:-0.02em;">Analytics Expert Dashboard</h1>
-                        <span class="badge" style="background:#18181b; color:#ffffff; font-weight:700; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:6px;">LIVE INTELLIGENCE</span>
+                        <h1 class="dash-title" style="margin:0; font-size:1.85rem; font-weight:800; letter-spacing:-0.02em; color:var(--text-primary);">Analytics Expert Dashboard</h1>
+                        <span class="badge" style="background:var(--surface-200); color:var(--text-primary); font-weight:700; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:6px; border:1px solid var(--border-color);">LIVE INTELLIGENCE</span>
                     </div>
                     <p class="dash-subtitle" style="margin:0.25rem 0 0 0; color:var(--text-secondary); font-size:0.88rem;">
                         Welcome back, <strong>${userName}</strong>. Complete financial health, sales performance, and predictive metrics.
@@ -249,23 +258,23 @@ export const renderOverview = async (container, workspaceId) => {
                 <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
                     <!-- Date Filter Button & Dropdown -->
                     <div class="dash-date-picker-wrap" style="position:relative;">
-                        <button class="dash-date-btn" id="dash-date-filter-btn" type="button" aria-expanded="false" style="display:flex; align-items:center; gap:0.45rem; padding:0.5rem 0.95rem; background:#ffffff; border:1px solid var(--border-color); border-radius:var(--radius-pill); font-size:0.85rem; font-weight:600; cursor:pointer; box-shadow:var(--shadow-subtle);">
+                        <button class="dash-date-btn" id="dash-date-filter-btn" type="button" aria-expanded="false" style="display:flex; align-items:center; gap:0.45rem; padding:0.5rem 0.95rem; background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-pill); font-size:0.85rem; font-weight:600; cursor:pointer; box-shadow:var(--shadow-subtle);">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                             <span id="dash-active-range-label">${currentRange.label}</span>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
-                        <div class="dash-date-dropdown" id="dash-date-dropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#ffffff; border:1px solid var(--border-color); border-radius:10px; box-shadow:var(--shadow-float); z-index:100; min-width:190px; padding:0.4rem;">
-                            <button type="button" class="dash-date-opt ${activeFilter === 'LAST_6_MONTHS' ? 'active' : ''}" data-filter="LAST_6_MONTHS" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">Last 6 Months</button>
-                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_MONTH' ? 'active' : ''}" data-filter="THIS_MONTH" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">This Month</button>
-                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_WEEK' ? 'active' : ''}" data-filter="THIS_WEEK" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">This Week (7 Days)</button>
-                            <button type="button" class="dash-date-opt ${activeFilter === 'TODAY' ? 'active' : ''}" data-filter="TODAY" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">Today</button>
-                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_YEAR' ? 'active' : ''}" data-filter="THIS_YEAR" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">This Year (1 Year)</button>
-                            <button type="button" class="dash-date-opt ${activeFilter === 'ALL_TIME' ? 'active' : ''}" data-filter="ALL_TIME" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px;">All Time Records</button>
+                        <div class="dash-date-dropdown" id="dash-date-dropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; box-shadow:var(--shadow-float); z-index:100; min-width:190px; padding:0.4rem; color:var(--text-primary);">
+                            <button type="button" class="dash-date-opt ${activeFilter === 'LAST_6_MONTHS' ? 'active' : ''}" data-filter="LAST_6_MONTHS" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px; color:var(--text-primary);">Last 6 Months</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_MONTH' ? 'active' : ''}" data-filter="THIS_MONTH" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px; color:var(--text-primary);">This Month</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_WEEK' ? 'active' : ''}" data-filter="THIS_WEEK" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px; color:var(--text-primary);">This Week (7 Days)</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'TODAY' ? 'active' : ''}" data-filter="TODAY" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px; color:var(--text-primary);">Today</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'THIS_YEAR' ? 'active' : ''}" data-filter="THIS_YEAR" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px; color:var(--text-primary);">This Year (1 Year)</button>
+                            <button type="button" class="dash-date-opt ${activeFilter === 'ALL_TIME' ? 'active' : ''}" data-filter="ALL_TIME" style="width:100%; text-align:left; padding:0.5rem 0.75rem; border:none; background:none; font-size:0.82rem; font-weight:600; cursor:pointer; border-radius:6px; color:var(--text-primary);">All Time Records</button>
                         </div>
                     </div>
 
                     <!-- Quick Shortcuts -->
-                    <a href="#/schema-analyzer" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; padding:0.5rem 0.85rem; border-color:#6366f1; color:#4f46e5; background:rgba(99,102,241,0.06);" title="Relational Schema & Demand Analyzer">
+                    <a href="#/schema-analyzer" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; padding:0.5rem 0.85rem; border:1px solid var(--border-color); color:var(--text-primary); background:var(--surface-100);" title="Relational Schema & Demand Analyzer">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
                         Schema Analyzer
                     </a>
@@ -280,10 +289,10 @@ export const renderOverview = async (container, workspaceId) => {
             <div class="dash-kpi-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
                 
                 <!-- 1. Total Gross Revenue -->
-                <div class="dash-kpi-card" style="background:#ffffff; border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
+                <div class="dash-kpi-card" style="background:var(--bg-card); border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
                         <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Gross Revenue</div>
-                        <span style="width:30px; height:30px; border-radius:8px; background:#f4f4f5; border:1px solid #e4e4e7; color:#18181b; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.95rem;">${getAppCurrencySymbol() || '$'}</span>
+                        <span style="width:30px; height:30px; border-radius:8px; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.95rem;">${getAppCurrencySymbol() || '$'}</span>
                     </div>
                     <div class="dash-kpi-value" id="kpi-revenue" style="font-size:1.65rem; font-weight:800; color:var(--text-primary); line-height:1.15;">...</div>
                     <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
@@ -294,26 +303,26 @@ export const renderOverview = async (container, workspaceId) => {
                     <svg class="dash-sparkline-svg" viewBox="0 0 240 45" preserveAspectRatio="none" style="width:100%; height:32px; margin-top:0.4rem;">
                         <defs>
                             <linearGradient id="grad-rev-dash" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#18181b" stop-opacity="0.2"/>
-                                <stop offset="100%" stop-color="#18181b" stop-opacity="0.0"/>
+                                <stop offset="0%" stop-color="currentColor" stop-opacity="0.2"/>
+                                <stop offset="100%" stop-color="currentColor" stop-opacity="0.0"/>
                             </linearGradient>
                         </defs>
-                        <path d="M0,32 Q30,12 60,26 T120,16 T180,28 T240,10 L240,45 L0,45 Z" fill="url(#grad-rev-dash)"/>
-                        <path d="M0,32 Q30,12 60,26 T120,16 T180,28 T240,10" fill="none" stroke="#18181b" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M0,32 Q30,12 60,26 T120,16 T180,28 T240,10 L240,45 L0,45 Z" fill="url(#grad-rev-dash)" style="color:var(--text-primary);"/>
+                        <path d="M0,32 Q30,12 60,26 T120,16 T180,28 T240,10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color:var(--text-primary);"/>
                     </svg>
                 </div>
 
                 <!-- 2. Total Net Profit & Margin -->
-                <div class="dash-kpi-card" style="background:#ffffff; border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
+                <div class="dash-kpi-card" style="background:var(--bg-card); border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
                         <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Net Gross Profit</div>
-                        <span style="width:30px; height:30px; border-radius:8px; background:rgba(16,185,129,0.1); color:#059669; display:flex; align-items:center; justify-content:center;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                        <span style="width:30px; height:30px; border-radius:8px; background:rgba(16,185,129,0.12); color:#10b981; display:flex; align-items:center; justify-content:center; border:1px solid rgba(16,185,129,0.3);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
                         </span>
                     </div>
-                    <div class="dash-kpi-value" id="kpi-profit" style="font-size:1.65rem; font-weight:800; color:#059669; line-height:1.15;">...</div>
+                    <div class="dash-kpi-value" id="kpi-profit" style="font-size:1.65rem; font-weight:800; color:#10b981; line-height:1.15;">...</div>
                     <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
-                        <span id="kpi-margin-pct" style="color:#059669; font-weight:700;">0% Margin</span>
+                        <span id="kpi-margin-pct" style="color:#10b981; font-weight:700;">0% Margin</span>
                         <span style="color:var(--text-muted);">&bull; Revenue minus COGS</span>
                     </div>
                     <!-- Sparkline Wave -->
@@ -330,54 +339,54 @@ export const renderOverview = async (container, workspaceId) => {
                 </div>
 
                 <!-- 3. Total Invoices & AOV -->
-                <div class="dash-kpi-card" style="background:#ffffff; border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
+                <div class="dash-kpi-card" style="background:var(--bg-card); border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
                         <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Orders & Invoices</div>
-                        <span style="width:30px; height:30px; border-radius:8px; background:rgba(59,130,246,0.1); color:#2563eb; display:flex; align-items:center; justify-content:center;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                        <span style="width:30px; height:30px; border-radius:8px; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); display:flex; align-items:center; justify-content:center;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                         </span>
                     </div>
                     <div class="dash-kpi-value" id="kpi-orders" style="font-size:1.65rem; font-weight:800; color:var(--text-primary); line-height:1.15;">...</div>
                     <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
-                        <span id="kpi-aov-val" style="color:#2563eb; font-weight:700;">AOV: $0</span>
+                        <span id="kpi-aov-val" style="color:var(--text-primary); font-weight:700;">AOV: $0</span>
                         <span style="color:var(--text-muted);">&bull; Avg order value</span>
                     </div>
                     <!-- Sparkline Wave -->
                     <svg class="dash-sparkline-svg" viewBox="0 0 240 45" preserveAspectRatio="none" style="width:100%; height:32px; margin-top:0.4rem;">
                         <defs>
                             <linearGradient id="grad-ord-dash" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/>
-                                <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
+                                <stop offset="0%" stop-color="currentColor" stop-opacity="0.2"/>
+                                <stop offset="100%" stop-color="currentColor" stop-opacity="0.0"/>
                             </linearGradient>
                         </defs>
-                        <path d="M0,30 Q35,16 70,28 T140,14 T210,22 T240,10 L240,45 L0,45 Z" fill="url(#grad-ord-dash)"/>
-                        <path d="M0,30 Q35,16 70,28 T140,14 T210,22 T240,10" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M0,30 Q35,16 70,28 T140,14 T210,22 T240,10 L240,45 L0,45 Z" fill="url(#grad-ord-dash)" style="color:var(--text-primary);"/>
+                        <path d="M0,30 Q35,16 70,28 T140,14 T210,22 T240,10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color:var(--text-primary);"/>
                     </svg>
                 </div>
 
                 <!-- 4. Inventory Valuation (Asset Worth) -->
-                <div class="dash-kpi-card" style="background:#ffffff; border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
+                <div class="dash-kpi-card" style="background:var(--bg-card); border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
                         <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Stock Asset Valuation</div>
-                        <span style="width:30px; height:30px; border-radius:8px; background:rgba(139,92,246,0.1); color:#7c3aed; display:flex; align-items:center; justify-content:center;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                        <span style="width:30px; height:30px; border-radius:8px; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); display:flex; align-items:center; justify-content:center;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                         </span>
                     </div>
                     <div class="dash-kpi-value" id="kpi-inventory-val" style="font-size:1.65rem; font-weight:800; color:var(--text-primary); line-height:1.15;">...</div>
                     <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
-                        <span id="kpi-sku-count" style="color:#7c3aed; font-weight:700;">0 SKUs Active</span>
+                        <span id="kpi-sku-count" style="color:var(--text-primary); font-weight:700;">0 SKUs Active</span>
                         <span style="color:var(--text-muted);">&bull; Total stock cost</span>
                     </div>
                     <!-- Sparkline Wave -->
                     <svg class="dash-sparkline-svg" viewBox="0 0 240 45" preserveAspectRatio="none" style="width:100%; height:32px; margin-top:0.4rem;">
                         <defs>
                             <linearGradient id="grad-purp-dash" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.25"/>
-                                <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.0"/>
+                                <stop offset="0%" stop-color="currentColor" stop-opacity="0.2"/>
+                                <stop offset="100%" stop-color="currentColor" stop-opacity="0.0"/>
                             </linearGradient>
                         </defs>
-                        <path d="M0,38 Q40,25 80,34 T160,16 T240,12 L240,45 L0,45 Z" fill="url(#grad-purp-dash)"/>
-                        <path d="M0,38 Q40,25 80,34 T160,16 T240,12" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M0,38 Q40,25 80,34 T160,16 T240,12 L240,45 L0,45 Z" fill="url(#grad-purp-dash)" style="color:var(--text-primary);"/>
+                        <path d="M0,38 Q40,25 80,34 T160,16 T240,12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color:var(--text-primary);"/>
                     </svg>
                 </div>
 
@@ -387,7 +396,7 @@ export const renderOverview = async (container, workspaceId) => {
             <div class="dash-charts-grid" style="display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr); gap:1.5rem; align-items:start;">
                 
                 <!-- CHART 1: INTERACTIVE REVENUE VS PROFIT VS COGS WAVE AREA GRAPH -->
-                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:1.5rem;">
+                <div class="dash-card" style="background:var(--bg-card); border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:1.5rem;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
                         <div>
                             <h3 style="margin:0 0 0.2rem 0; font-size:1.2rem; font-weight:800; color:var(--text-primary);">Macro Financial Trajectory</h3>
@@ -396,14 +405,14 @@ export const renderOverview = async (container, workspaceId) => {
 
                         <!-- Chart Series Toggles -->
                         <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; font-weight:700;">
-                            <span style="display:inline-flex; align-items:center; gap:0.35rem; color:#18181b;">
-                                <span style="width:8px; height:8px; border-radius:50%; background:#18181b;"></span> Revenue
+                            <span style="display:inline-flex; align-items:center; gap:0.35rem; color:var(--text-primary);">
+                                <span style="width:8px; height:8px; border-radius:50%; background:var(--text-primary);"></span> Revenue
                             </span>
                             <span style="display:inline-flex; align-items:center; gap:0.35rem; color:#10b981;">
                                 <span style="width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Net Profit
                             </span>
-                            <span style="display:inline-flex; align-items:center; gap:0.35rem; color:#64748b;">
-                                <span style="width:8px; height:8px; border-radius:50%; background:#64748b;"></span> COGS (Cost)
+                            <span style="display:inline-flex; align-items:center; gap:0.35rem; color:var(--text-muted);">
+                                <span style="width:8px; height:8px; border-radius:50%; background:var(--text-muted);"></span> COGS (Cost)
                             </span>
                         </div>
                     </div>
@@ -413,8 +422,8 @@ export const renderOverview = async (container, workspaceId) => {
                         <svg class="dash-svg-chart" id="dash-sales-svg" viewBox="0 0 680 240" preserveAspectRatio="none" style="width:100%; height:240px; display:block; overflow:visible;">
                             <defs>
                                 <linearGradient id="chartRevGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#18181b" stop-opacity="0.25"/>
-                                    <stop offset="100%" stop-color="#18181b" stop-opacity="0.01"/>
+                                    <stop offset="0%" stop-color="var(--text-primary)" stop-opacity="0.25"/>
+                                    <stop offset="100%" stop-color="var(--text-primary)" stop-opacity="0.01"/>
                                 </linearGradient>
                                 <linearGradient id="chartProfitGrad" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
@@ -423,16 +432,16 @@ export const renderOverview = async (container, workspaceId) => {
                             </defs>
 
                             <!-- Horizontal Grid Lines -->
-                            <g stroke="rgba(0,0,0,0.06)" stroke-width="1.2" stroke-dasharray="4 4">
+                            <g stroke="var(--border-color)" stroke-width="1.2" stroke-dasharray="4 4">
                                 <line x1="55" y1="20" x2="660" y2="20" />
                                 <line x1="55" y1="65" x2="660" y2="65" />
                                 <line x1="55" y1="110" x2="660" y2="110" />
                                 <line x1="55" y1="155" x2="660" y2="155" />
-                                <line x1="55" y1="200" x2="660" y2="200" stroke-dasharray="0" stroke="rgba(0,0,0,0.12)" />
+                                <line x1="55" y1="200" x2="660" y2="200" stroke-dasharray="0" stroke="var(--border-color)" />
                             </g>
 
                             <!-- Y-Axis Labels -->
-                            <g fill="#94a3b8" font-size="11" font-weight="600" text-anchor="end">
+                            <g fill="var(--text-muted)" font-size="11" font-weight="600" text-anchor="end">
                                 <text x="45" y="24" id="chart-y-4">40K</text>
                                 <text x="45" y="69" id="chart-y-3">30K</text>
                                 <text x="45" y="114" id="chart-y-2">20K</text>
@@ -443,41 +452,41 @@ export const renderOverview = async (container, workspaceId) => {
                             <!-- Area and Line Paths -->
                             <path id="chart-revenue-area" d="" fill="url(#chartRevGrad)" />
                             <path id="chart-profit-area" d="" fill="url(#chartProfitGrad)" />
-                            <path id="chart-revenue-line" d="" fill="none" stroke="#18181b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                            <path id="chart-revenue-line" d="" fill="none" stroke="var(--text-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
                             <path id="chart-profit-line" d="" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                            <path id="chart-cost-line" d="" fill="none" stroke="#64748b" stroke-width="1.8" stroke-dasharray="3 3" stroke-linecap="round" stroke-linejoin="round" />
+                            <path id="chart-cost-line" d="" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-dasharray="3 3" stroke-linecap="round" stroke-linejoin="round" />
 
                             <!-- Interactive Coordinate Circles -->
                             <g id="chart-data-dots"></g>
 
                             <!-- Hover Guide Line -->
-                            <line id="chart-hover-line" x1="0" y1="20" x2="0" y2="200" stroke="#0f172a" stroke-width="1.5" stroke-dasharray="3 3" opacity="0" />
+                            <line id="chart-hover-line" x1="0" y1="20" x2="0" y2="200" stroke="var(--text-primary)" stroke-width="1.5" stroke-dasharray="3 3" opacity="0" />
 
                             <!-- X-Axis Labels -->
-                            <g id="chart-x-labels" fill="#64748b" font-size="12" font-weight="600" text-anchor="middle"></g>
+                            <g id="chart-x-labels" fill="var(--text-muted)" font-size="12" font-weight="600" text-anchor="middle"></g>
                         </svg>
 
                         <!-- Floating Glass Tooltip -->
-                        <div class="dash-chart-tooltip" id="dash-chart-tooltip" style="display:none; position:absolute; transform:translate(-50%, -115%); background:rgba(15,23,42,0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); color:#ffffff; padding:0.6rem 0.85rem; border-radius:8px; font-size:0.78rem; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,0.25); z-index:50;">
-                            <div class="tooltip-month" id="tooltip-month-text" style="font-weight:700; border-bottom:1px solid rgba(255,255,255,0.15); padding-bottom:0.25rem; margin-bottom:0.35rem;">Month</div>
+                        <div class="dash-chart-tooltip" id="dash-chart-tooltip" style="display:none; position:absolute; transform:translate(-50%, -115%); background:var(--surface-900, #18181b); color:var(--surface-main, #ffffff); border:1px solid var(--border-color); padding:0.6rem 0.85rem; border-radius:8px; font-size:0.78rem; pointer-events:none; box-shadow:var(--shadow-elevated); z-index:50;">
+                            <div class="tooltip-month" id="tooltip-month-text" style="font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:0.25rem; margin-bottom:0.35rem;">Month</div>
                             <div class="tooltip-row" style="display:flex; justify-content:space-between; gap:0.75rem; margin-bottom:0.2rem;">
-                                <span style="color:#fda4af;">Revenue:</span>
-                                <strong id="tooltip-rev-text" style="color:#ffffff;">$0</strong>
+                                <span>Revenue:</span>
+                                <strong id="tooltip-rev-text">$0</strong>
                             </div>
                             <div class="tooltip-row" style="display:flex; justify-content:space-between; gap:0.75rem; margin-bottom:0.2rem;">
-                                <span style="color:#6ee7b7;">Profit:</span>
-                                <strong id="tooltip-profit-text" style="color:#ffffff;">$0</strong>
+                                <span style="color:#10b981;">Profit:</span>
+                                <strong id="tooltip-profit-text" style="color:#10b981;">$0</strong>
                             </div>
                             <div class="tooltip-row" style="display:flex; justify-content:space-between; gap:0.75rem;">
-                                <span style="color:#94a3b8;">Orders:</span>
-                                <strong id="tooltip-ord-text" style="color:#ffffff;">0</strong>
+                                <span style="color:var(--text-muted);">Orders:</span>
+                                <strong id="tooltip-ord-text">0</strong>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- CHART 2: ORDER STATUS & REVENUE DISTRIBUTION DONUT -->
-                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:1.5rem;">
+                <div class="dash-card" style="background:var(--bg-card); border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:1.5rem;">
                     <div style="margin-bottom:1.25rem;">
                         <h3 style="margin:0 0 0.2rem 0; font-size:1.2rem; font-weight:800; color:var(--text-primary);">Order & Cash Status</h3>
                         <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">Fulfillment health and payment completion</p>
@@ -487,7 +496,7 @@ export const renderOverview = async (container, workspaceId) => {
                         <!-- SVG Donut -->
                         <div class="dash-donut-graphic-wrap" style="position:relative; width:150px; height:150px; flex-shrink:0;">
                             <svg viewBox="0 0 160 160" width="150" height="150">
-                                <circle cx="80" cy="80" r="58" fill="none" stroke="#f1f5f9" stroke-width="18"/>
+                                <circle cx="80" cy="80" r="58" fill="none" stroke="var(--surface-100)" stroke-width="18"/>
                                 <g id="donut-segments"></g>
                             </svg>
                             <div class="dash-donut-center-text" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;">
@@ -497,7 +506,7 @@ export const renderOverview = async (container, workspaceId) => {
                         </div>
 
                         <!-- Breakdown List -->
-                        <div class="dash-donut-breakdown-list" id="donut-breakdown-list" style="flex:1; display:flex; flex-direction:column; gap:0.5rem;">
+                        <div class="dash-donut-breakdown-list" id="donut-breakdown-list" style="flex:1; display:flex; flex-direction:column; gap:0.5rem; color:var(--text-primary);">
                             <!-- Populated dynamically via JS -->
                         </div>
                     </div>
@@ -506,10 +515,10 @@ export const renderOverview = async (container, workspaceId) => {
                     <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem; font-size:0.82rem;">
                             <span style="font-weight:700; color:var(--text-primary);">Collection Efficiency</span>
-                            <span id="dash-collection-pct" style="font-weight:800; color:#059669;">0% Paid</span>
+                            <span id="dash-collection-pct" style="font-weight:800; color:#10b981;">0% Paid</span>
                         </div>
-                        <div class="perf-bar-wrap" style="height:8px;">
-                            <div class="perf-bar-fill" id="dash-collection-bar" style="width:0%;"></div>
+                        <div class="perf-bar-wrap" style="height:8px; background:var(--surface-100); border-radius:4px; overflow:hidden;">
+                            <div class="perf-bar-fill" id="dash-collection-bar" style="width:0%; background:#10b981; height:100%;"></div>
                         </div>
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-top:0.35rem;">
                             <span id="dash-paid-collected">Collected: $0</span>
@@ -524,11 +533,11 @@ export const renderOverview = async (container, workspaceId) => {
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem; align-items:start;">
                 
                 <!-- 1. TOP PERFORMING PRODUCTS -->
-                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
+                <div class="dash-card" style="background:var(--bg-card); border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
                     <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:6px;">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:var(--text-primary);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                                 Top Performing Products
                             </h3>
                             <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Highest revenue & gross profit contributors</p>
@@ -536,7 +545,7 @@ export const renderOverview = async (container, workspaceId) => {
                         <a href="#/products" class="btn btn-sm btn-secondary" style="font-size:0.78rem; padding:0.25rem 0.65rem;">View All</a>
                     </div>
                     <div class="table-container">
-                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem;">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem; background:var(--bg-card); color:var(--text-primary);">
                             <thead>
                                 <tr style="background:var(--surface-50); border-bottom:1px solid var(--border-color); color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
                                     <th style="padding:0.65rem 1rem;">Product</th>
@@ -553,11 +562,11 @@ export const renderOverview = async (container, workspaceId) => {
                 </div>
 
                 <!-- 2. TOP VIP CUSTOMERS -->
-                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
+                <div class="dash-card" style="background:var(--bg-card); border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
                     <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:6px;">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:var(--text-primary);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                 VIP Buyers Leaderboard
                             </h3>
                             <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Top accounts by cumulative spend</p>
@@ -565,7 +574,7 @@ export const renderOverview = async (container, workspaceId) => {
                         <a href="#/customers" class="btn btn-sm btn-secondary" style="font-size:0.78rem; padding:0.25rem 0.65rem;">View People</a>
                     </div>
                     <div class="table-container">
-                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem;">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem; background:var(--bg-card); color:var(--text-primary);">
                             <thead>
                                 <tr style="background:var(--surface-50); border-bottom:1px solid var(--border-color); color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
                                     <th style="padding:0.65rem 1rem;">Customer / Client</th>
@@ -581,11 +590,11 @@ export const renderOverview = async (container, workspaceId) => {
                 </div>
 
                 <!-- 3. RECENT INVOICES WITH 1-CLICK PERFORMANCE PREVIEW -->
-                <div class="dash-card" style="background:#ffffff; border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
+                <div class="dash-card" style="background:var(--bg-card); border-radius:var(--radius-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float); padding:0; overflow:hidden;">
                     <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:6px;">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                            <h3 style="margin:0 0 0.15rem 0; font-size:1.15rem; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:var(--text-primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                                 Recent Invoices Stream
                             </h3>
                             <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Latest sales & performance</p>
@@ -593,7 +602,7 @@ export const renderOverview = async (container, workspaceId) => {
                         <a href="#/invoices/customer" class="btn btn-sm btn-secondary" style="font-size:0.78rem; padding:0.25rem 0.65rem;">View Invoices</a>
                     </div>
                     <div class="table-container">
-                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem;">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.85rem; background:var(--bg-card); color:var(--text-primary);">
                             <thead>
                                 <tr style="background:var(--surface-50); border-bottom:1px solid var(--border-color); color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
                                     <th style="padding:0.65rem 1rem;">Invoice #</th>
@@ -682,6 +691,7 @@ export const renderOverview = async (container, workspaceId) => {
     };
 
     const computeAndRenderDashboard = () => {
+        const userRestrictions = getUserRestrictions();
         const allInvoices = [...cachedCustInvoices, ...cachedBusInvoices];
         
         // Filter within selected date range
@@ -781,12 +791,22 @@ export const renderOverview = async (container, workspaceId) => {
 
         // Populate Top KPIs with smooth animation
         animateNumber(container.querySelector('#kpi-revenue'), totalRevenue, true, 800);
-        animateNumber(container.querySelector('#kpi-profit'), totalProfit, true, 800);
+        if (userRestrictions.cannotSeeProfit) {
+            const kpiProfitEl = container.querySelector('#kpi-profit');
+            if (kpiProfitEl) kpiProfitEl.textContent = '••••';
+        } else {
+            animateNumber(container.querySelector('#kpi-profit'), totalProfit, true, 800);
+        }
         animateNumber(container.querySelector('#kpi-orders'), totalOrders, false, 700);
-        animateNumber(container.querySelector('#kpi-inventory-val'), totalInventoryValuation, true, 700);
+        if (userRestrictions.cannotSeeCost) {
+            const kpiInvEl = container.querySelector('#kpi-inventory-val');
+            if (kpiInvEl) kpiInvEl.textContent = '••••';
+        } else {
+            animateNumber(container.querySelector('#kpi-inventory-val'), totalInventoryValuation, true, 700);
+        }
 
         const marginLabel = container.querySelector('#kpi-margin-pct');
-        if (marginLabel) marginLabel.textContent = `${Math.round(netMarginPct)}% Net Margin`;
+        if (marginLabel) marginLabel.textContent = userRestrictions.cannotSeeProfit ? '••••' : `${Math.round(netMarginPct)}% Net Margin`;
 
         const aovLabel = container.querySelector('#kpi-aov-val');
         if (aovLabel) aovLabel.textContent = `AOV: ${formatCurr(avgOrderValue)}`;
@@ -976,8 +996,8 @@ export const renderOverview = async (container, workspaceId) => {
 
         if (elDataDots) {
             elDataDots.innerHTML = pointsRev.map((pt, i) => `
-                <circle cx="${pt.x}" cy="${pt.y}" r="4.5" fill="#ffffff" stroke="#18181b" stroke-width="2.5" />
-                <circle cx="${pointsProfit[i].x}" cy="${pointsProfit[i].y}" r="4" fill="#ffffff" stroke="#10b981" stroke-width="2.2" />
+                <circle cx="${pt.x}" cy="${pt.y}" r="4.5" fill="var(--bg-card)" stroke="var(--text-primary)" stroke-width="2.5" />
+                <circle cx="${pointsProfit[i].x}" cy="${pointsProfit[i].y}" r="4" fill="var(--bg-card)" stroke="#10b981" stroke-width="2.2" />
             `).join('');
         }
 
@@ -1021,7 +1041,7 @@ export const renderOverview = async (container, workspaceId) => {
 
                 if (tooltipMonth) tooltipMonth.textContent = d.month;
                 if (tooltipRev) tooltipRev.textContent = formatCurr(d.revenue);
-                if (tooltipProfit) tooltipProfit.textContent = `+${formatCurr(d.profit)}`;
+                if (tooltipProfit) tooltipProfit.textContent = userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurr(d.profit)}`;
                 if (tooltipOrd) tooltipOrd.textContent = `${d.orders} orders`;
             });
 
@@ -1126,7 +1146,7 @@ export const renderOverview = async (container, workspaceId) => {
                         </td>
                         <td style="padding:0.65rem; text-align:center; font-weight:700; color:var(--text-primary);">${p.units}</td>
                         <td style="padding:0.65rem; text-align:right; font-weight:700;">${formatCurr(p.revenue)}</td>
-                        <td style="padding:0.65rem 1rem; text-align:right; font-weight:700; color:#059669;">+${formatCurr(p.profit)}</td>
+                        <td style="padding:0.65rem 1rem; text-align:right; font-weight:700; color:#059669;">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurr(p.profit)}`}</td>
                     </tr>
                 `).join('');
             }

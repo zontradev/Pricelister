@@ -2,15 +2,17 @@ import { getPeopleService } from '../services/peopleService.js';
 import { getInvoiceService } from '../services/invoiceService.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
-import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
+import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { storageService } from '../../supabase/storage.js';
 import { draftManager } from '../services/draftManager.js';
+import { getUserRestrictions } from '../auth-handler.js';
 
 export const renderPeople = async (container, workspaceId, defaultTab = 'customers') => {
     const peopleService = getPeopleService(workspaceId);
     const invoiceService = getInvoiceService(workspaceId);
     const currentUser = authService.getCurrentUser();
+    const userRestrictions = getUserRestrictions();
     
     let currentTab = defaultTab; // 'customers', 'clients', or 'businesses'
     let dataList = [];
@@ -226,10 +228,12 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     </div>
                     
                     <div style="display:flex; gap:0.6rem; align-items:center;">
+                        ${userRestrictions.disableAdd ? '' : `
                         <button id="btn-add-person" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; font-weight:700; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow:0 4px 12px rgba(225,29,72,0.3); padding:0.55rem 1.25rem;">
                             ${ICONS.plus}
                             Add ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}
                         </button>
+                        `}
                     </div>
                 </div>
                 
@@ -433,11 +437,20 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         <span style="color:var(--text-primary); font-weight:700;">${escapeHtml(p.name)}</span>
                     </div>
 
-                    <div style="display:flex; gap:0.5rem;">
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        ${(isBusinessMode || currentTab === 'businesses') ? (p.isPrimary ? `
+                            <span class="badge" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.8rem; font-weight:700; padding:0.35rem 0.75rem; border-radius:999px; display:inline-flex; align-items:center; gap:5px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Primary Business (Default)
+                            </span>
+                        ` : `
+                            <button type="button" id="btn-detail-set-primary" class="btn btn-secondary" style="font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:0.35rem;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Set as Primary
+                            </button>
+                        `) : ''}
                         <button type="button" id="btn-edit-detail-profile" class="btn btn-secondary" style="font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:0.35rem;">
                             ${ICONS.edit} Edit Profile
                         </button>
-                        <button type="button" id="btn-detail-create-invoice" class="btn btn-primary" style="background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:0.35rem; box-shadow:0 3px 10px rgba(225,29,72,0.25);">
+                        <button type="button" id="btn-detail-create-invoice" class="btn btn-primary" style="background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:0.35rem; box-shadow:0 3px 10px rgba(37,99,235,0.25);">
                             ${ICONS.plus} Create Invoice
                         </button>
                     </div>
@@ -618,13 +631,48 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             </div>
                         </div>
 
+                        <!-- ORIGIN DIVIDER CARD -->
+                        <div class="card origin-divider-card" style="padding:1.25rem; background:var(--bg-card); border-radius:16px; border:1px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <h3 style="margin:0 0 0.85rem 0; font-size:0.95rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; justify-content:space-between;">
+                                <span style="display:flex; align-items:center; gap:0.4rem;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                    ${typeLabel} Origin
+                                </span>
+                                <span class="badge" style="font-size:0.65rem; background:rgba(225,29,72,0.1); color:var(--theme-primary, #e11d48); font-weight:700;">Trace</span>
+                            </h3>
+
+                            <div class="origin-grid" style="display:grid; grid-template-columns:1fr; gap:0.6rem; font-size:0.8rem;">
+                                <div class="origin-field-box" style="background:var(--surface-100); padding:0.55rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);">
+                                    <div style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">${typeLabel} ID</div>
+                                    <div style="font-weight:700; color:var(--text-primary); word-break:break-all;">${escapeHtml(String(p.uniqueId || p.id || 'N/A'))}</div>
+                                </div>
+                                <div class="origin-field-box" style="background:var(--surface-100); padding:0.55rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);">
+                                    <div style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Creator ID</div>
+                                    <div style="font-weight:600; color:var(--text-primary); word-break:break-all;">${escapeHtml(String(p.creatorId || p.createdBy || p.userId || 'System / Admin'))}</div>
+                                </div>
+                                <div class="origin-field-box" style="background:var(--surface-100); padding:0.55rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);">
+                                    <div style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Workspace ID</div>
+                                    <div style="font-weight:600; color:var(--text-primary); word-break:break-all;">${escapeHtml(String(workspaceId || p.workspaceId || localStorage.getItem('pricelister_active_workspace') || 'Default Workspace'))}</div>
+                                </div>
+                                <div class="origin-field-box" style="background:var(--surface-100); padding:0.55rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);">
+                                    <div style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Created At</div>
+                                    <div style="font-weight:600; color:var(--text-primary);">${formatExactTimestamp(p.createdAt || p.timestamp || p.date)}</div>
+                                </div>
+                                ${(p.updatedAt || p.updatedTimestamp) ? `
+                                <div class="origin-field-box" style="background:var(--surface-100); padding:0.55rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);">
+                                    <div style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Updated At</div>
+                                    <div style="font-weight:600; color:var(--text-primary);">${formatExactTimestamp(p.updatedAt || p.updatedTimestamp)}</div>
+                                </div>` : ''}
+                            </div>
+                        </div>
+
                         <div class="card" style="padding:1.5rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color);">
                             <h3 style="margin:0 0 1rem 0; font-size:1rem; font-weight:700; color:var(--text-primary);">
                                 Quick Actions
                             </h3>
 
                             <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                                <button type="button" id="btn-quick-new-invoice" class="btn btn-primary btn-block" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-weight:700; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); padding:0.65rem;">
+                                <button type="button" id="btn-quick-new-invoice" class="btn btn-primary btn-block" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-weight:700; background:var(--theme-gradient, linear-gradient(135deg, #e11d48 0%, #be123c 100%)); box-shadow:0 4px 12px var(--theme-glow, rgba(225,29,72,0.25)); padding:0.65rem;">
                                     ${ICONS.plus} Create Invoice
                                 </button>
                                 
@@ -679,7 +727,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                                     <td colspan="6" style="padding:2.5rem 1rem; text-align:center; color:var(--text-muted);">
                                                         <strong>No Invoices Found</strong>
                                                         <p style="margin:0.25rem 0 1rem 0; font-size:0.85rem;">No invoices have been billed to this profile yet.</p>
-                                                        <button type="button" id="btn-tab-empty-invoice" class="btn btn-primary btn-sm" style="background:#e11d48; font-weight:700;">+ Create First Invoice</button>
+                                                        <button type="button" id="btn-tab-empty-invoice" class="btn btn-primary btn-sm" style="background:#e11d48; font-weight:700;">Create First Invoice</button>
                                                     </td>
                                                 </tr>
                                             ` : stats.invoices.map(inv => {
@@ -1246,6 +1294,20 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         imageUri: finalImageUrl
                     };
 
+                    if (!id && userRestrictions.disableAdd) {
+                        throw new Error("You do not have permission to add new directory profiles.");
+                    }
+                    if (id && userRestrictions.disableUpdate) {
+                        throw new Error("You do not have permission to update directory profiles.");
+                    }
+                    if (id && userRestrictions.disableUpdateOthers) {
+                        const existing = dataList.find(p => p.id === id);
+                        const isCreatorSelf = existing && ((existing.creatorId && (existing.creatorId === currentUser?.uid || (currentUser?.email && existing.creatorId.toLowerCase() === (currentUser?.email || '').toLowerCase()))) || (existing.createdBy && (existing.createdBy === currentUser?.uid || (currentUser?.email && existing.createdBy.toLowerCase() === (currentUser?.email || '').toLowerCase()))));
+                        if (!isCreatorSelf) {
+                            throw new Error("You are restricted from updating profiles created by other members.");
+                        }
+                    }
+
                     if (id) {
                         if (currentTab === 'customers') await peopleService.updateCustomer(id, payload);
                         else if (currentTab === 'businesses') await peopleService.updateBusiness(id, payload);
@@ -1316,6 +1378,20 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 renderDedicatedDetailView();
             });
         });
+
+        const btnSetPrimary = container.querySelector('#btn-detail-set-primary');
+        if (btnSetPrimary && activePersonDetail) {
+            btnSetPrimary.addEventListener('click', async () => {
+                try {
+                    await peopleService.setPrimaryBusiness(activePersonDetail.id);
+                    activePersonDetail.isPrimary = true;
+                    showAlert.success(`"${activePersonDetail.name}" set as Primary Business. Invoices will default to this business.`);
+                    renderDedicatedDetailView();
+                } catch(err) {
+                    showAlert.error(err.message || 'Failed to set primary business');
+                }
+            });
+        }
 
         const btnEdit = container.querySelector('#btn-edit-detail-profile');
         if (btnEdit && activePersonDetail) {
@@ -1536,14 +1612,21 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 ` : avatarFallback}
                             </div>
                             <div>
-                                <strong style="color:var(--text-primary); font-size:0.92rem; display:block;">${escapeHtml(person.name)}</strong>
+                                <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+                                    <strong style="color:var(--text-primary); font-size:0.92rem;">${escapeHtml(person.name)}</strong>
+                                    ${(isBusinessMode || currentTab === 'businesses') && person.isPrimary ? `
+                                        <span class="badge badge-primary-business" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.68rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:999px; display:inline-flex; align-items:center; gap:3px;">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Primary
+                                        </span>
+                                    ` : ''}
+                                </div>
                                 <small class="text-muted" style="font-family:monospace; font-size:0.75rem;">${person.uniqueId || person.id}</small>
                             </div>
                         </div>
                     </td>
                     <td style="padding:0.9rem 1rem; font-size:0.85rem;">
-                        ${person.phone ? `<div style="display:flex; align-items:center; gap:4px;"><span style="color:#e11d48;">${ICONS.phone}</span> ${escapeHtml(person.phone)}</div>` : ''}
-                        ${person.email ? `<div style="color:var(--text-muted); display:flex; align-items:center; gap:4px;"><span style="color:#e11d48;">${ICONS.email}</span> ${escapeHtml(person.email)}</div>` : ''}
+                        ${person.phone ? `<div style="display:flex; align-items:center; gap:4px;"><span style="color:#2563eb;">${ICONS.phone}</span> ${escapeHtml(person.phone)}</div>` : ''}
+                        ${person.email ? `<div style="color:var(--text-muted); display:flex; align-items:center; gap:4px;"><span style="color:#2563eb;">${ICONS.email}</span> ${escapeHtml(person.email)}</div>` : ''}
                         ${!person.phone && !person.email ? '<span style="color:var(--text-muted);">—</span>' : ''}
                     </td>
                     <td style="padding:0.9rem 1rem; font-size:0.85rem; color:var(--text-secondary); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
@@ -1553,15 +1636,21 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         ${currSym} ${stats.totalSpent.toFixed(2)}
                     </td>
                     <td style="padding:0.9rem 1rem;">
-                        <span class="badge" style="background:${count > 0 ? '#fff1f2' : 'var(--surface-100)'}; color:${count > 0 ? '#e11d48' : 'var(--text-muted)'}; font-weight:700; font-size:0.78rem; padding:0.25rem 0.6rem; border-radius:999px; border:1px solid ${count > 0 ? '#fecdd3' : 'var(--border-color)'};">
+                        <span class="badge" style="background:${count > 0 ? '#eff6ff' : 'var(--surface-100)'}; color:${count > 0 ? '#2563eb' : 'var(--text-muted)'}; font-weight:700; font-size:0.78rem; padding:0.25rem 0.6rem; border-radius:999px; border:1px solid ${count > 0 ? '#bfdbfe' : 'var(--border-color)'};">
                             ${count} ${count === 1 ? 'Invoice' : 'Invoices'}
                         </span>
                     </td>
                     <td style="padding:0.9rem 1.25rem; text-align:right;">
                         <div style="display:inline-flex; gap:0.4rem; align-items:center;">
-                            <button type="button" class="btn btn-sm btn-primary add-invoice-for-person" data-id="${person.id}" style="background:linear-gradient(135deg, #e11d48, #be123c); border:none; font-weight:700; font-size:0.78rem; padding:0.25rem 0.65rem; display:inline-flex; align-items:center; gap:3px;" title="Create new invoice for ${escapeHtml(person.name)}">
+                            ${(isBusinessMode || currentTab === 'businesses') && !person.isPrimary ? `
+                                <button type="button" class="btn btn-sm btn-secondary set-primary-business-btn" data-id="${person.id}" title="Set as default business for all new invoices" style="font-weight:600; font-size:0.75rem; padding:0.25rem 0.55rem; display:inline-flex; align-items:center; gap:3px;">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                    Make Primary
+                                </button>
+                            ` : ''}
+                            <button type="button" class="btn btn-sm btn-primary add-invoice-for-person" data-id="${person.id}" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); border:none; font-weight:700; font-size:0.78rem; padding:0.25rem 0.65rem; display:inline-flex; align-items:center; gap:3px;" title="Create new invoice for ${escapeHtml(person.name)}">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                + Invoice
+                                Invoice
                             </button>
                             <button type="button" class="btn btn-sm btn-secondary view-person-detail" data-id="${person.id}" style="font-weight:600; font-size:0.78rem; padding:0.25rem 0.65rem;">
                                 View
@@ -1596,6 +1685,22 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         imageUrl: p.imageUrl || p.imageUri || ''
                     };
                     window.location.hash = `#/${isBus ? 'invoices/business' : 'invoices/customer'}`;
+                }
+            });
+        });
+
+        container.querySelectorAll('.set-primary-business-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.getAttribute('data-id');
+                const p = dataList.find(x => x.id === id);
+                try {
+                    await peopleService.setPrimaryBusiness(id);
+                    showAlert.success(`"${p?.name || 'Business'}" is now the Primary Business (default for new invoices).`);
+                    const refreshed = await peopleService.getAllBusinesses();
+                    renderRealtimeList(refreshed);
+                } catch(err) {
+                    showAlert.error(err.message || 'Failed to update primary business');
                 }
             });
         });
@@ -1674,6 +1779,16 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 const stats = getPersonStats(person);
                 const typeName = isBusinessMode ? 'business' : (currentTab === 'clients' ? 'client' : 'customer');
                 const typeCap = typeName.charAt(0).toUpperCase() + typeName.slice(1);
+
+                const isCreatorSelf = (person?.creatorId && (person.creatorId === currentUser?.uid || (currentUser?.email && person.creatorId.toLowerCase() === (currentUser?.email || '').toLowerCase()))) || (person?.createdBy && (person.createdBy === currentUser?.uid || (currentUser?.email && person.createdBy.toLowerCase() === (currentUser?.email || '').toLowerCase())));
+                if (userRestrictions.disableDelete) {
+                    showAlert.warning("You are restricted from deleting directory profiles.");
+                    return;
+                }
+                if (userRestrictions.disableDeleteOthers && !isCreatorSelf) {
+                    showAlert.warning("You are restricted from deleting directory profiles created by other members.");
+                    return;
+                }
 
                 if (stats.count > 0) {
                     showAlert.error(`Can't Delete ${typeName}. The ${typeCap} is used by ${stats.count} invoice${stats.count > 1 ? 's' : ''}. You have to Delete those invoices or edit this ${typeName}.`);

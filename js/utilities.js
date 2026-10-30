@@ -41,3 +41,19 @@ export const formatDate = (timestamp) => {
         day: 'numeric'
     }).format(new Date(timestamp));
 };
+
+export const formatExactTimestamp = (val) => {
+    if (!val) return 'N/A';
+    const date = (typeof val?.toDate === 'function') ? val.toDate() : new Date(val);
+    if (isNaN(date.getTime())) return String(val);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = date.toLocaleString('en-US', { month: 'long' });
+    const year = date.getFullYear();
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${day} (${month}) ${year} ${hours}:${minutes} ${ampm}`;
+};
+

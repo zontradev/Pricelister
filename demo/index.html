@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceLister Demo Sandbox</title>
+    <script>
+        (function() {
+            try {
+                localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
+                localStorage.setItem('mock_dev_session', JSON.stringify({
+                    uid: 'dev-mock-uid',
+                    email: 'developer@local.test',
+                    displayName: 'Demo Admin (Testing)',
+                    photoURL: null,
+                    role: 'CREATOR_ADMIN'
+                }));
+                sessionStorage.setItem('pricelister_last_route', '/overview');
+            } catch(e) {}
+            window.location.replace('/app.html');
+        })();
+    </script>
+</head>
+<body style="background:#09090b; color:#fff; display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
+    <p>Launching PriceLister Demo Sandbox...</p>
+</body>
+</html>

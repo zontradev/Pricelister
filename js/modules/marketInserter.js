@@ -4,6 +4,7 @@ import { getCategoryService } from '../services/categoryService.js';
 import { showAlert } from '../alert-handler.js';
 import { generateUniqueId } from '../utils/idGenerator.js';
 import { getAppCurrencySymbol } from '../utilities.js';
+import { storageService } from '../../supabase/storage.js';
 
 /**
  * Market Inserter Module (Dedicated In-Page Section)
@@ -34,6 +35,18 @@ export const renderMarketInserter = async (container, workspaceId) => {
         console.warn("Could not pre-fetch data for Market Inserter:", e);
     }
 
+    // Check if products were transferred from catalog for batch updating
+    const batchTransferRaw = sessionStorage.getItem('plister_market_batch_transfer');
+    let transferredProducts = [];
+    if (batchTransferRaw) {
+        try {
+            transferredProducts = JSON.parse(batchTransferRaw) || [];
+        } catch (e) {
+            console.warn('Failed to parse transferred products:', e);
+        }
+    }
+    const isBatchUpdateMode = transferredProducts.length > 0;
+
     // Row model state store
     const MAX_ROWS = 250;
     let rowDataList = [];
@@ -57,20 +70,65 @@ export const renderMarketInserter = async (container, workspaceId) => {
         variations: []
     });
 
-    // Initialize with default 10 rows
-    for (let i = 0; i < 10; i++) {
-        rowDataList.push(createBlankRow());
+    if (isBatchUpdateMode) {
+        rowDataList = transferredProducts.map(p => ({
+            id: 'row_' + Math.random().toString(36).substring(2, 9),
+            existingId: p.id,
+            name: p.name || '',
+            category: p.category || (categories.length > 0 ? (categories[0].uniqueId || categories[0].id) : ''),
+            sizeWeight: p.sizeWeight || '',
+            quantity: Number(p.quantity) || 0,
+            basePrice: Number(p.basePrice) || 0,
+            price: Number(p.price) || 0,
+            salePrice: Number(p.salePrice) || 0,
+            mrp: Number(p.mrp) || 0,
+            upcCode: p.upcCode || '',
+            mfgDate: p.mfgDate || '',
+            expDate: p.expDate || '',
+            note: p.note || '',
+            imageFile: null,
+            previewUrl: p.imageUri || '',
+            imageUri: p.imageUri || '',
+            variations: Array.isArray(p.variations) ? JSON.parse(JSON.stringify(p.variations)) : []
+        }));
+    } else {
+        // Initialize with default 10 blank rows
+        for (let i = 0; i < 10; i++) {
+            rowDataList.push(createBlankRow());
+        }
     }
 
     container.innerHTML = `
         <div class="market-inserter-page" style="display: flex; flex-direction: column; gap: 1.25rem;">
             
+            ${isBatchUpdateMode ? `
+                <!-- Batch Updator Banner -->
+                <div id="mi-transfer-mode-banner" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:12px; padding:0.9rem 1.25rem; gap:1rem; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <div style="width:38px; height:38px; border-radius:9px; background:#ffffff; border:1.5px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0;">
+                            📝
+                        </div>
+                        <div>
+                            <strong style="color:#0f172a; font-size:0.92rem;">Market Updator Mode: ${transferredProducts.length} Selected Products Loaded</strong>
+                            <div style="font-size:0.78rem; color:#64748b; margin-top:2px;">
+                                Mass detail update — modify name, category, pricing, stock, barcodes, or variations in the grid below. Submitting will update these items directly in your catalog instead of adding duplicates.
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" id="mi-btn-discard-batch" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; border:1.5px solid #cbd5e1; background:#ffffff; color:#64748b; border-radius:8px; font-weight:600;">
+                        Discard Batch & Start Blank
+                    </button>
+                </div>
+            ` : ''}
+
             <!-- 1. Header Toolbar Section -->
             <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 0;">
                 <div>
-                    <h2 style="margin: 0 0 0.25rem 0;">Market Inserter</h2>
+                    <h2 style="margin: 0 0 0.25rem 0;">${isBatchUpdateMode ? 'Market Updator' : 'Market Inserter'}</h2>
                     <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
-                        Fast spreadsheet grid — insert up to 250 products at once with live duplicate protection & instant image pickers
+                        ${isBatchUpdateMode 
+                            ? `Mass detail update — editing ${transferredProducts.length} selected products simultaneously with instant catalog sync` 
+                            : 'Fast spreadsheet grid — insert up to 250 products at once with live duplicate protection & instant image pickers'}
                     </p>
                 </div>
 
@@ -78,7 +136,7 @@ export const renderMarketInserter = async (container, workspaceId) => {
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 0.35rem; background: var(--surface-50); padding: 0.35rem 0.65rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600;">
                         <span>Rows:</span>
-                        <span id="mi-row-counter" style="color: var(--primary); font-weight: 700;">10 / 250</span>
+                        <span id="mi-row-counter" style="color: var(--primary); font-weight: 700;">${rowDataList.length} / 250</span>
                     </div>
 
                     <!-- Add Row buttons -->
@@ -191,7 +249,7 @@ export const renderMarketInserter = async (container, workspaceId) => {
                         <!-- Variation Rows -->
                     </div>
 
-                    <button id="mi-var-add-row" class="btn btn-secondary" style="width: 100%; font-size: 0.82rem; margin-bottom: 1.25rem;">+ Add Variation Option</button>
+                    <button id="mi-var-add-row" class="btn btn-secondary" style="width: 100%; font-size: 0.82rem; margin-bottom: 1.25rem;">Add Variation Option</button>
 
                     <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
                         <button id="mi-var-cancel" class="btn btn-secondary" style="font-size: 0.85rem;">Cancel</button>
@@ -240,7 +298,8 @@ export const renderMarketInserter = async (container, workspaceId) => {
                 return;
             }
 
-            const inCatalog = existingProducts.some(p => (p.name || '').trim().toLowerCase() === cleanName);
+            const isSelfExisting = Boolean(r.existingId);
+            const inCatalog = !isSelfExisting && existingProducts.some(p => (p.name || '').trim().toLowerCase() === cleanName);
             const inTableDup = nameMap.has(cleanName) && nameMap.get(cleanName).length > 1;
 
             if (inCatalog || inTableDup) {
@@ -264,7 +323,9 @@ export const renderMarketInserter = async (container, workspaceId) => {
         });
 
         validCountEl.textContent = validCount;
-        btnSubmitLabel.textContent = validCount > 0 ? `Insert ${validCount} Products` : 'Insert Products';
+        btnSubmitLabel.textContent = isBatchUpdateMode 
+            ? (validCount > 0 ? `Update ${validCount} Products in Catalog` : 'Update Products') 
+            : (validCount > 0 ? `Insert ${validCount} Products` : 'Insert Products');
 
         if (dupCount > 0) {
             dupPill.style.display = 'inline-flex';
@@ -700,10 +761,16 @@ export const renderMarketInserter = async (container, workspaceId) => {
     container.querySelector('#mi-var-close-x').addEventListener('click', closeVarModal);
     container.querySelector('#mi-var-cancel').addEventListener('click', closeVarModal);
 
+    // Discard batch transfer and start blank
+    container.querySelector('#mi-btn-discard-batch')?.addEventListener('click', () => {
+        sessionStorage.removeItem('plister_market_batch_transfer');
+        renderMarketInserter(container, workspaceId);
+    });
+
     // Initial render
     renderRows();
 
-    // 4. Submit Batch Insertion
+    // 4. Submit Batch Insertion / Updating
     const btnSubmit = container.querySelector('#mi-btn-submit');
     const progressOverlay = container.querySelector('#mi-progress-overlay');
     const progressBarFill = container.querySelector('#mi-progress-bar-fill');
@@ -715,7 +782,7 @@ export const renderMarketInserter = async (container, workspaceId) => {
         const validProducts = rowDataList.filter(r => (r.name || '').trim() !== '');
 
         if (validProducts.length === 0) {
-            showAlert.error('Please enter at least 1 product name before inserting.');
+            showAlert.error('Please enter at least 1 product name before submitting.');
             return;
         }
 
@@ -732,15 +799,20 @@ export const renderMarketInserter = async (container, workspaceId) => {
             }
         }
 
-        // Duplicate warning confirmation
-        const dupCount = validProducts.filter(p => {
-            const clean = p.name.trim().toLowerCase();
-            return existingProducts.some(ep => (ep.name || '').trim().toLowerCase() === clean);
-        }).length;
+        const toUpdate = validProducts.filter(r => r.existingId);
+        const toAdd = validProducts.filter(r => !r.existingId);
 
-        if (dupCount > 0) {
-            const proceed = await showAlert.confirm(`${dupCount} of the products to be inserted already exist in your workspace. Do you want to continue inserting them?`);
-            if (!proceed) return;
+        // Duplicate warning confirmation for brand new products
+        if (toAdd.length > 0) {
+            const dupCount = toAdd.filter(p => {
+                const clean = p.name.trim().toLowerCase();
+                return existingProducts.some(ep => (ep.name || '').trim().toLowerCase() === clean);
+            }).length;
+
+            if (dupCount > 0) {
+                const proceed = await showAlert.confirm(`${dupCount} of the new products already exist in your workspace. Do you want to continue inserting them?`);
+                if (!proceed) return;
+            }
         }
 
         // Show progress overlay
@@ -750,25 +822,71 @@ export const renderMarketInserter = async (container, workspaceId) => {
         progressBarFill.style.width = `0%`;
 
         try {
-            await productService.bulkAddProducts(
-                validProducts,
-                currentUser.uid,
-                null,
-                (current, total, currentName) => {
-                    const percent = Math.round((current / total) * 100);
-                    progressBarFill.style.width = `${percent}%`;
-                    progressPercent.textContent = `${percent}%`;
-                    progressCount.textContent = `${current} of ${total}`;
-                    progressItemName.textContent = currentName;
-                }
-            );
+            // 1. Process updates for transferred existing products
+            for (let i = 0; i < toUpdate.length; i++) {
+                const item = toUpdate[i];
+                const progressNum = i + 1;
+                const percent = Math.round((progressNum / validProducts.length) * 100);
+                progressBarFill.style.width = `${percent}%`;
+                progressPercent.textContent = `${percent}%`;
+                progressCount.textContent = `${progressNum} of ${validProducts.length}`;
+                progressItemName.textContent = `Updating: ${item.name}`;
 
-            showAlert.success(`Successfully inserted ${validProducts.length} products to your catalog!`);
+                let finalImageUri = item.imageUri || '';
+                if (item.imageFile instanceof File || item.imageFile instanceof Blob) {
+                    try {
+                        finalImageUri = await storageService.uploadImage(item.imageFile, workspaceId);
+                    } catch (imgErr) {
+                        console.warn(`Failed to upload image for ${item.name}:`, imgErr);
+                    }
+                }
+
+                const updatePayload = {
+                    name: item.name || '',
+                    category: item.category || '',
+                    sizeWeight: item.sizeWeight || '',
+                    quantity: Number(item.quantity) || 0,
+                    basePrice: Number(item.basePrice) || 0,
+                    price: Number(item.price) || 0,
+                    salePrice: Number(item.salePrice) || 0,
+                    mrp: Number(item.mrp) || 0,
+                    mfgDate: item.mfgDate || '',
+                    expDate: item.expDate || '',
+                    note: item.note || '',
+                    upcCode: item.upcCode || '',
+                    variations: Array.isArray(item.variations) ? item.variations : []
+                };
+                if (finalImageUri) updatePayload.imageUri = finalImageUri;
+
+                await productService.updateProduct(item.existingId, updatePayload, null, currentUser.uid);
+            }
+
+            // 2. Process additions if any
+            if (toAdd.length > 0) {
+                await productService.bulkAddProducts(
+                    toAdd,
+                    currentUser.uid,
+                    null,
+                    (current, total, currentName) => {
+                        const totalDone = toUpdate.length + current;
+                        const percent = Math.round((totalDone / validProducts.length) * 100);
+                        progressBarFill.style.width = `${percent}%`;
+                        progressPercent.textContent = `${percent}%`;
+                        progressCount.textContent = `${totalDone} of ${validProducts.length}`;
+                        progressItemName.textContent = `Inserting: ${currentName}`;
+                    }
+                );
+            }
+
+            sessionStorage.removeItem('plister_market_batch_transfer');
+            showAlert.success(isBatchUpdateMode 
+                ? `Successfully updated ${toUpdate.length} product(s) in catalog!` 
+                : `Successfully inserted ${validProducts.length} products to your catalog!`);
             window.location.hash = '#/products';
 
         } catch (err) {
             progressOverlay.style.display = 'none';
-            showAlert.error(err.message || 'Failed to complete batch insertion');
+            showAlert.error(err.message || 'Failed to complete batch operations');
         }
     });
 };

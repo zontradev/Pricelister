@@ -5,6 +5,7 @@ import { getPeopleService } from '../services/peopleService.js';
 import { calculateInvoiceTotal } from '../utils/invoiceCalculator.js';
 import { formatCurrency } from '../utilities.js';
 import { showAlert } from '../alert-handler.js';
+import { getUserRestrictions } from '../auth-handler.js';
 
 // Helper for currency formatting
 const formatCurr = (n) => formatCurrency(n);
@@ -57,6 +58,7 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
     const categoryService = getCategoryService(workspaceId);
     const invoiceService = getInvoiceService(workspaceId);
     const peopleService = getPeopleService(workspaceId);
+    const userRestrictions = getUserRestrictions();
 
     // Initial Skeleton Loading State
     container.innerHTML = `
@@ -1300,8 +1302,8 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
                                             <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${inv.isBusinessInvoice ? 'Business Invoice' : 'Customer Invoice'}</div>
                                         </td>
                                         <td style="padding:1rem; font-weight:600; color:var(--text-primary); font-size:0.92rem;">${formatCurr(inv.total)}</td>
-                                        <td style="padding:1rem;"><span class="badge" style="background:rgba(16,185,129,0.1); color:#059669; font-weight:700;">+${inv.margin.toFixed(1)}% Margin</span></td>
-                                        <td style="padding:1rem 1.25rem; font-weight:700; color:#059669; font-size:1.1rem;">+${formatCurr(inv.profit)}</td>
+                                        <td style="padding:1rem;"><span class="badge" style="background:rgba(16,185,129,0.1); color:#059669; font-weight:700;">${userRestrictions.cannotSeeProfit ? '••••' : `+${inv.margin.toFixed(1)}% Margin`}</span></td>
+                                        <td style="padding:1rem 1.25rem; font-weight:700; color:#059669; font-size:1.1rem;">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurr(inv.profit)}`}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -1357,8 +1359,8 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; margin-bottom:2rem;">
                     <div class="card" style="padding:1.4rem; border-left:4px solid #10b981;">
                         <div style="font-size:0.78rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">Net Profit</div>
-                        <div style="font-size:1.85rem; font-weight:700; color:#059669; margin-top:0.35rem;">+${formatCurr(netProfit)}</div>
-                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">Margin: ${margin.toFixed(1)}%</div>
+                        <div style="font-size:1.85rem; font-weight:700; color:#059669; margin-top:0.35rem;">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurr(netProfit)}`}</div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">Margin: ${userRestrictions.cannotSeeProfit ? '••••' : `${margin.toFixed(1)}%`}</div>
                     </div>
                     <div class="card" style="padding:1.4rem; border-left:4px solid var(--primary);">
                         <div style="font-size:0.78rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">Gross Revenue</div>
@@ -1367,7 +1369,7 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
                     </div>
                     <div class="card" style="padding:1.4rem; border-left:4px solid #f59e0b;">
                         <div style="font-size:0.78rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">Est. Cost of Goods (COGS)</div>
-                        <div style="font-size:1.85rem; font-weight:700; color:#d97706; margin-top:0.35rem;">${formatCurr(cogs)}</div>
+                        <div style="font-size:1.85rem; font-weight:700; color:#d97706; margin-top:0.35rem;">${userRestrictions.cannotSeeCost ? '••••' : formatCurr(cogs)}</div>
                     </div>
                 </div>
 
@@ -1395,8 +1397,8 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
                                             <td style="padding:1rem 1.25rem;"><code style="font-family:monospace; background:rgba(0,0,0,0.04); padding:0.2rem 0.4rem; border-radius:4px;">${inv.uniqueId || inv.busInvNumber || inv.id}</code></td>
                                             <td style="padding:1rem; font-size:0.85rem; color:var(--text-secondary);">${dateStr}</td>
                                             <td style="padding:1rem; font-weight:600; color:var(--text-primary); font-size:0.9rem;">${formatCurr(inv.totalPrice)}</td>
-                                            <td style="padding:1rem; font-weight:700; color:#059669; font-size:0.95rem;">+${formatCurr(p.profit)}</td>
-                                            <td style="padding:1rem 1.25rem;"><span class="badge" style="background:rgba(16,185,129,0.1); color:#059669; font-weight:700;">+${p.margin.toFixed(1)}%</span></td>
+                                            <td style="padding:1rem; font-weight:700; color:#059669; font-size:0.95rem;">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurr(p.profit)}`}</td>
+                                            <td style="padding:1rem 1.25rem;"><span class="badge" style="background:rgba(16,185,129,0.1); color:#059669; font-weight:700;">${userRestrictions.cannotSeeProfit ? '••••' : `+${p.margin.toFixed(1)}%`}</span></td>
                                         </tr>
                                     `;
                                 }).join('')}

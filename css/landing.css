@@ -1,5 +1,24 @@
 /* Landing Page specific styles */
 
+*, *::before, *::after {
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+:focus, :focus-visible, :active {
+    outline: none !important;
+}
+
+a, button, input, select, textarea, [tabindex], .brand-badge, .nav-link, .nav-links a {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+a:focus, a:focus-visible, a:active,
+button:focus, button:focus-visible, button:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .landing-body {
     background-color: white;
 }

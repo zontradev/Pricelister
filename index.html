@@ -2,27 +2,88 @@
 <html lang="en">
 
 <head>
+    <base href="/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>PriceLister — Next-Gen Business Workspace & Smart Price Lister</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Cinzel:wght@700;800&family=Dancing+Script:wght@700&family=Great+Vibes&family=Inter:wght@400;500;600;700;800;900&family=Merriweather:wght@700&family=Outfit:wght@700;800&family=Sacramento&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=Alex+Brush&family=Allura&family=Cinzel:wght@700;800&family=Dancing+Script:wght@700&family=Great+Vibes&family=Merriweather:wght@700&family=Outfit:wght@700;800&family=Sacramento&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="css/modern-ui.css">
-    <link rel="stylesheet" href="css/landing.css">
-    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="/css/modern-ui.css">
+    <link rel="stylesheet" href="/css/landing.css">
+    <link rel="stylesheet" href="/css/responsive.css">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script type="module" src="config.js"></script>
+    <script type="module" src="/config.js"></script>
+
+    <!-- Clean URL Initializer & Service Worker: Immediately strip index.html and # hash symbol, showing /home (or /explore, etc.) -->
+    <script>
+        (function() {
+            try {
+                if ('serviceWorker' in navigator && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
+                    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(e) {
+                        console.debug("Service worker skipped on index:", e);
+                    });
+                }
+
+                var path = window.location.pathname || '';
+                var hash = window.location.hash || '';
+                var savedLandingView = '';
+                try { savedLandingView = sessionStorage.getItem('pricelister_last_landing_view') || ''; } catch(e) {}
+
+                var validViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms'];
+                var pathView = path.replace(/\/index\.html$/i, '').replace(/^\/+/, '').toLowerCase();
+                var hashView = hash.replace(/^#\/?/, '').replace(/\/$/, '').toLowerCase();
+
+                var view = 'home';
+                if (validViews.includes(pathView)) {
+                    view = pathView;
+                } else if (validViews.includes(hashView)) {
+                    view = hashView;
+                } else if (savedLandingView && validViews.includes(savedLandingView.toLowerCase())) {
+                    view = savedLandingView.toLowerCase();
+                }
+
+                var cleanPath = '/' + view;
+                window.history.replaceState({ view: view }, '', cleanPath);
+            } catch(e) {}
+        })();
+    </script>
 
     <style>
+        /* Universal outline reset - eliminate black stroke highlights on click / focus */
+        *, *::before, *::after {
+            -webkit-tap-highlight-color: transparent !important;
+        }
+        :focus, :focus-visible, :active {
+            outline: none !important;
+        }
+        a, button, input, select, textarea, [tabindex], .brand-badge, .nav-link, .nav-links a {
+            outline: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+        }
+        a:focus, a:focus-visible, a:active,
+        button:focus, button:focus-visible, button:active,
+        .brand-badge:focus, .brand-badge:focus-visible, .brand-badge:active,
+        .landing-footer a:focus, .landing-footer a:focus-visible, .landing-footer a:active {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Default Native Font: Plus Jakarta Sans */
+        html, body, button, input, select, textarea, h1, h2, h3, h4, h5, h6,
+        .btn, .nav-link, .nav-links, .brand-title, .explore-nav-btn, .hero-title-rich,
+        .explore-hero-title, .cta-banner-deep, .landing-footer-elevated {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        }
+
         /* ===== Modern Design System & Variables ===== */
         :root {
             --primary: #18181b;
@@ -35,8 +96,8 @@
         }
 
         body.landing-body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: #FAFAF9;
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F5F5F5;
             /* Pure Milk White */
             color: #09090b;
             overflow-x: hidden;
@@ -324,6 +385,19 @@
             margin-right: 0.35rem;
         }
 
+        /* Universal Smooth Outline & Stroke Protection (No harsh black strokes) */
+        *:focus, *:focus-visible {
+            outline: none !important;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none !important;
+            border-color: #94a3b8 !important;
+            box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.2) !important;
+        }
+        button:focus, button:focus-visible, a:focus, a:focus-visible {
+            outline: none !important;
+        }
+
         /* ===== Find Workspace Card ===== */
         .find-workspace-card {
             max-width: 520px;
@@ -466,12 +540,59 @@
             justify-content: space-between;
             align-items: center;
             pointer-events: auto;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
+        /* Bubble Fluid Water Glass UI Header Scrolled State */
+        .landing-header-wrapper.is-scrolled .landing-header {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(28px) saturate(210%);
+            -webkit-backdrop-filter: blur(28px) saturate(210%);
+            border: 1px solid rgba(212, 212, 216, 0.95);
+            box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.09),
+                0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+            transform: translateY(-2px) scale(0.995);
+        }
+
+        .landing-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -120%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+            transform: skewX(-20deg);
+            pointer-events: none;
+            animation: fluidWaterGlassShine 9s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+        }
+
+        @keyframes fluidWaterGlassShine {
+            0% { left: -120%; }
+            35% { left: 180%; }
+            100% { left: 180%; }
+        }
+
+        /* Fluid Scroll & Slide Animations */
+        .fluid-reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
+        }
+        .fluid-reveal.is-revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .fluid-reveal-delay-1 { transition-delay: 0.12s; }
+        .fluid-reveal-delay-2 { transition-delay: 0.22s; }
+        .fluid-reveal-delay-3 { transition-delay: 0.32s; }
+
         .landing-header:hover {
-            background: rgba(255, 255, 255, 0.95);
-            box-shadow: 0 20px 42px -12px rgba(0, 0, 0, 0.09),
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 22px 46px -12px rgba(0, 0, 0, 0.1),
                 0 0 0 1px rgba(0, 0, 0, 0.08),
                 inset 0 1px 2px rgba(255, 255, 255, 1);
         }
@@ -529,26 +650,27 @@
         }
 
         .nav-links a.active {
-            color: #ffffff;
-            font-weight: 700;
-            background: #18181b;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+            color: #18181b !important;
+            font-weight: 700 !important;
+            background: #ffffff !important;
+            border: 1.5px solid #d4d4d8 !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
         }
 
         .btn-glass-cta {
-            font-weight: 600;
+            font-weight: 700 !important;
             padding: 0.6rem 1.4rem;
             font-size: 0.9rem;
             border-radius: 9999px;
-            background: linear-gradient(180deg, #27272a 0%, #18181b 100%);
-            color: #ffffff;
-            border: 1px solid #18181b;
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #18181b !important;
+            border: 1.5px solid #d4d4d8 !important;
             cursor: pointer;
-            box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
             display: flex;
             align-items: center;
             gap: 0.45rem;
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
             text-decoration: none;
@@ -671,19 +793,19 @@
         }
 
         .btn-hero-primary {
-            background: linear-gradient(180deg, #27272a 0%, #18181b 100%);
-            color: #ffffff;
-            font-weight: 600;
+            background: #ffffff !important;
+            color: #18181b !important;
+            font-weight: 700 !important;
             font-size: 1.05rem;
             padding: 0.85rem 1.85rem;
             border-radius: 12px;
-            border: 1px solid #18181b;
+            border: 1.5px solid #d4d4d8 !important;
             cursor: pointer;
-            box-shadow: 0 6px 18px -3px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .btn-hero-primary:hover {
@@ -1131,16 +1253,34 @@
 
         /* ===== Conversion Dark Banner ===== */
         .cta-banner-deep {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-            color: #ffffff;
+            background: rgba(244, 244, 245, 0.85) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: #18181b !important;
             border-radius: 24px;
-            padding: 3.5rem 2rem;
+            border: 1.5px solid #e4e4e7 !important;
+            padding: 3.5rem 2.5rem;
             text-align: center;
-            max-width: 1000px;
+            max-width: 1560px !important;
+            width: 95% !important;
             margin: 0 auto;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        .cta-banner-deep h2 {
+            color: #18181b !important;
+        }
+
+        .cta-banner-deep p {
+            color: #52525b !important;
+        }
+
+        .cta-banner-deep .btn-hero-primary {
+            background: #ffffff !important;
+            color: #18181b !important;
+            border: 1.5px solid #d4d4d8 !important;
         }
 
         .cta-banner-deep::before {
@@ -1156,15 +1296,16 @@
 
         /* ===== Expansive Elevated Footer ===== */
         .landing-footer-elevated {
-            background: #0b0f19;
-            color: #94a3b8;
+            background: #ffffff !important;
+            color: #52525b !important;
             padding: 4.5rem 5% 2.5rem;
-            border-top: 1px solid #1e293b;
+            border-top: 1px solid #e2e8f0 !important;
             position: relative;
         }
 
         .footer-grid-expansive {
-            max-width: 1140px;
+            max-width: 1560px !important;
+            width: 95% !important;
             margin: 0 auto 3.5rem;
             display: grid;
             grid-template-columns: 1.6fr 1fr 1fr 1fr;
@@ -1172,7 +1313,7 @@
         }
 
         .footer-brand-col h3 {
-            color: #ffffff;
+            color: #18181b !important;
             font-size: 1.35rem;
             font-weight: 800;
             margin: 0 0 0.75rem;
@@ -1183,28 +1324,15 @@
         }
 
         .footer-brand-col p {
-            color: #64748b;
+            color: #64748b !important;
             font-size: 0.92rem;
             line-height: 1.65;
             margin: 0 0 1.5rem;
             max-width: 320px;
         }
 
-        .footer-status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.35rem 0.8rem;
-            border-radius: 999px;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.25);
-            color: #34d399;
-            font-size: 0.78rem;
-            font-weight: 600;
-        }
-
         .footer-col-title {
-            color: #ffffff;
+            color: #18181b !important;
             font-size: 0.95rem;
             font-weight: 700;
             margin: 0 0 1.25rem;
@@ -1218,30 +1346,44 @@
         }
 
         .footer-links-list a {
-            color: #94a3b8;
+            color: #64748b !important;
             font-size: 0.9rem;
             font-weight: 500;
             transition: all 0.2s ease;
             text-decoration: none;
+            outline: none !important;
+            border: none !important;
+            box-shadow: none !important;
         }
 
         .footer-links-list a:hover {
-            color: #ffffff;
+            color: #09090b !important;
             transform: translateX(2px);
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        .footer-links-list a:focus,
+        .footer-links-list a:focus-visible {
+            outline: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #09090b !important;
         }
 
         .footer-bottom-bar {
-            max-width: 1140px;
+            max-width: 1560px !important;
+            width: 95% !important;
             margin: 0 auto;
             padding-top: 2rem;
-            border-top: 1px solid #1e293b;
+            border-top: 1px solid #f1f5f9 !important;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 1rem;
             font-size: 0.85rem;
-            color: #64748b;
+            color: #71717a !important;
         }
 
         /* Responsive adjustments */
@@ -1268,23 +1410,249 @@
         /* EXPLORE TAB: ADVANCED SYSTEM SUITE & ARCHITECTURE STYLES                 */
         /* ========================================================================= */
         .explore-wrap {
-            max-width: 1220px;
+            max-width: 1560px !important;
+            width: 95% !important;
             margin: 0 auto;
-            padding: 2.5rem 1.25rem 5rem;
+            padding: 2.5rem 0 5rem;
         }
 
-        /* Explore Hero Section */
-        .explore-hero-card {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%);
-            border-radius: 24px;
-            padding: 3.5rem 2.5rem;
-            color: #ffffff;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
-            margin-bottom: 2.5rem;
-            border: 1px solid #334155;
+        .explore-nav-btn.active {
+            background: #ffffff !important;
+            color: #18181b !important;
+            border: 1.5px solid #d4d4d8 !important;
+            font-weight: 700 !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
         }
+
+        .landing-header {
+            max-width: 1560px !important;
+            width: 95% !important;
+            margin: 0 auto;
+        }
+
+        .hero-section-rich > div {
+            max-width: 1560px !important;
+            width: 95% !important;
+            margin: 0 auto;
+        }
+
+
+        /* ===== Precise Explore View & Layout Styling (User Pixel Perfect Spec) ===== */
+        .landing-header {
+            height: 76px !important;
+            padding: 0 clamp(2rem, 5.5vw, 6vw) !important;
+            max-width: 1920px !important;
+            width: 100% !important;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .explore-wrap {
+            max-width: 1820px !important;
+            width: 95% !important;
+            margin: 0 auto;
+            padding: 1.5rem 0 5rem;
+        }
+
+        /* Explore Hero Section: 460-520px height, 48% / 52% split */
+        .explore-hero-card {
+            background: #ffffff !important;
+            border-radius: 18px !important;
+            border: 1.5px solid #e2e8f0 !important;
+            padding: 3rem 2.5rem !important;
+            color: #18181b !important;
+            position: relative;
+            overflow: visible !important;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.03) !important;
+            margin-bottom: 2rem !important;
+            display: grid !important;
+            grid-template-columns: 48% 52% !important;
+            gap: 2.5rem !important;
+            align-items: center !important;
+            min-height: 480px !important;
+        }
+
+        .explore-hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            height: 36px;
+            padding: 0 0.95rem;
+            border-radius: 999px;
+            background: #f4f4f5 !important;
+            border: 1px solid #e4e4e7 !important;
+            color: #18181b !important;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .explore-hero-title {
+            font-size: clamp(42px, 3.2vw, 54px) !important;
+            font-weight: 800 !important;
+            line-height: 1.12 !important;
+            letter-spacing: -0.025em !important;
+            color: #18181b !important;
+            margin-bottom: 1.15rem !important;
+            max-width: 780px;
+        }
+
+        .explore-hero-desc {
+            font-size: 1.05rem !important;
+            line-height: 1.62 !important;
+            color: #52525b !important;
+            max-width: 680px;
+            margin-bottom: 1.75rem !important;
+        }
+
+        .explore-hero-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+        }
+
+        .explore-stat-pill {
+            height: 38px !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #ffffff !important;
+            border: 1.5px solid #e4e4e7 !important;
+            padding: 0 0.95rem !important;
+            border-radius: 999px !important;
+            font-size: 0.82rem !important;
+            font-weight: 600 !important;
+            color: #18181b !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+            white-space: nowrap;
+        }
+
+        /* Capability navigation: 76px height */
+        .explore-filter-nav {
+            height: 76px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            overflow-x: auto;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.94) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid #e2e8f0 !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 0 1rem !important;
+            margin-bottom: 2rem !important;
+            scrollbar-width: none;
+        }
+        .explore-filter-nav::-webkit-scrollbar { display: none; }
+
+        .explore-nav-btn {
+            height: 44px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0 1.15rem;
+            border-radius: 999px;
+            font-size: 0.86rem;
+            font-weight: 600;
+            background: transparent;
+            color: #52525b;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .explore-nav-btn:hover {
+            background: #f4f4f5;
+            color: #18181b;
+        }
+
+        .explore-nav-btn.active {
+            background: #ffffff !important;
+            color: #18181b !important;
+            border: 1.5px solid #d4d4d8 !important;
+            font-weight: 700 !important;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06) !important;
+        }
+
+        /* Module section card radius 12-18px, padding 32-48px, gap 24-32px */
+        .explore-module-card {
+            background: #ffffff !important;
+            border-radius: 18px !important;
+            border: 1.5px solid #e2e8f0 !important;
+            padding: 2.5rem !important;
+            margin-bottom: 2rem !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03) !important;
+        }
+
+        /* Responsive Breakpoints specified by User */
+        @media (min-width: 1920px) {
+            .explore-wrap, .footer-grid-expansive, .footer-bottom-bar, .hero-section-rich > div {
+                max-width: 1820px !important;
+                width: 95% !important;
+            }
+            .explore-hero-card {
+                grid-template-columns: 48% 52% !important;
+            }
+        }
+
+        @media (min-width: 1440px) and (max-width: 1919px) {
+            .explore-wrap, .footer-grid-expansive, .footer-bottom-bar, .hero-section-rich > div {
+                max-width: 1560px !important;
+                width: 95% !important;
+            }
+            .explore-hero-card {
+                grid-template-columns: 48% 52% !important;
+            }
+        }
+
+        @media (min-width: 1024px) and (max-width: 1439px) {
+            .explore-wrap, .footer-grid-expansive, .footer-bottom-bar, .hero-section-rich > div {
+                max-width: 1220px !important;
+                width: 94% !important;
+            }
+            .explore-hero-card {
+                grid-template-columns: 48% 52% !important;
+                gap: 1.75rem !important;
+                padding: 2rem !important;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .explore-hero-card {
+                grid-template-columns: 1fr !important;
+                gap: 2.5rem !important;
+            }
+            .explore-hero-mockup-wrapper {
+                justify-content: center !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .explore-hero-card {
+                grid-template-columns: 1fr !important;
+                gap: 2rem !important;
+                padding: 1.75rem 1rem !important;
+            }
+            .explore-hero-title {
+                font-size: 2.1rem !important;
+            }
+            .landing-header {
+                padding: 0 1rem !important;
+                height: 68px !important;
+            }
+            .explore-filter-nav {
+                height: 64px !important;
+            }
+        }
+
 
         .explore-hero-card::before {
             content: '';
@@ -1805,7 +2173,7 @@
         <!-- GLASS UI FLOATING HEADER -->
         <div class="landing-header-wrapper">
             <header class="landing-header">
-                <a href="#home" data-view="home" class="brand-badge nav-link">
+                <a href="/home" data-view="home" class="brand-badge nav-link">
                     <div class="brand-logo-glass">
                         <img src="pricelister_org.png" alt="PriceLister"
                             style="height:26px;width:auto;border-radius:5px;">
@@ -1820,21 +2188,51 @@
                 </a>
 
                 <nav class="nav-links">
-                    <a href="#home" data-view="home" class="nav-link active">Home</a>
-                    <a href="#explore" data-view="explore" class="nav-link">Features & Workflow</a>
-                    <a href="#pricing" data-view="pricing" class="nav-link">Pricing</a>
-                    <a href="#find" data-view="find" class="nav-link">Find Workspace</a>
+                    <a href="/home" data-view="home" class="nav-link active">Home</a>
+                    <a href="/explore" data-view="explore" class="nav-link">Features & Workflow</a>
+                    <a href="/pricing" data-view="pricing" class="nav-link">Pricing</a>
+                    <a href="/find" data-view="find" class="nav-link">Find Workspace</a>
                 </nav>
 
-                <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
-                    <button class="btn-glass-cta open-login-modal" type="button">
-                        <span>Enter Workspace</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                            <polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </button>
+                <div class="header-actions" id="landing-header-actions" style="display:flex; align-items:center; gap:0.6rem;">
+                    <!-- 1. Logged Out State: (Login) (Enter Workspace ->) 2 Buttons -->
+                    <div id="header-auth-logged-out" style="display:flex; align-items:center; gap:0.55rem;">
+                        <button type="button" id="header-btn-login" class="btn-glass-cta" style="padding:0.48rem 1.15rem; font-weight:700; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer;">
+                            <span>Login</span>
+                        </button>
+                        <button type="button" id="header-btn-enter-ws" class="btn-glass-cta open-login-modal" style="padding:0.48rem 1.15rem; font-weight:700; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer; display:flex; align-items:center; gap:0.4rem;">
+                            <span>Enter Workspace</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+                    </div>
+
+                    <!-- 2. Logged In & Connected to Workspace: Round User Photo + One-tap Enter Workspace -->
+                    <div id="header-auth-connected" style="display:none; align-items:center; gap:0.55rem;">
+                        <a href="app.html" id="header-btn-enter-connected" class="btn-glass-cta" style="text-decoration:none; display:flex; align-items:center; gap:0.55rem; padding:0.38rem 1.15rem 0.38rem 0.5rem; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; font-weight:700;">
+                            <div id="header-avatar-circle-connected" style="width:28px; height:28px; border-radius:50%; overflow:hidden; background:#f4f4f5; border:1.5px solid #d4d4d8; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800; font-size:0.75rem;">
+                                <img id="header-avatar-img-connected" src="" alt="User" style="width:100%; height:100%; object-fit:cover; display:none; border-radius:50%;">
+                                <span id="header-avatar-init-connected">U</span>
+                            </div>
+                            <span id="header-connected-ws-title">Enter Workspace &rarr;</span>
+                        </a>
+                        <button type="button" id="header-btn-logout-connected" title="Sign out" style="background:#ffffff; border:1.5px solid #d4d4d8; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); cursor:pointer; padding:0;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        </button>
+                    </div>
+
+                    <!-- 3. Logged In But NOT Connected to Any Workspace: Google Account Icon + (Create Workspace ->) -->
+                    <div id="header-auth-not-connected" style="display:none; align-items:center; gap:0.55rem;">
+                        <button type="button" id="header-btn-create-ws" class="btn-glass-cta" style="display:flex; align-items:center; gap:0.55rem; padding:0.38rem 1.15rem 0.38rem 0.5rem; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; font-weight:700; cursor:pointer;">
+                            <div id="header-avatar-circle-unconnected" style="width:28px; height:28px; border-radius:50%; overflow:hidden; background:#f4f4f5; border:1.5px solid #d4d4d8; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800; font-size:0.75rem;">
+                                <img id="header-avatar-img-unconnected" src="" alt="Google User" style="width:100%; height:100%; object-fit:cover; display:none; border-radius:50%;">
+                                <span id="header-avatar-init-unconnected">G</span>
+                            </div>
+                            <span>Create Workspace &rarr;</span>
+                        </button>
+                        <button type="button" id="header-btn-logout-unconnected" title="Sign out" style="background:#ffffff; border:1.5px solid #d4d4d8; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); cursor:pointer; padding:0;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        </button>
+                    </div>
                 </div>
             </header>
         </div>
@@ -1886,7 +2284,7 @@
                                 </svg>
                                 <span>Enter Workspace Free</span>
                             </button>
-                            <a href="#explore" data-view="explore" class="btn-hero-secondary nav-link">
+                            <a href="/explore" data-view="explore" class="btn-hero-secondary nav-link">
                                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="2">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -2031,7 +2429,7 @@
                                         <button class="btn btn-sm btn-secondary" style="font-size:0.78rem;">Export
                                             Excel</button>
                                         <button class="btn btn-sm btn-primary"
-                                            style="font-size:0.78rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff;">+
+                                            style="font-size:0.78rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #d4d4d8; color:#ffffff;">+
                                             Add Product</button>
                                     </div>
                                 </div>
@@ -2131,7 +2529,7 @@
                                         <button class="btn btn-sm btn-secondary" style="font-size:0.78rem;">Print
                                             Layout</button>
                                         <button class="btn btn-sm btn-primary"
-                                            style="font-size:0.78rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff;">Export
+                                            style="font-size:0.78rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #d4d4d8; color:#ffffff;">Export
                                             PDF Catalog</button>
                                     </div>
                                 </div>
@@ -2247,7 +2645,7 @@
                                                 $32.97</span>
                                         </div>
                                         <button class="btn btn-sm btn-primary"
-                                            style="width:100%; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; font-weight:700; font-size:0.78rem; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+                                            style="width:100%; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #d4d4d8; color:#ffffff; font-weight:700; font-size:0.78rem; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                                                 stroke="currentColor" stroke-width="2">
                                                 <path
@@ -2694,7 +3092,7 @@
                 <div class="section" style="padding: 2rem 5% 5rem; background:#ffffff;">
                     <div class="cta-banner-deep">
                         <div
-                            style="width:48px; height:48px; border-radius:12px; background:rgba(255,255,255,0.12); color:#ffffff; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem;">
+                            style="width:48px; height:48px; border-radius:12px; background:#ffffff; border:1px solid #e4e4e7; color:#18181b; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2.2">
                                 <path
@@ -2734,109 +3132,235 @@
             <section id="view-explore" class="view">
                 <div class="explore-wrap">
 
-                    <!-- 1. EXPLORE HERO BANNER -->
+                    <!-- 1. EXPLORE HERO BANNER (Full Desktop 2-Column Responsive Layout) -->
                     <div class="explore-hero-card">
-                        <div class="explore-hero-badge">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.5">
-                                <polygon
-                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-                                </polygon>
-                            </svg>
-                            <span>Platform Architecture & Deep Feature Suite</span>
+                        <div class="explore-hero-content">
+                            <div class="explore-hero-badge">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <polygon
+                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                                    </polygon>
+                                </svg>
+                                <span>Platform Architecture &amp; Deep Feature Suite</span>
+                            </div>
+                            <h1 class="explore-hero-title">
+                                The Complete Commercial Operating Engine Built for Speed, Accuracy, and Scale
+                            </h1>
+                            <p class="explore-hero-desc">
+                                PriceLister unifies product cataloging, dynamic wholesale price generation, high-contrast
+                                monochrome designer billing, real-time stock ledgers, and zero-friction customer storefronts
+                                into one synchronized cloud workspace.
+                            </p>
+                            <div class="explore-hero-pills">
+                                <div class="explore-stat-pill">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                                    </svg>
+                                    <span>Sub-100ms Real-Time Cloud Sync</span>
+                                </div>
+                                <div class="explore-stat-pill">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5">
+                                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                                    </svg>
+                                    <span>High-Density Product Master</span>
+                                </div>
+                                <div class="explore-stat-pill">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5">
+                                        <path
+                                            d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z">
+                                        </path>
+                                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                                    </svg>
+                                    <span>Dynamic XLSX &amp; PDF Catalogs</span>
+                                </div>
+                                <div class="explore-stat-pill">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                    <span>Designer Invoice Engine</span>
+                                </div>
+                                <div class="explore-stat-pill">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                                        <path
+                                            d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                                        </path>
+                                    </svg>
+                                    <span>1-Tap WhatsApp Storefront</span>
+                                </div>
+                                <div class="explore-stat-pill">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                    </svg>
+                                    <span>Multi-Tenant Role Isolation</span>
+                                </div>
+                            </div>
                         </div>
-                        <h1 class="explore-hero-title">
-                            The Complete Commercial Operating Engine Built for Speed, Accuracy, and Scale
-                        </h1>
-                        <p class="explore-hero-desc">
-                            PriceLister unifies product cataloging, dynamic wholesale price generation, high-contrast
-                            monochrome designer billing, real-time stock ledgers, and zero-friction customer storefronts
-                            into one synchronized cloud workspace.
-                        </p>
-                        <div class="explore-hero-pills">
-                            <div class="explore-stat-pill">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5">
-                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                                </svg>
-                                <span>Sub-100ms Real-Time Cloud Sync</span>
+
+                        <!-- Right Column: Interactive Desktop & Mobile Storefront Mockup Preview -->
+                        <div class="explore-hero-mockup-wrapper" style="position:relative; display:flex; justify-content:center; align-items:center;">
+                            <!-- Laptop Window -->
+                            <div style="background:#ffffff; border-radius:18px; border:1.5px solid #e2e8f0; box-shadow:0 25px 60px -15px rgba(0,0,0,0.09); width:100%; max-width:580px; overflow:hidden;">
+                                <!-- Top Bar -->
+                                <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:0.65rem 1rem; display:flex; justify-content:space-between; align-items:center;">
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                                        <div style="width:20px; height:20px; border-radius:5px; background:#18181b; display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:800;">P</div>
+                                        <span style="font-size:0.78rem; font-weight:800; color:#18181b;">PriceLister</span>
+                                    </div>
+                                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.25rem 0.65rem; font-size:0.72rem; color:#94a3b8; display:flex; align-items:center; gap:0.4rem;">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                        <span>Search products, SKU, brand...</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                                        <span style="font-size:0.68rem; font-weight:700; background:#f1f5f9; padding:2px 7px; border-radius:4px; color:#475569;">Workspace</span>
+                                        <div style="width:20px; height:20px; border-radius:50%; background:#18181b; color:#fff; font-size:10px; display:flex; align-items:center; justify-content:center; font-weight:700;">A</div>
+                                    </div>
+                                </div>
+                                <!-- Dashboard Content -->
+                                <div style="padding:1rem;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                                        <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:#18181b;">Dashboard</h4>
+                                        <span style="font-size:0.7rem; color:#64748b;">Overview of your business performance</span>
+                                    </div>
+                                    <!-- 4 KPI Cards -->
+                                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.5rem; margin-bottom:0.85rem;">
+                                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem;">
+                                            <div style="font-size:0.65rem; color:#64748b; font-weight:600;">Total Products</div>
+                                            <div style="font-size:0.95rem; font-weight:800; color:#18181b;">2,458</div>
+                                            <div style="font-size:0.62rem; color:#16a34a; font-weight:700;">+ 12%</div>
+                                        </div>
+                                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem;">
+                                            <div style="font-size:0.65rem; color:#64748b; font-weight:600;">Total Orders</div>
+                                            <div style="font-size:0.95rem; font-weight:800; color:#18181b;">1,248</div>
+                                            <div style="font-size:0.62rem; color:#16a34a; font-weight:700;">+ 18%</div>
+                                        </div>
+                                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem;">
+                                            <div style="font-size:0.65rem; color:#64748b; font-weight:600;">Total Revenue</div>
+                                            <div style="font-size:0.95rem; font-weight:800; color:#18181b;">৳ 284,320</div>
+                                            <div style="font-size:0.62rem; color:#16a34a; font-weight:700;">+ 22%</div>
+                                        </div>
+                                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem;">
+                                            <div style="font-size:0.65rem; color:#64748b; font-weight:600;">Low Stock</div>
+                                            <div style="font-size:0.95rem; font-weight:800; color:#18181b;">32</div>
+                                            <div style="font-size:0.62rem; color:#e11d48; font-weight:700;">- 5%</div>
+                                        </div>
+                                    </div>
+                                    <!-- Sales Graph & Mini Table -->
+                                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.65rem 0.85rem;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                                            <span style="font-size:0.72rem; font-weight:700; color:#18181b;">Sales Overview</span>
+                                            <div style="display:flex; gap:0.25rem;">
+                                                <span style="font-size:0.62rem; padding:1px 5px; border-radius:4px; background:#ffffff; border:1px solid #e2e8f0; font-weight:600;">7D</span>
+                                                <span style="font-size:0.62rem; padding:1px 5px; border-radius:4px; background:#18181b; color:#fff; font-weight:600;">30D</span>
+                                                <span style="font-size:0.62rem; padding:1px 5px; border-radius:4px; background:#ffffff; border:1px solid #e2e8f0; font-weight:600;">90D</span>
+                                            </div>
+                                        </div>
+                                        <!-- SVG Trend Line Chart -->
+                                        <svg viewBox="0 0 400 65" style="width:100%; height:46px; overflow:visible;">
+                                            <path d="M0,52 Q60,40 120,44 T220,24 T320,34 T400,10" fill="none" stroke="#18181b" stroke-width="2.2"></path>
+                                            <circle cx="400" cy="10" r="3.5" fill="#18181b"></circle>
+                                        </svg>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="explore-stat-pill">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5">
-                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                                </svg>
-                                <span>High-Density Product Master</span>
-                            </div>
-                            <div class="explore-stat-pill">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5">
-                                    <path
-                                        d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z">
-                                    </path>
-                                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                                </svg>
-                                <span>Dynamic XLSX & PDF Catalogs</span>
-                            </div>
-                            <div class="explore-stat-pill">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                                </svg>
-                                <span>Designer Invoice Engine</span>
-                            </div>
-                            <div class="explore-stat-pill">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                                    <path
-                                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
-                                    </path>
-                                </svg>
-                                <span>1-Tap WhatsApp Storefront</span>
-                            </div>
-                            <div class="explore-stat-pill">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5">
-                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                </svg>
-                                <span>Multi-Tenant Role Isolation</span>
+
+                            <!-- Floating Phone Storefront Mockup in Foreground -->
+                            <div style="position:absolute; bottom:-16px; left:-20px; width:195px; background:#ffffff; border-radius:24px; border:2.5px solid #18181b; box-shadow:0 25px 50px -10px rgba(0,0,0,0.22); overflow:hidden; z-index:10;">
+                                <!-- Phone Notch & Header -->
+                                <div style="background:#f8fafc; padding:0.5rem 0.65rem 0.35rem; border-bottom:1px solid #e2e8f0; text-align:center;">
+                                    <div style="width:40px; height:4px; background:#d4d4d8; border-radius:4px; margin:0 auto 0.4rem;"></div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span style="font-size:0.72rem; font-weight:800; color:#18181b;">PriceLister</span>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path></svg>
+                                    </div>
+                                </div>
+                                <!-- Phone Category Pills -->
+                                <div style="display:flex; gap:0.25rem; padding:0.35rem 0.5rem; overflow-x:hidden; background:#ffffff;">
+                                    <span style="font-size:0.58rem; font-weight:700; background:#18181b; color:#fff; padding:1px 6px; border-radius:999px;">All</span>
+                                    <span style="font-size:0.58rem; font-weight:600; background:#f4f4f5; color:#52525b; padding:1px 6px; border-radius:999px;">Diapers</span>
+                                    <span style="font-size:0.58rem; font-weight:600; background:#f4f4f5; color:#52525b; padding:1px 6px; border-radius:999px;">Wipes</span>
+                                    <span style="font-size:0.58rem; font-weight:600; background:#f4f4f5; color:#52525b; padding:1px 6px; border-radius:999px;">Milk</span>
+                                </div>
+                                <!-- 3 Compact Storefront Item Rows -->
+                                <div style="padding:0.35rem 0.5rem; display:flex; flex-direction:column; gap:0.35rem; background:#ffffff;">
+                                    <div style="display:flex; align-items:center; gap:0.4rem; padding:0.25rem; border-radius:6px; background:#f8fafc; border:1px solid #f1f5f9;">
+                                        <div style="width:26px; height:26px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">📦</div>
+                                        <div style="flex:1; min-width:0;">
+                                            <div style="font-size:0.62rem; font-weight:700; color:#18181b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Twinkle Baby Diaper</div>
+                                            <div style="font-size:0.58rem; color:#16a34a; font-weight:700;">৳ 32 - 42</div>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:0.4rem; padding:0.25rem; border-radius:6px; background:#f8fafc; border:1px solid #f1f5f9;">
+                                        <div style="width:26px; height:26px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">🧴</div>
+                                        <div style="flex:1; min-width:0;">
+                                            <div style="font-size:0.62rem; font-weight:700; color:#18181b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Baby Wipes 80pcs</div>
+                                            <div style="font-size:0.58rem; color:#16a34a; font-weight:700;">৳ 120</div>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:0.4rem; padding:0.25rem; border-radius:6px; background:#f8fafc; border:1px solid #f1f5f9;">
+                                        <div style="width:26px; height:26px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">🥛</div>
+                                        <div style="flex:1; min-width:0;">
+                                            <div style="font-size:0.62rem; font-weight:700; color:#18181b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Formula Milk 400g</div>
+                                            <div style="font-size:0.58rem; color:#16a34a; font-weight:700;">৳ 850</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Floating Reliable Badge -->
+                                <div style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:0.35rem 0.5rem; text-align:center; font-size:0.58rem; font-weight:700; color:#52525b;">
+                                    Secure • Fast • Reliable
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 2. STICKY MODULE FILTER NAVIGATOR -->
+                    <!-- 2. STICKY MODULE FILTER NAVIGATOR (Wide Outlined Transparent Buttons with Icons) -->
                     <div class="explore-filter-nav" id="explore-subnav">
                         <button class="explore-nav-btn active" data-target="all">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                             <span>All Capabilities</span>
                         </button>
                         <button class="explore-nav-btn" data-target="module-products">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                             <span>1. Product Master</span>
                         </button>
                         <button class="explore-nav-btn" data-target="module-pricelister">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                             <span>2. Price Lister Pro</span>
                         </button>
                         <button class="explore-nav-btn" data-target="module-invoices">
-                            <span>3. Invoices & POS</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                            <span>3. Invoices &amp; POS</span>
                         </button>
                         <button class="explore-nav-btn" data-target="module-storefront">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                             <span>4. Customer Storefront</span>
                         </button>
                         <button class="explore-nav-btn" data-target="module-stock">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
                             <span>5. Stock Intelligence</span>
                         </button>
                         <button class="explore-nav-btn" data-target="module-security">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                             <span>6. Role Security Matrix</span>
                         </button>
                         <button class="explore-nav-btn" data-target="module-workflow">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                             <span>7. Workflow Pipeline</span>
                         </button>
                         <button class="explore-nav-btn" data-target="module-tech">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
                             <span>8. Technical Architecture</span>
                         </button>
                     </div>
@@ -2845,198 +3369,166 @@
                     <!-- MODULE 1: PRODUCT MASTER & VARIATION ENGINE                      -->
                     <!-- ================================================================= -->
                     <div class="explore-module-card" id="module-products">
-                        <div class="explore-module-header">
-                            <div class="explore-module-left">
-                                <div class="explore-module-icon">
-                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2.2">
-                                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <span class="explore-module-num">Module 01 • Core Catalog Engine</span>
-                                    <h2 class="explore-module-title">Enterprise Product Master & Variation Matrix</h2>
-                                </div>
-                            </div>
-                            <div class="explore-tag-cluster">
-                                <span class="explore-chip highlight">Barcode & UPC Scanning</span>
-                                <span class="explore-chip">Auto Margin Calculator</span>
-                                <span class="explore-chip">Multi-Image Gallery</span>
-                                <span class="explore-chip">Category Hierarchy</span>
-                            </div>
-                        </div>
-
-                        <div class="explore-2col-layout">
+                        <div style="display:grid; grid-template-columns: 1.1fr 1.1fr 1.8fr; gap: 2rem; align-items: start;">
+                            
+                            <!-- Col 1: Header, Description & Capability Pills -->
                             <div>
-                                <p class="explore-spec-lead">
-                                    A structured, high-density product database engineered to handle thousands of
-                                    physical SKUs with zero lag. Every product record captures commercial attributes,
-                                    multi-tier pricing, inventory thresholds, and media assets.
+                                <div style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.25rem 0.65rem; border-radius:6px; background:#f4f4f5; border:1px solid #e4e4e7; font-size:0.74rem; font-weight:700; color:#52525b; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.85rem;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                                    MODULE 01 &bull; CORE CATALOG ENGINE
+                                </div>
+                                <h2 style="font-size:1.6rem; font-weight:800; color:#18181b; margin:0 0 0.85rem 0; line-height:1.2; letter-spacing:-0.02em;">
+                                    Enterprise Product Master &amp; Variation Matrix
+                                </h2>
+                                <p style="font-size:0.92rem; color:#52525b; line-height:1.6; margin:0 0 1.5rem 0;">
+                                    Manage your entire product catalog with multi-variant support, brand, category, sub-category, and dynamic pricing &mdash; all in one centralized, high-performance system.
                                 </p>
-                                <div class="explore-specs-list">
-                                    <div class="explore-spec-bullet">
-                                        <div class="explore-bullet-icon">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2.2">
-                                                <path
-                                                    d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z">
-                                                </path>
-                                                <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                                            </svg>
-                                        </div>
-                                        <div class="explore-bullet-text">
-                                            <h4>Multi-Level Category Hierarchy & Color Tags</h4>
-                                            <p>Organize inventory with nested parent-child categories and visual color
-                                                badges for instant identification during billing and price list
-                                                generation.</p>
-                                        </div>
-                                    </div>
-                                    <div class="explore-spec-bullet">
-                                        <div class="explore-bullet-icon">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2.2">
-                                                <path
-                                                    d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
-                                                </path>
-                                                <circle cx="12" cy="13" r="4"></circle>
-                                            </svg>
-                                        </div>
-                                        <div class="explore-bullet-text">
-                                            <h4>High-Resolution Photo Gallery & Variation Media</h4>
-                                            <p>Attach multiple high-res product photos with automatic thumbnail
-                                                generation. Displayed in customer storefronts and PDF catalogs.</p>
-                                        </div>
-                                    </div>
-                                    <div class="explore-spec-bullet">
-                                        <div class="explore-bullet-icon">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2.2">
-                                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                                            </svg>
-                                        </div>
-                                        <div class="explore-bullet-text">
-                                            <h4>Hardware & Camera Barcode Scanner Support</h4>
-                                            <p>Generate clean EAN/UPC barcodes, print barcode sticker labels, and use
-                                                your device camera or USB barcode reader for instant lookups.</p>
-                                        </div>
-                                    </div>
-                                    <div class="explore-spec-bullet">
-                                        <div class="explore-bullet-icon">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2.2">
-                                                <line x1="12" y1="1" x2="12" y2="23"></line>
-                                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                                            </svg>
-                                        </div>
-                                        <div class="explore-bullet-text">
-                                            <h4>4-Tier Smart Pricing Matrix with Real-Time Profit Margins</h4>
-                                            <p>Track Cost Price, Base Dealer Price, Selling Price, and Retail MRP.
-                                                Automatically computes gross profit margin percentage and discount
-                                                spreads in real time.</p>
-                                        </div>
-                                    </div>
+                                <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+                                    <span style="font-size:0.78rem; font-weight:600; padding:0.35rem 0.75rem; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; color:#18181b; display:inline-flex; align-items:center; gap:0.35rem;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                        Multi-Variant Support
+                                    </span>
+                                    <span style="font-size:0.78rem; font-weight:600; padding:0.35rem 0.75rem; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; color:#18181b; display:inline-flex; align-items:center; gap:0.35rem;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                        Brand &amp; Category Management
+                                    </span>
+                                    <span style="font-size:0.78rem; font-weight:600; padding:0.35rem 0.75rem; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; color:#18181b; display:inline-flex; align-items:center; gap:0.35rem;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                                        Stock Sync &amp; Alerts
+                                    </span>
+                                    <span style="font-size:0.78rem; font-weight:600; padding:0.35rem 0.75rem; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; color:#18181b; display:inline-flex; align-items:center; gap:0.35rem;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                        Bulk Import &amp; Export
+                                    </span>
                                 </div>
                             </div>
 
-                            <!-- Live Product Mockup Preview -->
-                            <div class="explore-ui-preview">
-                                <div class="explore-preview-topbar">
+                            <!-- Col 2: Feature Check List -->
+                            <div style="display:flex; flex-direction:column; gap:0.75rem; padding-top:0.4rem;">
+                                <div style="display:flex; align-items:center; gap:0.65rem; font-size:0.88rem; color:#18181b; font-weight:600;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <span>Product variations (size, color, model)</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.65rem; font-size:0.88rem; color:#18181b; font-weight:600;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <span>Category &amp; sub-category mapping</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.65rem; font-size:0.88rem; color:#18181b; font-weight:600;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <span>Customer &amp; B2B pricing rules</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.65rem; font-size:0.88rem; color:#18181b; font-weight:600;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <span>Discount &amp; promotion management</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.65rem; font-size:0.88rem; color:#18181b; font-weight:600;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <span>Product status (draft, pending, release, cancel, delete)</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.65rem; font-size:0.88rem; color:#18181b; font-weight:600;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <span>Real-time stock synchronization</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:0.65rem; font-size:0.88rem; color:#18181b; font-weight:600;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    <span>Advanced search &amp; filtering</span>
+                                </div>
+                            </div>
+
+                            <!-- Col 3: Product Catalog Interactive Table Mockup -->
+                            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.04); overflow:hidden;">
+                                <!-- Table Header -->
+                                <div style="padding:0.75rem 1rem; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; background:#f8fafc;">
+                                    <div>
+                                        <div style="font-weight:800; font-size:0.95rem; color:#18181b;">Product Catalog</div>
+                                    </div>
                                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                                        <span
-                                            style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block;"></span>
-                                        <span>Product Master Record #PRD-8821</span>
-                                    </div>
-                                    <span style="font-family:monospace; color:#38bdf8;">UPC: 890123456789</span>
-                                </div>
-                                <div class="explore-preview-body">
-                                    <div
-                                        style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
-                                        <div>
-                                            <span
-                                                style="background:#e0e7ff; color:#3730a3; padding:0.2rem 0.6rem; border-radius:6px; font-size:0.75rem; font-weight:700;">Baby
-                                                Care • Premium</span>
-                                            <h3
-                                                style="margin:0.4rem 0 0.2rem; font-size:1.15rem; font-weight:800; color:#0f172a;">
-                                                Premium Baby Diaper — Medium</h3>
-                                            <span style="font-size:0.78rem; color:#64748b;">Package: 72 count box • SKU:
-                                                DIA-MED-72</span>
+                                        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.25rem 0.55rem; font-size:0.74rem; color:#94a3b8; display:flex; align-items:center; gap:0.35rem;">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                            <span>Search products, SKU, brand...</span>
                                         </div>
-                                        <span
-                                            style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; padding:0.25rem 0.65rem; border-radius:8px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:0.35rem;">
-                                            <span
-                                                style="width:6px; height:6px; border-radius:50%; background:#059669;"></span>
-                                            180 in Stock
-                                        </span>
-                                    </div>
-
-                                    <!-- Price Matrix Grid -->
-                                    <div
-                                        style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.5rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem; text-align:center; margin-bottom:1rem;">
-                                        <div>
-                                            <div style="font-size:0.7rem; color:#64748b; font-weight:700;">COST PRICE
-                                            </div>
-                                            <div style="font-size:0.95rem; font-weight:800; color:#475569;">$9.50</div>
-                                        </div>
-                                        <div>
-                                            <div style="font-size:0.7rem; color:#64748b; font-weight:700;">BASE
-                                                WHOLESALE</div>
-                                            <div style="font-size:0.95rem; font-weight:800; color:#0284c7;">$11.80</div>
-                                        </div>
-                                        <div
-                                            style="background:#f4f4f5; border:1px solid #e4e4e7; border-radius:6px; padding:0.2rem;">
-                                            <div style="font-size:0.7rem; color:#18181b; font-weight:800;">SELLING PRICE
-                                            </div>
-                                            <div style="font-size:1.05rem; font-weight:900; color:#09090b;">$13.99</div>
-                                        </div>
-                                        <div>
-                                            <div style="font-size:0.7rem; color:#64748b; font-weight:700;">RETAIL MRP
-                                            </div>
-                                            <div
-                                                style="font-size:0.95rem; font-weight:800; text-decoration:line-through; color:#94a3b8;">
-                                                $16.50</div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Profit Margin & Discount Metrics -->
-                                    <div
-                                        style="display:flex; justify-content:space-between; align-items:center; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:0.6rem 0.85rem; font-size:0.82rem; margin-bottom:1rem;">
-                                        <span
-                                            style="color:#166534; font-weight:700; display:inline-flex; align-items:center; gap:0.35rem;">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2.5">
-                                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                                                <polyline points="17 6 23 6 23 12"></polyline>
-                                            </svg>
-                                            Calculated Gross Margin:
-                                        </span>
-                                        <span
-                                            style="background:#16a34a; color:#ffffff; padding:0.2rem 0.6rem; border-radius:6px; font-weight:800;">+
-                                            47.3% Profit ($4.49)</span>
-                                    </div>
-
-                                    <!-- Action Bar -->
-                                    <div style="display:flex; gap:0.5rem;">
-                                        <button class="btn btn-sm btn-secondary"
-                                            style="flex:1; font-size:0.78rem; display:inline-flex; align-items:center; justify-content:center; gap:0.35rem;">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2">
-                                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                                                <path
-                                                    d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2">
-                                                </path>
-                                                <rect x="6" y="14" width="12" height="8"></rect>
-                                            </svg>
-                                            Barcode Label
+                                        <button type="button" class="btn" style="background:#18181b; color:#ffffff; font-size:0.74rem; font-weight:700; padding:0.3rem 0.65rem; border-radius:6px; border:none; display:inline-flex; align-items:center; gap:0.25rem;">
+                                            <span>+ Add Product</span>
                                         </button>
-                                        <button class="btn btn-sm btn-secondary"
-                                            style="flex:1; font-size:0.78rem;">Stock Adjust</button>
-                                        <button class="btn btn-sm btn-primary"
-                                            style="flex:1; font-size:0.78rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff;">Edit
-                                            Product</button>
                                     </div>
                                 </div>
+                                <!-- Status Tabs -->
+                                <div style="padding:0.4rem 1rem; border-bottom:1px solid #e2e8f0; display:flex; gap:0.4rem; background:#ffffff; font-size:0.74rem;">
+                                    <span style="font-weight:700; color:#18181b; padding:0.2rem 0.5rem; border-radius:4px; background:#f4f4f5;">All (2,458)</span>
+                                    <span style="font-weight:600; color:#64748b; padding:0.2rem 0.5rem;">Published</span>
+                                    <span style="font-weight:600; color:#64748b; padding:0.2rem 0.5rem;">Pending</span>
+                                    <span style="font-weight:600; color:#64748b; padding:0.2rem 0.5rem;">Draft</span>
+                                    <span style="font-weight:600; color:#64748b; padding:0.2rem 0.5rem;">Restricted</span>
+                                </div>
+                                <!-- Table Rows -->
+                                <table style="width:100%; border-collapse:collapse; font-size:0.76rem; text-align:left;">
+                                    <thead>
+                                        <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:0.7rem; text-transform:uppercase;">
+                                            <th style="padding:0.5rem 0.75rem;">Product</th>
+                                            <th style="padding:0.5rem 0.75rem;">Brand</th>
+                                            <th style="padding:0.5rem 0.75rem;">Category</th>
+                                            <th style="padding:0.5rem 0.75rem;">Price</th>
+                                            <th style="padding:0.5rem 0.75rem;">Stock</th>
+                                            <th style="padding:0.5rem 0.75rem;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                            <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b; display:flex; align-items:center; gap:0.4rem;">
+                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">📦</div>
+                                                <span>Twinkle Baby Diaper</span>
+                                            </td>
+                                            <td style="padding:0.55rem 0.75rem; color:#64748b;">Twinkle</td>
+                                            <td style="padding:0.55rem 0.75rem; color:#64748b;">Diapers</td>
+                                            <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b;">৳ 32 - 42</td>
+                                            <td style="padding:0.55rem 0.75rem; font-weight:600; color:#18181b;">1,248</td>
+                                            <td style="padding:0.55rem 0.75rem;">
+                                                <span style="background:rgba(22,163,74,0.1); color:#16a34a; font-weight:700; font-size:0.68rem; padding:2px 7px; border-radius:999px;">&bull; Published</span>
+                                            </td>
+                                        </tr>
+                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                            <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b; display:flex; align-items:center; gap:0.4rem;">
+                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">📦</div>
+                                                <span>Avonee Diaper</span>
+                                            </td>
+                                            <td style="padding:0.55rem 0.75rem; color:#64748b;">Avonee</td>
+                                            <td style="padding:0.55rem 0.75rem; color:#64748b;">Diapers</td>
+                                            <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b;">৳ 28 - 30</td>
+                                            <td style="padding:0.55rem 0.75rem; font-weight:600; color:#18181b;">902</td>
+                                            <td style="padding:0.55rem 0.75rem;">
+                                                <span style="background:rgba(22,163,74,0.1); color:#16a34a; font-weight:700; font-size:0.68rem; padding:2px 7px; border-radius:999px;">&bull; Published</span>
+                                            </td>
+                                        </tr>
+                                        <tr style="border-bottom:1px solid #f1f5f9;">
+                                            <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b; display:flex; align-items:center; gap:0.4rem;">
+                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">🧴</div>
+                                                <span>Baby Wipes</span>
+                                            </td>
+                                            <td style="padding:0.55rem 0.75rem; color:#64748b;">Pure &amp; Soft</td>
+                                            <td style="padding:0.55rem 0.75rem; color:#64748b;">Wipes</td>
+                                            <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b;">৳ 120</td>
+                                            <td style="padding:0.55rem 0.75rem; font-weight:600; color:#18181b;">640</td>
+                                            <td style="padding:0.55rem 0.75rem;">
+                                                <span style="background:rgba(22,163,74,0.1); color:#16a34a; font-weight:700; font-size:0.68rem; padding:2px 7px; border-radius:999px;">&bull; Published</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b; display:flex; align-items:center; gap:0.4rem;">
+                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">🥛</div>
+                                                <span>Formula Milk</span>
+                                            </td>
+                                            <td style="padding:0.55rem 0.75rem; color:#64748b;">Nestl&eacute;</td>
+                                            <td style="padding:0.55rem 0.75rem; color:#64748b;">Milk</td>
+                                            <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b;">৳ 850</td>
+                                            <td style="padding:0.55rem 0.75rem; font-weight:600; color:#18181b;">412</td>
+                                            <td style="padding:0.55rem 0.75rem;">
+                                                <span style="background:rgba(234,179,8,0.12); color:#ca8a04; font-weight:700; font-size:0.68rem; padding:2px 7px; border-radius:999px;">&bull; Pending</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
+
                         </div>
                     </div>
 
@@ -3170,7 +3662,7 @@
                                                 style="font-size:0.75rem; background:#ecfdf5; border-color:#a7f3d0; color:#065f46; font-weight:700;">Export
                                                 .XLSX</button>
                                             <button class="btn btn-sm btn-primary"
-                                                style="font-size:0.75rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; font-weight:700;">Export
+                                                style="font-size:0.75rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #d4d4d8; color:#ffffff; font-weight:700;">Export
                                                 PDF</button>
                                         </div>
                                     </div>
@@ -3587,7 +4079,7 @@
                                             <span style="font-size:0.72rem; color:#059669; font-weight:700;">In Stock
                                                 (95 units)</span>
                                             <button class="btn btn-sm btn-primary"
-                                                style="padding:0.2rem 0.6rem; font-size:0.72rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff;">+
+                                                style="padding:0.2rem 0.6rem; font-size:0.72rem; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #d4d4d8; color:#ffffff;">+
                                                 Add to Cart</button>
                                         </div>
                                     </div>
@@ -3783,7 +4275,7 @@
                                     </div>
 
                                     <button class="btn btn-sm btn-primary"
-                                        style="width:100%; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; font-size:0.78rem; font-weight:700;">+
+                                        style="width:100%; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #d4d4d8; color:#ffffff; font-size:0.78rem; font-weight:700;">+
                                         Batch Receive Shipment & Restock</button>
                                 </div>
                             </div>
@@ -3990,7 +4482,7 @@
                                     </svg>
                                 </div>
                                 <h3 style="font-size:1.1rem; font-weight:800; color:#0f172a; margin-bottom:0.5rem;">
-                                    Sub-100ms Cloud Firestore Engine</h3>
+                                    Sub-100ms Cloud Server Engine</h3>
                                 <p style="font-size:0.88rem; color:#64748b; line-height:1.6; margin:0;">
                                     Powered by real-time cloud document sync. Updates made on your desktop counter
                                     reflect immediately on field workers' mobile devices without page refreshes.
@@ -4102,7 +4594,7 @@
                                         <polyline points="12 5 19 12 12 19"></polyline>
                                     </svg>
                                 </button>
-                                <a href="#pricing" data-view="pricing" class="btn-hero-secondary nav-link"
+                                <a href="/pricing" data-view="pricing" class="btn-hero-secondary nav-link"
                                     style="background:rgba(255,255,255,0.1); color:#ffffff; border-color:rgba(255,255,255,0.25);">
                                     <span>View Pricing Plans</span>
                                 </a>
@@ -4195,7 +4687,7 @@
                             <h3>What’s included in every plan</h3>
                             <ul>
                                 <li>Secure Google OAuth 2.0 Single Sign-On</li>
-                                <li>Real-time Firebase Firestore cloud synchronization</li>
+                                <li>Real-time Cloud Server synchronization</li>
                                 <li>100% isolated workspace environment</li>
                                 <li>Product, price list, customer, and invoicing modules</li>
                                 <li>Full data export capability (.xlsx and .pdf)</li>
@@ -4212,35 +4704,22 @@
                         <span
                             style="font-size:0.82rem; font-weight:800; text-transform:uppercase; color:#18181b; letter-spacing:0.08em; display:block; margin-bottom:0.4rem;">Lookup</span>
                         <h2 style="font-size:2.2rem; font-weight:800; color:#0f172a;">Find a Workspace</h2>
-                        <p style="font-size:1.05rem; color:#64748b;">Enter a Workspace ID, UID, or Email to locate your
-                            workspace.</p>
+                        <p style="font-size:1.05rem; color:#64748b;">Enter a Workspace ID to inspect details, verify membership, or request to join.</p>
                     </div>
 
                     <div class="find-workspace-card">
                         <form id="find-workspace-form" class="find-form" autocomplete="off">
-                            <div class="form-group">
+                            <div class="form-group" style="margin-bottom: 1.25rem;">
                                 <label for="workspace-id-input"
-                                    style="font-weight:700; font-size:0.9rem; margin-bottom:0.35rem; display:block;">Workspace
-                                    ID, UID, or Email</label>
+                                    style="font-weight:700; font-size:0.9rem; margin-bottom:0.35rem; display:block;">Workspace ID</label>
                                 <input type="text" id="workspace-id-input" name="workspaceId"
-                                    placeholder="Enter Workspace ID, Admin UID, or Email..." required minlength="1"
+                                    placeholder="Enter Workspace ID (e.g. DEMO-SANDBOX-01)..." required minlength="1"
                                     maxlength="120" spellcheck="false" autocomplete="off" class="form-control"
-                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; font-size:0.95rem;">
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 1.5rem;">
-                                <label for="worker-ident-value"
-                                    style="font-weight:700; font-size:0.9rem; margin-bottom:0.35rem; display:block;">Worker
-                                    Email or ID <span
-                                        style="color:var(--text-muted); font-weight:normal;">(Optional)</span></label>
-                                <input type="text" id="worker-ident-value"
-                                    placeholder="Enter your email or worker ID to verify membership..." maxlength="120"
-                                    spellcheck="false" autocomplete="off" class="form-control"
-                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; font-size:0.95rem;">
+                                    style="width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #d4d4d8; border-radius: 10px; font-size:0.95rem;">
                             </div>
 
                             <button type="submit" class="btn btn-primary" id="find-workspace-btn"
-                                style="width: 100%; justify-content: center; padding:0.85rem; font-weight:700; font-size:1rem; border-radius:8px; background:var(--primary-gradient); box-shadow:0 4px 14px var(--primary-glow);">
+                                style="width: 100%; justify-content: center; padding:0.85rem; font-weight:700; font-size:1rem; border-radius:10px; border: 1.5px solid #d4d4d8; background:#ffffff; color:#18181b; box-shadow:0 1px 3px rgba(0,0,0,0.04); cursor:pointer;">
                                 <span class="btn-text">Find Workspace</span>
                                 <span class="spinner-sm" style="display:none;"></span>
                             </button>
@@ -4258,8 +4737,7 @@
                                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                                 </svg></div>
                             <h3 style="font-size:1.15rem; font-weight:700;">Workspace not found</h3>
-                            <p style="color:#64748b; font-size:0.88rem;">No workspace matches this identifier. Please
-                                double-check and try again.</p>
+                            <p style="color:#64748b; font-size:0.88rem;">No workspace matches this identifier. Please double-check the Workspace ID and try again.</p>
                         </div>
 
                         <div id="find-error" class="find-state" style="display:none;">
@@ -4272,117 +4750,101 @@
                                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                                 </svg></div>
                             <h3 style="font-size:1.15rem; font-weight:700;">Search Error</h3>
-                            <p id="find-error-message" style="color:#64748b; font-size:0.88rem;">Unable to search right
-                                now. Please try again later.</p>
+                            <p id="find-error-message" style="color:#64748b; font-size:0.88rem;">Unable to search right now. Please try again later.</p>
                         </div>
 
                         <div id="find-result" class="find-result" style="display:none; text-align: left;">
+                            <!-- Workspace Header with Round Logo -->
                             <div class="result-header"
-                                style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
-                                <div class="result-avatar">
-                                    <img src="pricelister_org.png" alt="Workspace">
+                                style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.15rem; margin-bottom: 1.15rem; display: flex; align-items: center; gap: 1rem;">
+                                <div class="result-avatar" style="width: 54px; height: 54px; border-radius: 50%; overflow: hidden; background: #f4f4f5; border: 1.5px solid #d4d4d8; display:flex; align-items:center; justify-content:center; flex-shrink: 0;">
+                                    <img id="result-ws-logo" src="pricelister_org.png" alt="Workspace" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                                 </div>
-                                <div>
+                                <div style="flex: 1; min-width: 0;">
                                     <h3 id="result-ws-name"
-                                        style="margin:0; font-size: 1.25rem; color: var(--primary); font-weight:800;">—
+                                        style="margin:0; font-size: 1.25rem; color: var(--text-primary); font-weight:800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">—
                                     </h3>
                                     <div class="result-id"
                                         style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">
-                                        Workspace ID: <code id="result-ws-id">—</code></div>
+                                        ID: <code id="result-ws-id" style="font-weight: 700; color: var(--text-primary);">—</code></div>
                                 </div>
                             </div>
 
-                            <h4
-                                style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em; font-weight:700;">
-                                Workspace Overview</h4>
-                            <div id="result-stats"
-                                style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem; text-align: center;">
-                                <div
-                                    style="background: var(--surface-50); padding: 0.6rem 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                                    <div id="res-stat-products"
-                                        style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">0</div>
-                                    <div
-                                        style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">
-                                        Products</div>
-                                </div>
-                                <div
-                                    style="background: var(--surface-50); padding: 0.6rem 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                                    <div id="res-stat-invoices"
-                                        style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">0</div>
-                                    <div
-                                        style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">
-                                        Invoices</div>
-                                </div>
-                                <div
-                                    style="background: var(--surface-50); padding: 0.6rem 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                                    <div id="res-stat-categories"
-                                        style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">0</div>
-                                    <div
-                                        style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">
-                                        Categories</div>
-                                </div>
-                                <div
-                                    style="background: var(--surface-50); padding: 0.6rem 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                                    <div id="res-stat-clients"
-                                        style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">0</div>
-                                    <div
-                                        style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">
-                                        Clients</div>
-                                </div>
-                                <div
-                                    style="background: var(--surface-50); padding: 0.6rem 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                                    <div id="res-stat-workers"
-                                        style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">0</div>
-                                    <div
-                                        style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">
-                                        Workers</div>
-                                </div>
-                                <div
-                                    style="background: var(--surface-50); padding: 0.6rem 0.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
-                                    <div id="res-stat-currency"
-                                        style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">$</div>
-                                    <div
-                                        style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">
-                                        Currency</div>
-                                </div>
-                            </div>
+                            <!-- Workspace Description -->
+                            <p id="result-ws-desc" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; margin-bottom: 1.15rem;">
+                                Enterprise catalog, pricing and customer invoice cloud workspace.
+                            </p>
 
+                            <!-- Workspace Metadata Table -->
                             <h4
-                                style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em; font-weight:700;">
-                                Admin Details</h4>
+                                style="font-size: 0.82rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em; font-weight:800;">
+                                Workspace Details</h4>
                             <div class="result-details"
-                                style="background: var(--surface-50); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--border-color);">
+                                style="background: var(--surface-50); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1.5px solid #d4d4d8;">
                                 <div class="detail-row"
                                     style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin
-                                        Account Name</span>
-                                    <span class="value" id="result-admin-name"
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Origin Country</span>
+                                    <span class="value" id="result-ws-country"
+                                        style="color: var(--text-primary); font-weight: 700;">Global</span>
+                                </div>
+                                <div class="detail-row"
+                                    style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin Email</span>
+                                    <span class="value" id="result-admin-email"
                                         style="color: var(--text-primary); font-weight: 600;">—</span>
                                 </div>
                                 <div class="detail-row"
-                                    style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin
-                                        AppWorker ID</span>
-                                    <span class="value" id="result-admin-id"
-                                        style="color: var(--text-primary); font-family: monospace; font-size: 0.85rem; font-weight:600;">—</span>
-                                </div>
-                                <div class="detail-row"
                                     style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Admin
-                                        Email</span>
-                                    <span class="value" id="result-admin-email"
-                                        style="color: var(--text-primary);">—</span>
+                                    <span class="label" style="font-weight: 500; color: var(--text-secondary);">Members Count</span>
+                                    <span class="value" id="result-ws-members-count"
+                                        style="color: var(--text-primary); font-weight: 700;">1 Member</span>
                                 </div>
                             </div>
 
-                            <div id="result-worker-section" style="display:none; margin-bottom: 1rem;"></div>
+                            <!-- Action Option 1: Request Join by Email -->
+                            <div style="border-top: 1px solid var(--border-color); padding-top: 1.25rem; margin-top: 1.25rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                                    <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin: 0; letter-spacing: 0.05em; font-weight:800;">
+                                        Option 1: Request Join
+                                    </h4>
+                                    <span style="font-size:0.75rem; color:var(--text-muted);">Requires unconnected Google Account</span>
+                                </div>
+                                <div id="join-request-box">
+                                    <button type="button" class="btn btn-primary" id="btn-request-join"
+                                        style="width: 100%; justify-content: center; padding: 0.75rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #d4d4d8; background: #ffffff; color: #18181b; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.18s ease;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                                        <span id="btn-request-join-text">Request Join by Email</span>
+                                        <span class="spinner-sm" id="spinner-request-join" style="display:none;"></span>
+                                    </button>
+                                    <div id="join-request-status" style="display:none; margin-top: 0.75rem;"></div>
+                                </div>
+                            </div>
 
-                            <div style="margin-top: 1.5rem; text-align: center;">
+                            <!-- Action Option 2: Search Member in Founded Workspace -->
+                            <div style="border-top: 1px solid var(--border-color); padding-top: 1.25rem; margin-top: 1.25rem;">
+                                <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.65rem; letter-spacing: 0.05em; font-weight:800;">
+                                    Option 2: Search Member
+                                </h4>
+                                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                    <input type="text" id="member-lookup-input" class="form-control"
+                                        placeholder="Enter Worker ID or Email to verify..." spellcheck="false" autocomplete="off"
+                                        style="flex: 1; padding: 0.65rem 0.85rem; border: 1.5px solid #d4d4d8; border-radius: 8px; font-size: 0.9rem;">
+                                    <button type="button" id="btn-do-member-lookup" class="btn btn-primary"
+                                        style="padding: 0.65rem 1.15rem; font-weight: 700; border-radius: 8px; border: 1.5px solid #d4d4d8; background: #ffffff; color: #18181b; white-space: nowrap; cursor: pointer;">
+                                        <span>Verify Member</span>
+                                    </button>
+                                </div>
+                                <div id="member-lookup-result" style="display:none;"></div>
+                            </div>
+
+                            <div style="margin-top: 1.5rem; text-align: center; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
                                 <a href="app.html" class="btn btn-primary"
-                                    style="width: 100%; justify-content: center; padding:0.75rem; font-weight:700; border-radius:8px;">Launch
-                                    PriceLister</a>
+                                    style="width: 100%; justify-content: center; padding:0.75rem; font-weight:700; border-radius:10px; border: 1.5px solid #d4d4d8; background: #ffffff; color: #18181b;">Launch PriceLister</a>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
                     </div>
                 </div>
             </section>
@@ -4489,22 +4951,17 @@
                     </h3>
                     <p>The modern operating system for products, live price lists, bespoke PDF invoices, and customer
                         web storefronts.</p>
-                    <div class="footer-status-pill">
-                        <span
-                            style="width:7px; height:7px; border-radius:50%; background:#10b981; box-shadow:0 0 6px rgba(16,185,129,0.8);"></span>
-                        <span>Real-Time Cloud Engine Active</span>
-                    </div>
                 </div>
 
                 <!-- Platform Col -->
                 <div>
                     <div class="footer-col-title">Core Platform</div>
                     <div class="footer-links-list">
-                        <a href="#home" data-view="home" class="nav-link">Product Catalog Master</a>
-                        <a href="#explore" data-view="explore" class="nav-link">Smart Price Lister</a>
-                        <a href="#explore" data-view="explore" class="nav-link">Invoice Designer & POS</a>
-                        <a href="#explore" data-view="explore" class="nav-link">Customer Web Portal</a>
-                        <a href="#explore" data-view="explore" class="nav-link">Real-Time Stock Engine</a>
+                        <a href="/home" data-view="home" class="nav-link">Product Catalog Master</a>
+                        <a href="/explore" data-view="explore" class="nav-link">Smart Price Lister</a>
+                        <a href="/explore" data-view="explore" class="nav-link">Invoice Designer & POS</a>
+                        <a href="/explore" data-view="explore" class="nav-link">Customer Web Portal</a>
+                        <a href="/explore" data-view="explore" class="nav-link">Real-Time Stock Engine</a>
                     </div>
                 </div>
 
@@ -4512,10 +4969,10 @@
                 <div>
                     <div class="footer-col-title">Solutions & Workspaces</div>
                     <div class="footer-links-list">
-                        <a href="#pricing" data-view="pricing" class="nav-link">Small Business Tier</a>
-                        <a href="#pricing" data-view="pricing" class="nav-link">Large Business & Wholesalers</a>
-                        <a href="#pricing" data-view="pricing" class="nav-link">Marketplace Enterprise</a>
-                        <a href="#find" data-view="find" class="nav-link">Find Workspace Lookup</a>
+                        <a href="/pricing" data-view="pricing" class="nav-link">Small Business Tier</a>
+                        <a href="/pricing" data-view="pricing" class="nav-link">Large Business & Wholesalers</a>
+                        <a href="/pricing" data-view="pricing" class="nav-link">Marketplace Enterprise</a>
+                        <a href="/find" data-view="find" class="nav-link">Find Workspace Lookup</a>
                         <a href="app.html">Launch Application</a>
                     </div>
                 </div>
@@ -4524,11 +4981,11 @@
                 <div>
                     <div class="footer-col-title">Trust & Compliance</div>
                     <div class="footer-links-list">
-                        <a href="#privacy" data-view="privacy" class="nav-link">Privacy Policy</a>
-                        <a href="#terms" data-view="terms" class="nav-link">Terms of Service</a>
-                        <a href="#home" data-view="home" class="nav-link">100% Tenant Isolation</a>
-                        <a href="#home" data-view="home" class="nav-link">Role-Based Security</a>
-                        <a href="#home" data-view="home" class="nav-link">Google OAuth 2.0 Security</a>
+                        <a href="/privacy" data-view="privacy" class="nav-link">Privacy Policy</a>
+                        <a href="/terms" data-view="terms" class="nav-link">Terms of Service</a>
+                        <a href="/home" data-view="home" class="nav-link">100% Tenant Isolation</a>
+                        <a href="/home" data-view="home" class="nav-link">Role-Based Security</a>
+                        <a href="/home" data-view="home" class="nav-link">Google OAuth 2.0 Security</a>
                     </div>
                 </div>
             </div>
@@ -4538,7 +4995,7 @@
                 <div style="display:flex; align-items:center; gap:1.25rem;">
                     <span>Enterprise Multi-Tenant Security</span>
                     <span>•</span>
-                    <span>Firebase Cloud Storage</span>
+                    <span>Cloud Server</span>
                 </div>
             </div>
         </footer>
@@ -4598,69 +5055,103 @@
         </div>
     </div>
 
-    <!-- WORKSPACE LAUNCHER -->
-    <div id="workspace-launcher-container" style="display:none;padding:2rem;">
-        <div class="setup-container card"
-            style="max-width:480px;margin:4rem auto;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.05);">
-            <div class="text-center mb-4">
-                <h1 style="color:var(--text-primary);font-weight:700;">Workspace Found</h1>
-                <p style="color:var(--text-secondary);">Ready to manage your business.</p>
+    <!-- WORKSPACE LAUNCHER (WORKSPACE FOUND GATEWAY) -->
+    <div id="workspace-launcher-container" style="display:none; padding: 3rem 1.25rem; min-height: 85vh; background: radial-gradient(circle at 50% 15%, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.01) 50%, transparent 80%);">
+        <div class="workspace-found-card" style="max-width: 480px; margin: 2rem auto; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06); border: 1.5px solid #f1f5f9; overflow: hidden; position: relative; animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1); padding: 2rem 1.85rem;">
+
+            <!-- Header Titles -->
+            <div style="text-align: center; margin-bottom: 1.75rem;">
+                <h1 style="color: #0f172a; font-size: 1.85rem; font-weight: 800; margin: 0 0 0.4rem 0; letter-spacing: -0.025em;">
+                    Workspace Found
+                </h1>
+                <p style="margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 500;">
+                    Ready to manage your business.
+                </p>
             </div>
-            <div
-                style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:2rem;">
-                <div
-                    style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid #e2e8f0;">
-                    <div
-                        style="width:48px;height:48px;border-radius:10px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);background:white;display:flex;align-items:center;justify-content:center;">
-                        <img src="pricelister_org.png" alt="Workspace"
-                            style="width:100%;height:100%;object-fit:contain;">
+
+            <!-- Inner Organization Details Card -->
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 18px; padding: 1.25rem 1.35rem; margin-bottom: 1.5rem;">
+                
+                <!-- Workspace Logo & Name Row -->
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.15rem;">
+                    <div id="launcher-logo-container" style="width: 54px; height: 54px; border-radius: 14px; background: #ffffff; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                        <img id="launcher-workspace-logo" src="/pricelister_org.png" alt="Workspace Logo" style="width: 100%; height: 100%; object-fit: contain; padding: 3px;">
+                        <div id="launcher-workspace-logo-fallback" style="display:none; width: 100%; height: 100%; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff; font-size: 1.45rem; font-weight: 800; align-items: center; justify-content: center;">W</div>
                     </div>
-                    <div>
-                        <h2 id="launcher-workspace-name" style="margin:0;font-size:1.25rem;color:#0f172a;">Loading...
-                        </h2>
-                        <div style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;font-family:monospace;">ID: <span
-                                id="launcher-workspace-id">...</span></div>
-                    </div>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:0.75rem;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;">
-                        <span style="color:#64748b;">User Account</span>
-                        <div style="display:flex;align-items:center;gap:0.5rem;color:#334155;font-weight:500;">
-                            <img id="launcher-photo" class="user-picture"
-                                style="width:24px;height:24px;min-width:24px;display:none;" alt="User">
-                            <div style="width:24px;height:24px;border-radius:50%;background:#334155;display:flex;align-items:center;justify-content:center;color:white;font-size:0.75rem;font-weight:bold;"
-                                id="launcher-avatar">?</div>
-                            <span id="launcher-account-email">user@example.com</span>
+                    <div style="overflow: hidden; flex: 1;">
+                        <h2 id="launcher-workspace-name" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Loading Workspace...</h2>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem;">
+                            <span style="font-size: 0.74rem; font-weight: 700; color: #64748b; text-transform: uppercase;">ID:</span>
+                            <code id="launcher-workspace-id" style="font-family: monospace; font-size: 0.8rem; font-weight: 700; color: #334155;">...</code>
+                            <button type="button" id="launcher-copy-id-btn" title="Copy Workspace ID" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 2px; display: inline-flex; align-items: center; transition: color 0.15s ease;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
                         </div>
                     </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;">
-                        <span style="color:#64748b;">Realtime Role</span>
-                        <span id="launcher-user-role" class="badge-role badge-role-admin">Admin</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;">
-                        <span style="color:#64748b;">Since Joined</span>
-                        <span id="launcher-joined-date" style="color:#334155;font-weight:500;">...</span>
-                    </div>
                 </div>
+
+                <!-- Clean Divider -->
+                <div style="height: 1px; background: #e2e8f0; margin-bottom: 1.1rem;"></div>
+
+                <!-- Key-Value Rows Grid -->
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.88rem;">
+                    
+                    <!-- Row 1: Access Account -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                        <span style="color: #64748b; font-weight: 600; font-size: 0.85rem;">Access Account:</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden; max-width: 65%;">
+                            <img id="launcher-photo" class="user-picture" style="width: 24px; height: 24px; min-width: 24px; border-radius: 50%; object-fit: cover; display: none;" alt="User">
+                            <div id="launcher-avatar" style="width: 24px; height: 24px; min-width: 24px; border-radius: 50%; background: #18181b; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">?</div>
+                            <span id="launcher-account-email" style="font-weight: 700; color: #0f172a; font-size: 0.86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">user@example.com</span>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Access Role -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #64748b; font-weight: 600; font-size: 0.85rem;">Access Role:</span>
+                        <span id="launcher-user-role" class="badge-role badge-role-admin" style="font-size: 0.78rem; padding: 0.25rem 0.75rem; border-radius: 999px; font-weight: 700; background: rgba(24, 24, 27, 0.04); color: #18181b; border: 1.5px solid #d4d4d8; box-shadow: none;">Administrator</span>
+                    </div>
+
+                    <!-- Row 3: Since Joined -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #64748b; font-weight: 600; font-size: 0.85rem;">Since Joined:</span>
+                        <span id="launcher-joined-date" style="font-weight: 700; color: #0f172a; font-size: 0.86rem;">...</span>
+                    </div>
+
+                    <!-- Row 4: Workspace Size -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #64748b; font-weight: 600; font-size: 0.85rem;">Workspace Size:</span>
+                        <span id="launcher-workspace-size" style="font-weight: 700; color: #0f172a; font-size: 0.86rem;">1 Member</span>
+                    </div>
+
+                </div>
+
             </div>
-            <button onclick="window.location.href='app.html'" class="btn btn-primary btn-block mb-3"
-                style="font-size:1.05rem;padding:0.85rem;border-radius:10px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:0.5rem;box-shadow:0 4px 14px rgba(225, 29, 72, 0.3);">
+
+            <!-- Primary Enter Workspace CTA Button (Smooth Transparent Outlined Button with Black Text) -->
+            <button type="button" id="launcher-enter-btn" class="btn btn-block" style="width: 100%; font-size: 0.96rem; padding: 0.85rem 1.25rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.6rem; background: rgba(24, 24, 27, 0.03); color: #18181b; border: 1.5px solid #d4d4d8; box-shadow: 0 1px 3px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.85rem;">
                 <span>Enter Workspace</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                </svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
             </button>
-            <button id="launcher-change-account-btn" class="btn btn-secondary btn-block"
-                style="display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.65rem 1rem;font-size:0.88rem;font-weight:600;border-radius:8px;border:1px solid #cbd5e1;background:#ffffff;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="17 1 21 5 17 9"></polyline>
-                    <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                    <polyline points="7 23 3 19 7 15"></polyline>
-                    <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                </svg>
-                <span>Switch / Change Google Account</span>
-            </button>
+
+            <!-- Bottom Row: [Switch Account] [Logout] side-by-side -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                <button type="button" id="launcher-change-account-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.65rem 0.85rem; font-size: 0.84rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #ffffff; color: #334155; cursor: pointer; transition: all 0.15s ease;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3">
+                        <polyline points="17 1 21 5 17 9"></polyline>
+                        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                        <polyline points="7 23 3 19 7 15"></polyline>
+                        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                    </svg>
+                    <span>Switch Account</span>
+                </button>
+
+                <button type="button" id="launcher-logout-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.65rem 0.85rem; font-size: 0.84rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #fee2e2; background: #fff5f5; color: #dc2626; cursor: pointer; transition: all 0.15s ease;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    <span>Logout</span>
+                </button>
+            </div>
+
         </div>
     </div>
 
@@ -4713,44 +5204,63 @@
                             <div style="font-size:0.7rem;color:var(--text-muted);">Creator Admin</div>
                         </div>
                     </div>
-                    <button id="setup-change-account-btn" class="btn btn-xs btn-outline"
-                        style="white-space:nowrap;font-size:0.72rem;padding:0.25rem 0.55rem;display:inline-flex;align-items:center;gap:3px;"
-                        title="Switch Google Account">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <polyline points="17 1 21 5 17 9"></polyline>
-                            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                            <polyline points="7 23 3 19 7 15"></polyline>
-                            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                        </svg>
-                        <span>Switch</span>
-                    </button>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <button id="setup-change-account-btn" class="btn btn-xs btn-outline"
+                            style="white-space:nowrap;font-size:0.72rem;padding:0.25rem 0.55rem;display:inline-flex;align-items:center;gap:3px;"
+                            title="Switch Google Account">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <polyline points="17 1 21 5 17 9"></polyline>
+                                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                                <polyline points="7 23 3 19 7 15"></polyline>
+                                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                            </svg>
+                            <span>Switch</span>
+                        </button>
+                        <button id="setup-logout-btn" class="btn btn-xs btn-outline"
+                            style="white-space:nowrap;font-size:0.72rem;padding:0.25rem 0.55rem;display:inline-flex;align-items:center;gap:3px;color:#dc2626;border-color:#fecdd3;background:#fff5f5;"
+                            title="Sign out">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                            <span>Logout</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Pending Invitations Notification Section (Join Workspace) -->
-            <div id="pending-invites-section" style="display:none;margin-bottom:1.75rem;">
-                <div
-                    style="background:rgba(16, 185, 129, 0.08);border:1.5px solid rgba(16, 185, 129, 0.4);border-radius:14px;padding:1.25rem;">
-                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;color:#065f46;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                        </svg>
-                        <strong style="font-size:1rem;">Workspace Join Request(s) Available</strong>
+            <!-- Dedicated Mailbox / Invitations Section -->
+            <div id="pending-invites-section" style="margin-bottom:2rem;">
+                <div style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px; padding:1.35rem; box-shadow:0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #f1f5f9;">
+                        <div style="display:flex; align-items:center; gap:0.6rem; color:#0f172a;">
+                            <div style="width:32px; height:32px; border-radius:8px; background:rgba(37,99,235,0.1); color:#2563eb; display:flex; align-items:center; justify-content:center;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                            </div>
+                            <div>
+                                <strong style="font-size:0.98rem; display:block;">Workspace Mailbox &amp; Invitations</strong>
+                                <span style="font-size:0.78rem; color:#64748b;">Pending team collaboration requests</span>
+                            </div>
+                        </div>
+                        <span id="mailbox-badge-count" style="font-size:0.74rem; font-weight:700; padding:0.2rem 0.6rem; border-radius:999px; background:#f1f5f9; color:#475569;">0 Requests</span>
                     </div>
-                    <p style="font-size:0.85rem;color:#065f46;margin:0 0 1rem 0;">You have an invitation to join the
-                        following workspace:</p>
-                    <div id="pending-invites-list" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+
+                    <!-- Invitations List (shown when invites exist) -->
+                    <div id="pending-invites-list" style="display:none; flex-direction:column; gap:0.75rem;"></div>
+
+                    <!-- Empty Mailbox State (shown when NO invites exist) -->
+                    <div id="mailbox-empty-state" style="padding:1.5rem 1rem; text-align:center;">
+                        <div style="width:48px; height:48px; border-radius:50%; background:#f8fafc; color:#94a3b8; display:flex; align-items:center; justify-content:center; margin:0 auto 0.75rem auto; border:1px solid #e2e8f0;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8z"></path><path d="M5.45 5.11L2 12v0h20v0l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+                        </div>
+                        <strong style="display:block; font-size:0.92rem; color:#0f172a; margin-bottom:0.25rem;">No Workspace Invites Yet</strong>
+                        <p style="font-size:0.82rem; color:#64748b; margin:0; max-width:380px; margin:0 auto; line-height:1.45;">Your mailbox is clear. When an organization admin invites you to join their team, their invite will appear here with instant one-click joining.</p>
+                    </div>
                 </div>
 
-                <div style="display:flex;align-items:center;margin:1.75rem 0;">
-                    <div style="flex-grow:1;height:1px;background:#e2e8f0;"></div>
-                    <span
-                        style="padding:0 1rem;color:var(--text-muted);font-size:0.78rem;font-weight:700;letter-spacing:0.05em;">OR
-                        PROVISION A NEW WORKSPACE</span>
-                    <div style="flex-grow:1;height:1px;background:#e2e8f0;"></div>
+                <!-- Divider -->
+                <div style="display:flex; align-items:center; margin:2rem 0 1.25rem 0;">
+                    <div style="flex-grow:1; height:1px; background:#e2e8f0;"></div>
+                    <span style="padding:0 1rem; color:#94a3b8; font-size:0.76rem; font-weight:700; letter-spacing:0.06em;">OR PROVISION A NEW WORKSPACE</span>
+                    <div style="flex-grow:1; height:1px; background:#e2e8f0;"></div>
                 </div>
             </div>
 
@@ -5057,9 +5567,17 @@
 
                 </div>
 
+                <!-- Terms & Conditions and Privacy Policy Agreement Checkbox -->
+                <div style="background:#ffffff;border:1.5px solid #d4d4d8;border-radius:10px;padding:0.85rem 1.15rem;margin-top:1.25rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:0.75rem;">
+                    <input type="checkbox" id="ws-terms-agreement" required style="width:18px;height:18px;margin-top:2px;accent-color:#18181b;cursor:pointer;">
+                    <label for="ws-terms-agreement" style="font-size:0.84rem;color:var(--text-secondary);cursor:pointer;line-height:1.5;margin:0;">
+                        I have read and agree to the <a href="/terms" data-view="terms" class="nav-link" style="color:var(--text-primary);font-weight:700;text-decoration:underline;">Terms &amp; Conditions</a> and <a href="/privacy" data-view="privacy" class="nav-link" style="color:var(--text-primary);font-weight:700;text-decoration:underline;">Privacy Policy</a>.
+                    </label>
+                </div>
+
                 <!-- Submit Button -->
                 <button type="submit" class="btn btn-primary btn-block"
-                    style="padding:0.95rem 1.5rem;font-size:1.05rem;font-weight:800;border-radius:12px;background:linear-gradient(180deg, #27272a 0%, #18181b 100%);box-shadow:0 8px 24px -4px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;gap:0.5rem;border:1px solid #18181b;color:#ffffff;cursor:pointer;">
+                    style="padding:0.95rem 1.5rem;font-size:1.05rem;font-weight:800;border-radius:12px;background:linear-gradient(180deg, #27272a 0%, #18181b 100%);box-shadow:0 8px 24px -4px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;gap:0.5rem;border:1.5px solid #d4d4d8;color:#ffffff;cursor:pointer;">
                     <span>Initialize Workspace &amp; Launch Console</span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2.5">
@@ -5078,7 +5596,7 @@
         import { initAuthHandler } from './js/auth-handler.js';
         import { initFindWorkspace } from './js/find-workspace.js';
 
-        document.addEventListener('DOMContentLoaded', () => {
+        const initApp = () => {
             const yr = document.getElementById('current-year');
             if (yr) yr.textContent = new Date().getFullYear();
             initAuthHandler('index');
@@ -5094,9 +5612,16 @@
                 terms: document.getElementById('view-terms')
             };
 
-            function showView(name) {
+            function getCleanLandingUrl(viewName) {
+                const clean = (viewName || 'home').toLowerCase();
+                return '/' + clean;
+            }
+
+            function showView(name, push = true) {
                 if (!views[name]) name = 'home';
-                Object.values(views).forEach(v => v.classList.remove('active'));
+                Object.values(views).forEach(v => {
+                    if (v) v.classList.remove('active');
+                });
                 views[name].classList.add('active');
 
                 // Update nav active state
@@ -5107,27 +5632,68 @@
                 // Scroll to top of main content
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // Update URL hash without jumping
-                history.replaceState(null, '', '#' + name);
+                // Update URL location cleanly without revealing index.html or #
+                const cleanUrl = getCleanLandingUrl(name);
+                try {
+                    sessionStorage.setItem('pricelister_last_landing_view', name);
+                    if (push) {
+                        history.pushState({ view: name }, '', cleanUrl);
+                    } else {
+                        history.replaceState({ view: name }, '', cleanUrl);
+                    }
+                } catch (e) {
+                    try { history.replaceState({ view: name }, '', '#' + name); } catch (err) {}
+                }
             }
 
-            // Click handlers for all nav links
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.addEventListener('click', (e) => {
+            // Universal Click handlers for nav links and landing routes
+            document.addEventListener('click', (e) => {
+                const link = e.target.closest('a[data-view], a.nav-link, a[href^="/"], a[href^="#"]');
+                if (!link) return;
+                
+                // Do not intercept external links or app links
+                const href = link.getAttribute('href') || '';
+                if (href === 'app.html' || href.startsWith('http://') || href.startsWith('https://')) return;
+
+                const view = link.dataset.view || href.replace(/^(\/|#)+/, '').toLowerCase();
+                if (view && views[view]) {
                     e.preventDefault();
-                    const view = link.dataset.view;
-                    if (view) showView(view);
-                });
+                    showView(view, true);
+                }
             });
 
-            // Handle initial hash or default to home
-            const initial = (location.hash || '#home').slice(1);
-            showView(initial);
+            // Extract initial landing view cleanly from URL path, fallback hash, or session
+            function extractInitialView() {
+                const path = (window.location.pathname || '')
+                    .replace(/\/index\.html$/i, '')
+                    .replace(/^\/+/, '')
+                    .toLowerCase();
+                if (path && views[path]) return path;
 
-            // Handle browser back/forward
+                const hash = (window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
+                if (hash && views[hash]) return hash;
+
+                try {
+                    const saved = sessionStorage.getItem('pricelister_last_landing_view');
+                    if (saved && views[saved]) return saved;
+                } catch(e) {}
+
+                return 'home';
+            }
+
+            const initial = extractInitialView();
+            showView(initial, false);
+
+            // Handle browser back/forward without hash
+            window.addEventListener('popstate', (e) => {
+                const view = (e.state && e.state.view) || extractInitialView();
+                showView(view, false);
+            });
+
+            // Handle fallback hash changes
             window.addEventListener('hashchange', () => {
-                const name = (location.hash || '#home').slice(1);
-                showView(name);
+                const view = extractInitialView();
+                showView(view, false);
             });
 
             // ---------- Hero Mockup Interactive Switcher ----------
@@ -5284,7 +5850,47 @@
                 googleBtn.disabled = loading;
             };
 
-        });
+            // Bubble Fluid Water Glass UI Header Changing Animation
+            const headerWrapper = document.querySelector('.landing-header-wrapper');
+            const onHeaderScroll = () => {
+                if (window.scrollY > 20) {
+                    headerWrapper?.classList.add('is-scrolled');
+                } else {
+                    headerWrapper?.classList.remove('is-scrolled');
+                }
+            };
+            window.addEventListener('scroll', onHeaderScroll, { passive: true });
+            onHeaderScroll();
+
+            // Scroll & Slide Animations via Fluid Intersection Observer
+            const revealElements = document.querySelectorAll('.card, .pricing-card, .explore-module-card, .find-workspace-card, .capability-nav-card, .section-header');
+            revealElements.forEach((el, idx) => {
+                el.classList.add('fluid-reveal');
+                if (idx % 3 === 1) el.classList.add('fluid-reveal-delay-1');
+                if (idx % 3 === 2) el.classList.add('fluid-reveal-delay-2');
+            });
+
+            if ('IntersectionObserver' in window) {
+                const revealObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-revealed');
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+                document.querySelectorAll('.fluid-reveal').forEach(el => revealObserver.observe(el));
+            } else {
+                document.querySelectorAll('.fluid-reveal').forEach(el => el.classList.add('is-revealed'));
+            }
+
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
     </script>
 </body>
 

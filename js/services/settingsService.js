@@ -1,4 +1,4 @@
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 import { setAppCurrencySymbol } from '../utilities.js';
 import { authService } from '../../firebase/auth.js';
@@ -6,11 +6,11 @@ import { authService } from '../../firebase/auth.js';
 const db = getFirestore(firebaseApp);
 
 export const getSettingsService = (workspaceId) => {
+    // Only mock if explicitly the demo workspace or demo UID without real workspace ID
     const isMock = !workspaceId || 
                    workspaceId === 'ws_dev_mock' || 
                    workspaceId === 'demo' || 
-                   workspaceId === 'dev-mock-uid' || 
-                   Boolean(localStorage.getItem('mock_dev_session'));
+                   workspaceId === 'dev-mock-uid';
 
     return {
         getWorkspaceSettings: async () => {
@@ -322,6 +322,8 @@ export const getSettingsService = (workspaceId) => {
                 return res;
             };
 
+            receiptPayload["last_updated"] = serverTimestamp();
+
             const cleanReceiptPayload = cleanFirestorePayload(receiptPayload);
             const cleanWsPayload = cleanFirestorePayload(wsPayload);
 
@@ -330,11 +332,13 @@ export const getSettingsService = (workspaceId) => {
                     setDoc(receiptRef, cleanReceiptPayload, { merge: true }),
                     setDoc(wsRef, cleanWsPayload, { merge: true })
                 ]);
+                localStorage.setItem('pricelister_active_ws', workspaceId);
+                return { success: true, syncedWithServer: true };
             } catch (cloudErr) {
-                console.warn("Firestore settings cloud write warning (stored in local storage mirror):", cloudErr);
+                console.error("Firestore settings cloud write error:", cloudErr);
+                // Throw so caller knows server sync status
+                throw new Error("Local cache updated, but cloud server sync failed: " + (cloudErr.message || 'Network/Permission error'));
             }
-
-            return true;
         },
 
         isVendingEnabled: async () => {

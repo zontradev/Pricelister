@@ -73,10 +73,62 @@ export const getPeopleService = (workspaceId) => {
 
         // --- BUSINESSES ---
         getAllBusinesses: async () => {
-            return await businessRepo.getAll();
+            const list = (await businessRepo.getAll()) || [];
+            let primaryId = null;
+            try {
+                primaryId = localStorage.getItem('pricelister_primary_business_' + workspaceId);
+            } catch(e) {}
+            return list.map(b => ({
+                ...b,
+                isPrimary: b.isPrimary === true || (primaryId ? b.id === primaryId : false)
+            }));
         },
         listenBusinesses: (callback) => {
-            return businessRepo.listenAll(callback);
+            return businessRepo.listenAll(data => {
+                const list = Array.isArray(data) ? data : [];
+                let primaryId = null;
+                try {
+                    primaryId = localStorage.getItem('pricelister_primary_business_' + workspaceId);
+                } catch(e) {}
+                const mapped = list.map(b => ({
+                    ...b,
+                    isPrimary: b.isPrimary === true || (primaryId ? b.id === primaryId : false)
+                }));
+                callback(mapped);
+            });
+        },
+        setPrimaryBusiness: async (id) => {
+            const list = (await businessRepo.getAll()) || [];
+            const target = list.find(b => b.id === id);
+            if (!target) throw new Error("Business profile not found.");
+
+            for (const b of list) {
+                const makePrimary = (b.id === id);
+                if (b.isPrimary !== makePrimary) {
+                    try {
+                        await businessRepo.update(b.id, { isPrimary: makePrimary });
+                    } catch(err) {
+                        console.warn("Could not sync isPrimary to repo:", err);
+                    }
+                }
+            }
+            try {
+                localStorage.setItem('pricelister_primary_business_' + workspaceId, id);
+                window.dispatchEvent(new CustomEvent('pricelister-primary-business-changed', {
+                    detail: { businessId: id, business: target }
+                }));
+            } catch(e) {}
+            return id;
+        },
+        getPrimaryBusiness: async () => {
+            const list = (await businessRepo.getAll()) || [];
+            let primaryId = null;
+            try {
+                primaryId = localStorage.getItem('pricelister_primary_business_' + workspaceId);
+            } catch(e) {}
+            return (primaryId ? list.find(b => b.id === primaryId) : null) ||
+                   list.find(b => b.isPrimary === true) ||
+                   list[0] || null;
         },
         addBusiness: async (data, creatorId) => {
             validateBusiness(data);
@@ -121,6 +173,11 @@ export const getPeopleService = (workspaceId) => {
             }
 
             await businessRepo.delete(id);
+            try {
+                if (localStorage.getItem('pricelister_primary_business_' + workspaceId) === id) {
+                    localStorage.removeItem('pricelister_primary_business_' + workspaceId);
+                }
+            } catch(e) {}
             await firestoreService.updateMetricsCounter(workspaceId, 'business', false, bus?.creatorId, 1);
         },
 

@@ -1,19 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <base href="/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>PriceLister Workspace</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="css/modern-ui.css">
-    <link rel="stylesheet" href="css/app.css">
-    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="/css/modern-ui.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/responsive.css">
     
-    <!-- Supabase JS Library -->
+    <!-- Cloud Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <!-- SheetJS (Excel .xlsx / .xls parsing and writing) -->
@@ -23,8 +24,106 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     
-    <script type="module" src="config.js"></script>
-    <script type="module" src="DataModel.js"></script>
+    <script type="module" src="/config.js"></script>
+    <script type="module" src="/DataModel.js"></script>
+
+    <!-- Immediate Color Mode, Theme, Custom Font & Layout Initializer: Prevents white flash and sets Enterprise Minimal -->
+    <script>
+        (function() {
+            try {
+                var mode = localStorage.getItem('pricelister_color_mode') || 'light';
+                document.documentElement.setAttribute('data-color-mode', mode);
+                var theme = localStorage.getItem('pricelister_theme') || 'enterprise';
+                document.documentElement.setAttribute('data-theme', theme);
+
+                // Immediate Custom Font apply to prevent FOUT
+                var savedFont = localStorage.getItem('pricelister_custom_font');
+                if (savedFont) {
+                    var parsedFont = JSON.parse(savedFont);
+                    if (parsedFont && parsedFont.name) {
+                        var fontCss = '';
+                        if (parsedFont.dataUrl && parsedFont.dataUrl.indexOf('data:') === 0) {
+                            fontCss += '@font-face { font-family: "' + parsedFont.name + '"; src: url("' + parsedFont.dataUrl + '"); font-display: swap; }\n';
+                        }
+                        fontCss += 'html, body, button, input, select, textarea, .topbar, .sidebar, .card, table, kbd, .btn, .nav-item { font-family: "' + parsedFont.name + '", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }\n';
+                        fontCss += ':root { --font-sans: "' + parsedFont.name + '", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }';
+                        
+                        var styleEl = document.createElement('style');
+                        styleEl.id = 'pricelister-custom-font-style';
+                        styleEl.textContent = fontCss;
+                        document.head.appendChild(styleEl);
+                    }
+                }
+
+                // Immediate Custom Layout & UI Divider Blocks
+                var savedLayout = localStorage.getItem('pricelister_custom_layout');
+                if (savedLayout) {
+                    var parsedLayout = JSON.parse(savedLayout);
+                    if (parsedLayout) {
+                        if (parsedLayout.sidebarPosition) {
+                            document.documentElement.setAttribute('data-sidebar-pos', parsedLayout.sidebarPosition);
+                        }
+                        if (parsedLayout.density) {
+                            document.documentElement.setAttribute('data-density', parsedLayout.density);
+                        }
+                        if (parsedLayout.dividerStyle) {
+                            document.documentElement.setAttribute('data-divider-style', parsedLayout.dividerStyle);
+                        }
+                        if (parsedLayout.radius) {
+                            document.documentElement.style.setProperty('--radius-card', parsedLayout.radius);
+                        }
+                    }
+                }
+
+                // Immediate Custom Border Outline Color (Custom Color Accent mode)
+                var savedBorder = localStorage.getItem('pricelister_custom_border_color');
+                if (savedBorder) {
+                    document.documentElement.style.setProperty('--border-color', savedBorder);
+                    document.documentElement.style.setProperty('--border-subtle', savedBorder);
+                    document.documentElement.style.setProperty('--custom-border-color', savedBorder);
+                }
+            } catch(e) {}
+        })();
+    </script>
+
+    <!-- Clean URL Initializer & Service Worker: Prevents 404 reload crashes and persists active page -->
+    <script>
+        (function() {
+            try {
+                // Register Service Worker for seamless SPA reload routing on static/live servers
+                if ('serviceWorker' in navigator && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
+                    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(e) {
+                        console.debug("Service Worker registration skipped:", e);
+                    });
+                }
+
+                var path = window.location.pathname || '';
+                var hash = window.location.hash || '';
+                var savedRoute = '';
+                try {
+                    savedRoute = sessionStorage.getItem('pricelister_last_route') || '';
+                } catch(e) {}
+
+                var route = 'overview';
+                var wsMatch = path.match(/(?:\/|^)workspace(\/.*)?$/i);
+                if (wsMatch && wsMatch[1] && wsMatch[1] !== '/' && wsMatch[1] !== '/index.html') {
+                    route = wsMatch[1].replace(/^\//, '');
+                } else if (hash && hash.startsWith('#/')) {
+                    route = hash.replace(/^#\/?/, '').replace(/\/$/, '');
+                } else if (savedRoute && savedRoute !== '/overview') {
+                    route = savedRoute.replace(/^\//, '');
+                }
+
+                if (!route.startsWith('/')) route = '/' + route;
+                if (route === '/workers') route = '/workspace';
+                if (route === '/customer-invoices') route = '/invoices/customer';
+                if (route === '/business-invoices') route = '/invoices/business';
+
+                var cleanUrl = '/Workspace' + route;
+                window.history.replaceState({ route: route }, '', cleanUrl);
+            } catch(e) {}
+        })();
+    </script>
 </head>
 <body class="app-loading">
     <div id="alert-container"></div>
@@ -34,7 +133,45 @@
         <div class="spinner"></div>
         <p id="loader-text">Loading Workspace...</p>
         <div id="loader-error" style="color: #ff4d4f; max-width: 400px; margin-top: 1rem; font-size: 0.9rem; word-break: break-all; display: none;"></div>
+        <button id="loader-bypass-btn" type="button" style="display:none; margin-top:1.25rem; padding:0.6rem 1.4rem; font-size:0.85rem; font-weight:700; border-radius:999px; background:#18181b; color:#ffffff; border:1px solid #334155; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.18);">
+            Continue to Workspace (Demo Sandbox) &rarr;
+        </button>
     </div>
+
+    <!-- Synchronous Emergency Watchdog (runs immediately while HTML parses) -->
+    <script>
+        (function() {
+            window.__dismissWorkspaceLoader = function(reason) {
+                var loader = document.getElementById('app-loader');
+                var shell = document.getElementById('app-shell');
+                document.body.classList.remove('app-loading');
+                if (loader) loader.style.display = 'none';
+                if (shell) shell.style.display = 'flex';
+                console.log("[PriceLister] Loader dismissed: " + (reason || 'unknown'));
+            };
+
+            // Show manual bypass button after 1 second if still loading
+            setTimeout(function() {
+                var btn = document.getElementById('loader-bypass-btn');
+                var loader = document.getElementById('app-loader');
+                if (btn && loader && loader.style.display !== 'none') {
+                    btn.style.display = 'inline-block';
+                    btn.onclick = function() {
+                        localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
+                        window.__dismissWorkspaceLoader('manual_bypass');
+                    };
+                }
+            }, 1000);
+
+            // Auto-dismiss failsafe: Maximum 1.8 seconds wait in demo/local sessions
+            setTimeout(function() {
+                var loader = document.getElementById('app-loader');
+                if (loader && loader.style.display !== 'none') {
+                    window.__dismissWorkspaceLoader('emergency_timeout');
+                }
+            }, 1800);
+        })();
+    </script>
 
     <!-- Main Application Shell (hidden until auth verified) -->
     <div id="app-shell" style="display: none;">
@@ -42,7 +179,7 @@
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-brand" id="sidebar-logo-brand" title="PriceLister — Click to reload workspace & sync data" role="button" tabindex="0">
-                    <img src="pricelister_org.png" alt="Logo" class="sidebar-logo">
+                    <img src="/pricelister_org.png" alt="Logo" class="sidebar-logo">
                     <h2 class="sidebar-title">PriceLister</h2>
                 </div>
                 <button id="toggle-sidebar" class="icon-btn sidebar-toggle-btn" aria-label="Toggle Sidebar" title="Collapse Sidebar (Mini Mode)">
@@ -110,13 +247,13 @@
                     <h3 class="nav-section-title">SALES</h3>
                     <ul class="nav-tree">
                         <li>
-                            <a href="#/invoices/customer" class="nav-item" data-route="customer-invoices" title="Customer Invoices">
+                            <a href="#/invoices/customer" class="nav-item" data-route="invoices/customer" title="Customer Invoices">
                                 <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span>
                                 <span class="nav-label">Customer Invoices</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#/invoices/business" class="nav-item" data-route="business-invoices" title="Business Invoices">
+                            <a href="#/invoices/business" class="nav-item" data-route="invoices/business" title="Business Invoices">
                                 <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></span>
                                 <span class="nav-label">Business Invoices</span>
                             </a>
@@ -205,8 +342,8 @@
                     <div style="display:flex; align-items:center; gap:0.65rem; overflow:hidden; flex:1;">
                         <div class="user-avatar-container" style="position:relative; width:34px; height:34px; flex-shrink:0;">
                             <img id="user-picture" class="user-picture" src="" alt="Profile" style="width:100%; height:100%; border-radius:50%; object-fit:cover; display:none;">
-                            <div class="user-avatar" id="user-avatar" style="width:100%; height:100%; border-radius:50%; background:linear-gradient(135deg, #e11d48, #be123c); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem;">U</div>
-                            <div style="position:absolute; bottom:-1px; right:-1px; width:9px; height:9px; border-radius:50%; background:#10b981; border:1.5px solid #ffffff;"></div>
+                            <div class="user-avatar" id="user-avatar" style="width:100%; height:100%; border-radius:50%; background:var(--text-primary); color:var(--surface-main); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem;">U</div>
+                            <div style="position:absolute; bottom:-1px; right:-1px; width:9px; height:9px; border-radius:50%; background:#10b981; border:1.5px solid var(--border-color);"></div>
                         </div>
                         <div style="overflow:hidden; display:flex; flex-direction:column; gap:2px; flex:1;">
                             <div id="user-email" style="font-size:0.8rem; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">user@example.com</div>
@@ -216,10 +353,10 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:2px; align-items:center; flex-shrink:0;">
-                        <button id="sidebar-switch-account-btn" class="icon-btn" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border-color); background:#f8fafc; color:var(--text-secondary); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Change / Switch Account">
+                        <button id="sidebar-switch-account-btn" class="icon-btn" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border-color); background:var(--surface-50); color:var(--text-secondary); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Change / Switch Account">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
                         </button>
-                        <button id="logout-btn" class="icon-btn" style="width:28px; height:28px; border-radius:6px; border:1px solid #fecdd3; background:#fff1f2; color:#e11d48; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Sign Out">
+                        <button id="logout-btn" class="icon-btn" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border-color); background:var(--surface-50); color:var(--text-primary); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Sign Out">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                         </button>
                     </div>
@@ -235,9 +372,6 @@
         <main class="main-content">
             <header class="topbar" id="app-topbar">
                 <div class="topbar-left" style="display:flex; align-items:center; gap:0.75rem;">
-                    <button id="open-sidebar" class="icon-btn mobile-menu-btn" aria-label="Open Navigation" title="Toggle Navigation Menu">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                    </button>
                     <div class="breadcrumbs" id="breadcrumbs">Workspace / Overview</div>
                 </div>
                 <div class="topbar-actions" id="topbar-actions">
@@ -284,13 +418,51 @@
         });
     </script>
     <script type="module">
-        import { initAuthHandler } from './js/auth-handler.js';
-        import { initWorkspace } from './js/workspace.js';
+        import { initAuthHandler } from '/js/auth-handler.js';
+        import { initWorkspace } from '/js/workspace.js';
+        import { initCustomFontAndLayout } from '/js/modules/customFontManager.js';
         
-        document.addEventListener('DOMContentLoaded', () => {
-            initAuthHandler('app');
-            initWorkspace();
-        });
+        const boot = async () => {
+            try {
+                initCustomFontAndLayout();
+                await initAuthHandler('app');
+                initWorkspace();
+            } catch (err) {
+                console.error("[PriceLister] App boot error:", err);
+            } finally {
+                if (typeof window.__dismissWorkspaceLoader === 'function') {
+                    window.__dismissWorkspaceLoader('boot_complete');
+                }
+            }
+
+            // Safety Watchdog: Prevent permanent "Loading Workspace..." lock
+            setTimeout(async () => {
+                const loader = document.getElementById('app-loader');
+                const shell = document.getElementById('app-shell');
+                if (loader && loader.style.display !== 'none' && !document.getElementById('loader-error')?.innerHTML) {
+                    console.warn("Loader watchdog triggered: auto-dismissing stalled loader state.");
+                    document.body.classList.remove('app-loading');
+                    loader.style.display = 'none';
+                    if (shell) shell.style.display = 'flex';
+                    
+                    const container = document.getElementById('workspace-container');
+                    if (container && !container.hasChildNodes()) {
+                        try {
+                            const { initRouter } = await import('/js/router.js');
+                            initRouter();
+                        } catch (e) {
+                            console.error("Watchdog router initialization fallback failed:", e);
+                        }
+                    }
+                }
+            }, 1500);
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', boot);
+        } else {
+            boot();
+        }
     </script>
 </body>
 </html>

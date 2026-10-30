@@ -519,6 +519,7 @@ export class BusinessProfile {
         this.uniqueId = data.uniqueId || generateInvoiceUniqueId();
         this.updatedTimestamp = data.updatedTimestamp || Date.now();
         this.creatorId = data.creatorId || "";
+        this.isPrimary = Boolean(data.isPrimary) || false;
     }
 }
 

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceLister Settings</title>
+    <script>
+        (function() {
+            try {
+                sessionStorage.setItem('pricelister_last_route', '/settings');
+            } catch(e) {}
+            window.location.replace('/app.html');
+        })();
+    </script>
+</head>
+<body style="background:#09090b; color:#fff; display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
+    <p>Opening Workspace Settings...</p>
+</body>
+</html>

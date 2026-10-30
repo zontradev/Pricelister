@@ -251,7 +251,7 @@ export const renderMembers = async (container, workspaceId) => {
                 ${coAdmins.length === 0 && workers.length === 0 ? `
                     <div class="card" style="padding: 2rem; text-align:center; color:var(--text-secondary); border-radius:12px;">
                         <p style="margin:0;">No additional workers or co-admins joined this workspace yet.</p>
-                        <button class="btn btn-sm btn-primary mt-12" onclick="window.location.hash='#/workspace'" style="margin-top:0.75rem;">+ Invite Worker</button>
+                        <button class="btn btn-sm btn-primary mt-12" onclick="window.location.hash='#/workspace'" style="margin-top:0.75rem;">Invite Worker</button>
                     </div>
                 ` : ''}
             </div>

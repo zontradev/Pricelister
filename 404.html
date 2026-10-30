@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PriceLister</title>
+    <script>
+        (function() {
+            var path = window.location.pathname || '';
+            if (path.toLowerCase().includes('demo')) {
+                try {
+                    localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
+                    localStorage.setItem('mock_dev_session', JSON.stringify({
+                        uid: 'dev-mock-uid',
+                        email: 'developer@local.test',
+                        displayName: 'Demo Admin (Testing)',
+                        photoURL: null,
+                        role: 'CREATOR_ADMIN'
+                    }));
+                    sessionStorage.setItem('pricelister_last_route', '/overview');
+                } catch(e) {}
+                window.location.replace('app.html');
+                return;
+            }
+            if (path.toLowerCase().includes('/workspace') || path.toLowerCase().includes('invoices') || path.toLowerCase().includes('products')) {
+                var subroute = path.replace(/^\/workspace\/?/i, '');
+                if (subroute) {
+                    try { sessionStorage.setItem('pricelister_last_route', '/' + subroute.replace(/^\//, '')); } catch(e) {}
+                }
+                window.location.replace('app.html');
+                return;
+            }
+            var landingViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms'];
+            for (var i = 0; i < landingViews.length; i++) {
+                if (path.toLowerCase().includes(landingViews[i])) {
+                    try { sessionStorage.setItem('pricelister_last_landing_view', landingViews[i]); } catch(e) {}
+                    window.location.replace('index.html');
+                    return;
+                }
+            }
+            window.location.replace('index.html');
+        })();
+    </script>
+</head>
+<body style="background:#09090b; color:#fff; display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
+    <p>Navigating to PriceLister...</p>
+</body>
+</html>

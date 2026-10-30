@@ -6,7 +6,7 @@ import { getPeopleService } from '../services/peopleService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { getSettingsService } from '../services/settingsService.js';
 import { showAlert } from '../alert-handler.js';
-import { getRoleBadgeHtml, openAccountSwitcherModal } from '../auth-handler.js';
+import { getRoleBadgeHtml, openAccountSwitcherModal, getUserRestrictions } from '../auth-handler.js';
 import { openExportModal } from './importExportModal.js';
 
 export const renderProfile = async (container, workspaceId) => {
@@ -162,6 +162,74 @@ export const renderProfile = async (container, workspaceId) => {
         const initClientCount = liveClients.filter(isUserItem).length;
         const initBusCount = liveBusinesses.filter(isUserItem).length;
         const initDelCount = Number(isAdmin ? (docMetrics?.adminTotalDeleted ?? docMetrics?.adminTotalDeletedCount ?? 0) : (docMetrics?.totalDeleted ?? 0));
+
+        const userRestrictions = getUserRestrictions();
+        const roleUpper = (role || 'WORKER').toUpperCase();
+        const isCreator = roleUpper === 'CREATOR_ADMIN' || roleUpper === 'CREATOR' || isAdmin;
+
+        let restrictionsCardHtml = '';
+        if (isCreator) {
+            restrictionsCardHtml = `
+                <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); border-left: 4px solid #10b981; background: var(--bg-card); margin-bottom: 2rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <div style="width:40px; height:40px; border-radius:10px; background:rgba(16,185,129,0.12); color:#059669; display:flex; align-items:center; justify-content:center;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            </div>
+                            <div>
+                                <h4 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">Creator Admin — Full Unrestricted Access</h4>
+                                <p style="margin:0; font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Creator safety protection is active. As the workspace creator, all restrictions are unconditionally bypassed.</p>
+                            </div>
+                        </div>
+                        <span class="badge" style="background:rgba(16,185,129,0.12); color:#059669; font-weight:700; padding:0.35rem 0.75rem; border-radius:6px;">All Access Granted</span>
+                    </div>
+                </div>
+            `;
+        } else if (userRestrictions.isRestricted) {
+            const restrictionBadges = [];
+            if (userRestrictions.cannotSeeCost) restrictionBadges.push(`<span class="badge" style="background:rgba(239,68,68,0.1); color:#dc2626; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px; font-size:0.8rem;">Restricted: Cannot View Cost (••••)</span>`);
+            if (userRestrictions.cannotSeeProfit) restrictionBadges.push(`<span class="badge" style="background:rgba(245,158,11,0.1); color:#d97706; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px; font-size:0.8rem;">Restricted: Cannot View Profit (••••)</span>`);
+            if (userRestrictions.disableAdd) restrictionBadges.push(`<span class="badge" style="background:rgba(100,116,139,0.1); color:#64748b; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px; font-size:0.8rem;">Restricted: Creation Disabled</span>`);
+            if (userRestrictions.disableUpdate) restrictionBadges.push(`<span class="badge" style="background:rgba(100,116,139,0.1); color:#64748b; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px; font-size:0.8rem;">Restricted: Modification Disabled</span>`);
+            if (userRestrictions.disableDelete) restrictionBadges.push(`<span class="badge" style="background:rgba(239,68,68,0.1); color:#dc2626; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px; font-size:0.8rem;">Restricted: Deletion Disabled</span>`);
+
+            restrictionsCardHtml = `
+                <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); border-left: 4px solid #f59e0b; background: var(--bg-card); margin-bottom: 2rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:0.75rem;">
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <div style="width:40px; height:40px; border-radius:10px; background:rgba(245,158,11,0.12); color:#d97706; display:flex; align-items:center; justify-content:center;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            </div>
+                            <div>
+                                <h4 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">Active Restrictions & Policy</h4>
+                                <p style="margin:0; font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Your workspace administrator has assigned the following active restrictions to your account:</p>
+                            </div>
+                        </div>
+                        <span class="badge" style="background:rgba(245,158,11,0.12); color:#d97706; font-weight:700; padding:0.35rem 0.75rem; border-radius:6px;">Restricted Member</span>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.75rem;">
+                        ${restrictionBadges.join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            restrictionsCardHtml = `
+                <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); border-left: 4px solid var(--primary); background: var(--bg-card); margin-bottom: 2rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <div style="width:40px; height:40px; border-radius:10px; background:var(--primary-subtle); color:var(--primary); display:flex; align-items:center; justify-content:center;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                            </div>
+                            <div>
+                                <h4 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">Standard Member — Full Data Access</h4>
+                                <p style="margin:0; font-size:0.8rem; color:var(--text-muted); margin-top:2px;">You currently have full operational access to products, invoices, and analytics in this workspace.</p>
+                            </div>
+                        </div>
+                        <span class="badge" style="background:rgba(16,185,129,0.1); color:#059669; font-weight:700; padding:0.35rem 0.75rem; border-radius:6px;">Standard Access</span>
+                    </div>
+                </div>
+            `;
+        }
 
         container.innerHTML = `
             <div class="module-header" style="margin-bottom: 2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
@@ -347,14 +415,16 @@ export const renderProfile = async (container, workspaceId) => {
                 </div>
             </div>
 
+            ${restrictionsCardHtml}
+
             <!-- ======================================================== -->
             <!-- 3. ACCOUNT ACTIONS & QUICK LINKS                         -->
             <!-- ======================================================== -->
             <div class="card" style="padding: 1.75rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float);">
                 <h3 style="margin:0 0 1rem 0; font-size:1.15rem; color:var(--text-primary); font-weight:700;">Quick Navigation</h3>
                 <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-                    <button class="btn btn-secondary" onclick="window.location.hash='#/invoices/customer'">+ Customer Invoice</button>
-                    <button class="btn btn-secondary" onclick="window.location.hash='#/invoices/business'">+ Business Invoice</button>
+                    <button class="btn btn-secondary" onclick="window.location.hash='#/invoices/customer'">Customer Invoice</button>
+                    <button class="btn btn-secondary" onclick="window.location.hash='#/invoices/business'">Business Invoice</button>
                     <button class="btn btn-secondary" onclick="window.location.hash='#/products'">Manage Products</button>
                     <button class="btn btn-secondary" onclick="window.location.hash='#/categories'">Manage Categories</button>
                     <button id="btn-profile-export-fast" class="btn btn-secondary">Export Data</button>

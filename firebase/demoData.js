@@ -134,6 +134,7 @@ export const getInitialDemoData = () => {
             status: 'Active',
             tags: 'Headquarters, Enterprise, Supplier',
             notes: 'Net 30 payment terms.',
+            isPrimary: true,
             imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=150&auto=format&fit=crop&q=60'
         },
         {
@@ -146,6 +147,7 @@ export const getInitialDemoData = () => {
             status: 'Active',
             tags: 'Wholesale Partner, Retail',
             notes: 'Preferred commercial client.',
+            isPrimary: false,
             imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=150&auto=format&fit=crop&q=60'
         }
     ];

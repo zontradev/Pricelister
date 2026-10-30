@@ -17,7 +17,7 @@ export const calculateInvoiceItem = (quantity, unitPrice, unitCost) => {
     };
 };
 
-export const calculateInvoiceTotal = (items, discountPercent, additionalCut, taxPercent = 0, shippingCost = 0) => {
+export const calculateInvoiceTotal = (items, discountPercent, additionalCut, taxPercent = 0, shippingCost = 0, cutSign = null) => {
     let subtotal = 0;
     let totalProfit = 0;
 
@@ -41,16 +41,23 @@ export const calculateInvoiceTotal = (items, discountPercent, additionalCut, tax
         finalProfit -= discountAmount; // discount eats into profit
     }
 
-    const addCut = parseFloat(additionalCut || 0);
-    if (addCut > 0) {
-        grandTotal -= addCut;
-        finalProfit -= addCut; // additional cut eats into profit
+    let addCut = parseFloat(additionalCut || 0);
+    // If cutSign is explicitly provided, apply it: '-' cuts (subtracts), '+' adds
+    if (cutSign === '-') {
+        addCut = -Math.abs(addCut);
+    } else if (cutSign === '+') {
+        addCut = Math.abs(addCut);
+    }
+
+    if (addCut !== 0) {
+        grandTotal += addCut;
+        finalProfit += addCut;
     }
 
     const taxPct = parseFloat(taxPercent || 0);
     let taxAmount = 0;
     if (taxPct > 0) {
-        taxAmount = grandTotal * (taxPct / 100);
+        taxAmount = Math.max(0, grandTotal) * (taxPct / 100);
         grandTotal += taxAmount; 
     }
 
@@ -62,9 +69,10 @@ export const calculateInvoiceTotal = (items, discountPercent, additionalCut, tax
     return {
         subtotal,
         discountAmount,
+        additionalCut: addCut,
         taxAmount,
         shippingAmount: shipping,
-        grandTotal,
+        grandTotal: Math.max(0, grandTotal),
         totalProfit: finalProfit
     };
 };

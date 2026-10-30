@@ -18,8 +18,9 @@
  */
 
 import { generateInvoicePdf, downloadInvoicePdf, printInvoicePdf, getInvoiceLayoutSpec, validateInvoiceLayout, calculateAnchorPosition, SPACING_TOKENS_PX } from '../utils/invoicePdfEngine.js';
-import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
+import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp } from '../utilities.js';
 import { showAlert } from '../alert-handler.js';
+import { getUserRestrictions } from '../auth-handler.js';
 
 // =============================================================================
 // SIGNATURE FONTS & CLOUD/BROWSER STORAGE (SUPABASE + LOCALSTORAGE)
@@ -1051,7 +1052,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                                                 <!-- Populated dynamically -->
                                             </select>
                                             <button type="button" id="iv-btn-delete-font" class="btn btn-secondary btn-sm" style="display:none; padding:0.3rem 0.45rem; font-size:0.7rem; color:#e11d48;" title="Delete custom font">🗑️</button>
-                                            <button type="button" id="iv-btn-add-custom-font" class="btn btn-primary btn-sm" style="padding:0.3rem 0.55rem; font-size:0.7rem; white-space:nowrap; background:#e11d48; border-color:#e11d48;">+ Add Font</button>
+                                            <button type="button" id="iv-btn-add-custom-font" class="btn btn-primary btn-sm" style="padding:0.3rem 0.55rem; font-size:0.7rem; white-space:nowrap; background:#e11d48; border-color:#e11d48;">Add Font</button>
                                         </div>
                                         
                                         <!-- Live Font Signature Preview Card -->
@@ -1138,13 +1139,13 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <div style="display:flex; gap:0.4rem;">
                                 <button type="button" id="iv-btn-add-floating-photo" class="btn btn-secondary btn-sm" style="flex:1; font-size:0.72rem; padding:0.4rem; display:flex; align-items:center; justify-content:center; gap:0.3rem;" title="Upload photo element placed directly on canvas">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                                    + Add Photo Element
+                                    Add Photo Element
                                 </button>
                                 <input type="file" id="iv-photo-element-input" accept="image/*" style="display:none;">
 
                                 <button type="button" id="iv-btn-add-custom-text" class="btn btn-secondary btn-sm" style="flex:1; font-size:0.72rem; padding:0.4rem; display:flex; align-items:center; justify-content:center; gap:0.3rem;" title="Add placeable custom text or banner">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    + Add Custom Text
+                                    Add Custom Text
                                 </button>
                             </div>
 
@@ -1292,9 +1293,43 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                         </div>
                     </div>
 
+                    <!-- 7. INVOICE ORIGIN -->
+                    <div class="iv-control-section origin-divider-card" style="margin-top:0.45rem; padding:0.75rem; border-radius:10px; background:var(--bg-card); border:1px solid var(--border-color);">
+                        <label class="iv-section-title" style="margin-bottom:0.45rem; display:flex; align-items:center; justify-content:space-between;">
+                            <span style="display:flex; align-items:center; gap:0.4rem; color:var(--text-primary); font-weight:700;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                7. Invoice Origin
+                            </span>
+                            <span class="badge" style="font-size:0.65rem; background:rgba(225,29,72,0.1); color:var(--theme-primary, #e11d48); font-weight:700;">Origin Trace</span>
+                        </label>
+                        <div class="origin-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-size:0.75rem;">
+                            <div class="origin-field-box" style="background:var(--surface-100); padding:0.4rem 0.55rem; border-radius:6px; border:1px solid var(--border-color);">
+                                <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Invoice ID</div>
+                                <div style="font-weight:700; color:var(--text-primary); word-break:break-all;">${escapeHtml(String(currentInvoice.invoiceNumber || currentInvoice.busInvNumber || currentInvoice.uniqueId || currentInvoice.id || 'N/A'))}</div>
+                            </div>
+                            <div class="origin-field-box" style="background:var(--surface-100); padding:0.4rem 0.55rem; border-radius:6px; border:1px solid var(--border-color);">
+                                <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Creator ID</div>
+                                <div style="font-weight:600; color:var(--text-primary); word-break:break-all;">${escapeHtml(String(currentInvoice.creatorId || currentInvoice.createdBy || currentInvoice.userId || 'System / Admin'))}</div>
+                            </div>
+                            <div class="origin-field-box" style="grid-column: span 2; background:var(--surface-100); padding:0.4rem 0.55rem; border-radius:6px; border:1px solid var(--border-color);">
+                                <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Workspace ID</div>
+                                <div style="font-weight:600; color:var(--text-primary); word-break:break-all;">${escapeHtml(String(currentInvoice.workspaceId || localStorage.getItem('pricelister_active_workspace') || 'Default Workspace'))}</div>
+                            </div>
+                            <div class="origin-field-box" style="grid-column: span 2; background:var(--surface-100); padding:0.4rem 0.55rem; border-radius:6px; border:1px solid var(--border-color);">
+                                <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Created At</div>
+                                <div style="font-weight:600; color:var(--text-primary);">${formatExactTimestamp(currentInvoice.createdAt || currentInvoice.timestamp || currentInvoice.date)}</div>
+                            </div>
+                            ${(currentInvoice.updatedAt || currentInvoice.updatedTimestamp) ? `
+                            <div class="origin-field-box" style="grid-column: span 2; background:var(--surface-100); padding:0.4rem 0.55rem; border-radius:6px; border:1px solid var(--border-color);">
+                                <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Updated At</div>
+                                <div style="font-weight:600; color:var(--text-primary);">${formatExactTimestamp(currentInvoice.updatedAt || currentInvoice.updatedTimestamp)}</div>
+                            </div>` : ''}
+                        </div>
+                    </div>
+
                     <!-- Bottom Action Buttons Bar -->
                     <div style="margin-top:auto; padding-top:1rem; display:flex; flex-direction:column; gap:0.5rem;">
-                        <button type="button" id="iv-btn-download-bottom" class="btn btn-primary" style="width:100%; padding:0.65rem; font-weight:700; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:0.4rem; background: linear-gradient(135deg, #ff3366 0%, #e11d48 55%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35);">
+                        <button type="button" id="iv-btn-download-bottom" class="btn btn-primary" style="width:100%; padding:0.65rem; font-weight:700; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:0.4rem; background: var(--theme-gradient, linear-gradient(135deg, #ff3366 0%, #e11d48 55%, #be123c 100%)); box-shadow:0 4px 14px var(--theme-glow, rgba(225,29,72,0.35)); color:#ffffff;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                             Export & Download PDF
                         </button>
@@ -2752,13 +2787,15 @@ const updatePerformanceView = () => {
     const breakEvenRev = totalCost;
     const safetyCushion = Math.max(0, totalRevenue - breakEvenRev);
 
+    const userRestrictions = getUserRestrictions();
+
     perfContainer.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.75rem;">
             <div>
                 <h3 style="margin:0 0 0.15rem 0; font-size:1.35rem; font-weight:800; color:#0f172a;">Executive Financial Intelligence</h3>
                 <p style="margin:0; font-size:0.8rem; color:#64748b;">Comprehensive profitability, unit economics, COGS, and safety margins</p>
             </div>
-            <span style="font-size:0.78rem; font-weight:800; padding:0.35rem 0.75rem; border-radius:6px; ${gradeBadgeStyle}">${healthGrade} (${Math.round(marginPct)}%)</span>
+            <span style="font-size:0.78rem; font-weight:800; padding:0.35rem 0.75rem; border-radius:6px; ${gradeBadgeStyle}">${healthGrade} (${userRestrictions.cannotSeeProfit ? '••••' : Math.round(marginPct) + '%'})</span>
         </div>
 
         <!-- 6 Metrics Enterprise KPI Grid -->
@@ -2771,14 +2808,14 @@ const updatePerformanceView = () => {
 
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">
                 <div style="font-size:0.68rem; font-weight:700; color:#64748b; text-transform:uppercase;">Total COGS (Cost)</div>
-                <div style="font-size:1.35rem; font-weight:900; color:#64748b; margin-top:0.2rem;">${formatCurrency(totalCost, currentOptions.currencySymbol)}</div>
+                <div style="font-size:1.35rem; font-weight:900; color:#64748b; margin-top:0.2rem;">${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(totalCost, currentOptions.currencySymbol)}</div>
                 <div style="font-size:0.72rem; color:#94a3b8;">Procurement outlay</div>
             </div>
 
             <div style="background:rgba(225,29,72,0.04); border:1px solid rgba(225,29,72,0.2); border-radius:10px; padding:0.85rem;">
                 <div style="font-size:0.68rem; font-weight:700; color:#e11d48; text-transform:uppercase;">Net Gross Profit</div>
-                <div style="font-size:1.35rem; font-weight:900; color:#e11d48; margin-top:0.2rem;">+${formatCurrency(finalProfit, currentOptions.currencySymbol)}</div>
-                <div style="font-size:0.72rem; color:#e11d48; font-weight:700;">${Math.round(marginPct)}% net yield</div>
+                <div style="font-size:1.35rem; font-weight:900; color:#e11d48; margin-top:0.2rem;">${userRestrictions.cannotSeeProfit ? '••••' : '+' + formatCurrency(finalProfit, currentOptions.currencySymbol)}</div>
+                <div style="font-size:0.72rem; color:#e11d48; font-weight:700;">${userRestrictions.cannotSeeProfit ? '•••• yield' : Math.round(marginPct) + '% net yield'}</div>
             </div>
 
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">
@@ -2821,12 +2858,11 @@ const updatePerformanceView = () => {
                                 ${item.size ? `<span style="font-size:0.75rem; color:#94a3b8;"> (${escapeHtml(item.size)})</span>` : ''}
                             </td>
                             <td style="padding:0.65rem; text-align:center; font-weight:700;">${item.qty}</td>
-                            <td style="padding:0.65rem; text-align:right; color:#64748b;">${formatCurrency(item.unitCost, currentOptions.currencySymbol)}</td>
+                            <td style="padding:0.65rem; text-align:right; color:#64748b;">${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(item.unitCost, currentOptions.currencySymbol)}</td>
                             <td style="padding:0.65rem; text-align:right; font-weight:600;">${formatCurrency(item.unitPrice, currentOptions.currencySymbol)}</td>
                             <td style="padding:0.65rem; text-align:right; font-weight:700;">${formatCurrency(item.lineRev, currentOptions.currencySymbol)}</td>
                             <td style="padding:0.65rem 1rem; text-align:right; font-weight:700; color:#059669;">
-                                +${formatCurrency(item.lineProfit, currentOptions.currencySymbol)}
-                                <span style="font-size:0.72rem; color:#64748b; font-weight:500;">(${Math.round(item.marginPct)}%)</span>
+                                ${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurrency(item.lineProfit, currentOptions.currencySymbol)} <span style="font-size:0.72rem; color:#64748b; font-weight:500;">(${Math.round(item.marginPct)}%)</span>`}
                             </td>
                         </tr>
                     `).join('')}
@@ -2903,7 +2939,9 @@ const updateMakerEditorView = () => {
                                     <input type="number" class="form-control iv-maker-item-qty" value="${qty}" min="1" style="font-size:0.8rem; padding:0.3rem; text-align:center;">
                                 </td>
                                 <td style="padding:0.5rem;">
-                                    <input type="number" class="form-control iv-maker-item-cost" value="${cost}" min="0" step="0.5" style="font-size:0.8rem; padding:0.3rem; text-align:right;">
+                                    ${userRestrictions.cannotSeeCost
+                                        ? `<input type="text" class="form-control iv-maker-item-cost" value="••••" disabled readonly style="font-size:0.8rem; padding:0.3rem; text-align:right;">`
+                                        : `<input type="number" class="form-control iv-maker-item-cost" value="${cost}" min="0" step="0.5" style="font-size:0.8rem; padding:0.3rem; text-align:right;">`}
                                 </td>
                                 <td style="padding:0.5rem;">
                                     <input type="number" class="form-control iv-maker-item-price" value="${price}" min="0" step="0.5" style="font-size:0.8rem; padding:0.3rem; text-align:right;">

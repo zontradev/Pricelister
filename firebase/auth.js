@@ -14,17 +14,57 @@ const googleProvider = new GoogleAuthProvider();
 
 export const authService = {
     onAuthStateChanged: (callback) => {
-        // If developer is using the offline test session, immediately provide demo user
+        // If user explicitly signed out, do not auto-login to demo or any previous session
+        const isExplicitSignedOut = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_signed_out') === 'true';
+        if (isExplicitSignedOut) {
+            setTimeout(() => callback(null), 0);
+            return () => {};
+        }
+
+        // If developer is using the offline test session or demo mode, immediately provide demo user
         const devSession = localStorage.getItem('mock_dev_session');
-        if (devSession) {
-            try {
-                const user = JSON.parse(devSession);
-                authService.saveAccountToRegistry(user);
-                callback(user);
-                return () => {}; // dummy unsubscribe
-            } catch (e) {
-                localStorage.removeItem('mock_dev_session');
+        const activeWs = localStorage.getItem('pricelister_active_ws');
+        const isLocalHost = typeof window !== 'undefined' && (
+            window.location.hostname === 'localhost' || 
+            window.location.hostname === '127.0.0.1' || 
+            window.location.protocol === 'file:'
+        );
+        const isLandingPage = typeof window !== 'undefined' && (
+            window.location.pathname === '/' ||
+            window.location.pathname.endsWith('/index.html') ||
+            window.location.pathname.endsWith('/home') ||
+            window.location.pathname.endsWith('/explore') ||
+            window.location.pathname.endsWith('/pricing') ||
+            window.location.pathname.endsWith('/find') ||
+            window.location.pathname.endsWith('/privacy') ||
+            window.location.pathname.endsWith('/terms')
+        );
+        const isDemo = activeWs === 'ws_dev_mock' || 
+                       activeWs === 'demo' || 
+                       Boolean(devSession) || 
+                       (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo')) ||
+                       (isLocalHost && !isLandingPage && (!activeWs || activeWs === 'ws_dev_mock'));
+
+        if (isDemo) {
+            let user = null;
+            if (devSession) {
+                try { user = JSON.parse(devSession); } catch (e) {}
             }
+            // Sanitize: ensure user is a valid object with uid, not a boolean or invalid string
+            if (!user || typeof user !== 'object' || !user.uid) {
+                user = {
+                    uid: 'dev-mock-uid',
+                    email: 'developer@local.test',
+                    displayName: 'Demo Admin (Testing)',
+                    photoURL: null,
+                    role: 'CREATOR_ADMIN'
+                };
+                localStorage.setItem('mock_dev_session', JSON.stringify(user));
+            }
+            localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
+            authService.saveAccountToRegistry(user);
+            setTimeout(() => callback(user), 0);
+            return () => {}; // dummy unsubscribe
         }
 
         return firebaseOnAuthStateChanged(auth, (user) => {
@@ -46,6 +86,9 @@ export const authService = {
     
     loginWithGoogle: async (forceSelectAccount = true) => {
         try {
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.removeItem('pricelister_signed_out');
+            }
             // Clear test session when initiating real production Google login
             localStorage.removeItem('mock_dev_session');
             if (forceSelectAccount) {
@@ -65,11 +108,23 @@ export const authService = {
             return result.user;
         } catch (error) {
             console.error("Google Sign-In Error:", error);
+            const isLocalHost = typeof window !== 'undefined' && (
+                window.location.hostname === 'localhost' || 
+                window.location.hostname === '127.0.0.1' || 
+                window.location.protocol === 'file:'
+            );
+            if (CONFIG.APP_MODE === 'test' || isLocalHost) {
+                console.info("Fallback to dev mock account due to local/test environment error:", error?.code || error?.message);
+                return await authService.loginAsGuest();
+            }
             throw error;
         }
     },
     
     loginAsGuest: async () => {
+        if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.removeItem('pricelister_signed_out');
+        }
         // Purely local mock session with full admin privileges for UI testing
         const mockUser = {
             uid: 'dev-mock-uid',
@@ -79,6 +134,7 @@ export const authService = {
             role: 'CREATOR_ADMIN'
         };
         localStorage.setItem('mock_dev_session', JSON.stringify(mockUser));
+        localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
         authService.saveAccountToRegistry(mockUser);
         return mockUser;
     },
@@ -130,25 +186,71 @@ export const authService = {
     
     logout: async () => {
         try {
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.setItem('pricelister_signed_out', 'true');
+            }
             localStorage.removeItem('mock_dev_session');
-            await firebaseSignOut(auth);
+            localStorage.removeItem('pricelister_active_ws');
+            try {
+                await firebaseSignOut(auth);
+            } catch (e) {}
             
-            // Force reload to clear mock state properly
-            if (!auth.currentUser) {
-                window.location.reload();
+            // Redirect to home impression panel
+            if (typeof window !== 'undefined') {
+                window.location.href = '/home';
             }
         } catch (error) {
             console.error("Logout Error:", error);
-            throw error;
+            if (typeof window !== 'undefined') {
+                window.location.href = '/home';
+            }
         }
     },
     
     getCurrentUser: () => {
+        const isExplicitSignedOut = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_signed_out') === 'true';
+        if (isExplicitSignedOut) {
+            return null;
+        }
+
         const devSession = localStorage.getItem('mock_dev_session');
-        if (devSession) {
-            try {
-                return JSON.parse(devSession);
-            } catch (e) {}
+        const activeWs = localStorage.getItem('pricelister_active_ws');
+        const isLocalHost = typeof window !== 'undefined' && (
+            window.location.hostname === 'localhost' || 
+            window.location.hostname === '127.0.0.1' || 
+            window.location.protocol === 'file:'
+        );
+        const isLandingPage = typeof window !== 'undefined' && (
+            window.location.pathname === '/' ||
+            window.location.pathname.endsWith('/index.html') ||
+            window.location.pathname.endsWith('/home') ||
+            window.location.pathname.endsWith('/explore') ||
+            window.location.pathname.endsWith('/pricing') ||
+            window.location.pathname.endsWith('/find') ||
+            window.location.pathname.endsWith('/privacy') ||
+            window.location.pathname.endsWith('/terms')
+        );
+        const isDemo = activeWs === 'ws_dev_mock' || 
+                       activeWs === 'demo' || 
+                       Boolean(devSession) || 
+                       (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo')) ||
+                       (isLocalHost && !isLandingPage && (!activeWs || activeWs === 'ws_dev_mock'));
+
+        if (isDemo) {
+            let user = null;
+            if (devSession) {
+                try { user = JSON.parse(devSession); } catch (e) {}
+            }
+            if (user && typeof user === 'object' && user.uid) {
+                return user;
+            }
+            return {
+                uid: 'dev-mock-uid',
+                email: 'developer@local.test',
+                displayName: 'Demo Admin (Testing)',
+                photoURL: null,
+                role: 'CREATOR_ADMIN'
+            };
         }
         return auth.currentUser;
     }

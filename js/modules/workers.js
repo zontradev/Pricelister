@@ -232,8 +232,8 @@ export const renderWorkers = async (container, workspaceId) => {
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
                 
                 <!-- Stat 1: Products -->
-                <div class="ws-metric-card" onclick="window.location.hash='#/products'" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.25rem 1.35rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 8px 25px -5px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.2s ease;">
-                    <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(225, 29, 72, 0.08); color: #e11d48; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <div class="ws-metric-card" onclick="if(window.navigateToRoute){window.navigateToRoute('/products')}else{window.location.hash='#/products'}" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.25rem 1.35rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 8px 25px -5px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.2s ease;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                     </div>
                     <div>
@@ -245,8 +245,8 @@ export const renderWorkers = async (container, workspaceId) => {
                 </div>
 
                 <!-- Stat 2: Categories / Catalog Lists -->
-                <div class="ws-metric-card" onclick="window.location.hash='#/categories'" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.25rem 1.35rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 8px 25px -5px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.2s ease;">
-                    <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(59, 130, 246, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <div class="ws-metric-card" onclick="if(window.navigateToRoute){window.navigateToRoute('/categories')}else{window.location.hash='#/categories'}" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.25rem 1.35rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 8px 25px -5px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.2s ease;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                     </div>
                     <div>
@@ -258,13 +258,13 @@ export const renderWorkers = async (container, workspaceId) => {
                 </div>
 
                 <!-- Stat 3: Customer Storefront -->
-                <div class="ws-metric-card" onclick="window.location.hash='#/customer-panel'" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.25rem 1.35rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 8px 25px -5px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.2s ease;">
-                    <div style="width: 48px; height: 48px; border-radius: 12px; background: ${isStoreLive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)'}; color: ${isStoreLive ? '#059669' : '#d97706'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <div class="ws-metric-card" onclick="if(window.navigateToRoute){window.navigateToRoute('/customer-panel')}else{window.location.hash='#/customer-panel'}" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.25rem 1.35rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 8px 25px -5px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.2s ease;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
                     </div>
                     <div>
                         <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Storefront</div>
-                        <div style="font-size: 1.35rem; font-weight: 800; color: ${isStoreLive ? '#059669' : '#d97706'}; line-height: 1.15; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.4rem;">
+                        <div style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); line-height: 1.15; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.4rem;">
                             <span style="width: 8px; height: 8px; border-radius: 50%; background: ${isStoreLive ? '#10b981' : '#f59e0b'};"></span>
                             ${isStoreLive ? 'Live Portal' : 'Draft'}
                         </div>
@@ -272,7 +272,7 @@ export const renderWorkers = async (container, workspaceId) => {
                 </div>
 
                 <!-- Stat 4: Active Members -->
-                <div class="ws-metric-card" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.25rem 1.35rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 8px 25px -5px rgba(0,0,0,0.03); transition: all 0.2s ease;">
+                <div class="ws-metric-card" onclick="if(window.navigateToRoute){window.navigateToRoute('/members')}else{window.location.hash='#/members'}" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.25rem 1.35rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 8px 25px -5px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.2s ease;">
                     <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(147, 51, 234, 0.08); color: #7e22ce; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     </div>
@@ -289,13 +289,13 @@ export const renderWorkers = async (container, workspaceId) => {
             <!-- ======================================================== -->
             <!-- 3. WELCOME CALLOUT BANNER HUB                            -->
             <!-- ======================================================== -->
-            <div class="ws-welcome-card" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem 2rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03); margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; position: relative; overflow: hidden;">
+            <div class="ws-welcome-card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem 2rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03); margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; position: relative; overflow: hidden;">
                 
                 <div style="position:absolute; right:0; top:0; bottom:0; width: 200px; background: linear-gradient(90deg, transparent 0%, rgba(225,29,72,0.03) 100%); pointer-events:none;"></div>
 
                 <div style="display: flex; align-items: center; gap: 1.5rem; max-width: 760px;">
                     <!-- Graphical Tech Node Icon -->
-                    <div style="width: 58px; height: 58px; border-radius: 16px; background: #f4f4f5; border: 1.5px solid #e4e4e7; display: flex; align-items: center; justify-content: center; color: #18181b; flex-shrink: 0; box-shadow: 0 6px 16px rgba(0,0,0,0.06);">
+                    <div style="width: 58px; height: 58px; border-radius: 16px; background: var(--surface-100); border: 1.5px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-primary); flex-shrink: 0; box-shadow: 0 6px 16px rgba(0,0,0,0.06);">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                     </div>
 
@@ -310,7 +310,7 @@ export const renderWorkers = async (container, workspaceId) => {
                 </div>
 
                 ${canManageWorkers ? `
-                    <button type="button" id="btn-trigger-invite-hub" class="btn btn-primary" style="background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; font-weight: 700; font-size: 0.9rem; padding: 0.75rem 1.4rem; border-radius: 10px; border: 1px solid #18181b; box-shadow: 0 4px 14px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s ease;">
+                    <button type="button" id="btn-trigger-invite-hub" class="btn btn-primary" style="background: var(--btn-primary-bg); color: var(--btn-primary-text); font-weight: 700; font-size: 0.9rem; padding: 0.75rem 1.4rem; border-radius: 10px; border: 1px solid var(--btn-primary-border); box-shadow: var(--shadow-subtle); display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s ease;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         <span>Invite Member</span>
                     </button>
@@ -326,10 +326,10 @@ export const renderWorkers = async (container, workspaceId) => {
                 <div style="display: flex; flex-direction: column; gap: 1.75rem;">
                     
                     <!-- RECENT ACTIVITY FEED -->
-                    <div class="card" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
+                    <div class="card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
                             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                                 Recent Activity
                             </h3>
                             <a href="#/overview" style="font-size: 0.82rem; font-weight: 700; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
@@ -343,7 +343,7 @@ export const renderWorkers = async (container, workspaceId) => {
                             <!-- Activity 1 -->
                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px;">
                                 <div style="display: flex; align-items: center; gap: 0.85rem;">
-                                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(225,29,72,0.1); color: #e11d48; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                                     </div>
                                     <div>
@@ -357,7 +357,7 @@ export const renderWorkers = async (container, workspaceId) => {
                             <!-- Activity 2 -->
                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px;">
                                 <div style="display: flex; align-items: center; gap: 0.85rem;">
-                                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16,185,129,0.1); color: #059669; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path></svg>
                                     </div>
                                     <div>
@@ -371,7 +371,7 @@ export const renderWorkers = async (container, workspaceId) => {
                             <!-- Activity 3 -->
                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px;">
                                 <div style="display: flex; align-items: center; gap: 0.85rem;">
-                                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59,130,246,0.1); color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                                     </div>
                                     <div>
@@ -386,9 +386,9 @@ export const renderWorkers = async (container, workspaceId) => {
                     </div>
 
                     <!-- QUICK ACTIONS HUB -->
-                    <div class="card" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
+                    <div class="card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
                         <h3 style="margin: 0 0 1.25rem 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                             Quick Actions
                         </h3>
 
@@ -398,7 +398,7 @@ export const renderWorkers = async (container, workspaceId) => {
                             ${canManageWorkers ? `
                                 <div id="qa-invite-worker" style="padding: 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s ease;">
                                     <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(225,29,72,0.1); color: #e11d48; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
                                         </div>
                                         <div>
@@ -411,9 +411,9 @@ export const renderWorkers = async (container, workspaceId) => {
                             ` : ''}
 
                             <!-- Action 2: Add Product -->
-                            <div onclick="window.location.hash='#/products'" style="padding: 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s ease;">
+                            <div onclick="if(window.navigateToRoute){window.navigateToRoute('/products')}else{window.location.hash='#/products'}" style="padding: 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s ease;">
                                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(59,130,246,0.1); color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
                                     </div>
                                     <div>
@@ -425,9 +425,9 @@ export const renderWorkers = async (container, workspaceId) => {
                             </div>
 
                             <!-- Action 3: New Invoice -->
-                            <div onclick="window.location.hash='#/invoices/customer'" style="padding: 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s ease;">
+                            <div onclick="if(window.navigateToRoute){window.navigateToRoute('/invoices/customer')}else{window.location.hash='#/invoices/customer'}" style="padding: 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s ease;">
                                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(16,185,129,0.1); color: #059669; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                                     </div>
                                     <div>
@@ -439,9 +439,9 @@ export const renderWorkers = async (container, workspaceId) => {
                             </div>
 
                             <!-- Action 4: Customer Panel -->
-                            <div onclick="window.location.hash='#/customer-panel'" style="padding: 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s ease;">
+                            <div onclick="if(window.navigateToRoute){window.navigateToRoute('/customer-panel')}else{window.location.hash='#/customer-panel'}" style="padding: 1rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s ease;">
                                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245,158,11,0.1); color: #d97706; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path></svg>
                                     </div>
                                     <div>
@@ -461,7 +461,7 @@ export const renderWorkers = async (container, workspaceId) => {
                 <div style="display: flex; flex-direction: column; gap: 1.75rem;">
                     
                     <!-- WORKSPACE INFORMATION CARD -->
-                    <div class="card" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
+                    <div class="card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem;">
                             <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Workspace Information</h3>
                             ${isAdmin ? `
@@ -473,12 +473,12 @@ export const renderWorkers = async (container, workspaceId) => {
 
                         <!-- Mini Logo & Name Block -->
                         <div style="display: flex; align-items: center; gap: 0.85rem; margin-bottom: 1rem;">
-                            <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem;">
+                            <div style="width: 44px; height: 44px; border-radius: 12px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem;">
                                 ${escapeHtml((wsDisplayName.charAt(0) || 'W').toUpperCase())}
                             </div>
                             <div>
                                 <div style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary);">${escapeHtml(wsDisplayName)}</div>
-                                <span style="display: inline-block; padding: 0.15rem 0.55rem; border-radius: 6px; background: #fff1f2; color: #be123c; font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">${escapeHtml(roleUpper.replace('_', ' '))}</span>
+                                <span style="display: inline-block; padding: 0.15rem 0.55rem; border-radius: 6px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">${escapeHtml(roleUpper.replace('_', ' '))}</span>
                             </div>
                         </div>
 
@@ -542,7 +542,7 @@ export const renderWorkers = async (container, workspaceId) => {
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                                     Architecture / Schema:
                                 </span>
-                                <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #059669; font-weight: 700; font-size: 0.75rem; border: 1px solid rgba(16, 185, 129, 0.25);">v2.0.0 Enterprise</span>
+                                <span class="badge" style="background: var(--surface-100); color: var(--text-primary); font-weight: 700; font-size: 0.75rem; border: 1px solid var(--border-color);">v2.0.0 Enterprise</span>
                             </div>
 
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -550,7 +550,7 @@ export const renderWorkers = async (container, workspaceId) => {
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                                     Security & Encryption:
                                 </span>
-                                <span class="badge" style="background: rgba(225, 29, 72, 0.08); color: #e11d48; font-weight: 700; font-size: 0.75rem; border: 1px solid rgba(225, 29, 72, 0.2);">AES-256 Cloud</span>
+                                <span class="badge" style="background: var(--surface-100); color: var(--text-primary); font-weight: 700; font-size: 0.75rem; border: 1px solid var(--border-color);">AES-256 Cloud</span>
                             </div>
 
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -564,19 +564,35 @@ export const renderWorkers = async (container, workspaceId) => {
                         </div>
                     </div>
 
+                    ${canManageWorkers ? `
+                        <!-- PENDING JOIN REQUESTS CARD (Admin & Co-Admin only) -->
+                        <div id="join-requests-section" class="card" style="display:none; background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">Join Requests</h3>
+                                    <span id="join-requests-count-badge" style="background: var(--surface-100); color: var(--text-secondary); border: 1.5px solid var(--border-color); font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px;">0</span>
+                                </div>
+                                <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Admin &amp; Co-Admin Approval</span>
+                            </div>
+                            <div id="join-requests-container" style="display: flex; flex-direction: column; gap: 0.65rem;">
+                                <!-- Dynamic Requests -->
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <!-- MEMBERS LIST SECTION -->
-                    <div class="card" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
+                    <div class="card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
                         
                         <!-- Members Header -->
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
                                 <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">Members</h3>
-                                <span id="members-count-badge" style="background: #f1f5f9; color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px;">...</span>
+                                <span id="members-count-badge" class="members-count-badge" style="background: var(--surface-100); color: var(--text-secondary); border: 1px solid var(--border-color); font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px;">...</span>
                             </div>
                             
                             ${canManageWorkers ? `
-                                <button type="button" id="btn-quick-invite-member" class="btn btn-sm btn-primary" style="background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); font-weight: 700; font-size: 0.78rem; padding: 0.35rem 0.85rem; border-radius: 8px;">
-                                    + Invite Member
+                                <button type="button" id="btn-quick-invite-member" class="btn btn-sm btn-primary" style="font-weight: 700; font-size: 0.78rem; padding: 0.45rem 1rem; border-radius: 8px;">
+                                    Invite Member
                                 </button>
                             ` : ''}
                         </div>
@@ -602,37 +618,78 @@ export const renderWorkers = async (container, workspaceId) => {
             </div>
 
             <!-- ======================================================== -->
+            <!-- ======================================================== -->
             <!-- 5. INVITE WORKER MODAL / DRAWER                          -->
             <!-- ======================================================== -->
-            <div id="add-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
-                <div class="card" style="background: #ffffff; border-radius: 18px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); overflow: hidden; border: 1.5px solid #e4e4e7; animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div id="add-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
+                <div class="card" style="background: var(--bg-card); border-radius: 20px; max-width: 480px; width: 100%; box-shadow: var(--shadow-elevated); overflow: hidden; border: 1px solid var(--border-color); animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
                     
-                    <div style="background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; padding: 1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display:flex; align-items:center; gap:0.4rem;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <div style="background: var(--surface-50); border-bottom: 1px solid var(--border-color); color: var(--text-primary); padding: 1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin: 0; font-size: 1.18rem; font-weight: 800; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem; letter-spacing:-0.015em;">
+                            <div style="width:32px; height:32px; border-radius:8px; background:var(--surface-100); color:var(--text-primary); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </div>
                             Invite Team Member
                         </h3>
-                        <button type="button" id="btn-close-invite-modal" style="background: transparent; border: none; color: #ffffff; font-size: 1.2rem; cursor: pointer; padding: 0.2rem;">✕</button>
+                        <button type="button" id="btn-close-invite-modal" style="background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 1.1rem; cursor: pointer; padding: 0.2rem 0.55rem; border-radius:8px; line-height:1; transition:all 0.15s ease;">✕</button>
                     </div>
 
-                    <form id="add-worker-form" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.15rem;">
+                    <form id="add-worker-form" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.15rem; background: var(--bg-card);">
                         <div class="form-group">
                             <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem; display:block;">Worker Email Address *</label>
-                            <input type="email" id="worker-email" required class="form-control" style="width:100%; font-size:0.9rem;" placeholder="worker@gmail.com">
+                            <input type="email" id="worker-email" required class="form-control" style="width:100%; font-size:0.9rem; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.6rem 0.85rem;" placeholder="worker@gmail.com">
                             <small style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem; display:block;">Must be a valid Gmail address ending with @gmail.com</small>
                         </div>
                         
                         <div class="form-group">
                             <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem; display:block;">Workspace Role</label>
-                            <select id="worker-role" class="form-control" style="width:100%; font-size:0.9rem;">
+                            <select id="worker-role" class="form-control" style="width:100%; font-size:0.9rem; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.6rem 0.85rem;">
                                 <option value="WORKER">Worker (Standard Operator)</option>
-                                ${isAdmin ? '<option value="CO_ADMIN">Co-Admin (Elevated Manager)</option>' : ''}
+                                ${isAdmin ? '<option value="CO_ADMIN">Co-Admin (Elevated Manager - No Restrictions)</option>' : ''}
                             </select>
                         </div>
+
+                        <!-- Restrictions Container (Applies to Workers only; hidden when Co-Admin is selected) -->
+                        <div id="add-worker-restrictions-container" style="display:flex; flex-direction:column; gap:0.9rem;">
+                            <!-- Group A: Action Restriction -->
+                            <div class="form-group" style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.9rem 1rem;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.55rem;">
+                                    <label style="font-size:0.78rem; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">Action Restrictions (Group A)</label>
+                                    <span style="font-size:0.68rem; background:var(--surface-200); color:var(--text-secondary); padding:0.1rem 0.4rem; border-radius:4px; font-weight:700;">Worker Only</span>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:0.55rem; font-size:0.85rem; color:var(--text-primary);">
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="worker-disable-add" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Add New Data
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="worker-disable-delete-others" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Delete Others Data
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="worker-disable-update-others" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Update Other Data
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Group B: Visibility Restriction -->
+                            <div class="form-group" style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.9rem 1rem;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.55rem;">
+                                    <label style="font-size:0.78rem; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">Visibility Restrictions (Group B)</label>
+                                    <span style="font-size:0.68rem; background:var(--surface-200); color:var(--text-secondary); padding:0.1rem 0.4rem; border-radius:4px; font-weight:700;">Worker Only</span>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:0.55rem; font-size:0.85rem; color:var(--text-primary);">
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="worker-cannot-see-cost" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to see Cost
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="worker-cannot-see-profit" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to see Profit Margin
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                         
-                        <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
-                            <button type="submit" id="btn-submit-worker" class="btn btn-primary" style="flex:1; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; font-weight:700;">Send Invitation</button>
-                            <button type="button" id="btn-cancel-worker" class="btn btn-secondary" style="font-weight:600;">Cancel</button>
+                        <div style="display:flex; gap:0.75rem; margin-top:0.35rem;">
+                            <button type="submit" id="btn-submit-worker" class="btn btn-primary" style="flex:1; background:var(--btn-primary-bg); border:1px solid var(--btn-primary-border); color:var(--btn-primary-text); font-weight:700; border-radius:10px; padding:0.7rem; box-shadow:var(--shadow-subtle);">Send Invitation</button>
+                            <button type="button" id="btn-cancel-worker" class="btn btn-secondary" style="font-weight:700; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.7rem 1.25rem;">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -641,54 +698,79 @@ export const renderWorkers = async (container, workspaceId) => {
             <!-- ======================================================== -->
             <!-- 6. MANAGE WORKER MODAL                                   -->
             <!-- ======================================================== -->
-            <div id="manage-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
-                <div class="card" style="background: #ffffff; border-radius: 18px; max-width: 500px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); overflow: hidden; border: 1.5px solid rgba(225, 29, 72, 0.2); animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div id="manage-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
+                <div class="card" style="background: var(--bg-card); border-radius: 20px; max-width: 520px; width: 100%; box-shadow: var(--shadow-elevated); overflow: hidden; border: 1px solid var(--border-color); animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
                     
-                    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display:flex; align-items:center; gap:0.4rem;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <div style="background: var(--surface-50); border-bottom: 1px solid var(--border-color); color: var(--text-primary); padding: 1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin: 0; font-size: 1.18rem; font-weight: 800; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem; letter-spacing:-0.015em;">
+                            <div style="width:32px; height:32px; border-radius:8px; background:var(--surface-100); color:var(--text-primary); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            </div>
                             Manage Member
                         </h3>
-                        <button type="button" id="btn-close-manage-modal" style="background: transparent; border: none; color: #ffffff; font-size: 1.2rem; cursor: pointer; padding: 0.2rem;">✕</button>
+                        <button type="button" id="btn-close-manage-modal" style="background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 1.1rem; cursor: pointer; padding: 0.2rem 0.55rem; border-radius:8px; line-height:1; transition:all 0.15s ease;">✕</button>
                     </div>
 
-                    <form id="manage-worker-form" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.15rem;">
+                    <form id="manage-worker-form" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.15rem; background: var(--bg-card); max-height: 80vh; overflow-y: auto;">
                         <input type="hidden" id="manage-email">
                         
-                        <div style="background: var(--surface-50); padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid var(--border-color);">
-                            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 0.2rem;">Member Email</span>
-                            <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-primary); word-break: break-all;" id="manage-email-display"></div>
+                        <div style="background: var(--surface-50); padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 0.25rem; letter-spacing:0.04em;">Member Email</span>
+                            <div style="font-size: 0.96rem; font-weight: 800; color: var(--text-primary); word-break: break-all;" id="manage-email-display"></div>
                         </div>
                         
                         ${isAdmin ? `
                             <div class="form-group">
                                 <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem; display:block;">Role Assignment</label>
-                                <select id="manage-role" class="form-control" style="width:100%; font-size:0.9rem;">
-                                    <option value="WORKER">Worker</option>
-                                    <option value="CO_ADMIN">Co-Admin</option>
+                                <select id="manage-role" class="form-control" style="width:100%; font-size:0.9rem; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.6rem 0.85rem;">
+                                    <option value="WORKER">Worker (Restricted Operator)</option>
+                                    <option value="CO_ADMIN">Co-Admin (Elevated Manager - No Restrictions)</option>
                                 </select>
                             </div>
                         ` : '<input type="hidden" id="manage-role" value="WORKER">'}
 
-                        <div class="form-group" id="manage-restrictions-group">
-                            <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem; display:block;">Restrictions (Applies to Workers only)</label>
-                            <div style="display:flex; flex-direction:column; gap:0.6rem; background: var(--surface-50); padding: 0.9rem 1rem; border-radius: 10px; border: 1px solid var(--border-color); font-size: 0.85rem;">
-                                <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer;">
-                                    <input type="checkbox" id="manage-disable-add" style="accent-color: var(--primary); width:16px; height:16px;"> Unable to add data
-                                </label>
-                                <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer;">
-                                    <input type="checkbox" id="manage-disable-update" style="accent-color: var(--primary); width:16px; height:16px;"> Unable to update data
-                                </label>
-                                <label style="display:flex; align-items:center; gap:0.6rem; cursor:pointer;">
-                                    <input type="checkbox" id="manage-disable-delete" style="accent-color: var(--primary); width:16px; height:16px;"> Unable to delete data
-                                </label>
+                        <!-- Restrictions Container (Applies to Workers only; hidden when Co-Admin is selected) -->
+                        <div id="manage-restrictions-container" style="display:flex; flex-direction:column; gap:0.9rem;">
+                            <!-- Group A: Action Restriction -->
+                            <div class="form-group" style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.9rem 1rem;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.55rem;">
+                                    <label style="font-size:0.78rem; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">Action Restrictions (Group A)</label>
+                                    <span style="font-size:0.68rem; background:var(--surface-200); color:var(--text-secondary); padding:0.1rem 0.4rem; border-radius:4px; font-weight:700;">Worker Only</span>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:0.55rem; font-size:0.85rem; color:var(--text-primary);">
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="manage-disable-add" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Add New Data
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="manage-disable-delete-others" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Delete Others Data
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="manage-disable-update-others" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Update Other Data
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Group B: Visibility Restriction -->
+                            <div class="form-group" style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.9rem 1rem;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.55rem;">
+                                    <label style="font-size:0.78rem; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">Visibility Restrictions (Group B)</label>
+                                    <span style="font-size:0.68rem; background:var(--surface-200); color:var(--text-secondary); padding:0.1rem 0.4rem; border-radius:4px; font-weight:700;">Worker Only</span>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:0.55rem; font-size:0.85rem; color:var(--text-primary);">
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="manage-cannot-see-cost" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to see Cost
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
+                                        <input type="checkbox" id="manage-cannot-see-profit" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to see Profit Margin
+                                    </label>
+                                </div>
                             </div>
                         </div>
                         
-                        <div style="display:flex; gap:0.75rem; margin-top:0.5rem; flex-wrap:wrap;">
-                            <button type="submit" id="btn-save-manage" class="btn btn-primary" style="flex:1; background:linear-gradient(180deg, #27272a 0%, #18181b 100%); border:1px solid #18181b; color:#ffffff; font-weight:700;">Save Changes</button>
-                            <button type="button" id="btn-remove-worker" class="btn btn-outline" style="color: var(--error); border-color: var(--error); font-weight:600;">Remove</button>
-                            <button type="button" id="btn-cancel-manage" class="btn btn-secondary" style="font-weight:600;">Cancel</button>
+                        <div style="display:flex; gap:0.75rem; margin-top:0.35rem; flex-wrap:wrap;">
+                            <button type="submit" id="btn-save-manage" class="btn btn-primary" style="flex:1; background:var(--btn-primary-bg); border:1px solid var(--btn-primary-border); color:var(--btn-primary-text); font-weight:700; border-radius:10px; padding:0.7rem; box-shadow:var(--shadow-subtle);">Save Changes</button>
+                            <button type="button" id="btn-remove-worker" class="btn btn-outline" style="color: #dc2626; border: 1.5px solid rgba(239,68,68,0.4); background:rgba(239,68,68,0.06); font-weight:700; border-radius:10px; padding:0.7rem 1.1rem;">Remove</button>
+                            <button type="button" id="btn-cancel-manage" class="btn btn-secondary" style="font-weight:700; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.7rem 1.1rem;">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -743,12 +825,7 @@ export const renderWorkers = async (container, workspaceId) => {
         }
     };
 
-    const closeInviteModal = async () => {
-        const email = (container.querySelector('#worker-email')?.value || '').trim();
-        if (email) {
-            const leave = await showAlert.confirmUnsavedChanges();
-            if (!leave) return;
-        }
+    const closeInviteModal = () => {
         if (addContainer) {
             addContainer.style.display = 'none';
             if (addForm) addForm.reset();
@@ -760,17 +837,71 @@ export const renderWorkers = async (container, workspaceId) => {
     container.querySelector('#qa-invite-worker')?.addEventListener('click', openInviteModal);
     container.querySelector('#btn-close-invite-modal')?.addEventListener('click', closeInviteModal);
     container.querySelector('#btn-cancel-worker')?.addEventListener('click', closeInviteModal);
+
+    // Edit Workspace Settings Button
     container.querySelector('#btn-hero-edit-workspace')?.addEventListener('click', () => {
-        window.location.hash = '#/settings';
+        if (window.navigateToRoute) {
+            window.navigateToRoute('/settings');
+        } else {
+            window.location.hash = '#/settings';
+        }
+    });
+
+    // Side Edit Workspace Button
+    container.querySelector('#btn-side-edit-ws')?.addEventListener('click', () => {
+        if (window.navigateToRoute) {
+            window.navigateToRoute('/settings');
+        } else {
+            window.location.hash = '#/settings';
+        }
+    });
+
+    // Hero Logo Box Click -> Navigates to Settings
+    container.querySelector('#btn-hero-logo-box')?.addEventListener('click', () => {
+        if (window.navigateToRoute) {
+            window.navigateToRoute('/settings');
+        } else {
+            window.location.hash = '#/settings';
+        }
+    });
+
+    // Copy Workspace ID to Clipboard
+    container.querySelector('#btn-copy-workspace-id')?.addEventListener('click', () => {
+        navigator.clipboard.writeText(wsIdString).then(() => {
+            showAlert.success(`Workspace ID "${wsIdString}" copied to clipboard!`);
+        }).catch(() => {
+            showAlert.info(`Workspace ID: ${wsIdString}`);
+        });
+    });
+
+    // Change Workspace Banner Action
+    container.querySelector('#btn-hero-change-banner')?.addEventListener('click', () => {
+        openBannerPickerModal(async (selectedBannerUrl) => {
+            try {
+                const wsRef = doc(db, 'Workspaces', workspaceId);
+                await setDoc(wsRef, {
+                    bannerUrl: selectedBannerUrl,
+                    updatedAt: Date.now(),
+                    lastUpdatedBy: currentUser.email || 'Admin'
+                }, { merge: true });
+
+                const heroBanner = container.querySelector('#hub-hero-banner');
+                if (heroBanner) {
+                    heroBanner.style.backgroundImage = `linear-gradient(180deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.88) 100%), url('${selectedBannerUrl}')`;
+                }
+                if (window.__activeWorkspace) {
+                    window.__activeWorkspace.bannerUrl = selectedBannerUrl;
+                }
+                showAlert.success('Workspace cover banner updated successfully!');
+            } catch (err) {
+                console.error('Error updating banner:', err);
+                showAlert.error('Failed to update workspace banner.');
+            }
+        });
     });
 
     // 4. Close Manage Modal
-    const closeManageModal = async () => {
-        const btnSave = container.querySelector('#btn-save-manage');
-        if (btnSave && !btnSave.disabled) {
-            const leave = await showAlert.confirmUnsavedChanges();
-            if (!leave) return;
-        }
+    const closeManageModal = () => {
         if (manageContainer) manageContainer.style.display = 'none';
         initialManageSnapshot = null;
     };
@@ -818,9 +949,9 @@ export const renderWorkers = async (container, workspaceId) => {
                 rolePillColor = '#ffffff';
                 rolePillBorder = '#18181b';
             } else if (rUpper === 'ADMIN') {
-                rolePillBg = '#f4f4f5';
-                rolePillColor = '#18181b';
-                rolePillBorder = '#e4e4e7';
+                rolePillBg = 'var(--surface-100)';
+                rolePillColor = 'var(--text-primary)';
+                rolePillBorder = 'var(--border-color)';
             } else if (rUpper === 'CO_ADMIN' || rUpper === 'CO-ADMIN') {
                 rolePillBg = '#eff6ff';
                 rolePillColor = '#2563eb';
@@ -829,19 +960,39 @@ export const renderWorkers = async (container, workspaceId) => {
 
             // Status Indicator styling
             let statusDotColor = '#10b981';
-            let statusText = 'Joined';
-            let statusBadgeBg = '#ecfdf5';
-            let statusBadgeColor = '#065f46';
+            let statusBadgeHtml = `
+                <span style="font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 4px; background: #ecfdf5; color: #065f46;">
+                    Joined
+                </span>
+            `;
             if (isPending) {
                 statusDotColor = '#f59e0b';
-                statusText = 'Pending';
-                statusBadgeBg = '#fef3c7';
-                statusBadgeColor = '#92400e';
+                statusBadgeHtml = `
+                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: rgba(245, 158, 11, 0.15); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.35);">
+                        (Pending)
+                    </span>
+                    ${m.hasExistingWorkspace ? `
+                        <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: rgba(37, 99, 235, 0.12); color: #1d4ed8; border: 1px solid rgba(37, 99, 235, 0.3);">
+                            (Connected in a Workspace)
+                        </span>
+                    ` : ''}
+                `;
             } else if (isRestrictedWorker) {
                 statusDotColor = '#ef4444';
-                statusText = 'Restricted';
-                statusBadgeBg = '#fee2e2';
-                statusBadgeColor = '#991b1b';
+                statusBadgeHtml = `
+                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 4px; background: #fee2e2; color: #991b1b;">
+                        Restricted
+                    </span>
+                `;
+            }
+
+            if (m.accessRevoked || m.isAccessBlocked) {
+                statusDotColor = '#dc2626';
+                statusBadgeHtml += `
+                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #fee2e2; color: #991b1b; border: 1px solid #fecdd3; display:inline-flex; align-items:center; gap:3px;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Access Blocked
+                    </span>
+                `;
             }
 
             // Action button
@@ -853,26 +1004,21 @@ export const renderWorkers = async (container, workspaceId) => {
                             Cancel
                         </button>
                     `;
-                } else if (isAdmin && !isCreator) {
+                } else if ((isAdmin && !isCreator) || (isCoAdmin && !isCreator && rUpper === 'WORKER')) {
                     actionBtnHtml = `
                         <button type="button" class="btn btn-sm btn-manage-member" 
                             data-email="${escapeHtml(m.email)}" 
                             data-role="${rUpper}"
+                            data-cost="${m.cannotSeeCost ? '1' : '0'}"
+                            data-profit="${m.cannotSeeProfit ? '1' : '0'}"
                             data-add="${m.disableAdd ? '1' : '0'}"
-                            data-update="${m.disableUpdate ? '1' : '0'}"
-                            data-delete="${m.disableDelete ? '1' : '0'}"
-                            style="font-size:0.75rem; padding:0.25rem 0.65rem; font-weight:700; border-radius:6px; border:1px solid var(--border-color); background:#ffffff; color:var(--text-primary); cursor:pointer;">
-                            Manage
-                        </button>
-                    `;
-                } else if (isCoAdmin && !isCreator && rUpper === 'WORKER') {
-                    actionBtnHtml = `
-                        <button type="button" class="btn btn-sm btn-manage-member" 
-                            data-email="${escapeHtml(m.email)}" 
-                            data-role="${rUpper}"
-                            data-add="${m.disableAdd ? '1' : '0'}"
-                            data-update="${m.disableUpdate ? '1' : '0'}"
-                            data-delete="${m.disableDelete ? '1' : '0'}"
+                            data-del-others="${m.disableDeleteOthers ? '1' : '0'}"
+                            data-upd-others="${m.disableUpdateOthers ? '1' : '0'}"
+                            data-revoked="${m.accessRevoked ? '1' : '0'}"
+                            data-revoke-start="${m.revokeStart || ''}"
+                            data-revoke-end="${m.revokeEnd || ''}"
+                            data-revoke-start-fmt="${escapeHtml(m.revokeStartFormatted || '')}"
+                            data-revoke-end-fmt="${escapeHtml(m.revokeEndFormatted || '')}"
                             style="font-size:0.75rem; padding:0.25rem 0.65rem; font-weight:700; border-radius:6px; border:1px solid var(--border-color); background:#ffffff; color:var(--text-primary); cursor:pointer;">
                             Manage
                         </button>
@@ -898,13 +1044,11 @@ export const renderWorkers = async (container, workspaceId) => {
                                 </div>
                                 ${isSelf ? '<span style="font-size:0.7rem; color:var(--primary); font-weight:700;">(You)</span>' : ''}
                             </div>
-                            <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.15rem;">
+                            <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.15rem; flex-wrap: wrap;">
                                 <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 4px; background: ${rolePillBg}; color: ${rolePillColor}; border: 1px solid ${rolePillBorder};">
                                     ${escapeHtml(isCreator ? 'Creator Admin' : (rUpper === 'CO_ADMIN' ? 'Co-Admin' : rUpper))}
                                 </span>
-                                <span style="font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 4px; background: ${statusBadgeBg}; color: ${statusBadgeColor};">
-                                    ${statusText}
-                                </span>
+                                ${statusBadgeHtml}
                             </div>
                         </div>
 
@@ -918,14 +1062,51 @@ export const renderWorkers = async (container, workspaceId) => {
             `;
         }).join('');
 
+        // Format Date Helper
+        const formatDurationDate = (dateOrTimestamp) => {
+            if (!dateOrTimestamp) return '';
+            const d = new Date(dateOrTimestamp);
+            if (isNaN(d.getTime())) return '';
+            return d.toLocaleString(undefined, {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        };
+
+        const updateRevocationDurationPreview = () => {
+            const startDisp = container.querySelector('#manage-revoke-start-disp');
+            const endInput = container.querySelector('#manage-revoke-end-input');
+            const durationText = container.querySelector('#manage-revoke-duration-text');
+            if (!durationText) return;
+
+            const startStr = startDisp ? startDisp.textContent : formatDurationDate(Date.now());
+            if (endInput && endInput.value) {
+                const endStr = formatDurationDate(endInput.value);
+                durationText.textContent = `${startStr} — ${endStr}`;
+            } else {
+                durationText.textContent = `${startStr} — (Choose End Date/Time)`;
+            }
+        };
+
         // Attach action handlers
         container.querySelectorAll('.btn-manage-member').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const email = e.currentTarget.getAttribute('data-email');
                 const r = e.currentTarget.getAttribute('data-role');
+                const cannotCost = e.currentTarget.getAttribute('data-cost') === '1';
+                const cannotProfit = e.currentTarget.getAttribute('data-profit') === '1';
                 const dAdd = e.currentTarget.getAttribute('data-add') === '1';
-                const dUpd = e.currentTarget.getAttribute('data-update') === '1';
-                const dDel = e.currentTarget.getAttribute('data-delete') === '1';
+                const dDelOthers = e.currentTarget.getAttribute('data-del-others') === '1';
+                const dUpdOthers = e.currentTarget.getAttribute('data-upd-others') === '1';
+                const isRevoked = e.currentTarget.getAttribute('data-revoked') === '1';
+                const rStart = e.currentTarget.getAttribute('data-revoke-start');
+                const rEnd = e.currentTarget.getAttribute('data-revoke-end');
+                const rStartFmt = e.currentTarget.getAttribute('data-revoke-start-fmt');
+                const rEndFmt = e.currentTarget.getAttribute('data-revoke-end-fmt');
                 
                 container.querySelector('#manage-email').value = email;
                 container.querySelector('#manage-email-display').textContent = email;
@@ -935,9 +1116,52 @@ export const renderWorkers = async (container, workspaceId) => {
                     roleSelect.value = (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? 'CO_ADMIN' : 'WORKER';
                 }
                 
-                container.querySelector('#manage-disable-add').checked = dAdd;
-                container.querySelector('#manage-disable-update').checked = dUpd;
-                container.querySelector('#manage-disable-delete').checked = dDel;
+                const costBox = container.querySelector('#manage-cannot-see-cost');
+                const profitBox = container.querySelector('#manage-cannot-see-profit');
+                if (costBox) costBox.checked = cannotCost;
+                if (profitBox) profitBox.checked = cannotProfit;
+
+                const addBox = container.querySelector('#manage-disable-add');
+                const delOthersBox = container.querySelector('#manage-disable-delete-others');
+                const updOthersBox = container.querySelector('#manage-disable-update-others');
+                if (addBox) addBox.checked = dAdd;
+                if (delOthersBox) delOthersBox.checked = dDelOthers;
+                if (updOthersBox) updOthersBox.checked = dUpdOthers;
+
+                // Handle Restrictions Display depending on Role
+                const restrContainer = container.querySelector('#manage-restrictions-container');
+                if (restrContainer) {
+                    restrContainer.style.display = (roleSelect && roleSelect.value === 'CO_ADMIN') ? 'none' : 'flex';
+                }
+
+                // Handle Revocation Controls
+                const revokeToggle = container.querySelector('#manage-access-revoke-toggle');
+                const revokeBox = container.querySelector('#manage-revoke-details-box');
+                const startDisp = container.querySelector('#manage-revoke-start-disp');
+                const endInput = container.querySelector('#manage-revoke-end-input');
+
+                if (revokeToggle) revokeToggle.checked = isRevoked;
+                if (revokeBox) revokeBox.style.display = isRevoked ? 'flex' : 'none';
+
+                const nowMs = Date.now();
+                const effectiveStart = rStart ? Number(rStart) : nowMs;
+                if (startDisp) {
+                    startDisp.textContent = rStartFmt || formatDurationDate(effectiveStart);
+                    startDisp.dataset.timestamp = String(effectiveStart);
+                }
+
+                if (endInput) {
+                    if (rEnd && !isNaN(Number(rEnd))) {
+                        const d = new Date(Number(rEnd));
+                        const pad = (n) => String(n).padStart(2, '0');
+                        endInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                    } else {
+                        const d = new Date(nowMs + 24 * 60 * 60 * 1000);
+                        const pad = (n) => String(n).padStart(2, '0');
+                        endInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                    }
+                }
+                updateRevocationDurationPreview();
                 
                 if (addContainer) addContainer.style.display = 'none';
                 if (manageContainer) {
@@ -946,13 +1170,60 @@ export const renderWorkers = async (container, workspaceId) => {
 
                 initialManageSnapshot = {
                     role: (roleSelect ? roleSelect.value : 'WORKER'),
+                    cannotCost,
+                    cannotProfit,
                     dAdd,
-                    dUpd,
-                    dDel
+                    dDelOthers,
+                    dUpdOthers,
+                    isRevoked,
+                    endVal: endInput ? endInput.value : ''
                 };
                 checkManageDirty();
             });
         });
+
+        // Toggle Restrictions on Role Change
+        const manageRoleSelect = container.querySelector('#manage-role');
+        if (manageRoleSelect) {
+            manageRoleSelect.addEventListener('change', () => {
+                const restrContainer = container.querySelector('#manage-restrictions-container');
+                if (restrContainer) {
+                    restrContainer.style.display = manageRoleSelect.value === 'CO_ADMIN' ? 'none' : 'flex';
+                }
+                checkManageDirty();
+            });
+        }
+
+        const workerRoleSelect = container.querySelector('#worker-role');
+        if (workerRoleSelect) {
+            workerRoleSelect.addEventListener('change', () => {
+                const restrContainer = container.querySelector('#add-worker-restrictions-container');
+                if (restrContainer) {
+                    restrContainer.style.display = workerRoleSelect.value === 'CO_ADMIN' ? 'none' : 'flex';
+                }
+            });
+        }
+
+        // Revocation Toggle in Manage Form
+        const revokeToggleEl = container.querySelector('#manage-access-revoke-toggle');
+        const endInputEl = container.querySelector('#manage-revoke-end-input');
+        if (revokeToggleEl) {
+            revokeToggleEl.addEventListener('change', () => {
+                const revokeBox = container.querySelector('#manage-revoke-details-box');
+                if (revokeBox) {
+                    revokeBox.style.display = revokeToggleEl.checked ? 'flex' : 'none';
+                }
+                updateRevocationDurationPreview();
+                checkManageDirty();
+            });
+        }
+
+        if (endInputEl) {
+            endInputEl.addEventListener('input', () => {
+                updateRevocationDurationPreview();
+                checkManageDirty();
+            });
+        }
 
         container.querySelectorAll('.btn-cancel-invite').forEach(btn => {
             btn.addEventListener('click', async (e) => {
@@ -1026,6 +1297,96 @@ export const renderWorkers = async (container, workspaceId) => {
     }
 
     // -------------------------------------------------------------
+    // Join Requests Listener (Admin & Co-Admin only)
+    // -------------------------------------------------------------
+    if (canManageWorkers) {
+        const joinReqSection = container.querySelector('#join-requests-section');
+        const joinReqContainer = container.querySelector('#join-requests-container');
+        const joinReqBadge = container.querySelector('#join-requests-count-badge');
+
+        try {
+            firestoreService.listenJoinRequests(workspaceId, (requests) => {
+                if (!joinReqSection || !joinReqContainer) return;
+                const pending = (requests || []).filter(r => r.status === 'PENDING');
+                if (pending.length === 0) {
+                    joinReqSection.style.display = 'none';
+                    return;
+                }
+
+                joinReqSection.style.display = 'block';
+                if (joinReqBadge) joinReqBadge.textContent = `${pending.length}`;
+
+                joinReqContainer.innerHTML = pending.map(req => {
+                    const reqDate = req.requestedAt ? new Date(req.requestedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently';
+                    const avatarLetter = (req.displayName || req.email || 'U').charAt(0).toUpperCase();
+
+                    return `
+                        <div class="join-req-item" data-email="${escapeHtml(req.email)}" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-50); border:1.5px solid var(--border-color); border-radius:12px; padding:0.85rem 1rem;">
+                            <div style="display:flex; align-items:center; gap:0.75rem; min-width:0;">
+                                <div style="width:38px; height:38px; border-radius:50%; background:var(--surface-100); border:1.5px solid var(--border-color); overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:700; color:var(--text-primary);">
+                                    ${req.photoURL ? `<img src="${escapeHtml(req.photoURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` : avatarLetter}
+                                </div>
+                                <div style="min-width:0;">
+                                    <div style="font-weight:700; font-size:0.92rem; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(req.displayName || req.email)}</div>
+                                    <div style="font-size:0.78rem; color:var(--text-muted);">${escapeHtml(req.email)} &bull; <span style="opacity:0.85;">${reqDate}</span></div>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:0.5rem; align-items:center; flex-shrink:0;">
+                                <button type="button" class="btn btn-sm btn-primary btn-approve-request" data-email="${escapeHtml(req.email)}" style="border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; font-weight:700; padding:0.35rem 0.85rem; border-radius:8px; cursor:pointer;">
+                                    Approve
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline btn-reject-request" data-email="${escapeHtml(req.email)}" style="border:1.5px solid #d4d4d8; background:transparent; color:var(--text-secondary); font-weight:600; padding:0.35rem 0.85rem; border-radius:8px; cursor:pointer;">
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Attach handlers
+                joinReqContainer.querySelectorAll('.btn-approve-request').forEach(b => {
+                    b.addEventListener('click', async () => {
+                        const targetEmail = b.getAttribute('data-email');
+                        const targetReq = pending.find(r => r.email === targetEmail);
+                        if (!targetReq) return;
+                        b.disabled = true;
+                        b.textContent = 'Approving...';
+                        try {
+                            await firestoreService.approveJoinRequest(workspaceId, targetReq);
+                            showAlert.success(`Worker ${targetReq.displayName || targetEmail} joined workspace.`);
+                        } catch (err) {
+                            console.error("Approve error:", err);
+                            showAlert.error("Failed to approve join request.");
+                            b.disabled = false;
+                            b.textContent = 'Approve';
+                        }
+                    });
+                });
+
+                joinReqContainer.querySelectorAll('.btn-reject-request').forEach(b => {
+                    b.addEventListener('click', async () => {
+                        const targetEmail = b.getAttribute('data-email');
+                        b.disabled = true;
+                        b.textContent = 'Rejecting...';
+                        try {
+                            await firestoreService.rejectJoinRequest(workspaceId, targetEmail);
+                            showAlert.info(`Join request from ${targetEmail} rejected.`);
+                        } catch (err) {
+                            console.error("Reject error:", err);
+                            showAlert.error("Failed to reject join request.");
+                            b.disabled = false;
+                            b.textContent = 'Reject';
+                        }
+                    });
+                });
+
+            });
+        } catch (err) {
+            console.warn("Failed to listen to join requests:", err);
+        }
+    }
+
+    // -------------------------------------------------------------
     // Manage Worker Dirty Check & Submissions
     // -------------------------------------------------------------
     let initialManageSnapshot = null;
@@ -1039,26 +1400,34 @@ export const renderWorkers = async (container, workspaceId) => {
 
         const roleSelect = container.querySelector('#manage-role');
         const currentRole = roleSelect ? roleSelect.value : 'WORKER';
+        const currentCost = Boolean(container.querySelector('#manage-cannot-see-cost')?.checked);
+        const currentProfit = Boolean(container.querySelector('#manage-cannot-see-profit')?.checked);
         const currentDAdd = Boolean(container.querySelector('#manage-disable-add')?.checked);
-        const currentDUpd = Boolean(container.querySelector('#manage-disable-update')?.checked);
-        const currentDDel = Boolean(container.querySelector('#manage-disable-delete')?.checked);
+        const currentDDelOthers = Boolean(container.querySelector('#manage-disable-delete-others')?.checked);
+        const currentDUpdOthers = Boolean(container.querySelector('#manage-disable-update-others')?.checked);
+        const currentRevoked = Boolean(container.querySelector('#manage-access-revoke-toggle')?.checked);
+        const currentEndVal = container.querySelector('#manage-revoke-end-input')?.value || '';
 
         const isDirty = (
             currentRole !== initialManageSnapshot.role ||
+            currentCost !== initialManageSnapshot.cannotCost ||
+            currentProfit !== initialManageSnapshot.cannotProfit ||
             currentDAdd !== initialManageSnapshot.dAdd ||
-            currentDUpd !== initialManageSnapshot.dUpd ||
-            currentDDel !== initialManageSnapshot.dDel
+            currentDDelOthers !== initialManageSnapshot.dDelOthers ||
+            currentDUpdOthers !== initialManageSnapshot.dUpdOthers ||
+            currentRevoked !== initialManageSnapshot.isRevoked ||
+            currentEndVal !== initialManageSnapshot.endVal
         );
 
         btnSave.disabled = !isDirty;
     };
 
-    ['#manage-role', '#manage-disable-add', '#manage-disable-update', '#manage-disable-delete'].forEach(sel => {
+    ['#manage-role', '#manage-cannot-see-cost', '#manage-cannot-see-profit', '#manage-disable-add', '#manage-disable-delete-others', '#manage-disable-update-others', '#manage-access-revoke-toggle', '#manage-revoke-end-input'].forEach(sel => {
         const el = container.querySelector(sel);
         if (el) el.addEventListener('change', checkManageDirty);
     });
 
-    // Invite Submission
+    // Invite Submission with Image 5 Confirmation Alert
     if (addForm) {
         addForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1099,6 +1468,39 @@ export const renderWorkers = async (container, workspaceId) => {
                 return;
             }
 
+            const isCoAdmin = role === 'CO_ADMIN';
+            const cannotSeeCost = isCoAdmin ? false : Boolean(container.querySelector('#worker-cannot-see-cost')?.checked);
+            const cannotSeeProfit = isCoAdmin ? false : Boolean(container.querySelector('#worker-cannot-see-profit')?.checked);
+            const disableAdd = isCoAdmin ? false : Boolean(container.querySelector('#worker-disable-add')?.checked);
+            const disableDeleteOthers = isCoAdmin ? false : Boolean(container.querySelector('#worker-disable-delete-others')?.checked);
+            const disableUpdateOthers = isCoAdmin ? false : Boolean(container.querySelector('#worker-disable-update-others')?.checked);
+
+            // Confirm Dialog Matching Image 5 Style
+            const confirmed = await showAlert.confirm(
+                `Send team invitation to ${email}?`,
+                'Confirm Team Invitation',
+                {
+                    confirmText: 'Send Invitation',
+                    cancelText: 'Cancel',
+                    isDestructive: false,
+                    detailsHtml: `
+                        <div style="display:flex; align-items:center; gap:0.75rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem 1rem; margin-top:0.4rem;">
+                            <div style="width:36px; height:36px; border-radius:50%; background:#18181b; color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.9rem;">
+                                ${email.charAt(0).toUpperCase()}
+                            </div>
+                            <div style="overflow:hidden; flex:1;">
+                                <div style="font-weight:700; font-size:0.88rem; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${email}</div>
+                                <div style="font-size:0.75rem; color:#64748b; margin-top:0.15rem;">
+                                    Assigned Role: <strong style="color:${isCoAdmin ? '#2563eb' : '#059669'};">${isCoAdmin ? 'Co-Admin (No Restrictions)' : 'Worker'}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    `
+                }
+            );
+
+            if (!confirmed) return;
+
             btnSubmit.disabled = true;
             btnSubmit.textContent = 'Sending...';
 
@@ -1110,6 +1512,14 @@ export const renderWorkers = async (container, workspaceId) => {
                     return;
                 }
 
+                // Check if user already has their own workspace in cloud
+                let hasExistingWs = false;
+                try {
+                    hasExistingWs = await firestoreService.checkUserHasWorkspace(email);
+                } catch (e) {
+                    console.warn("Workspace check warning:", e);
+                }
+
                 // Create Invite Doc
                 const inviteRef = doc(db, 'Invites', `${workspaceId}_${email}`);
                 await setDoc(inviteRef, {
@@ -1118,6 +1528,12 @@ export const renderWorkers = async (container, workspaceId) => {
                     workerEmail: email,
                     workspaceName: wsInfo.name || 'Workspace',
                     role: role,
+                    cannotSeeCost: cannotSeeCost,
+                    cannotSeeProfit: cannotSeeProfit,
+                    disableAdd: disableAdd,
+                    disableDeleteOthers: disableDeleteOthers,
+                    disableUpdateOthers: disableUpdateOthers,
+                    hasExistingWorkspace: Boolean(hasExistingWs),
                     timestamp: Date.now()
                 });
 
@@ -1126,6 +1542,12 @@ export const renderWorkers = async (container, workspaceId) => {
                     email: email,
                     role: role,
                     status: 'PENDING',
+                    cannotSeeCost: cannotSeeCost,
+                    cannotSeeProfit: cannotSeeProfit,
+                    disableAdd: disableAdd,
+                    disableDeleteOthers: disableDeleteOthers,
+                    disableUpdateOthers: disableUpdateOthers,
+                    hasExistingWorkspace: Boolean(hasExistingWs),
                     addedAt: Date.now(),
                     timestamp: Date.now()
                 });
@@ -1142,7 +1564,7 @@ export const renderWorkers = async (container, workspaceId) => {
         });
     }
 
-    // Save Manage Changes
+    // Save Manage Changes with Group A, Group B and Temporary Revocation
     if (manageForm) {
         manageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1152,27 +1574,71 @@ export const renderWorkers = async (container, workspaceId) => {
             const email = container.querySelector('#manage-email').value;
             const roleSelect = container.querySelector('#manage-role');
             const newRole = roleSelect ? roleSelect.value : 'WORKER';
+            const isCoAdmin = newRole === 'CO_ADMIN';
             
-            const dAdd = container.querySelector('#manage-disable-add').checked;
-            const dUpd = container.querySelector('#manage-disable-update').checked;
-            const dDel = container.querySelector('#manage-disable-delete').checked;
-            const isRestricted = dAdd || dUpd || dDel;
+            const cannotSeeCost = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-cost')?.checked);
+            const cannotSeeProfit = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-profit')?.checked);
+            const dAdd = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-add')?.checked);
+            const dDelOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-delete-others')?.checked);
+            const dUpdOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-update-others')?.checked);
+            
+            // Temporary Revocation Logic
+            const accessRevoked = isCoAdmin ? false : Boolean(container.querySelector('#manage-access-revoke-toggle')?.checked);
+            let revokeStart = null;
+            let revokeEnd = null;
+            let revokeStartFormatted = '';
+            let revokeEndFormatted = '';
+            let isAccessBlocked = false;
+
+            if (accessRevoked) {
+                const startDisp = container.querySelector('#manage-revoke-start-disp');
+                const endInput = container.querySelector('#manage-revoke-end-input');
+
+                const parsedStart = startDisp && startDisp.dataset.timestamp ? Number(startDisp.dataset.timestamp) : Date.now();
+                revokeStart = parsedStart;
+                revokeStartFormatted = formatDurationDate(revokeStart);
+
+                if (endInput && endInput.value) {
+                    const parsedEnd = new Date(endInput.value).getTime();
+                    if (!isNaN(parsedEnd)) {
+                        revokeEnd = parsedEnd;
+                        revokeEndFormatted = formatDurationDate(revokeEnd);
+                    }
+                }
+                if (!revokeEnd) {
+                    revokeEnd = revokeStart + (24 * 60 * 60 * 1000);
+                    revokeEndFormatted = formatDurationDate(revokeEnd);
+                }
+
+                const nowMs = Date.now();
+                isAccessBlocked = (nowMs >= revokeStart && nowMs <= revokeEnd);
+            }
+
+            const isRestricted = cannotSeeCost || cannotSeeProfit || dAdd || dDelOthers || dUpdOthers || accessRevoked;
 
             try {
                 const memberRef = doc(db, 'Workspaces/' + workspaceId + '/Members', email);
                 await updateDoc(memberRef, {
                     role: newRole,
+                    cannotSeeCost: cannotSeeCost,
+                    cannotSeeProfit: cannotSeeProfit,
                     isRestricted: isRestricted,
                     disableAdd: dAdd,
-                    disableUpdate: dUpd,
-                    disableDelete: dDel,
+                    disableDeleteOthers: dDelOthers,
+                    disableUpdateOthers: dUpdOthers,
+                    accessRevoked: accessRevoked,
+                    revokeStart: revokeStart,
+                    revokeEnd: revokeEnd,
+                    revokeStartFormatted: revokeStartFormatted,
+                    revokeEndFormatted: revokeEndFormatted,
+                    isAccessBlocked: isAccessBlocked,
                     updatedAt: Date.now()
                 });
                 
                 showAlert.success(`Member settings updated for ${email}`);
                 closeManageModal();
             } catch (err) {
-                console.error(err);
+                console.error("Update member error:", err);
                 showAlert.error("Failed to update member. Check permissions.");
             } finally {
                 btnSave.disabled = false;

@@ -28,7 +28,10 @@ export const getProductService = (workspaceId) => {
             return await repo.getById(id);
         },
 
-        addProduct: async (productData, creatorId) => {
+        addProduct: async (productData, creatorId, workerPermission = null) => {
+            if (workerPermission && workerPermission.disableAdd) {
+                throw new Error("You don't have permission to add new products.");
+            }
             validateProduct(productData);
 
             const newProduct = new Product({
@@ -105,9 +108,17 @@ export const getProductService = (workspaceId) => {
             return results;
         },
 
-        updateProduct: async (id, productData, workerPermission = null) => {
+        updateProduct: async (id, productData, workerPermission = null, currentUserUid = null) => {
             if (workerPermission && workerPermission.disableUpdate) {
                 throw new Error("You don't have permission to update this product.");
+            }
+
+            const currentUid = currentUserUid || workerPermission?.currentUserUid;
+            if (workerPermission && workerPermission.disableUpdateOthers && currentUid) {
+                const existing = await repo.getById(id);
+                if (existing && existing.creatorId && existing.creatorId !== currentUid) {
+                    throw new Error("You don't have permission to update products created by other members.");
+                }
             }
 
             validateProduct(productData, true);
@@ -160,7 +171,7 @@ export const getProductService = (workspaceId) => {
             return id;
         },
 
-        deleteProduct: async (id, workerPermission = null) => {
+        deleteProduct: async (id, workerPermission = null, currentUserUid = null) => {
             if (workerPermission && workerPermission.disableDelete) {
                 throw new Error("You don't have permission to delete products.");
             }
@@ -169,16 +180,22 @@ export const getProductService = (workspaceId) => {
             try {
                 const prod = await repo.getById(id);
                 itemCreatorId = prod?.creatorId || null;
+                const currentUid = currentUserUid || workerPermission?.currentUserUid;
+                if (workerPermission && workerPermission.disableDeleteOthers && currentUid && itemCreatorId && itemCreatorId !== currentUid) {
+                    throw new Error("You don't have permission to delete products created by other members.");
+                }
                 if (prod && prod.imageUri) {
                     await storageService.deleteImage(prod.imageUri).catch(() => {});
                 }
-            } catch(e) {}
+            } catch(e) {
+                if (e.message && e.message.includes("permission")) throw e;
+            }
 
             await repo.delete(id);
             await firestoreService.updateMetricsCounter(workspaceId, 'product', false, itemCreatorId, 1);
         },
 
-        archiveProduct: async (id, workerPermission = null) => {
+        archiveProduct: async (id, workerPermission = null, currentUserUid = null) => {
             if (workerPermission && workerPermission.disableDelete) {
                 throw new Error("You don't have permission to delete/archive products.");
             }
@@ -187,7 +204,13 @@ export const getProductService = (workspaceId) => {
             try {
                 const prod = await repo.getById(id);
                 itemCreatorId = prod?.creatorId || null;
-            } catch(e) {}
+                const currentUid = currentUserUid || workerPermission?.currentUserUid;
+                if (workerPermission && workerPermission.disableDeleteOthers && currentUid && itemCreatorId && itemCreatorId !== currentUid) {
+                    throw new Error("You don't have permission to delete/archive products created by other members.");
+                }
+            } catch(e) {
+                if (e.message && e.message.includes("permission")) throw e;
+            }
 
             // Prefer archive over hard delete
             await repo.update(id, {

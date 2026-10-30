@@ -79,14 +79,18 @@ const getCollectionName = (baseName) => {
 
 export const firestoreService = {
     checkWorkspaceExists: async (uid, email = null) => {
-        // Purely local mock session bypass
-        if (uid === 'dev-mock-uid' || localStorage.getItem('mock_dev_session')) {
+        const activeWsKey = localStorage.getItem('pricelister_active_ws');
+        const isDemoUrl = typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo');
+        const hasMockSession = uid === 'dev-mock-uid' || Boolean(localStorage.getItem('mock_dev_session')) || isDemoUrl;
+
+        // Purely local mock session or demo request bypass
+        if (hasMockSession || activeWsKey === 'ws_dev_mock' || activeWsKey === 'demo') {
             return {
                 id: 'ws_dev_mock',
                 workspaceId: 'DEMO-SANDBOX-01',
                 name: 'PriceLister Demo Enterprise',
                 description: 'UI Testing Sandbox',
-                email: 'developer@local.test',
+                email: email || 'developer@local.test',
                 adminEmail: 'developer@local.test',
                 role: 'CREATOR_ADMIN',
                 currency: '$',
@@ -98,34 +102,132 @@ export const firestoreService = {
         }
 
         try {
-            // 1. Check if user is an Admin (Workspace ID == UID)
-            const wsRef = doc(db, 'Workspaces', uid);
-            const wsSnap = await getDoc(wsRef);
-            if (wsSnap.exists()) {
-                return { id: wsSnap.id, ...wsSnap.data(), role: 'CREATOR_ADMIN' };
+            // Helper to build workspace payload with rock-solid permission protections
+            const buildWorkspacePayload = (wsId, wsData, role, memberData = null) => {
+                const isCreator = role === 'CREATOR_ADMIN' || wsData.role === 'CREATOR_ADMIN';
+                const isCoAdmin = role === 'CO_ADMIN' || role === 'COADMIN' || wsData.role === 'CO_ADMIN' || wsData.role === 'COADMIN';
+                const isPrivileged = isCreator || isCoAdmin;
+                const mem = memberData || {};
+                
+                // Temporary Access Revocation evaluation:
+                // Check if accessRevoked is active and current time is within revokeStart and revokeEnd
+                const now = Date.now();
+                let isAccessBlocked = false;
+                if (!isPrivileged && mem.accessRevoked) {
+                    const start = Number(mem.revokeStart) || 0;
+                    const end = Number(mem.revokeEnd) || Infinity;
+                    if (now >= start && now <= end) {
+                        isAccessBlocked = true;
+                    }
+                }
+
+                return {
+                    id: wsId,
+                    ...wsData,
+                    role: isCreator ? 'CREATOR_ADMIN' : role,
+                    // Safety: Creator Admin & Co-Admin are ALWAYS completely unrestricted
+                    cannotSeeCost: isPrivileged ? false : Boolean(mem.cannotSeeCost),
+                    cannotSeeProfit: isPrivileged ? false : Boolean(mem.cannotSeeProfit),
+                    disableAdd: isPrivileged ? false : Boolean(mem.disableAdd),
+                    disableDeleteOthers: isPrivileged ? false : Boolean(mem.disableDeleteOthers),
+                    disableUpdateOthers: isPrivileged ? false : Boolean(mem.disableUpdateOthers),
+                    disableUpdate: isPrivileged ? false : Boolean(mem.disableUpdate),
+                    disableDelete: isPrivileged ? false : Boolean(mem.disableDelete),
+                    isRestricted: isPrivileged ? false : Boolean(mem.isRestricted || mem.cannotSeeCost || mem.cannotSeeProfit || mem.disableAdd || mem.disableDeleteOthers || mem.disableUpdateOthers || mem.disableUpdate || mem.disableDelete),
+
+                    // Temporary Access Revoke payload
+                    accessRevoked: isPrivileged ? false : Boolean(mem.accessRevoked),
+                    revokeStart: isPrivileged ? null : (mem.revokeStart || null),
+                    revokeEnd: isPrivileged ? null : (mem.revokeEnd || null),
+                    revokeStartFormatted: isPrivileged ? null : (mem.revokeStartFormatted || (mem.revokeStart ? new Date(mem.revokeStart).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '')),
+                    revokeEndFormatted: isPrivileged ? null : (mem.revokeEndFormatted || (mem.revokeEnd ? new Date(mem.revokeEnd).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '')),
+                    revokeReason: isPrivileged ? null : (mem.revokeReason || 'Temporary Access Blocked by Workspace Administrator'),
+                    isAccessBlocked: isPrivileged ? false : isAccessBlocked
+                };
+            };
+
+            // 1. If user previously switched to a specific active workspace, load it first
+            if (activeWsKey && activeWsKey !== 'ws_dev_mock' && activeWsKey !== 'demo') {
+                try {
+                    const activeDocRef = doc(db, 'Workspaces', activeWsKey);
+                    const activeSnap = await getDoc(activeDocRef);
+                    if (activeSnap.exists()) {
+                        const wsData = activeSnap.data();
+                        let realRole = 'WORKER';
+                        let memberData = null;
+                        if (activeWsKey === uid || wsData.adminUid === uid || (wsData.email && wsData.email.toLowerCase() === (email || '').toLowerCase()) || (wsData.adminEmail && wsData.adminEmail.toLowerCase() === (email || '').toLowerCase())) {
+                            realRole = 'CREATOR_ADMIN';
+                        } else if (email) {
+                            try {
+                                const memberRef = doc(db, `Workspaces/${activeWsKey}/Members`, email.toLowerCase());
+                                const memberSnap = await getDoc(memberRef);
+                                if (memberSnap.exists()) {
+                                    memberData = memberSnap.data();
+                                    if (memberData.role) realRole = memberData.role;
+                                }
+                            } catch (mErr) {
+                                console.warn("Member role check warning:", mErr);
+                            }
+                        }
+                        return buildWorkspacePayload(activeSnap.id, wsData, realRole, memberData);
+                    }
+                } catch (activeErr) {
+                    console.warn("Could not load requested active workspace, falling back to default:", activeErr);
+                    localStorage.removeItem('pricelister_active_ws');
+                }
             }
 
-            // 2. If not admin, check if they are a Verified Worker
-            const connRef = doc(db, 'Connections', uid);
-            const connSnap = await getDoc(connRef);
-            if (connSnap.exists() && connSnap.data().adminUid) {
-                const adminUid = connSnap.data().adminUid;
-                const workerWsRef = doc(db, 'Workspaces', adminUid);
-                const workerWsSnap = await getDoc(workerWsRef);
-                if (workerWsSnap.exists()) {
-                    let realRole = connSnap.data().role || 'WORKER';
-                    if (email) {
-                        try {
-                            const memberRef = doc(db, `Workspaces/${adminUid}/Members`, email.toLowerCase());
-                            const memberSnap = await getDoc(memberRef);
-                            if (memberSnap.exists() && memberSnap.data().role) {
-                                realRole = memberSnap.data().role;
+            // 2. Check if user is an Admin (Workspace ID == UID)
+            if (uid) {
+                const wsRef = doc(db, 'Workspaces', uid);
+                const wsSnap = await getDoc(wsRef);
+                if (wsSnap.exists()) {
+                    return buildWorkspacePayload(wsSnap.id, wsSnap.data(), 'CREATOR_ADMIN', null);
+                }
+
+                // 3. If not admin, check if they are a Verified Worker in Connections
+                const connRef = doc(db, 'Connections', uid);
+                const connSnap = await getDoc(connRef);
+                if (connSnap.exists() && connSnap.data().adminUid) {
+                    const adminUid = connSnap.data().adminUid;
+                    const workerWsRef = doc(db, 'Workspaces', adminUid);
+                    const workerWsSnap = await getDoc(workerWsRef);
+                    if (workerWsSnap.exists()) {
+                        let realRole = connSnap.data().role || 'WORKER';
+                        let memberData = null;
+                        if (email) {
+                            try {
+                                const memberRef = doc(db, `Workspaces/${adminUid}/Members`, email.toLowerCase());
+                                const memberSnap = await getDoc(memberRef);
+                                if (memberSnap.exists()) {
+                                    memberData = memberSnap.data();
+                                    if (memberData.role) realRole = memberData.role;
+                                }
+                            } catch (err) {
+                                console.error("Error fetching member real role:", err);
                             }
-                        } catch (err) {
-                            console.error("Error fetching member real role:", err);
                         }
+                        return buildWorkspacePayload(workerWsSnap.id, workerWsSnap.data(), realRole, memberData);
                     }
-                    return { id: workerWsSnap.id, ...workerWsSnap.data(), role: realRole };
+                }
+            }
+
+            // 4. Query by email if uid is not passed or no direct UID match
+            if (email) {
+                try {
+                    const cleanEmail = email.trim().toLowerCase();
+                    const wsQuery = query(collection(db, 'Workspaces'), where('email', '==', cleanEmail));
+                    const wsSnap = await getDocs(wsQuery);
+                    if (!wsSnap.empty) {
+                        return buildWorkspacePayload(wsSnap.docs[0].id, wsSnap.docs[0].data(), 'CREATOR_ADMIN', null);
+                    }
+                    const adminQuery = query(collection(db, 'Workspaces'), where('adminEmail', '==', cleanEmail));
+                    const adminSnap = await getDocs(adminQuery);
+                    if (!adminSnap.empty) {
+                        return buildWorkspacePayload(adminSnap.docs[0].id, adminSnap.docs[0].data(), 'CREATOR_ADMIN', null);
+                    }
+                } catch (e) {
+                    console.warn("Could not query workspace by email:", e);
                 }
             }
 
@@ -133,6 +235,23 @@ export const firestoreService = {
         } catch (error) {
             console.error("Error checking workspace:", error);
             throw error;
+        }
+    },
+
+    checkUserHasWorkspace: async (email) => {
+        if (!email || email === 'developer@local.test') return false;
+        try {
+            const cleanEmail = email.trim().toLowerCase();
+            const wsQuery = query(collection(db, 'Workspaces'), where('email', '==', cleanEmail));
+            const wsSnap = await getDocs(wsQuery);
+            if (!wsSnap.empty) return true;
+
+            const adminQuery = query(collection(db, 'Workspaces'), where('adminEmail', '==', cleanEmail));
+            const adminSnap = await getDocs(adminQuery);
+            return !adminSnap.empty;
+        } catch (e) {
+            console.warn("checkUserHasWorkspace query warning:", e);
+            return false;
         }
     },
     
@@ -396,8 +515,10 @@ export const firestoreService = {
                 role: roleMeta.id,
                 workspaceRole: roleLevel,
                 roleTag: roleTagResolved,
-                canViewProfit: Boolean(invite.canViewProfit ?? roleMeta.canViewProfit),
-                isRestricted: Boolean(invite.isRestricted ?? roleMeta.isDefaultRestricted),
+                canViewProfit: !Boolean(invite.cannotSeeProfit),
+                cannotSeeCost: Boolean(invite.cannotSeeCost),
+                cannotSeeProfit: Boolean(invite.cannotSeeProfit),
+                isRestricted: Boolean(invite.isRestricted || invite.cannotSeeCost || invite.cannotSeeProfit),
                 disableDelete: Boolean(invite.disableDelete),
                 disableUpdate: Boolean(invite.disableUpdate),
                 disableAdd: Boolean(invite.disableAdd),
@@ -438,6 +559,214 @@ export const firestoreService = {
             const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             callback(list);
         }, (err) => console.warn("Invites listen error:", err));
+    },
+
+    checkUserWorkspaceConnection: async (user) => {
+        if (!user || (!user.uid && !user.email)) return { isConnected: false };
+        const uid = user.uid;
+        const email = (user.email || '').toLowerCase();
+        
+        // Demo mode check
+        if (uid === 'dev-mock-uid' || email === 'developer@local.test') {
+            return { isConnected: true, workspaceId: 'DEMO-SANDBOX-01', role: 'CREATOR_ADMIN' };
+        }
+
+        try {
+            // Check if user is creator/admin of a workspace
+            if (uid) {
+                const adminWs = await getDoc(doc(db, 'Workspaces', uid));
+                if (adminWs.exists()) {
+                    return { isConnected: true, workspaceId: adminWs.data().workspaceId || uid, role: 'ADMIN' };
+                }
+            }
+
+            // Check if user has an active connection document
+            if (uid) {
+                const connSnap = await getDoc(doc(db, 'Connections', uid));
+                if (connSnap.exists() && connSnap.data()?.adminUid) {
+                    return { isConnected: true, workspaceId: connSnap.data().adminUid, role: connSnap.data().role || 'WORKER' };
+                }
+            }
+
+            // Check if user is in any demo local connections
+            const demoConn = localStorage.getItem('pricelister_demo_connection_' + (email || uid));
+            if (demoConn) {
+                const parsed = JSON.parse(demoConn);
+                if (parsed && parsed.workspaceId) {
+                    return { isConnected: true, workspaceId: parsed.workspaceId, role: parsed.role || 'WORKER' };
+                }
+            }
+
+            return { isConnected: false };
+        } catch (e) {
+            console.warn("Connection check failed:", e);
+            return { isConnected: false };
+        }
+    },
+
+    createJoinRequest: async (workspaceDocId, user) => {
+        if (!user || !user.email) throw new Error("A valid email address is required to request joining.");
+        const email = user.email.toLowerCase();
+        const requestData = {
+            uid: user.uid || ('req_' + Date.now()),
+            email: email,
+            displayName: user.displayName || user.name || email.split('@')[0],
+            photoURL: user.photoURL || '',
+            requestedAt: Date.now(),
+            status: 'PENDING',
+            workspaceDocId: workspaceDocId
+        };
+
+        // Try Firestore
+        try {
+            await setDoc(doc(db, `Workspaces/${workspaceDocId}/JoinRequests`, email), requestData, { merge: true });
+        } catch (e) {
+            console.warn("Firestore join request save failed, using local/demo store:", e);
+        }
+
+        // Always save to demo/local store for seamless local and offline testing
+        try {
+            const key = `pricelister_join_requests_${workspaceDocId}`;
+            const existing = JSON.parse(localStorage.getItem(key) || '[]');
+            const filtered = existing.filter(r => (r.email || '').toLowerCase() !== email);
+            filtered.unshift(requestData);
+            localStorage.setItem(key, JSON.stringify(filtered));
+        } catch (err) {}
+
+        return requestData;
+    },
+
+    listenJoinRequests: (workspaceDocId, callback) => {
+        if (!workspaceDocId) return () => {};
+
+        const localKey = `pricelister_join_requests_${workspaceDocId}`;
+        const readLocal = () => {
+            try {
+                const list = JSON.parse(localStorage.getItem(localKey) || '[]');
+                return list.filter(r => r.status === 'PENDING');
+            } catch (e) { return []; }
+        };
+
+        // If in mock or offline
+        if (workspaceDocId === 'ws_dev_mock' || workspaceDocId === 'DEMO-SANDBOX-01' || workspaceDocId === 'dev-mock-uid') {
+            callback(readLocal());
+            const interval = setInterval(() => callback(readLocal()), 2000);
+            return () => clearInterval(interval);
+        }
+
+        try {
+            const q = collection(db, `Workspaces/${workspaceDocId}/JoinRequests`);
+            return onSnapshot(q, (snap) => {
+                const firestoreList = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.status === 'PENDING');
+                const localList = readLocal();
+                const mergedMap = new Map();
+                firestoreList.forEach(item => mergedMap.set(item.email.toLowerCase(), item));
+                localList.forEach(item => {
+                    if (!mergedMap.has(item.email.toLowerCase())) {
+                        mergedMap.set(item.email.toLowerCase(), item);
+                    }
+                });
+                callback(Array.from(mergedMap.values()));
+            }, (err) => {
+                console.warn("Join requests listener fallback to local:", err);
+                callback(readLocal());
+            });
+        } catch (e) {
+            callback(readLocal());
+            return () => {};
+        }
+    },
+
+    approveJoinRequest: async (workspaceDocId, request) => {
+        if (!workspaceDocId || !request || !request.email) throw new Error("Invalid request");
+        const email = request.email.toLowerCase();
+        const workerId = (request.uid || 'usr_' + Date.now()).substring(0, 8);
+
+        // 1. Add to Members subcollection
+        const memberData = {
+            status: "Joined",
+            workerUid: request.uid || ('uid_' + Date.now()),
+            appWorkerId: workerId,
+            joinedAt: Date.now(),
+            name: request.displayName || email.split('@')[0],
+            email: email,
+            photoURL: request.photoURL || '',
+            role: "WORKER",
+            workspaceRole: 3,
+            roleTag: "Worker",
+            canViewProfit: false,
+            cannotSeeCost: false,
+            cannotSeeProfit: false,
+            isRestricted: false,
+            disableDelete: false,
+            disableUpdate: false,
+            disableAdd: false,
+            productAdded: 0,
+            invoiceAdded: 0
+        };
+
+        try {
+            await setDoc(doc(db, `Workspaces/${workspaceDocId}/Members`, email), memberData, { merge: true });
+            
+            // 2. Create Connection doc
+            if (request.uid) {
+                await setDoc(doc(db, 'Connections', request.uid), {
+                    adminUid: workspaceDocId,
+                    role: 'WORKER',
+                    workspaceRole: 3,
+                    roleTag: 'Worker',
+                    email: email,
+                    name: memberData.name
+                }, { merge: true });
+            }
+
+            // 3. Update JoinRequest status or remove
+            await deleteDoc(doc(db, `Workspaces/${workspaceDocId}/JoinRequests`, email)).catch(() => {});
+            
+            // 4. Increment workersCount
+            await updateDoc(doc(db, 'Workspaces', workspaceDocId), {
+                workersCount: increment(1)
+            }).catch(() => {});
+        } catch (e) {
+            console.warn("Firestore approve failed, updating local/demo state:", e);
+        }
+
+        // Update local/demo storage
+        try {
+            const key = `pricelister_join_requests_${workspaceDocId}`;
+            const existing = JSON.parse(localStorage.getItem(key) || '[]');
+            const updated = existing.filter(r => (r.email || '').toLowerCase() !== email);
+            localStorage.setItem(key, JSON.stringify(updated));
+
+            // Mark connection locally
+            localStorage.setItem('pricelister_demo_connection_' + email, JSON.stringify({
+                workspaceId: workspaceDocId,
+                role: 'WORKER'
+            }));
+            if (request.uid) {
+                localStorage.setItem('pricelister_demo_connection_' + request.uid, JSON.stringify({
+                    workspaceId: workspaceDocId,
+                    role: 'WORKER'
+                }));
+            }
+        } catch (err) {}
+
+        return memberData;
+    },
+
+    rejectJoinRequest: async (workspaceDocId, requestEmail) => {
+        if (!workspaceDocId || !requestEmail) return;
+        const email = requestEmail.toLowerCase();
+        try {
+            await deleteDoc(doc(db, `Workspaces/${workspaceDocId}/JoinRequests`, email)).catch(() => {});
+        } catch (e) {}
+
+        try {
+            const key = `pricelister_join_requests_${workspaceDocId}`;
+            const existing = JSON.parse(localStorage.getItem(key) || '[]');
+            const updated = existing.filter(r => (r.email || '').toLowerCase() !== email);
+            localStorage.setItem(key, JSON.stringify(updated));
+        } catch (err) {}
     },
 
     leaveWorkspace: async (adminUid, currentUser = null) => {

@@ -14,8 +14,6 @@ import { openCurrencyPickerModal } from './currencyModal.js';
 import { openAccountSwitcherModal } from '../auth-handler.js';
 import { formatCurrency, getAppCurrencySymbol, setAppCurrencySymbol } from '../utilities.js';
 import { showAlert } from '../alert-handler.js';
-import { openInvoiceViewerModal } from './invoiceViewer.js';
-import { openInvoiceDetailsModal } from './invoiceDetailsModal.js';
 
 let cachedWorkspaceId = null;
 let liveDataCache = {
@@ -209,19 +207,6 @@ const getStaticActions = (workspaceId) => [
         }
     },
     {
-        id: 'act-customer-panel',
-        type: 'ACTION',
-        title: 'Customer Panel Setup & Portal',
-        subtitle: 'Configure public shopping catalog, category visibility, WhatsApp orders, or launch portal',
-        keywords: ['customer panel', 'customer portal', 'catalog setup', 'store setup', 'public catalog', 'shopping cart', 'terms', 'whatsapp order', 'launch panel'],
-        icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
-        badge: 'Store',
-        badgeClass: 'badge-action-secondary',
-        handler: () => {
-            window.location.hash = '#/customer-panel';
-        }
-    },
-    {
         id: 'act-workers-permissions',
         type: 'ACTION',
         title: 'Workers & Permissions Management',
@@ -231,7 +216,7 @@ const getStaticActions = (workspaceId) => [
         badge: 'Security',
         badgeClass: 'badge-action',
         handler: () => {
-            window.location.hash = '#/workspace';
+            window.location.hash = '#/workers';
         }
     },
     {
@@ -367,16 +352,6 @@ const getStaticNavRoutes = () => [
         keywords: ['businesses', 'b2b', 'corporate partners', 'companies', 'dealers', 'vendors'],
         icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="22" x2="9" y2="22.01"></line><line x1="15" y1="22" x2="15" y2="22.01"></line></svg>`,
         route: '#/businesses',
-        badge: 'Page'
-    },
-    {
-        id: 'nav-customer-panel',
-        type: 'NAV',
-        title: 'Customer Panel Setup',
-        subtitle: 'Configure public shopping portal, terms, categories, and shareable catalog link',
-        keywords: ['customer panel', 'customer portal', 'store', 'public catalog', 'shop setup', 'online cart'],
-        icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
-        route: '#/customer-panel',
         badge: 'Page'
     }
 ];
@@ -656,11 +631,7 @@ const performSearch = (query, filter = 'ALL') => {
                     score: score,
                     categoryLabel: 'Sales & Invoices',
                     handler: () => {
-                        openInvoiceDetailsModal(inv, {
-                            onEdit: (invoiceToEdit) => {
-                                window.location.hash = inv.isBusiness ? '#/invoices/business' : '#/invoices/customer';
-                            }
-                        });
+                        window.location.hash = route;
                     }
                 });
             }
@@ -882,11 +853,11 @@ const createGlobalSearchModalDOM = () => {
                 <!-- Category Filter Pills -->
                 <div class="palette-filters-bar">
                     <button type="button" class="palette-filter-pill active" data-filter="ALL">All</button>
-                    <button type="button" class="palette-filter-pill" data-filter="ACTION">Actions</button>
-                    <button type="button" class="palette-filter-pill" data-filter="PRODUCT">Products</button>
-                    <button type="button" class="palette-filter-pill" data-filter="NAV">Pages</button>
-                    <button type="button" class="palette-filter-pill" data-filter="CATEGORY">Categories</button>
-                    <button type="button" class="palette-filter-pill" data-filter="INVOICE">Invoices</button>
+                    <button type="button" class="palette-filter-pill" data-filter="ACTION">⚡ Actions</button>
+                    <button type="button" class="palette-filter-pill" data-filter="PRODUCT">📦 Products</button>
+                    <button type="button" class="palette-filter-pill" data-filter="NAV">🧭 Pages</button>
+                    <button type="button" class="palette-filter-pill" data-filter="CATEGORY">🏷️ Categories</button>
+                    <button type="button" class="palette-filter-pill" data-filter="INVOICE">🧾 Invoices</button>
                     <span class="palette-result-count" id="palette-result-count">0 found</span>
                 </div>
             </div>
@@ -903,22 +874,10 @@ const createGlobalSearchModalDOM = () => {
                     <div class="palette-empty-title">No matching results <span class="palette-empty-query"></span></div>
                     <p class="palette-empty-desc">Try searching for <strong>Import</strong>, <strong>Export</strong>, <strong>Add Product</strong>, <strong>Currency</strong>, <strong>Profile</strong>, or an item name.</p>
                     <div class="palette-quick-suggestions">
-                        <button type="button" class="palette-suggestion-chip" data-query="import" style="display:inline-flex; align-items:center; gap:5px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            Import Products
-                        </button>
-                        <button type="button" class="palette-suggestion-chip" data-query="export" style="display:inline-flex; align-items:center; gap:5px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            Export Pricelist
-                        </button>
-                        <button type="button" class="palette-suggestion-chip" data-query="currency" style="display:inline-flex; align-items:center; gap:5px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                            Currency
-                        </button>
-                        <button type="button" class="palette-suggestion-chip" data-query="add product" style="display:inline-flex; align-items:center; gap:5px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            Add Product
-                        </button>
+                        <button type="button" class="palette-suggestion-chip" data-query="import">📥 Import Products</button>
+                        <button type="button" class="palette-suggestion-chip" data-query="export">📤 Export Pricelist</button>
+                        <button type="button" class="palette-suggestion-chip" data-query="currency">💱 Currency</button>
+                        <button type="button" class="palette-suggestion-chip" data-query="add product">➕ Add Product</button>
                     </div>
                 </div>
             </div>

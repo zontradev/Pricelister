@@ -2,10 +2,11 @@ import { getProductService } from '../services/productService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { getInvoiceService } from '../services/invoiceService.js';
 import { authService } from '../../firebase/auth.js';
+import { getUserRestrictions } from '../auth-handler.js';
 import { showAlert } from '../alert-handler.js';
 import { storageService } from '../../supabase/storage.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
-import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
+import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { draftManager } from '../services/draftManager.js';
 
@@ -19,6 +20,19 @@ export const renderProducts = async (container, workspaceId) => {
     let activeProducts = [];
     let allInvoices = [];
     let activeProductDetail = null; // When set, renders dedicated analytical Product Detail View
+    let currentLayout = localStorage.getItem('pricelister_product_layout') || 'list';
+    let currentPage = 1;
+    const pageSize = 15;
+    let selectedProductIds = new Set();
+    const layoutDisplayNames = {
+        'list': 'List',
+        'large_list': 'Large List',
+        'grid_4': 'Grid (4x4)',
+        'hexa': 'Hexa (6x6)',
+        'octa': 'Octa (8x8)',
+        'hexadecagon': '16x16 Cube',
+        'hexa_octa': '32x32 Cube'
+    };
 
     // Fetch all historical invoices to power real product sales analytics
     async function fetchAllInvoices() {
@@ -318,8 +332,8 @@ export const renderProducts = async (container, workspaceId) => {
             <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; display:block;">
                 <defs>
                     <linearGradient id="prdGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#e11d48" stop-opacity="0.32" />
-                        <stop offset="100%" stop-color="#e11d48" stop-opacity="0.01" />
+                        <stop offset="0%" stop-color="var(--theme-primary, #e11d48)" stop-opacity="0.32" />
+                        <stop offset="100%" stop-color="var(--theme-primary, #e11d48)" stop-opacity="0.01" />
                     </linearGradient>
                 </defs>
                 
@@ -333,16 +347,16 @@ export const renderProducts = async (container, workspaceId) => {
                 <text x="${padding.left - 8}" y="${padding.top + chartH / 2 + 4}" font-size="10" fill="#94a3b8" text-anchor="end">${formatCurrency(maxRev / 2)}</text>
                 <text x="${padding.left - 8}" y="${height - padding.bottom + 4}" font-size="10" fill="#94a3b8" text-anchor="end">0</text>
 
-                <!-- Area Fill -->
-                <path d="${areaD}" fill="url(#prdGrad)" />
+                <!-- Area Fill with Animated Fade -->
+                <path d="${areaD}" fill="url(#prdGrad)" class="trend-area-animated" />
 
-                <!-- Line Curve -->
-                <path d="${lineD}" fill="none" stroke="#e11d48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                <!-- Line Curve with Animated Draw -->
+                <path d="${lineD}" fill="none" stroke="var(--theme-primary, #e11d48)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="trend-curve-animated" />
 
                 <!-- Data Dots & X-Labels -->
                 ${points.map((p) => `
                     <g class="chart-point-group" style="cursor:pointer;">
-                        <circle cx="${p.x}" cy="${p.y}" r="5" fill="#ffffff" stroke="#e11d48" stroke-width="2.5" />
+                        <circle cx="${p.x}" cy="${p.y}" r="5" fill="#ffffff" stroke="var(--theme-primary, #e11d48)" stroke-width="2.5" />
                         <text x="${p.x}" y="${height - 10}" font-size="11" fill="#64748b" text-anchor="middle" font-weight="600">${p.label}</text>
                         <title>${p.label}: ${formatCurrency(p.revenue)} (${p.units} units sold, ${formatCurrency(p.profit)} profit)</title>
                     </g>
@@ -354,6 +368,7 @@ export const renderProducts = async (container, workspaceId) => {
     // Render Dedicated Product Detail View
     function renderProductDetailView(prd, activeTrendRange = '6_MONTHS') {
         activeProductDetail = prd;
+        const userRestrictions = getUserRestrictions();
         const analytics = calculateProductAnalytics(prd, activeTrendRange);
         const catName = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category)?.name || prd.category || 'General';
 
@@ -427,7 +442,7 @@ export const renderProducts = async (container, workspaceId) => {
                             <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Selling Price</div>
                             <div style="font-size:1.6rem; font-weight:800; color:var(--primary); line-height:1.1;">${formatCurrency(prd.salePrice)}</div>
                             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.2rem;">
-                                Cost: <strong>${formatCurrency(prd.price || 0)}</strong> &bull; Profit: <strong style="color:#059669;">+${formatCurrency(analytics.unitGrossProfit)}</strong>
+                                Cost: <strong>${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(prd.price || 0)}</strong> &bull; Profit: <strong style="color:#059669;">${userRestrictions.cannotSeeProfit ? '••••' : '+' + formatCurrency(analytics.unitGrossProfit)}</strong>
                             </div>
                             <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border-color); font-size:0.82rem; font-weight:700; color:${(prd.quantity || 0) > 5 ? '#059669' : '#dc2626'}; display:flex; align-items:center; justify-content:flex-end; gap:4px;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
@@ -464,8 +479,8 @@ export const renderProducts = async (container, workspaceId) => {
                                 <span>Gross Profit</span>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
                             </div>
-                            <div class="detail-kpi-value" style="color:#059669;">${formatCurrency(analytics.totalProfit)}</div>
-                            <div class="detail-kpi-sub">${Math.round(analytics.overallMarginPercent)}% net gross margin</div>
+                            <div class="detail-kpi-value" style="color:#059669;">${userRestrictions.cannotSeeProfit ? '••••' : formatCurrency(analytics.totalProfit)}</div>
+                            <div class="detail-kpi-sub">${userRestrictions.cannotSeeProfit ? '•••• margin' : `${Math.round(analytics.overallMarginPercent)}% net gross margin`}</div>
                         </div>
 
                         <!-- KPI 4: Total Units Sold -->
@@ -671,7 +686,7 @@ export const renderProducts = async (container, workspaceId) => {
                                     <div style="font-size:0.82rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.6rem;">Unit Profitability Breakdown</div>
                                     <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; font-size:0.85rem;">
                                         <span style="color:var(--text-secondary);">Unit Cost Price:</span>
-                                        <strong>${formatCurrency(prd.price || 0)}</strong>
+                                        <strong>${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(prd.price || 0)}</strong>
                                     </div>
                                     <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; font-size:0.85rem;">
                                         <span style="color:var(--text-secondary);">Unit Selling Price:</span>
@@ -685,7 +700,7 @@ export const renderProducts = async (container, workspaceId) => {
                                     ` : ''}
                                     <div style="display:flex; justify-content:space-between; padding-top:0.5rem; margin-top:0.5rem; border-top:1px solid var(--border-color); font-size:0.9rem;">
                                         <span style="font-weight:700; color:var(--text-primary);">Net Markup Margin:</span>
-                                        <strong style="color:#059669;">+${formatCurrency(analytics.unitGrossProfit)} (${Math.round(analytics.unitMarginPercent)}%)</strong>
+                                        <strong style="color:#059669;">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurrency(analytics.unitGrossProfit)} (${Math.round(analytics.unitMarginPercent)}%)`}</strong>
                                     </div>
                                 </div>
 
@@ -694,6 +709,40 @@ export const renderProducts = async (container, workspaceId) => {
 
                     </div>
 
+                </div>
+
+                <!-- Product Origin Section Divider -->
+                <div class="card origin-divider-card" style="margin-top:1.5rem; padding:1.5rem; border-radius:var(--radius-card); background:var(--bg-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float);">
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding-bottom:0.6rem; border-bottom:1px solid var(--border-color);">
+                        <div style="width:28px; height:28px; border-radius:6px; background:var(--theme-subtle, rgba(225,29,72,0.1)); color:var(--theme-primary, #e11d48); display:flex; align-items:center; justify-content:center;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        </div>
+                        <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:var(--text-primary);">Product Origin</h3>
+                    </div>
+                    <div class="origin-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
+                        <div class="origin-field-box">
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Product ID:</span>
+                            <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:700; color:var(--text-primary);">${prd.uniqueId || prd.id || 'N/A'}</code>
+                        </div>
+                        <div class="origin-field-box">
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Creator ID:</span>
+                            <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:700; color:var(--text-primary);">${prd.creatorId || prd.createdBy || 'System / Admin'}</code>
+                        </div>
+                        <div class="origin-field-box">
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Workspace ID:</span>
+                            <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:700; color:var(--text-primary);">${workspaceId || 'Default Workspace'}</code>
+                        </div>
+                        <div class="origin-field-box">
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Created at:</span>
+                            <span class="origin-value" style="font-size:0.88rem; font-weight:600; color:var(--text-primary);">${formatExactTimestamp(prd.createdAt || prd.timestamp)}</span>
+                        </div>
+                        ${(prd.updatedAt || prd.updatedTimestamp) && (prd.updatedAt !== prd.createdAt) ? `
+                        <div class="origin-field-box">
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Updated at:</span>
+                            <span class="origin-value" style="font-size:0.88rem; font-weight:600; color:var(--text-primary);">${formatExactTimestamp(prd.updatedAt || prd.updatedTimestamp)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -863,31 +912,105 @@ export const renderProducts = async (container, workspaceId) => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // Dedicated Product Editor Screen Controls (Totally custom alone screen)
+    const showProductEditorView = () => {
+        const formContainer = container.querySelector('#product-form-container');
+        const headerContainer = container.querySelector('.prd-header-container');
+        const kpiGrid = container.querySelector('.prd-kpi-grid');
+        const listContainer = container.querySelector('#product-list-container');
+        if (headerContainer) headerContainer.style.display = 'none';
+        if (kpiGrid) kpiGrid.style.display = 'none';
+        if (listContainer) listContainer.style.display = 'none';
+        if (formContainer) {
+            formContainer.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    const hideProductEditorView = () => {
+        const formContainer = container.querySelector('#product-form-container');
+        const headerContainer = container.querySelector('.prd-header-container');
+        const kpiGrid = container.querySelector('.prd-kpi-grid');
+        const listContainer = container.querySelector('#product-list-container');
+        if (formContainer) formContainer.style.display = 'none';
+        if (headerContainer) headerContainer.style.display = 'flex';
+        if (kpiGrid) kpiGrid.style.display = 'grid';
+        if (listContainer) listContainer.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     // Main Product View Layout (List + Form + Modals)
     function renderProductMainView() {
+        const userRestrictions = getUserRestrictions();
         container.innerHTML = `
-            <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:1rem;">
-                <div>
-                    <h2 style="margin:0 0 0.25rem 0;">Products</h2>
-                    <p style="margin:0; font-size:0.85rem; color:var(--text-secondary);">Manage your product catalog, prices, categories, and inventory</p>
+            <!-- Image 3: Modern Products Header -->
+            <div class="prd-header-container">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <div class="prd-header-icon-box">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 style="margin:0 0 0.2rem 0; font-size:1.6rem; font-weight:800; color:var(--text-primary); letter-spacing:-0.02em;">Products</h1>
+                        <p style="margin:0; font-size:0.86rem; color:var(--text-secondary);">Manage, organize, and track your workspace product catalog.</p>
+                    </div>
                 </div>
-                <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
-                    <button id="btn-market-inserter" class="btn btn-primary" style="display:flex; align-items:center; gap:0.4rem; font-weight:700; background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow:0 3px 10px rgba(16, 185, 129, 0.25);" title="Open Market Inserter spreadsheet grid (up to 250 products)">
+
+                <div style="display:flex; gap:0.65rem; align-items:center; flex-wrap:wrap;">
+                    ${userRestrictions.disableAdd ? '' : `
+                    <button id="btn-market-inserter" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.85rem; padding:0.6rem 1rem; border-radius:10px; border:1px solid var(--border-color); background:var(--surface-50); color:var(--text-primary);" title="Open Market Inserter spreadsheet grid">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
                         Market Inserter
                     </button>
-                    <button id="btn-import-excel" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <button id="btn-import-excel" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.85rem; padding:0.6rem 1rem; border-radius:10px; border:1px solid var(--border-color); background:var(--surface-50); color:var(--text-primary);">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
                         Import Excel
                     </button>
-                    <button id="btn-export-products" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    `}
+                    <button id="btn-export-products" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.85rem; padding:0.6rem 1rem; border-radius:10px; border:1px solid var(--border-color); background:var(--surface-50); color:var(--text-primary);">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Export
                     </button>
-                    <button id="btn-add-product" class="btn btn-primary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    ${userRestrictions.disableAdd ? '' : `
+                    <button id="btn-add-product" class="btn btn-primary" style="display:flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.88rem; padding:0.6rem 1.25rem; border-radius:10px; white-space:nowrap;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         Add Product
                     </button>
+                    `}
+                </div>
+            </div>
+
+            <!-- Image 3: 2 KPI Cards Row (Total Products & Categories) -->
+            <div class="prd-kpi-grid">
+                <!-- Card 1: Total Products -->
+                <div class="prd-kpi-card">
+                    <div>
+                        <div style="font-size:0.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Total Products</div>
+                        <div style="font-size:1.85rem; font-weight:800; color:var(--text-primary); margin-top:0.15rem; line-height:1.15;" id="kpi-total-products">${activeProducts.length}</div>
+                        <div style="font-size:0.75rem; color:#059669; font-weight:700; margin-top:0.35rem; display:flex; align-items:center; gap:4px;">
+                            <span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span> Active in catalog
+                        </div>
+                    </div>
+                    <div class="prd-kpi-icon" style="background:var(--surface-100); color:var(--text-primary); border:1px solid var(--border-color);">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                    </div>
+                </div>
+
+                <!-- Card 2: Categories -->
+                <div class="prd-kpi-card" onclick="if(window.navigateToRoute){window.navigateToRoute('/categories')}else{window.location.hash='#/categories'}" style="cursor:pointer;">
+                    <div>
+                        <div style="font-size:0.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Categories</div>
+                        <div style="font-size:1.85rem; font-weight:800; color:var(--text-primary); margin-top:0.15rem; line-height:1.15;" id="kpi-total-categories">${categoriesList.length}</div>
+                        <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:700; margin-top:0.35rem; display:flex; align-items:center; gap:4px;">
+                            <span style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span> Organized groups
+                        </div>
+                    </div>
+                    <div class="prd-kpi-icon" style="background:var(--surface-100); color:var(--text-primary); border:1px solid var(--border-color);">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    </div>
                 </div>
             </div>
 
@@ -953,9 +1076,9 @@ export const renderProducts = async (container, workspaceId) => {
                         </div>
                     </div>
                     <div style="display:flex; gap:0.6rem; align-items:center;">
-                        <button type="button" class="btn btn-secondary prd-cancel-trigger" style="display:flex; align-items:center; gap:0.4rem; font-weight:600; font-size:0.85rem; padding:0.45rem 0.9rem;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                            Back to Catalog
+                        <button type="button" class="btn btn-secondary prd-cancel-trigger" style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.88rem; padding:0.5rem 1.1rem; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#0f172a;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                            &larr; Back to Products
                         </button>
                     </div>
                 </div>
@@ -1103,14 +1226,14 @@ export const renderProducts = async (container, workspaceId) => {
                                     </div>
                                     <button type="button" id="btn-add-variation-row" class="btn btn-secondary" style="font-size:0.78rem; padding:0.35rem 0.75rem; display:flex; align-items:center; gap:4px; font-weight:600;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                        + Add Variant
+                                        Add Variant
                                     </button>
                                 </div>
                                 <div id="prd-variations-list" style="display:flex; flex-direction:column; gap:0.6rem;">
                                     <!-- Dynamic variation rows -->
                                 </div>
                                 <div id="prd-no-variations-msg" style="color:var(--text-muted); font-size:0.82rem; font-style:italic; padding:0.4rem 0;">
-                                    No custom variations configured. Click "+ Add Variant" to create flavor, size, or secondary UPC mappings.
+                                    No custom variations configured. Click "Add Variant" to create flavor, size, or secondary UPC mappings.
                                 </div>
                             </div>
                         </div>
@@ -1208,7 +1331,7 @@ export const renderProducts = async (container, workspaceId) => {
                         </div>
                         <div style="display:flex; gap:0.75rem; align-items:center;">
                             <button type="button" class="btn btn-secondary prd-cancel-trigger" id="prd-cancel-btn" style="padding:0.6rem 1.25rem; font-weight:600;">Cancel</button>
-                            <button type="submit" class="btn btn-primary" id="prd-submit-btn" style="padding:0.6rem 1.75rem; font-weight:700; display:flex; align-items:center; gap:0.5rem; background:linear-gradient(135deg, #ff3366, #e11d48); box-shadow:0 4px 14px rgba(225,29,72,0.3);">
+                            <button type="submit" class="btn btn-primary" id="prd-submit-btn" style="padding:0.6rem 1.75rem; font-weight:700; display:flex; align-items:center; gap:0.5rem; border-radius:10px;">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                                 <span>Save Product</span>
                             </button>
@@ -1217,42 +1340,227 @@ export const renderProducts = async (container, workspaceId) => {
                 </form>
             </div>
             
+            <!-- PRODUCT LIST CONTAINER (Image 3 Modern Elevated Catalog) -->
             <!-- PRODUCT LIST CONTAINER -->
-            <div id="product-list-container">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding: 1rem; background: var(--surface-50); border-radius: var(--radius-md); border: 1px solid var(--border-color); flex-wrap:wrap; gap:1rem;">
-                    <div style="display:flex; gap: 1rem; flex: 1; flex-wrap:wrap;">
-                        <select id="filter-sort" class="form-control" style="padding: 0.5rem; max-width: 250px;">
-                            <option value="recent_created">Recently Created (Default)</option>
-                            <option value="recent_updated">Recently Updated</option>
-                            <option value="expire">Close to Expire</option>
-                            <option value="az">A-Z</option>
-                            <option value="oldest">Oldest</option>
-                            <option value="low_qty">Low Quantity</option>
-                            <option value="high_price">Highest Price</option>
-                        </select>
-                        <select id="filter-category" class="form-control" style="padding: 0.5rem; max-width: 250px;">
-                            <option value="all">All Categories</option>
-                        </select>
+            <div id="product-list-container" style="display:block;">
+                <!-- Straight Toolbar (Image 2: Search -> Category -> Filter -> Layouts -> Product Count) -->
+                <div class="prd-toolbar prd-toolbar-straight" style="display:flex; align-items:center; gap:0.55rem; margin-bottom:1.25rem; flex-wrap:wrap; background:#ffffff; padding:0.65rem 0.9rem; border-radius:12px; border:1px solid var(--border-color); box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                    <!-- Smart Search Input -->
+                    <div style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:210px; position:relative;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" style="position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" id="filter-search" class="form-control" style="width:100%; padding-left:2.2rem; font-size:0.85rem;" placeholder="Search by name, SKU, UPC, variant UPC...">
                     </div>
-                    <div style="font-weight: 600; color: var(--text-muted);" id="product-count">0 Products</div>
+                    <!-- Category Dropdown -->
+                    <select id="filter-category" class="form-control" style="width:auto; min-width:130px; font-size:0.83rem; font-weight:500;">
+                        <option value="all">All Categories</option>
+                    </select>
+                    <!-- Sort / Filter Dropdown -->
+                    <select id="filter-sort" class="form-control" style="width:auto; min-width:145px; font-size:0.83rem; font-weight:500;">
+                        <option value="recent_created">Recently Created</option>
+                        <option value="recent_updated">Recently Updated</option>
+                        <option value="az">A to Z</option>
+                        <option value="expire">Close to Expire</option>
+                        <option value="low_qty">Low Quantity</option>
+                        <option value="high_price">Highest Price</option>
+                        <option value="oldest">Oldest</option>
+                    </select>
+                    <!-- Layout & Theme Drawer Trigger per User Requirement (Clean List > trigger) -->
+                    <button type="button" id="btn-open-layout-drawer" class="btn btn-secondary prd-layout-trigger-btn" style="height:38px; padding:0 0.85rem; font-size:0.83rem; font-weight:600; display:inline-flex; align-items:center; gap:0.45rem; border-radius:10px; border:1px solid var(--border-color); background:var(--surface-50); color:var(--text-primary); cursor:pointer;" title="Choose Layout & Theme">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        <span>Layout:</span> <strong id="current-layout-label">${layoutDisplayNames[currentLayout] || 'List'}</strong>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                    <!-- Product Count Badge -->
+                    <div id="product-count" style="font-size:0.8rem; font-weight:700; color:var(--text-secondary); background:var(--surface-100); padding:0.45rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); white-space:nowrap;">
+                        0 Products
+                    </div>
                 </div>
 
-                <div class="table-container">
-                    <table style="width:100%; border-collapse: collapse; text-align:left;">
-                        <thead>
-                            <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted);">
-                                <th style="padding:1rem; width: 60px;">Image</th>
-                                <th style="padding:1rem;">Name</th>
-                                <th style="padding:1rem;">Category</th>
-                                <th style="padding:1rem;">Price</th>
-                                <th style="padding:1rem;">Stock</th>
-                                <th style="padding:1rem 1.25rem;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="product-list-body">
+                <!-- TABLE VIEW (for Default List layout) -->
+                <div id="prd-table-card-container" class="prd-table-card" style="${currentLayout === 'list' ? 'display:block;' : 'display:none;'}">
+                    <div class="table-container" style="overflow-x:auto;">
+                        <table class="prd-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px; text-align:center;">
+                                        <input type="checkbox" id="prd-select-all" style="cursor:pointer; width:16px; height:16px; accent-color:var(--text-primary); border-radius:4px;">
+                                    </th>
+                                    <th style="min-width:240px;">Product</th>
+                                    <th style="min-width:130px;">Category</th>
+                                    <th style="min-width:120px;">Brand / Size</th>
+                                    <th style="min-width:140px;">Price</th>
+                                    <th style="min-width:130px;">Stock</th>
+                                    <th style="min-width:120px; text-align:right; padding-right:1.5rem;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="product-list-body">
+                                <!-- Injected dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRID / LARGE-LIST CARDS VIEW (for all 6 finding layouts) -->
+                <div id="prd-grid-card-container" style="${currentLayout !== 'list' ? 'display:block;' : 'display:none;'}">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+
+            <!-- FLOATING BATCH ACTION BAR (Multi-selection for category change, delete, or transfer to Market Updator) -->
+            <div id="prd-batch-action-bar" class="prd-batch-action-bar" style="display:none;">
+                <div style="display:flex; align-items:center; gap:0.65rem;">
+                    <span id="prd-batch-count" class="prd-batch-badge">0 selected</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                    <button type="button" id="btn-batch-category" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-primary); border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Change category for all selected products">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                        <span>Change Category</span>
+                    </button>
+
+                    <button type="button" id="btn-batch-transfer-market" class="btn btn-primary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid var(--btn-primary-border); background:var(--btn-primary-bg); color:var(--btn-primary-text); border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Transfer selected products to Market Updator for mass editing">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <span>Transfer to Market Updator</span>
+                    </button>
+
+                    <button type="button" id="btn-batch-delete" class="btn btn-danger btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1.5px solid #fca5a5; background:var(--surface-100); color:#dc2626; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Delete all selected products">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <span>Delete Selected</span>
+                    </button>
+
+                    <button type="button" id="btn-batch-clear" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-secondary); border-radius:8px;" title="Clear selection">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- BATCH CHANGE CATEGORY MODAL -->
+            <div id="batch-category-modal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:99999; align-items:center; justify-content:center;">
+                <div class="modal-box" style="background:var(--bg-card); border-radius:14px; width:92%; max-width:440px; padding:1.5rem; box-shadow:var(--shadow-elevated); border:1px solid var(--border-color); color:var(--text-primary);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:var(--text-primary);">Batch Change Category</h3>
+                        <button type="button" id="batch-cat-close" class="btn btn-secondary btn-sm" style="width:28px; height:28px; padding:0; border-radius:6px; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-secondary); cursor:pointer;">✕</button>
+                    </div>
+                    <p style="font-size:0.84rem; color:var(--text-secondary); margin-top:0; margin-bottom:1.25rem;">
+                        Select the new category to apply to all <strong id="batch-cat-count" style="color:var(--text-primary);">0</strong> selected products:
+                    </p>
+                    <div style="margin-bottom:1.5rem;">
+                        <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--text-primary); margin-bottom:0.4rem;">Target Category</label>
+                        <select id="batch-cat-dropdown" class="form-control" style="width:100%; height:38px; font-size:0.85rem; border-radius:8px; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-primary);">
                             <!-- Injected dynamically -->
-                        </tbody>
-                    </table>
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+                        <button type="button" id="batch-cat-cancel" class="btn btn-secondary" style="height:36px; padding:0 1rem; border-radius:8px; font-weight:600; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-primary);">Cancel</button>
+                        <button type="button" id="batch-cat-confirm" class="btn btn-primary" style="height:36px; padding:0 1.25rem; border-radius:8px; font-weight:700; border:1px solid var(--btn-primary-border); background:var(--btn-primary-bg); color:var(--btn-primary-text);">Apply Category</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLIDE-OVER LAYOUT DRAWER (Contains .prd-layout-selector with 7 layout modes) -->
+            <div id="prd-layout-drawer-overlay" class="app-drawer-overlay" style="display:none;"></div>
+            <div id="prd-layout-drawer" class="app-drawer" style="display:none;">
+                <div class="app-drawer-header">
+                    <div>
+                        <h3 class="app-drawer-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            <span>Product Display Layout</span>
+                        </h3>
+                        <p style="margin:2px 0 0; font-size:0.78rem; color:var(--text-secondary);">Choose your preferred density and finding layout</p>
+                    </div>
+                    <button type="button" id="prd-layout-drawer-close" class="app-drawer-close" title="Close Drawer">✕</button>
+                </div>
+                <div class="app-drawer-body">
+                    
+                    <!-- PRODUCT CATALOG LAYOUT SYSTEM (7 Layout Modes) -->
+                    <div>
+                        <div class="app-drawer-section-title" style="justify-content:space-between; margin-bottom: 0.85rem;">
+                            <div style="display:flex; align-items:center; gap:0.4rem;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                                <span>Catalog Finding Modes</span>
+                            </div>
+                            <span style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">7 Modes</span>
+                        </div>
+
+                        <div class="prd-layout-selector layout-drawer-options" id="prd-layout-selector">
+                            <!-- 1. Default List -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'list' ? 'active' : ''}" data-layout="list">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                        <strong style="font-size:0.86rem; color:var(--text-primary);">List (Default Table)</strong>
+                                    </div>
+                                    <span class="badge" style="background:var(--surface-100); color:var(--text-secondary); border:1px solid var(--border-color); font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Table</span>
+                                </div>
+                            </button>
+
+                            <!-- 2. Large List -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'large_list' ? 'active' : ''}" data-layout="large_list">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="7" rx="2"></rect><rect x="3" y="14" width="18" height="7" rx="2"></rect></svg>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">Large List</strong>
+                                    </div>
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Expanded</span>
+                                </div>
+                            </button>
+
+                            <!-- 3. Grid 4x4 (4 Cube View) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'grid_4' ? 'active' : ''}" data-layout="grid_4">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">Grid 4x4 (4 Cube View)</strong>
+                                    </div>
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">4 Cubes / Row</span>
+                                </div>
+                            </button>
+
+                            <!-- 4. Hexa (6x6 Grid) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa' ? 'active' : ''}" data-layout="hexa">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z"></path></svg>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">Hexa (6 per Row)</strong>
+                                    </div>
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">6 Cubes / Row</span>
+                                </div>
+                            </button>
+
+                            <!-- 5. Octa (8x8 Grid) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'octa' ? 'active' : ''}" data-layout="octa">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon></svg>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">Octa (8 per Row)</strong>
+                                    </div>
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">8 Cubes / Row</span>
+                                </div>
+                            </button>
+
+                            <!-- 6. Hexadecagon (16x16 Grid - 16 cubes in a row for maximum products) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexadecagon' ? 'active' : ''}" data-layout="hexadecagon">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">16x16 Cube (16 in a Row)</strong>
+                                    </div>
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">16 Cubes / Row</span>
+                                </div>
+                            </button>
+
+                            <!-- 7. Hexa-Octa (32x32 Grid - 32 cubes in a row for maximum products) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa_octa' ? 'active' : ''}" data-layout="hexa_octa">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><line x1="2" y1="9" x2="22" y2="9"></line><line x1="2" y1="15" x2="22" y2="15"></line></svg>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">32x32 Cube (32 in a Row)</strong>
+                                    </div>
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">32 Cubes / Row</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         `;
@@ -1262,9 +1570,13 @@ export const renderProducts = async (container, workspaceId) => {
     };
 
     function renderProductList() {
+        const userRestrictions = getUserRestrictions();
         const tbody = container.querySelector('#product-list-body');
+        const tableCardContainer = container.querySelector('#prd-table-card-container');
+        const gridCardContainer = container.querySelector('#prd-grid-card-container');
         if (!tbody) return;
 
+        const searchVal = (container.querySelector('#filter-search')?.value || '').trim().toLowerCase();
         const sortVal = container.querySelector('#filter-sort')?.value || 'recent_created';
         const catVal = container.querySelector('#filter-category')?.value || 'all';
 
@@ -1274,6 +1586,34 @@ export const renderProducts = async (container, workspaceId) => {
             filtered = filtered.filter(p => {
                 const uId = categoriesList.find(c => c.uniqueId === p.category || c.id === p.category || c.name === p.category)?.uniqueId || p.category;
                 return uId === catVal || p.category === catVal;
+            });
+        }
+
+        // SMART SEARCH: Searching by Name, SKU, Barcode / UPC, Brand, Size, Note & Variant UPCs
+        if (searchVal) {
+            filtered = filtered.filter(p => {
+                const name = (p.name || '').toLowerCase();
+                const sku = (p.sku || p.upcCode || p.barcode || p.uniqueId || p.id || '').toLowerCase();
+                const size = (p.sizeWeight || '').toLowerCase();
+                const note = (p.note || '').toLowerCase();
+                const brand = (p.brand || '').toLowerCase();
+
+                if (name.includes(searchVal) || sku.includes(searchVal) || size.includes(searchVal) || note.includes(searchVal) || brand.includes(searchVal)) {
+                    return true;
+                }
+
+                // Check variant UPC codes & variant titles
+                if (Array.isArray(p.variations) && p.variations.length > 0) {
+                    return p.variations.some(v => {
+                        const vUpc = (v.upcCode || v.barcode || v.sku || '').toLowerCase();
+                        const vName = (v.sizeFlavor || v.name || v.title || '').toLowerCase();
+                        return vUpc.includes(searchVal) || vName.includes(searchVal);
+                    });
+                } else if (typeof p.variations === 'string' && p.variations.toLowerCase().includes(searchVal)) {
+                    return true;
+                }
+
+                return false;
             });
         }
 
@@ -1300,59 +1640,309 @@ export const renderProducts = async (container, workspaceId) => {
             }
         });
 
-        const countEl = container.querySelector('#product-count');
-        if (countEl) countEl.textContent = `${filtered.length} Products`;
+        // Full product display (no page limits / infinite by number of products)
+        const totalItems = filtered.length;
+        const pageItems = filtered;
 
-        if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="padding:2.5rem; text-align:center; color: var(--text-muted);">No products found.</td></tr>`;
+        const countEl = container.querySelector('#product-count');
+        if (countEl) countEl.textContent = `${totalItems} Product${totalItems === 1 ? '' : 's'}`;
+
+        // Toggle Table vs Grid Container cleanly
+        if (currentLayout === 'list') {
+            if (tableCardContainer) tableCardContainer.style.setProperty('display', 'block', 'important');
+            if (gridCardContainer) {
+                gridCardContainer.style.setProperty('display', 'none', 'important');
+                gridCardContainer.className = '';
+                gridCardContainer.innerHTML = '';
+            }
+        } else {
+            if (tableCardContainer) tableCardContainer.style.setProperty('display', 'none', 'important');
+            if (gridCardContainer) {
+                gridCardContainer.style.setProperty('display', 'grid', 'important');
+                const gridClassMap = {
+                    'large_list': 'prd-large-list',
+                    'grid_4': 'prd-grid prd-grid-4',
+                    'hexa': 'prd-grid prd-grid-hexa',
+                    'octa': 'prd-grid prd-grid-octa',
+                    'hexadecagon': 'prd-grid prd-grid-hexadecagon',
+                    'hexa_octa': 'prd-grid prd-grid-hexa-octa'
+                };
+                gridCardContainer.className = gridClassMap[currentLayout] || 'prd-grid prd-grid-4';
+            }
+        }
+
+        if (totalItems === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted);"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></td></tr>`;
+            if (gridCardContainer) {
+                gridCardContainer.innerHTML = `<div style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted); grid-column: 1 / -1;"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></div>`;
+            }
             return;
         }
 
-        tbody.innerHTML = filtered.map(prd => {
-            const catName = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category)?.name || prd.category || 'General';
-            const isCreatorSelf = prd.creatorId && (prd.creatorId === currentUser.uid || prd.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase());
-            const creatorTag = prd.creatorId
+        // 1. Render Table Rows for List Layout
+        tbody.innerHTML = pageItems.map(prd => {
+            const catObj = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category);
+            const catName = catObj?.name || prd.category || 'General';
+            const catColor = catObj?.color || '#e11d48';
+
+            const isCreatorSelf = (prd.creatorId && (
+                prd.creatorId === currentUser.uid || 
+                (currentUser.email && prd.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase())
+            )) || (prd.createdBy && (
+                prd.createdBy === currentUser.uid || 
+                (currentUser.email && prd.createdBy.toLowerCase() === (currentUser.email || '').toLowerCase())
+            ));
+
+            const canEdit = !userRestrictions.disableUpdate && (!userRestrictions.disableUpdateOthers || isCreatorSelf);
+            const canDelete = !userRestrictions.disableDelete && (!userRestrictions.disableDeleteOthers || isCreatorSelf);
+            const canDuplicate = !userRestrictions.disableAdd;
+
+            const skuCode = prd.upcCode ? `UPC: ${prd.upcCode}` : (prd.uniqueId ? `#${prd.uniqueId.substring(0, 8)}` : `#${prd.id.substring(0, 8)}`);
+
+            const salePriceFormatted = formatCurrency(prd.salePrice || 0);
+            let mrpMarkup = '';
+            if (prd.mrp && Number(prd.mrp) > Number(prd.salePrice)) {
+                const discountPct = Math.round((1 - (Number(prd.salePrice) / Number(prd.mrp))) * 100);
+                mrpMarkup = `
+                    <div style="display:flex; align-items:center; gap:4px; margin-top:2px;">
+                        <span style="font-size:0.75rem; text-decoration:line-through; color:#94a3b8;">${formatCurrency(prd.mrp)}</span>
+                        <span style="background:rgba(16,185,129,0.12); color:#059669; font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:4px;">-${discountPct}%</span>
+                    </div>
+                `;
+            }
+
+            const qty = Number(prd.quantity) || 0;
+            let stockStatusDot = '#10b981';
+            let stockStatusText = `${qty} in stock`;
+            let stockColor = '#059669';
+
+            if (qty <= 0) {
+                stockStatusDot = '#ef4444';
+                stockStatusText = 'Out of stock';
+                stockColor = '#dc2626';
+            } else if (qty <= 5) {
+                stockStatusDot = '#f59e0b';
+                stockStatusText = `${qty} low stock`;
+                stockColor = '#d97706';
+            }
+
+            const creatorBadge = prd.creatorId
                 ? (isCreatorSelf
-                    ? `<span class="badge" style="background:rgba(16,185,129,0.12); color:#059669; font-size:0.72rem; padding:0.1rem 0.45rem; border-radius:4px; font-weight:600;" title="Created by you">By You</span>`
-                    : `<span class="badge" style="background:rgba(100,116,139,0.1); color:#64748b; font-size:0.72rem; padding:0.1rem 0.45rem; border-radius:4px;" title="Creator ID: ${prd.creatorId}">Creator: ${prd.creatorId.substring(0, 8)}</span>`)
+                    ? `<span class="badge" style="background:rgba(16,185,129,0.12); color:#059669; font-size:0.7rem; padding:1px 5px; border-radius:4px; font-weight:700;" title="Created by you">By You</span>`
+                    : `<span class="badge" style="background:rgba(100,116,139,0.1); color:#64748b; font-size:0.7rem; padding:1px 5px; border-radius:4px;" title="Created by member ${prd.creatorId}">Member</span>`)
                 : '';
 
             return `
-                <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.15s ease;">
-                    <td style="padding:1rem;">
-                        ${prd.imageUri
-                    ? `<img src="${prd.imageUri}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; cursor:pointer;" class="view-prd-img" data-id="${prd.id}">`
-                    : `<div style="width: 44px; height: 44px; background: var(--surface-200); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.7rem; cursor:pointer;" class="view-prd-img" data-id="${prd.id}">None</div>`}
+                <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;">
+                    <td style="width:40px; text-align:center; padding:0.95rem 0.5rem 0.95rem 1.15rem;">
+                        <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px; accent-color:var(--text-primary); border-radius:4px;">
                     </td>
-                    <td style="padding:1rem;">
-                        <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.2rem;">
-                            <strong style="cursor:pointer; color:var(--text-primary);" class="view-prd-title" data-id="${prd.id}">${prd.name}</strong>
-                            ${creatorTag}
+                    <td style="padding:0.95rem 1.15rem;">
+                        <div style="display:flex; align-items:center; gap:0.85rem;">
+                            <div class="prd-thumb-box view-prd-img" data-id="${prd.id}" style="cursor:pointer;" title="Click to view details">
+                                ${prd.imageUri 
+                                    ? `<img src="${prd.imageUri}" alt="${prd.name}">` 
+                                    : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>`
+                                }
+                            </div>
+                            <div>
+                                <div style="display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap;">
+                                    <strong class="view-prd-title" data-id="${prd.id}" style="cursor:pointer; color:var(--text-primary); font-size:0.9rem; font-weight:700;">${prd.name}</strong>
+                                    ${creatorBadge}
+                                </div>
+                                <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace; margin-top:2px;">
+                                    ${skuCode}
+                                </div>
+                            </div>
                         </div>
-                        <small style="color:var(--text-muted)">${prd.sizeWeight ? prd.sizeWeight : ''} ${prd.upcCode ? ' | UPC: ' + prd.upcCode : ''}</small>
                     </td>
-                    <td style="padding:1rem;"><span class="badge">${catName}</span></td>
-                    <td style="padding:1rem; font-weight:700; color:var(--text-primary);">${formatCurrency(prd.salePrice)}</td>
-                    <td style="padding:1rem;">
-                        <span class="badge" style="background:${(prd.quantity || 0) > 5 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; color:${(prd.quantity || 0) > 5 ? '#059669' : '#dc2626'}; font-weight:700;">
-                            ${prd.quantity || 0}
+                    <td style="padding:0.95rem 1.15rem;">
+                        <span class="prd-cat-tag" style="background:var(--surface-100); color:var(--text-primary); border:1px solid var(--border-color);">
+                            ${catName}
                         </span>
                     </td>
-                    <td style="padding:1rem 1.25rem;">
-                        <div style="display:flex; gap:0.4rem; align-items:center;">
-                            <button class="btn btn-sm btn-primary view-prd" data-id="${prd.id}" style="padding:0.25rem 0.65rem; font-size:0.8rem; font-weight:700; background:linear-gradient(135deg, #ff3366, #e11d48);">View</button>
-                            <button class="btn btn-sm btn-secondary edit-prd" data-id="${prd.id}" style="padding:0.25rem 0.65rem; font-size:0.8rem;">Edit</button>
-                            <button class="btn btn-sm btn-secondary dup-prd" data-id="${prd.id}" style="padding:0.25rem 0.65rem; font-size:0.8rem;">Duplicate</button>
-                            <button class="btn btn-sm btn-outline del-prd" data-id="${prd.id}" style="padding:0.25rem 0.65rem; font-size:0.8rem; color:var(--danger);">Delete</button>
+                    <td style="padding:0.95rem 1.15rem; font-size:0.85rem; color:var(--text-secondary);">
+                        ${prd.sizeWeight || '<span style="color:var(--text-muted);">Standard</span>'}
+                    </td>
+                    <td style="padding:0.95rem 1.15rem;">
+                        <div style="font-weight:800; color:var(--text-primary); font-size:0.92rem;">${salePriceFormatted}</div>
+                        ${mrpMarkup}
+                    </td>
+                    <td style="padding:0.95rem 1.15rem;">
+                        <div class="prd-stock-indicator" style="color:${stockColor};">
+                            <span class="prd-stock-dot" style="background:${stockStatusDot};"></span>
+                            <span>${stockStatusText}</span>
+                        </div>
+                    </td>
+                    <td style="padding:0.95rem 1.5rem 0.95rem 1.15rem; text-align:right;">
+                        <div style="display:inline-flex; gap:0.35rem; align-items:center; justify-content:flex-end;">
+                            <button class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:0.32rem 0.65rem; font-size:0.8rem; font-weight:700; background:var(--surface-50); color:var(--text-primary); border:1px solid var(--border-color); border-radius:8px;" title="View Product Analytics">
+                                View &rsaquo;
+                            </button>
+                            ${canEdit ? `
+                                <button class="btn btn-sm btn-secondary edit-prd" data-id="${prd.id}" style="padding:0.32rem 0.55rem; font-size:0.8rem; border-radius:8px;" title="Edit Product">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                            ` : (userRestrictions.disableUpdateOthers && !isCreatorSelf ? `
+                                <button class="btn btn-sm btn-secondary restricted-action" disabled style="opacity:0.4; cursor:not-allowed; padding:0.32rem 0.55rem; border-radius:8px;" title="Restricted: Cannot edit data created by others">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </button>
+                            ` : '')}
+                            ${canDuplicate ? `
+                                <button class="btn btn-sm btn-secondary dup-prd" data-id="${prd.id}" style="padding:0.32rem 0.55rem; font-size:0.8rem; border-radius:8px;" title="Duplicate Product">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                </button>
+                            ` : ''}
+                            ${canDelete ? `
+                                <button class="btn btn-sm btn-outline del-prd" data-id="${prd.id}" style="padding:0.32rem 0.55rem; font-size:0.8rem; border-radius:8px; color:var(--danger); border-color:rgba(239,68,68,0.3);" title="Delete Product">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            ` : (userRestrictions.disableDeleteOthers && !isCreatorSelf ? `
+                                <button class="btn btn-sm btn-secondary restricted-action" disabled style="opacity:0.4; cursor:not-allowed; padding:0.32rem 0.55rem; border-radius:8px; color:var(--text-muted);" title="Restricted: Cannot delete data created by others">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </button>
+                            ` : '')}
                         </div>
                     </td>
                 </tr>
-            `}).join('');
+            `;
+        }).join('');
+
+        // 2. Render Cards for Large List & Finding Grids
+        if (gridCardContainer) {
+            if (currentLayout === 'large_list') {
+                gridCardContainer.innerHTML = pageItems.map(prd => {
+                    const catObj = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category);
+                    const catName = catObj?.name || prd.category || 'General';
+                    const salePriceFormatted = formatCurrency(prd.salePrice || 0);
+                    const qty = Number(prd.quantity) || 0;
+                    const skuCode = prd.upcCode ? `UPC: ${prd.upcCode}` : (prd.uniqueId ? `#${prd.uniqueId.substring(0, 8)}` : `#${prd.id.substring(0, 8)}`);
+
+                    return `
+                        <div class="prd-large-list-card" data-id="${prd.id}">
+                            <div style="display:flex; align-items:center; padding-right:0.65rem;" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px; accent-color:#0f172a; border-radius:4px;">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:1.15rem; flex:1; min-width:240px;">
+                                <div class="prd-thumb-box view-prd-img" data-id="${prd.id}" style="width:68px; height:68px; border-radius:12px; cursor:pointer; flex-shrink:0;">
+                                    ${prd.imageUri ? `<img src="${prd.imageUri}" alt="${prd.name}">` : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>`}
+                                </div>
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                                        <strong class="view-prd-title" data-id="${prd.id}" style="cursor:pointer; color:var(--text-primary); font-size:1rem; font-weight:700;">${prd.name}</strong>
+                                        <span class="badge" style="background:var(--surface-100); color:var(--text-primary); font-size:0.72rem; font-weight:700; padding:2px 7px; border-radius:5px; border:1px solid var(--border-color);">${catName}</span>
+                                    </div>
+                                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px; display:flex; gap:0.65rem; align-items:center;">
+                                        <span>${prd.sizeWeight || 'Standard'}</span>
+                                        <span>&bull;</span>
+                                        <code style="font-family:monospace; color:var(--text-muted);">${skuCode}</code>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:1.5rem;">
+                                <div style="text-align:right;">
+                                    <div style="font-weight:800; font-size:1.25rem; color:var(--text-primary);">${salePriceFormatted}</div>
+                                    <div style="font-size:0.8rem; font-weight:700; color:${qty > 0 ? '#059669' : '#dc2626'};">${qty > 0 ? `${qty} in stock` : 'Out of stock'}</div>
+                                </div>
+                                <button type="button" class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:0.4rem 0.85rem; font-size:0.85rem; font-weight:700; background:var(--surface-50); color:var(--text-primary); border:1px solid var(--border-color); border-radius:8px;">
+                                    View &rsaquo;
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else if (currentLayout === 'hexa_octa') {
+                // 32x32 Cube: Photo square 1:1, followed by price only (no name)
+                gridCardContainer.innerHTML = pageItems.map(prd => {
+                    const salePriceFormatted = formatCurrency(prd.salePrice || 0);
+                    const qty = Number(prd.quantity) || 0;
+                    return `
+                        <div class="prd-find-card prd-find-cube-32 view-prd" data-id="${prd.id}" title="${prd.name} - ${salePriceFormatted} (${qty} in stock)">
+                            <label class="prd-find-chk-wrap" onclick="event.stopPropagation();" title="Select product">
+                                <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:11px; height:11px; accent-color:#0f172a; border-radius:3px;">
+                            </label>
+                            <div class="prd-find-card-thumb prd-find-img-wrap" style="aspect-ratio:1/1; width:100%; border-radius:4px; overflow:hidden; margin-bottom:2px;">
+                                ${prd.imageUri ? `<img src="${prd.imageUri}" alt="${prd.name}" style="aspect-ratio:1/1; width:100%; height:100%; object-fit:cover; display:block;">` : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>`}
+                            </div>
+                            <div class="prd-find-info" style="text-align:center; width:100%; padding:0;">
+                                <span class="prd-find-card-price prd-find-price" style="font-size:0.62rem; font-weight:800; line-height:1; display:block; color:var(--text-primary);">${salePriceFormatted}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                // Finding Grids & Cube Views: Photo & name stock & price with selection checkboxes
+                gridCardContainer.innerHTML = pageItems.map(prd => {
+                    const salePriceFormatted = formatCurrency(prd.salePrice || 0);
+                    const qty = Number(prd.quantity) || 0;
+                    const isMicro = currentLayout === 'hexadecagon';
+                    return `
+                        <div class="prd-find-card view-prd" data-id="${prd.id}" title="${prd.name} - ${salePriceFormatted} (${qty} in stock)">
+                            <label class="prd-find-chk-wrap" onclick="event.stopPropagation();" title="Select product">
+                                <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:${isMicro ? '12px' : '15px'}; height:${isMicro ? '12px' : '15px'}; accent-color:#0f172a; border-radius:3px;">
+                            </label>
+                            <div class="prd-find-card-thumb prd-find-img-wrap">
+                                ${prd.imageUri ? `<img src="${prd.imageUri}" alt="${prd.name}">` : `<svg width="${isMicro ? '14' : '22'}" height="${isMicro ? '14' : '22'}" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>`}
+                            </div>
+                            <div class="prd-find-info">
+                                <div class="prd-find-card-name prd-find-name">${prd.name}</div>
+                                <div class="prd-find-card-meta prd-find-meta">
+                                    <span class="prd-find-card-price prd-find-price">${salePriceFormatted}</span>
+                                    <span class="prd-find-card-stock prd-find-stock ${qty <= 0 ? 'stock-out' : (qty <= 5 ? 'stock-low' : 'stock-ok')}">${qty}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
 
         attachListEvents();
     };
 
+    function updateBatchBar() {
+        const bar = container.querySelector('#prd-batch-action-bar');
+        const countEl = container.querySelector('#prd-batch-count');
+        const catCountEl = container.querySelector('#batch-cat-count');
+        const count = selectedProductIds.size;
+        if (bar) {
+            if (count > 0) {
+                bar.style.display = 'flex';
+                setTimeout(() => bar.classList.add('visible'), 10);
+                if (countEl) countEl.textContent = `${count} selected`;
+                if (catCountEl) catCountEl.textContent = `${count}`;
+            } else {
+                bar.classList.remove('visible');
+                setTimeout(() => { bar.style.display = 'none'; }, 260);
+            }
+        }
+        const selectAll = container.querySelector('#prd-select-all');
+        if (selectAll) {
+            const pageChk = container.querySelectorAll('.prd-select-chk');
+            if (pageChk.length > 0) {
+                selectAll.checked = Array.from(pageChk).every(c => c.checked);
+            } else {
+                selectAll.checked = false;
+            }
+        }
+    }
+
     function attachListEvents() {
+        const userRestrictions = getUserRestrictions();
+
+        // Checkbox change listener
+        container.querySelectorAll('.prd-select-chk').forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                const id = e.target.getAttribute('data-id');
+                if (id) {
+                    if (e.target.checked) selectedProductIds.add(id);
+                    else selectedProductIds.delete(id);
+                    updateBatchBar();
+                }
+            });
+        });
+        updateBatchBar();
+
         // Dedicated View Panel Trigger
         const openDetail = (id) => {
             const prd = activeProducts.find(p => p.id === id);
@@ -1361,19 +1951,48 @@ export const renderProducts = async (container, workspaceId) => {
             }
         };
 
-        container.querySelectorAll('.view-prd, .view-prd-title, .view-prd-img').forEach(el => {
+        container.querySelectorAll('.view-prd, .view-prd-title, .view-prd-img, .prd-find-card, .prd-large-list-card').forEach(el => {
             el.addEventListener('click', (e) => {
-                const id = e.currentTarget.getAttribute('data-id');
-                openDetail(id);
+                if (e.target.closest('.edit-prd, .dup-prd, .del-prd, .prd-select-chk, .restricted-action')) return;
+                const id = e.currentTarget.getAttribute('data-id') || e.target.closest('[data-id]')?.getAttribute('data-id');
+                if (id) openDetail(id);
             });
         });
 
-        // Edit Product Click
+        // Pagination page number buttons
+        container.querySelectorAll('.prd-page-num').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const page = parseInt(e.currentTarget.getAttribute('data-page'), 10);
+                if (!isNaN(page) && page !== currentPage) {
+                    currentPage = page;
+                    renderProductList();
+                }
+            });
+        });
+
+        // Edit Product Click with Double Permission Check
         container.querySelectorAll('.edit-prd').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const id = e.target.getAttribute('data-id');
+                const id = e.currentTarget.getAttribute('data-id');
                 const prd = activeProducts.find(p => p.id === id);
                 if (prd) {
+                    const isCreatorSelf = (prd.creatorId && (
+                        prd.creatorId === currentUser.uid || 
+                        (currentUser.email && prd.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase())
+                    )) || (prd.createdBy && (
+                        prd.createdBy === currentUser.uid || 
+                        (currentUser.email && prd.createdBy.toLowerCase() === (currentUser.email || '').toLowerCase())
+                    ));
+
+                    if (userRestrictions.disableUpdate) {
+                        showAlert.warning("You are restricted from updating product data.");
+                        return;
+                    }
+                    if (userRestrictions.disableUpdateOthers && !isCreatorSelf) {
+                        showAlert.warning("You are restricted from updating products created by other members.");
+                        return;
+                    }
+
                     const formContainer = container.querySelector('#product-form-container');
                     container.querySelector('#prd-id').value = prd.id;
                     container.querySelector('#prd-image').value = prd.imageUri || '';
@@ -1388,7 +2007,17 @@ export const renderProducts = async (container, workspaceId) => {
 
                     container.querySelector('#prd-qty').value = prd.quantity || 0;
 
-                    container.querySelector('#prd-cost-price').value = prd.price !== undefined && prd.price !== null ? prd.price : '';
+                    if (userRestrictions.cannotSeeCost) {
+                        const costEl = container.querySelector('#prd-cost-price');
+                        if (costEl) {
+                            costEl.type = 'text';
+                            costEl.value = '••••';
+                            costEl.disabled = true;
+                            costEl.readOnly = true;
+                        }
+                    } else {
+                        container.querySelector('#prd-cost-price').value = prd.price !== undefined && prd.price !== null ? prd.price : '';
+                    }
                     container.querySelector('#prd-sale-price').value = prd.salePrice !== undefined && prd.salePrice !== null ? prd.salePrice : '';
                     container.querySelector('#prd-base-price').value = prd.basePrice !== undefined && prd.basePrice !== null ? prd.basePrice : '';
                     container.querySelector('#prd-mrp').value = prd.mrp !== undefined && prd.mrp !== null ? prd.mrp : '';
@@ -1425,9 +2054,7 @@ export const renderProducts = async (container, workspaceId) => {
                         `;
                     }
 
-                    formContainer.style.display = 'block';
-                    container.querySelector('#product-list-container').style.display = 'none';
-                    formContainer.scrollIntoView({ behavior: 'smooth' });
+                    showProductEditorView();
 
                     updateLiveProfitSummary();
                     initialProductSnapshot = getProductFormSnapshot();
@@ -1437,14 +2064,18 @@ export const renderProducts = async (container, workspaceId) => {
             });
         });
 
-        // Duplicate
+        // Duplicate with Double Permission Check
         container.querySelectorAll('.dup-prd').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const id = e.target.getAttribute('data-id');
+                if (userRestrictions.disableAdd) {
+                    showAlert.warning("You are restricted from adding new data.");
+                    return;
+                }
+                const id = e.currentTarget.getAttribute('data-id');
                 const prd = activeProducts.find(p => p.id === id);
                 if (prd && await showAlert.confirm(`Duplicate ${prd.name}?`)) {
                     try {
-                        await productService.duplicateProduct(prd, currentUser.uid);
+                        await productService.duplicateProduct(prd, currentUser.uid, userRestrictions);
                         showAlert.success('Product duplicated');
                         await loadData();
                     } catch (err) {
@@ -1454,18 +2085,37 @@ export const renderProducts = async (container, workspaceId) => {
             });
         });
 
-        // Delete Product
+        // Delete Product with Double Permission Check
         container.querySelectorAll('.del-prd').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const id = e.target.getAttribute('data-id');
+                const id = e.currentTarget.getAttribute('data-id');
                 const prd = activeProducts.find(p => p.id === id);
-                if (prd && await showAlert.confirm(`Delete product "${prd.name}" permanently?`)) {
-                    try {
-                        await productService.deleteProduct(id);
-                        showAlert.success('Product deleted successfully');
-                        await loadData();
-                    } catch (err) {
-                        showAlert.error(err.message || 'Failed to delete product');
+                if (prd) {
+                    const isCreatorSelf = (prd.creatorId && (
+                        prd.creatorId === currentUser.uid || 
+                        (currentUser.email && prd.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase())
+                    )) || (prd.createdBy && (
+                        prd.createdBy === currentUser.uid || 
+                        (currentUser.email && prd.createdBy.toLowerCase() === (currentUser.email || '').toLowerCase())
+                    ));
+
+                    if (userRestrictions.disableDelete) {
+                        showAlert.warning("You are restricted from deleting products.");
+                        return;
+                    }
+                    if (userRestrictions.disableDeleteOthers && !isCreatorSelf) {
+                        showAlert.warning("You are restricted from deleting products created by other members.");
+                        return;
+                    }
+
+                    if (await showAlert.confirm(`Delete product "${prd.name}" permanently?`)) {
+                        try {
+                            await productService.deleteProduct(id, userRestrictions, currentUser.uid);
+                            showAlert.success('Product deleted successfully');
+                            await loadData();
+                        } catch (err) {
+                            showAlert.error(err.message || 'Failed to delete product');
+                        }
                     }
                 }
             });
@@ -1533,6 +2183,39 @@ export const renderProducts = async (container, workspaceId) => {
         const totalSaleEl = container.querySelector('#calc-total-sale');
         const totalProfitEl = container.querySelector('#calc-total-profit');
         const profitPill = container.querySelector('#calc-profit-pill');
+
+        const userRestrictions = getUserRestrictions();
+        if (userRestrictions.cannotSeeCost) {
+            if (totalCostEl) totalCostEl.textContent = '••••';
+            if (markupEl) markupEl.textContent = '••••';
+            if (marginEl) marginEl.textContent = '••••';
+            if (unitProfitEl) unitProfitEl.textContent = '••••';
+            if (totalProfitEl) totalProfitEl.textContent = '••••';
+            if (profitPill) {
+                profitPill.textContent = '••••';
+                profitPill.style.background = 'rgba(100, 116, 139, 0.2)';
+                profitPill.style.color = '#cbd5e1';
+            }
+            if (totalSaleEl) totalSaleEl.textContent = formatCurrency(totalSaleVal);
+            if (mrpDiscEl) mrpDiscEl.textContent = mrpDiscountPct > 0 ? `${mrpDiscountPct.toFixed(1)}% Off` : '0%';
+            return;
+        }
+
+        if (userRestrictions.cannotSeeProfit) {
+            if (unitProfitEl) unitProfitEl.textContent = '••••';
+            if (markupEl) markupEl.textContent = '••••';
+            if (marginEl) marginEl.textContent = '••••';
+            if (totalProfitEl) totalProfitEl.textContent = '••••';
+            if (profitPill) {
+                profitPill.textContent = '••••';
+                profitPill.style.background = 'rgba(100, 116, 139, 0.2)';
+                profitPill.style.color = '#cbd5e1';
+            }
+            if (totalCostEl) totalCostEl.textContent = formatCurrency(totalCostVal);
+            if (totalSaleEl) totalSaleEl.textContent = formatCurrency(totalSaleVal);
+            if (mrpDiscEl) mrpDiscEl.textContent = mrpDiscountPct > 0 ? `${mrpDiscountPct.toFixed(1)}% Off` : '0%';
+            return;
+        }
 
         if (unitProfitEl) {
             unitProfitEl.textContent = (unitProfit >= 0 ? '+' : '') + formatCurrency(unitProfit);
@@ -1738,8 +2421,210 @@ export const renderProducts = async (container, workspaceId) => {
                 categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
         }
 
-        container.querySelector('#filter-sort')?.addEventListener('change', () => renderProductList());
-        container.querySelector('#filter-category')?.addEventListener('change', () => renderProductList());
+        container.querySelector('#filter-search')?.addEventListener('input', () => {
+            currentPage = 1;
+            renderProductList();
+        });
+        container.querySelector('#filter-sort')?.addEventListener('change', () => {
+            currentPage = 1;
+            renderProductList();
+        });
+        container.querySelector('#filter-category')?.addEventListener('change', () => {
+            currentPage = 1;
+            renderProductList();
+        });
+
+        // 1. Layout & Theme Drawer Controls (per User Request)
+        const openLayoutDrawer = () => {
+            const drawer = container.querySelector('#prd-layout-drawer');
+            const overlay = container.querySelector('#prd-layout-drawer-overlay');
+            if (drawer && overlay) {
+                drawer.style.display = 'flex';
+                overlay.style.display = 'block';
+                setTimeout(() => {
+                    drawer.classList.add('open');
+                    overlay.classList.add('open');
+                }, 10);
+            }
+        };
+
+        const closeLayoutDrawer = () => {
+            const drawer = container.querySelector('#prd-layout-drawer');
+            const overlay = container.querySelector('#prd-layout-drawer-overlay');
+            if (drawer && overlay) {
+                drawer.classList.remove('open');
+                overlay.classList.remove('open');
+                setTimeout(() => {
+                    drawer.style.display = 'none';
+                    overlay.style.display = 'none';
+                }, 280);
+            }
+        };
+
+        container.querySelector('#btn-open-layout-drawer')?.addEventListener('click', openLayoutDrawer);
+        container.querySelector('#prd-layout-drawer-close')?.addEventListener('click', closeLayoutDrawer);
+        container.querySelector('#prd-layout-drawer-overlay')?.addEventListener('click', closeLayoutDrawer);
+
+        // 2. Theme Selection inside Drawer
+        const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('pricelister_theme') || 'red';
+        container.querySelectorAll('.prd-theme-btn').forEach(btn => {
+            const th = btn.getAttribute('data-theme');
+            if (th === currentTheme) {
+                btn.style.borderColor = '#0f172a';
+                btn.style.background = '#f8fafc';
+                btn.style.fontWeight = '700';
+            }
+            btn.addEventListener('click', () => {
+                document.documentElement.setAttribute('data-theme', th);
+                localStorage.setItem('pricelister_theme', th);
+                container.querySelectorAll('.prd-theme-btn').forEach(b => {
+                    const isActive = (b.getAttribute('data-theme') === th);
+                    b.style.borderColor = isActive ? '#0f172a' : '#cbd5e1';
+                    b.style.background = isActive ? '#f8fafc' : '#ffffff';
+                    b.style.fontWeight = isActive ? '700' : '500';
+                });
+                showAlert.success(`Theme switched to ${th.toUpperCase()}`);
+            });
+        });
+
+        // 3. Layout Selector (Inside Drawer: 7 Layout Modes)
+        container.querySelectorAll('.prd-layout-pill-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const layout = e.currentTarget.getAttribute('data-layout');
+                if (layout) {
+                    currentLayout = layout;
+                    localStorage.setItem('pricelister_product_layout', layout);
+                    container.querySelectorAll('.prd-layout-pill-btn').forEach(b => b.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+
+                    const labelEl = container.querySelector('#current-layout-label');
+                    if (labelEl) labelEl.textContent = layoutDisplayNames[layout] || layout;
+
+                    const tblContainer = container.querySelector('#prd-table-card-container');
+                    const gridContainer = container.querySelector('#prd-grid-card-container');
+                    if (tblContainer) tblContainer.style.display = currentLayout === 'list' ? 'block' : 'none';
+                    if (gridContainer) gridContainer.style.display = currentLayout !== 'list' ? 'block' : 'none';
+
+                    currentPage = 1;
+                    closeLayoutDrawer();
+                    renderProductList();
+                }
+            });
+        });
+
+        // 4. Select All Checkbox
+        container.querySelector('#prd-select-all')?.addEventListener('change', (e) => {
+            const isChecked = e.currentTarget.checked;
+            container.querySelectorAll('.prd-select-chk').forEach(chk => {
+                chk.checked = isChecked;
+                const id = chk.getAttribute('data-id');
+                if (id) {
+                    if (isChecked) selectedProductIds.add(id);
+                    else selectedProductIds.delete(id);
+                }
+            });
+            updateBatchBar();
+        });
+
+        // 5. Multi-Product Batch Actions
+        // Batch Action A: Change Category
+        container.querySelector('#btn-batch-category')?.addEventListener('click', () => {
+            if (selectedProductIds.size === 0) return;
+            const modal = container.querySelector('#batch-category-modal');
+            const catDropdown = container.querySelector('#batch-cat-dropdown');
+            const catCount = container.querySelector('#batch-cat-count');
+            if (catDropdown) {
+                catDropdown.innerHTML = categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
+            }
+            if (catCount) catCount.textContent = selectedProductIds.size;
+            if (modal) modal.style.display = 'flex';
+        });
+
+        container.querySelector('#batch-cat-close')?.addEventListener('click', () => {
+            const modal = container.querySelector('#batch-category-modal');
+            if (modal) modal.style.display = 'none';
+        });
+
+        container.querySelector('#batch-cat-cancel')?.addEventListener('click', () => {
+            const modal = container.querySelector('#batch-category-modal');
+            if (modal) modal.style.display = 'none';
+        });
+
+        container.querySelector('#batch-cat-confirm')?.addEventListener('click', async () => {
+            const targetCat = container.querySelector('#batch-cat-dropdown')?.value;
+            if (!targetCat) {
+                showAlert.error('Please select a target category.');
+                return;
+            }
+            const count = selectedProductIds.size;
+            try {
+                for (const id of selectedProductIds) {
+                    await productService.updateProduct(id, { category: targetCat }, userRestrictions, currentUser.uid);
+                }
+                showAlert.success(`Successfully updated category for ${count} product(s)!`);
+                selectedProductIds.clear();
+                const modal = container.querySelector('#batch-category-modal');
+                if (modal) modal.style.display = 'none';
+                activeProducts = await productService.getAllActiveProducts();
+                renderProductList();
+                updateBatchBar();
+            } catch (err) {
+                showAlert.error(err.message || 'Failed to update category for selected products');
+            }
+        });
+
+        // Batch Action B: Transfer to Market Updator for mass detail editing
+        container.querySelector('#btn-batch-transfer-market')?.addEventListener('click', () => {
+            if (selectedProductIds.size === 0) {
+                showAlert.error('Please select at least 1 product to transfer.');
+                return;
+            }
+            const selectedProds = activeProducts.filter(p => selectedProductIds.has(p.id));
+            sessionStorage.setItem('plister_market_batch_transfer', JSON.stringify(selectedProds));
+            showAlert.success(`Transferred ${selectedProds.length} products into Market Updator!`);
+            window.location.hash = '#/market-inserter';
+        });
+
+        // Batch Action C: Delete Selected
+        container.querySelector('#btn-batch-delete')?.addEventListener('click', async () => {
+            const count = selectedProductIds.size;
+            if (count === 0) return;
+            const confirmed = await showAlert.confirm(`Are you sure you want to permanently delete all ${count} selected product(s)? This action cannot be undone.`);
+            if (!confirmed) return;
+            try {
+                for (const id of selectedProductIds) {
+                    await productService.deleteProduct(id, userRestrictions, currentUser.uid);
+                }
+                showAlert.success(`Successfully deleted ${count} product(s).`);
+                selectedProductIds.clear();
+                activeProducts = await productService.getAllActiveProducts();
+                renderProductList();
+                updateBatchBar();
+            } catch (err) {
+                showAlert.error(err.message || 'Failed to delete selected products');
+            }
+        });
+
+        // Batch Action D: Clear Selection
+        container.querySelector('#btn-batch-clear')?.addEventListener('click', () => {
+            selectedProductIds.clear();
+            container.querySelectorAll('.prd-select-chk').forEach(c => c.checked = false);
+            const selectAll = container.querySelector('#prd-select-all');
+            if (selectAll) selectAll.checked = false;
+            updateBatchBar();
+        });
+
+        // Prev / Next Pagination Buttons
+        container.querySelector('#prd-page-prev')?.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderProductList();
+            }
+        });
+        container.querySelector('#prd-page-next')?.addEventListener('click', () => {
+            currentPage++;
+            renderProductList();
+        });
 
         const btnAddVar = container.querySelector('#btn-add-variation-row');
         if (btnAddVar) {
@@ -1805,9 +2690,7 @@ export const renderProducts = async (container, workspaceId) => {
             }
 
             checkProductDirty();
-            formContainer.style.display = 'block';
-            container.querySelector('#product-list-container').style.display = 'none';
-            formContainer.scrollIntoView({ behavior: 'smooth' });
+            showProductEditorView();
         });
 
         // Auto Generate UPC Barcode
@@ -2032,8 +2915,7 @@ export const renderProducts = async (container, workspaceId) => {
             draftManager.unregisterActiveForm('product_form');
             if (prdUnsavedIndicator) prdUnsavedIndicator.update(false);
 
-            formContainer.style.display = 'none';
-            container.querySelector('#product-list-container').style.display = 'block';
+            hideProductEditorView();
             form.reset();
             initialProductSnapshot = null;
             checkProductDirty();
@@ -2092,7 +2974,16 @@ export const renderProducts = async (container, workspaceId) => {
 
                 quantity: parseInt(container.querySelector('#prd-qty').value || 0, 10),
 
-                price: container.querySelector('#prd-cost-price').value ? parseFloat(container.querySelector('#prd-cost-price').value) : 0,
+                price: (() => {
+                    if (userRestrictions.cannotSeeCost) {
+                        if (id) {
+                            const existingPrd = activeProducts.find(p => p.id === id);
+                            return existingPrd && existingPrd.price !== undefined ? existingPrd.price : 0;
+                        }
+                        return 0;
+                    }
+                    return container.querySelector('#prd-cost-price').value ? parseFloat(container.querySelector('#prd-cost-price').value) : 0;
+                })(),
                 salePrice: salePrice,
                 basePrice: container.querySelector('#prd-base-price').value ? parseFloat(container.querySelector('#prd-base-price').value) : 0,
                 mrp: container.querySelector('#prd-mrp').value ? parseFloat(container.querySelector('#prd-mrp').value) : 0,
@@ -2103,12 +2994,32 @@ export const renderProducts = async (container, workspaceId) => {
                 variations: collectedVariations
             };
 
+            if (id && userRestrictions.disableUpdate) {
+                showAlert.error('You do not have permission to update products.');
+                btn.disabled = false;
+                return;
+            }
+            if (id && userRestrictions.disableUpdateOthers) {
+                const existingPrd = activeProducts.find(p => p.id === id);
+                const isCreatorSelf = existingPrd && ((existingPrd.creatorId && (existingPrd.creatorId === currentUser.uid || (currentUser.email && existingPrd.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase()))) || (existingPrd.createdBy && (existingPrd.createdBy === currentUser.uid || (currentUser.email && existingPrd.createdBy.toLowerCase() === (currentUser.email || '').toLowerCase()))));
+                if (!isCreatorSelf) {
+                    showAlert.error('You are restricted from updating products created by other members.');
+                    btn.disabled = false;
+                    return;
+                }
+            }
+            if (!id && userRestrictions.disableAdd) {
+                showAlert.error('You do not have permission to add new products.');
+                btn.disabled = false;
+                return;
+            }
+
             try {
                 if (id) {
-                    await productService.updateProduct(id, data);
+                    await productService.updateProduct(id, data, userRestrictions, currentUser.uid);
                     showAlert.success('Product updated');
                 } else {
-                    await productService.addProduct(data, currentUser.uid);
+                    await productService.addProduct(data, currentUser.uid, userRestrictions);
                     showAlert.success('Product added');
                 }
 
@@ -2118,8 +3029,7 @@ export const renderProducts = async (container, workspaceId) => {
                 draftManager.unregisterActiveForm('product_form');
                 if (prdUnsavedIndicator) prdUnsavedIndicator.update(false);
 
-                formContainer.style.display = 'none';
-                container.querySelector('#product-list-container').style.display = 'block';
+                hideProductEditorView();
                 await loadData();
             } catch (error) {
                 showAlert.error(error.message);

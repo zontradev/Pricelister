@@ -56,9 +56,9 @@
 
 .sidebar-title {
     font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: -0.01em;
+    font-weight: 800;
+    color: #000000 !important; /* Pricelister Text Black */
+    letter-spacing: -0.02em;
     margin: 0;
     transition: opacity 0.2s ease;
 }
@@ -139,12 +139,15 @@
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.55rem 0.85rem;
+    gap: 0.65rem;
+    padding: 0.42rem 0.75rem;
+    height: 36px !important;
+    box-sizing: border-box;
     color: var(--text-secondary);
-    font-size: 0.86rem;
+    font-size: 0.84rem;
     font-weight: 500;
-    border-radius: var(--radius-md);
+    border-radius: 8px;
+    border: 1.5px solid transparent;
     text-decoration: none;
     transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -155,9 +158,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    min-width: 20px;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
     color: var(--text-secondary);
     transition: transform 0.18s ease, color 0.18s ease;
 }
@@ -171,24 +174,26 @@
 }
 
 .nav-item:hover {
-    background-color: var(--surface-100);
-    color: var(--text-primary);
+    background-color: #f8fafc;
+    border-color: #e2e8f0;
+    color: #0f172a;
 }
 
 .nav-item:hover .nav-icon {
-    color: var(--text-primary);
-    transform: scale(1.08);
+    color: #0f172a;
+    transform: scale(1.06);
 }
 
 .nav-item.active {
-    background: #18181b;
-    color: #ffffff;
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    border: 1.5px solid #cbd5e1 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
 .nav-item.active .nav-icon {
-    color: #ffffff;
+    color: #0f172a !important;
 }
 
 /* Footer & Profile */
@@ -547,14 +552,14 @@
 }
 
 #app-shell.sidebar-mini .nav-item.active {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
-    background: #18181b;
-    border: 1px solid #18181b;
-    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #0f172a !important;
 }
 
 #app-shell.sidebar-mini .nav-item.active .nav-icon {
-    color: #ffffff;
+    color: #0f172a !important;
 }
 
 #app-shell.sidebar-mini .sidebar-footer {
