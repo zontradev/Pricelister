@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PriceLister Workspace</title>
+    <script>
+        (function() {
+            var path = window.location.pathname || '';
+                if (!localStorage.getItem('pricelister_active_ws')) {
+                    localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
+                }
+                var subroute = path.replace(/^\/workspace\/?/i, '');
+                if (subroute && subroute !== 'index.html') {
+                    try {
+                        sessionStorage.setItem('pricelister_last_route', '/' + subroute.replace(/^\//, ''));
+                    } catch(e) {}
+                }
+                window.location.replace('/app.html');
+            } catch(e) {
+                window.location.replace('/app.html');
+            }
+        })();
+    </script>
+</head>
+<body style="background:#09090b; color:#fff; display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
+    <p>Opening PriceLister Workspace...</p>
+</body>
+</html>

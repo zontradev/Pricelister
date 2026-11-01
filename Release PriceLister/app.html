@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base href="/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>PriceLister Workspace</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="/css/modern-ui.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    
+    <!-- Cloud Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- SheetJS (Excel .xlsx / .xls parsing and writing) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- jsPDF & AutoTable (High quality PDF generation) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    
+    <script type="module" src="/config.js"></script>
+    <script type="module" src="/DataModel.js"></script>
+
+    <!-- Immediate Color Mode, Theme, Custom Font & Layout Initializer: Prevents white flash and sets Enterprise Minimal -->
+    <script>
+        // Universal opener for Critical Board Modal (works synchronously or loads on-demand)
+        window.openCriticalBoard = function(tab) {
+            tab = tab || 'font';
+            if (typeof window.openCriticalBoardModal === 'function') {
+                try {
+                    window.openCriticalBoardModal(tab);
+                    return;
+                } catch(e) {
+                    console.error("Critical Board opener error:", e);
+                }
+            }
+            import('/js/modules/customFontManager.js').then(function(m) {
+                window.openCriticalBoardModal = m.openCriticalBoardModal;
+                m.openCriticalBoardModal(tab);
+            }).catch(function(err) {
+                console.warn("Retrying relative import for Critical Board:", err);
+                import('./js/modules/customFontManager.js').then(function(m) {
+                    window.openCriticalBoardModal = m.openCriticalBoardModal;
+                    m.openCriticalBoardModal(tab);
+                }).catch(function(finalErr) {
+                    alert("Critical Board could not be loaded: " + (finalErr.message || finalErr));
+                });
+            });
+        };
+
+        (function() {
+            try {
+                var mode = localStorage.getItem('pricelister_color_mode') || 'light';
+                document.documentElement.setAttribute('data-color-mode', mode);
+                var theme = localStorage.getItem('pricelister_theme') || 'enterprise';
+                document.documentElement.setAttribute('data-theme', theme);
+
+                // Immediate Custom Font apply to prevent FOUT
+                var savedFont = localStorage.getItem('pricelister_custom_font');
+                if (savedFont) {
+                    var parsedFont = JSON.parse(savedFont);
+                    if (parsedFont && parsedFont.name) {
+                        var fontCss = '';
+                        if (parsedFont.dataUrl && parsedFont.dataUrl.indexOf('data:') === 0) {
+                            fontCss += '@font-face { font-family: "' + parsedFont.name + '"; src: url("' + parsedFont.dataUrl + '"); font-display: swap; }\n';
+                        }
+                        fontCss += 'html, body, button, input, select, textarea, .topbar, .sidebar, .card, table, kbd, .btn, .nav-item { font-family: "' + parsedFont.name + '", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }\n';
+                        fontCss += ':root { --font-sans: "' + parsedFont.name + '", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }';
+                        
+                        var styleEl = document.createElement('style');
+                        styleEl.id = 'pricelister-custom-font-style';
+                        styleEl.textContent = fontCss;
+                        document.head.appendChild(styleEl);
+                    }
+                }
+
+                // Immediate Custom Layout & UI Divider Blocks
+                var savedLayout = localStorage.getItem('pricelister_custom_layout');
+                if (savedLayout) {
+                    var parsedLayout = JSON.parse(savedLayout);
+                    if (parsedLayout) {
+                        if (parsedLayout.sidebarPosition) {
+                            document.documentElement.setAttribute('data-sidebar-pos', parsedLayout.sidebarPosition);
+                        }
+                        if (parsedLayout.density) {
+                            document.documentElement.setAttribute('data-density', parsedLayout.density);
+                        }
+                        if (parsedLayout.dividerStyle) {
+                            document.documentElement.setAttribute('data-divider-style', parsedLayout.dividerStyle);
+                        }
+                        if (parsedLayout.radius) {
+                            document.documentElement.style.setProperty('--radius-card', parsedLayout.radius);
+                        }
+                    }
+                }
+
+                // Immediate Custom Border Outline Color (Custom Color Accent mode)
+                var savedBorder = localStorage.getItem('pricelister_custom_border_color');
+                if (savedBorder) {
+                    document.documentElement.style.setProperty('--border-color', savedBorder);
+                    document.documentElement.style.setProperty('--border-subtle', savedBorder);
+                    document.documentElement.style.setProperty('--custom-border-color', savedBorder);
+                }
+            } catch(e) {}
+        })();
+    </script>
+
+    <!-- Clean URL Initializer & Service Worker: Prevents 404 reload crashes and persists active page -->
+    <script>
+        (function() {
+            try {
+                // Register Service Worker for seamless SPA reload routing on static/live servers
+                if ('serviceWorker' in navigator && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
+                    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(e) {
+                        console.debug("Service Worker registration skipped:", e);
+                    });
+                }
+
+                var path = window.location.pathname || '';
+                var hash = window.location.hash || '';
+                var savedRoute = '';
+                try {
+                    savedRoute = sessionStorage.getItem('pricelister_last_route') || '';
+                } catch(e) {}
+
+                var route = 'overview';
+                var wsMatch = path.match(/(?:\/|^)workspace(\/.*)?$/i);
+                if (wsMatch && wsMatch[1] && wsMatch[1] !== '/' && wsMatch[1] !== '/index.html') {
+                    route = wsMatch[1].replace(/^\//, '');
+                } else if (hash && hash.startsWith('#/')) {
+                    route = hash.replace(/^#\/?/, '').replace(/\/$/, '');
+                } else if (savedRoute && savedRoute !== '/overview') {
+                    route = savedRoute.replace(/^\//, '');
+                }
+
+                if (!route.startsWith('/')) route = '/' + route;
+                if (route === '/workers') route = '/workspace';
+                if (route === '/customer-invoices') route = '/invoices/customer';
+                if (route === '/business-invoices') route = '/invoices/business';
+
+                var cleanUrl = '/Workspace' + route;
+                window.history.replaceState({ route: route }, '', cleanUrl);
+            } catch(e) {}
+        })();
+    </script>
+</head>
+<body class="app-loading">
+    <div id="alert-container"></div>
+    
+    <!-- Full Screen Loader for Auth Check -->
+    <div id="app-loader" class="full-loader">
+        <div class="spinner"></div>
+        <p id="loader-text">Loading Workspace...</p>
+        <div id="loader-error" style="color: #ff4d4f; max-width: 400px; margin-top: 1rem; font-size: 0.9rem; word-break: break-all; display: none;"></div>
+        <button id="loader-bypass-btn" type="button" style="display:none; margin-top:1.25rem; padding:0.6rem 1.4rem; font-size:0.85rem; font-weight:700; border-radius:999px; background:#18181b; color:#ffffff; border:1px solid #334155; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.18);">
+            Continue to Workspace (Demo Sandbox) &rarr;
+        </button>
+    </div>
+
+    <!-- Synchronous Emergency Watchdog (runs immediately while HTML parses) -->
+    <script>
+        (function() {
+            window.__dismissWorkspaceLoader = function(reason) {
+                var loader = document.getElementById('app-loader');
+                var shell = document.getElementById('app-shell');
+                document.body.classList.remove('app-loading');
+                if (loader) loader.style.display = 'none';
+                if (shell) shell.style.display = 'flex';
+                console.log("[PriceLister] Loader dismissed: " + (reason || 'unknown'));
+            };
+
+            // Show manual bypass button after 1 second if still loading
+            setTimeout(function() {
+                var btn = document.getElementById('loader-bypass-btn');
+                var loader = document.getElementById('app-loader');
+                if (btn && loader && loader.style.display !== 'none') {
+                    btn.style.display = 'inline-block';
+                    btn.onclick = function() {
+                        localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
+                        window.__dismissWorkspaceLoader('manual_bypass');
+                    };
+                }
+            }, 1000);
+
+            // Auto-dismiss failsafe: Maximum 1.8 seconds wait in demo/local sessions
+            setTimeout(function() {
+                var loader = document.getElementById('app-loader');
+                if (loader && loader.style.display !== 'none') {
+                    window.__dismissWorkspaceLoader('emergency_timeout');
+                }
+            }, 1800);
+        })();
+    </script>
+
+    <!-- Main Application Shell (hidden until auth verified) -->
+    <div id="app-shell" style="display: none;">
+        <!-- Persistent Left Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand" id="sidebar-logo-brand" title="PriceLister — Click to reload workspace & sync data" role="button" tabindex="0">
+                    <img src="/pricelister_org.png" alt="Logo" class="sidebar-logo">
+                    <h2 class="sidebar-title">PriceLister</h2>
+                </div>
+                <button id="toggle-sidebar" class="icon-btn sidebar-toggle-btn" aria-label="Toggle Sidebar" title="Collapse Sidebar (Mini Mode)">
+                    <svg class="toggle-icon-collapse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+                    <svg class="toggle-icon-expand" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none;"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="nav-section">
+                    <h3 class="nav-section-title">WORKSPACE</h3>
+                    <ul class="nav-tree">
+                        <li>
+                            <a href="#/overview" class="nav-item active" data-route="overview" title="Workspace Overview">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span>
+                                <span class="nav-label">Overview</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#/members" class="nav-item" data-route="members" title="Members Activity & Contributions">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+                                <span class="nav-label">Members Activity</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#/analytics" class="nav-item" data-route="analytics" title="Data Check & Analytics Reports">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
+                                <span class="nav-label">Analytics & Reports</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#/schema-analyzer" class="nav-item" data-route="schema-analyzer" id="nav-schema-analyzer" title="Schema Analyzer — Relational Connections, Demand Velocity & Integrity">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="8" height="6" rx="1.5"></rect><rect x="14" y="3" width="8" height="6" rx="1.5"></rect><rect x="8" y="15" width="8" height="6" rx="1.5"></rect><line x1="6" y1="9" x2="6" y2="12"></line><line x1="18" y1="9" x2="18" y2="12"></line><line x1="6" y1="12" x2="18" y2="12"></line><line x1="12" y1="12" x2="12" y2="15"></line></svg></span>
+                                <span class="nav-label">Schema</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3 class="nav-section-title">PRODUCTS</h3>
+                    <ul class="nav-tree">
+                        <li>
+                            <a href="#/products" class="nav-item" data-route="products" title="All Products">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></span>
+                                <span class="nav-label">All Products</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#/market-inserter" class="nav-item" data-route="market-inserter" title="Market Inserter (Grid)">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg></span>
+                                <span class="nav-label">Market Inserter</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#/categories" class="nav-item" data-route="categories" title="Categories">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg></span>
+                                <span class="nav-label">Categories</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <h3 class="nav-section-title">SALES</h3>
+                    <ul class="nav-tree">
+                        <li>
+                            <a href="#/invoices/customer" class="nav-item" data-route="invoices/customer" title="Customer Invoices">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span>
+                                <span class="nav-label">Customer Invoices</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#/invoices/business" class="nav-item" data-route="invoices/business" title="Business Invoices">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></span>
+                                <span class="nav-label">Business Invoices</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <h3 class="nav-section-title">PEOPLE</h3>
+                    <ul class="nav-tree">
+                        <li>
+                            <a href="#/customers" class="nav-item" data-route="customers" title="Customers & Clients">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+                                <span class="nav-label">Customers & Clients</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <h3 class="nav-section-title">B2B</h3>
+                    <ul class="nav-tree">
+                        <li>
+                            <a href="#/businesses" class="nav-item" data-route="businesses" title="Businesses">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="22" x2="9" y2="22.01"></line><line x1="15" y1="22" x2="15" y2="22.01"></line><line x1="9" y1="6" x2="9" y2="6.01"></line><line x1="15" y1="6" x2="15" y2="6.01"></line><line x1="9" y1="10" x2="9" y2="10.01"></line><line x1="15" y1="10" x2="15" y2="10.01"></line><line x1="9" y1="14" x2="9" y2="14.01"></line><line x1="15" y1="14" x2="15" y2="14.01"></line></svg></span>
+                                <span class="nav-label">Businesses</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <h3 class="nav-section-title">WORKSPACE SETTINGS</h3>
+                    <ul class="nav-tree">
+                        <li>
+                            <a href="#/workspace" class="nav-item" data-route="workspace" title="Workspace Hub & Members">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>
+                                <span class="nav-label">Workspace</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#/settings" class="nav-item" data-route="settings" title="Settings">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
+                                <span class="nav-label">Settings</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="javascript:void(0)" class="nav-item" id="nav-item-critical-board" onclick="window.openCriticalBoard('font');" title="Critical Board — Custom Fonts, UI Dividers & Layout">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg></span>
+                                <span class="nav-label" style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <span>Critical Board</span>
+                                    <span style="font-size:0.6rem; font-weight:800; background:var(--text-primary); color:var(--surface-main); padding:1px 5px; border-radius:999px;">Custom</span>
+                                </span>
+                            </a>
+                        </li>
+                        <li id="nav-item-customer-panel-wrapper">
+                            <a href="#/customer-panel" class="nav-item" data-route="customer-panel" id="nav-customer-panel" title="Setup Customer Catalog & Shopping Panel (Admins & Co-admins)">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg></span>
+                                <span class="nav-label" style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <span>Customer Panel</span>
+                                    <span id="sidebar-customer-panel-status" class="status-pill status-pill-active" style="font-size:0.65rem; padding:0.1rem 0.4rem;">Live</span>
+                                </span>
+                            </a>
+                        </li>
+                        <li id="nav-item-orders-wrapper">
+                            <a href="#/orders" class="nav-item" data-route="orders" id="nav-orders" title="Customer Orders Received from Storefront">
+                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></span>
+                                <span class="nav-label">Orders</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Bottom account tab removed from navigation bar per user request -->
+            <div class="sidebar-footer" style="display:none !important;">
+                <div class="sidebar-user-elevated" id="sidebar-user-card" style="cursor:pointer;" title="Click to manage accounts / profile">
+                    <div style="display:flex; align-items:center; gap:0.65rem; overflow:hidden; flex:1;">
+                        <div class="user-avatar-container" style="position:relative; width:34px; height:34px; flex-shrink:0;">
+                            <img id="user-picture" class="user-picture" src="" alt="Profile" style="width:100%; height:100%; border-radius:50%; object-fit:cover; display:none;">
+                            <div class="user-avatar" id="user-avatar" style="width:100%; height:100%; border-radius:50%; background:var(--text-primary); color:var(--surface-main); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem;">U</div>
+                            <div style="position:absolute; bottom:-1px; right:-1px; width:9px; height:9px; border-radius:50%; background:#10b981; border:1.5px solid var(--border-color);"></div>
+                        </div>
+                        <div style="overflow:hidden; display:flex; flex-direction:column; gap:2px; flex:1;">
+                            <div id="user-email" style="font-size:0.8rem; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">user@example.com</div>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <span id="user-role" class="badge-role badge-role-worker" style="font-size:0.65rem; padding:0.1rem 0.4rem; font-weight:700;">Worker</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:2px; align-items:center; flex-shrink:0;">
+                        <button id="sidebar-switch-account-btn" class="icon-btn" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border-color); background:var(--surface-50); color:var(--text-secondary); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Change / Switch Account">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                        </button>
+                        <button id="logout-btn" class="icon-btn" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border-color); background:var(--surface-50); color:var(--text-primary); display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Sign Out">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </nav>
+
+        <!-- Mobile Drawer Backdrop Overlay -->
+        <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="topbar" id="app-topbar">
+                <div class="topbar-left" style="display:flex; align-items:center; gap:0.75rem;">
+                    <div class="breadcrumbs" id="breadcrumbs">Workspace / Overview</div>
+                </div>
+                <div class="topbar-actions" id="topbar-actions">
+                    <!-- Global search & actions injected via globalSearch.js -->
+                </div>
+            </header>
+            
+            <!-- Central Workspace: This is where modules load -->
+            <div id="workspace-container" class="workspace-area">
+                <!-- Modules injected here via JS -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        window.addEventListener('error', function(event) {
+            const errEl = document.getElementById('loader-error');
+            if (errEl) {
+                errEl.style.display = 'block';
+                let errorMsg = '<strong>Script Error:</strong> ' + (event.message || 'Unknown Error') + '<br>';
+                if (event.filename) {
+                    errorMsg += '<small><strong>File:</strong> ' + event.filename + ' (Line: ' + event.lineno + ', Col: ' + event.colno + ')</small><br>';
+                }
+                if (event.error && event.error.stack) {
+                    errorMsg += '<pre style="text-align:left; background:rgba(255,0,0,0.1); padding:10px; border-radius:4px; font-size:11px; margin-top:8px; overflow-x:auto;">' + event.error.stack + '</pre>';
+                }
+                errEl.innerHTML = errorMsg;
+                const spinner = document.querySelector('.spinner');
+                if(spinner) spinner.style.display = 'none';
+            }
+        });
+        window.addEventListener('unhandledrejection', function(event) {
+            const errEl = document.getElementById('loader-error');
+            if (errEl) {
+                errEl.style.display = 'block';
+                let errorMsg = '<strong>Promise Error:</strong> ' + (event.reason ? event.reason.message : 'Unknown') + '<br>';
+                if (event.reason && event.reason.stack) {
+                    errorMsg += '<pre style="text-align:left; background:rgba(255,0,0,0.1); padding:10px; border-radius:4px; font-size:11px; margin-top:8px; overflow-x:auto;">' + event.reason.stack + '</pre>';
+                }
+                errEl.innerHTML = errorMsg;
+                const spinner = document.querySelector('.spinner');
+                if(spinner) spinner.style.display = 'none';
+            }
+        });
+    </script>
+    <script type="module">
+        import { initAuthHandler } from '/js/auth-handler.js';
+        import { initWorkspace } from '/js/workspace.js';
+        import { initCustomFontAndLayout, openCriticalBoardModal } from '/js/modules/customFontManager.js';
+        
+        window.openCriticalBoardModal = openCriticalBoardModal;
+        
+        const boot = async () => {
+            try {
+                initCustomFontAndLayout();
+                await initAuthHandler('app');
+                initWorkspace();
+            } catch (err) {
+                console.error("[PriceLister] App boot error:", err);
+            } finally {
+                if (typeof window.__dismissWorkspaceLoader === 'function') {
+                    window.__dismissWorkspaceLoader('boot_complete');
+                }
+            }
+
+            // Safety Watchdog: Prevent permanent "Loading Workspace..." lock
+            setTimeout(async () => {
+                const loader = document.getElementById('app-loader');
+                const shell = document.getElementById('app-shell');
+                if (loader && loader.style.display !== 'none' && !document.getElementById('loader-error')?.innerHTML) {
+                    console.warn("Loader watchdog triggered: auto-dismissing stalled loader state.");
+                    document.body.classList.remove('app-loading');
+                    loader.style.display = 'none';
+                    if (shell) shell.style.display = 'flex';
+                    
+                    const container = document.getElementById('workspace-container');
+                    if (container && !container.hasChildNodes()) {
+                        try {
+                            const { initRouter } = await import('/js/router.js');
+                            initRouter();
+                        } catch (e) {
+                            console.error("Watchdog router initialization fallback failed:", e);
+                        }
+                    }
+                }
+            }, 1500);
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', boot);
+        } else {
+            boot();
+        }
+    </script>
+</body>
+</html>

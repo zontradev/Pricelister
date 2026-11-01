@@ -1,0 +1,13 @@
+# Cloudflare Pages / Static SPA Redirect Rules
+/Workspace/*    /app.html    200
+/workspace/*    /app.html    200
+/demo/*         /app.html    200
+/demo           /app.html    200
+/home           /index.html  200
+/explore        /index.html  200
+/pricing        /index.html  200
+/find           /index.html  200
+/terms          /index.html  200
+/privacy        /index.html  200
+/*              /index.html  200
+
