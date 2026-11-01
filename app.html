@@ -29,6 +29,31 @@
 
     <!-- Immediate Color Mode, Theme, Custom Font & Layout Initializer: Prevents white flash and sets Enterprise Minimal -->
     <script>
+        // Universal opener for Critical Board Modal (works synchronously or loads on-demand)
+        window.openCriticalBoard = function(tab) {
+            tab = tab || 'font';
+            if (typeof window.openCriticalBoardModal === 'function') {
+                try {
+                    window.openCriticalBoardModal(tab);
+                    return;
+                } catch(e) {
+                    console.error("Critical Board opener error:", e);
+                }
+            }
+            import('/js/modules/customFontManager.js').then(function(m) {
+                window.openCriticalBoardModal = m.openCriticalBoardModal;
+                m.openCriticalBoardModal(tab);
+            }).catch(function(err) {
+                console.warn("Retrying relative import for Critical Board:", err);
+                import('./js/modules/customFontManager.js').then(function(m) {
+                    window.openCriticalBoardModal = m.openCriticalBoardModal;
+                    m.openCriticalBoardModal(tab);
+                }).catch(function(finalErr) {
+                    alert("Critical Board could not be loaded: " + (finalErr.message || finalErr));
+                });
+            });
+        };
+
         (function() {
             try {
                 var mode = localStorage.getItem('pricelister_color_mode') || 'light';
@@ -286,24 +311,6 @@
                 </div>
                 
                 <div class="nav-section">
-                    <h3 class="nav-section-title">ACCOUNT</h3>
-                    <ul class="nav-tree">
-                        <li>
-                            <a href="#/profile" class="nav-item" data-route="profile" title="My Profile">
-                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
-                                <span class="nav-label">My Profile</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#/mailbox" class="nav-item" data-route="mailbox" title="Mailbox">
-                                <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span>
-                                <span class="nav-label">Mailbox</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="nav-section">
                     <h3 class="nav-section-title">WORKSPACE SETTINGS</h3>
                     <ul class="nav-tree">
                         <li>
@@ -318,6 +325,7 @@
                                 <span class="nav-label">Settings</span>
                             </a>
                         </li>
+
                         <li id="nav-item-customer-panel-wrapper">
                             <a href="#/customer-panel" class="nav-item" data-route="customer-panel" id="nav-customer-panel" title="Setup Customer Catalog & Shopping Panel (Admins & Co-admins)">
                                 <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg></span>
@@ -337,7 +345,8 @@
                 </div>
             </div>
             
-            <div class="sidebar-footer">
+            <!-- Bottom account tab removed from navigation bar per user request -->
+            <div class="sidebar-footer" style="display:none !important;">
                 <div class="sidebar-user-elevated" id="sidebar-user-card" style="cursor:pointer;" title="Click to manage accounts / profile">
                     <div style="display:flex; align-items:center; gap:0.65rem; overflow:hidden; flex:1;">
                         <div class="user-avatar-container" style="position:relative; width:34px; height:34px; flex-shrink:0;">
@@ -420,7 +429,9 @@
     <script type="module">
         import { initAuthHandler } from '/js/auth-handler.js';
         import { initWorkspace } from '/js/workspace.js';
-        import { initCustomFontAndLayout } from '/js/modules/customFontManager.js';
+        import { initCustomFontAndLayout, openCriticalBoardModal } from '/js/modules/customFontManager.js';
+        
+        window.openCriticalBoardModal = openCriticalBoardModal;
         
         const boot = async () => {
             try {

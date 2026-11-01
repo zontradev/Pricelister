@@ -23,36 +23,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script type="module" src="/config.js"></script>
 
-    <!-- Clean URL Initializer & Service Worker: Immediately strip index.html and # hash symbol, showing /home (or /explore, etc.) -->
+    <!-- Multi-View Routing State (Hash-based / Default safe routing) -->
     <script>
         (function() {
             try {
                 if ('serviceWorker' in navigator && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
-                    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(e) {
+                    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function(e) {
                         console.debug("Service worker skipped on index:", e);
                     });
                 }
-
-                var path = window.location.pathname || '';
-                var hash = window.location.hash || '';
-                var savedLandingView = '';
-                try { savedLandingView = sessionStorage.getItem('pricelister_last_landing_view') || ''; } catch(e) {}
-
-                var validViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms'];
-                var pathView = path.replace(/\/index\.html$/i, '').replace(/^\/+/, '').toLowerCase();
-                var hashView = hash.replace(/^#\/?/, '').replace(/\/$/, '').toLowerCase();
-
-                var view = 'home';
-                if (validViews.includes(pathView)) {
-                    view = pathView;
-                } else if (validViews.includes(hashView)) {
-                    view = hashView;
-                } else if (savedLandingView && validViews.includes(savedLandingView.toLowerCase())) {
-                    view = savedLandingView.toLowerCase();
-                }
-
-                var cleanPath = '/' + view;
-                window.history.replaceState({ view: view }, '', cleanPath);
             } catch(e) {}
         })();
     </script>
@@ -2151,7 +2130,14 @@
             const el = document.getElementById('loader-error');
             if (el) {
                 el.style.display = 'block';
-                el.innerHTML = '<strong>Script Error:</strong> ' + (e.message || 'Unknown');
+                let msg = '<strong>Script Error:</strong> ' + (e.message || 'Unknown');
+                if (e.filename) {
+                    msg += '<br><small><strong>File:</strong> ' + e.filename + ' (Line ' + e.lineno + ', Col ' + e.colno + ')</small>';
+                }
+                if (e.error && e.error.stack) {
+                    msg += '<pre style="text-align:left; background:rgba(255,0,0,0.08); padding:8px; border-radius:4px; font-size:11px; margin-top:6px; overflow-x:auto;">' + e.error.stack + '</pre>';
+                }
+                el.innerHTML = msg;
                 const s = document.querySelector('.spinner');
                 if (s) s.style.display = 'none';
             }
@@ -2160,7 +2146,11 @@
             const el = document.getElementById('loader-error');
             if (el) {
                 el.style.display = 'block';
-                el.innerHTML = '<strong>Promise Error:</strong> ' + (e.reason?.message || 'Unknown');
+                let msg = '<strong>Promise Error:</strong> ' + (e.reason?.message || 'Unknown');
+                if (e.reason && e.reason.stack) {
+                    msg += '<pre style="text-align:left; background:rgba(255,0,0,0.08); padding:8px; border-radius:4px; font-size:11px; margin-top:6px; overflow-x:auto;">' + e.reason.stack + '</pre>';
+                }
+                el.innerHTML = msg;
                 const s = document.querySelector('.spinner');
                 if (s) s.style.display = 'none';
             }
@@ -2197,9 +2187,9 @@
                 <div class="header-actions" id="landing-header-actions" style="display:flex; align-items:center; gap:0.6rem;">
                     <!-- 1. Logged Out State: (Login) (Enter Workspace ->) 2 Buttons -->
                     <div id="header-auth-logged-out" style="display:flex; align-items:center; gap:0.55rem;">
-                        <button type="button" id="header-btn-login" class="btn-glass-cta" style="padding:0.48rem 1.15rem; font-weight:700; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer;">
+                        <a href="login.html" id="header-btn-login" class="btn-glass-cta" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; padding:0.48rem 1.15rem; font-weight:700; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer;">
                             <span>Login</span>
-                        </button>
+                        </a>
                         <button type="button" id="header-btn-enter-ws" class="btn-glass-cta open-login-modal" style="padding:0.48rem 1.15rem; font-weight:700; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer; display:flex; align-items:center; gap:0.4rem;">
                             <span>Enter Workspace</span>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
@@ -5034,6 +5024,13 @@
                     <span class="spinner-sm" aria-hidden="true"></span>
                 </button>
 
+                <!-- DEDICATED LOGIN / EMAIL AUTH BUTTON -->
+                <a href="login.html" id="modal-dedicated-login-btn" class="btn"
+                    style="text-decoration:none; width:100%; padding:0.75rem 1rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:0.5rem; background:#ffffff; color:#0f172a; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.92rem; transition:all 0.15s ease;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    <span>Sign in with Email / Dedicated Login &rarr;</span>
+                </a>
+
                 <!-- OR DIVIDER -->
                 <div style="display:flex; align-items:center; gap:0.75rem; margin:0.25rem 0;">
                     <div style="flex:1; height:1px; background:#e2e8f0;"></div>
@@ -5632,18 +5629,22 @@
                 // Scroll to top of main content
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // Update URL location cleanly without revealing index.html or #
-                const cleanUrl = getCleanLandingUrl(name);
+                // Keep default browser URL safe without forcing root path redirects
                 try {
                     sessionStorage.setItem('pricelister_last_landing_view', name);
-                    if (push) {
-                        history.pushState({ view: name }, '', cleanUrl);
+                    if (name !== 'home') {
+                        if (push) {
+                            history.pushState({ view: name }, '', '#' + name);
+                        } else {
+                            history.replaceState({ view: name }, '', '#' + name);
+                        }
                     } else {
-                        history.replaceState({ view: name }, '', cleanUrl);
+                        // On home view, do not append /home
+                        if (window.location.hash) {
+                            history.replaceState({ view: 'home' }, '', window.location.pathname);
+                        }
                     }
-                } catch (e) {
-                    try { history.replaceState({ view: name }, '', '#' + name); } catch (err) {}
-                }
+                } catch (e) {}
             }
 
             // Universal Click handlers for nav links and landing routes

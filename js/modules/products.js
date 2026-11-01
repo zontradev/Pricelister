@@ -25,13 +25,13 @@ export const renderProducts = async (container, workspaceId) => {
     const pageSize = 15;
     let selectedProductIds = new Set();
     const layoutDisplayNames = {
-        'list': 'List',
-        'large_list': 'Large List',
-        'grid_4': 'Grid (4x4)',
-        'hexa': 'Hexa (6x6)',
-        'octa': 'Octa (8x8)',
-        'hexadecagon': '16x16 Cube',
-        'hexa_octa': '32x32 Cube'
+        'list': 'List (Default Table)',
+        'excel': 'EXCLE VIEW',
+        'grid_4': 'Grid ( 4x )',
+        'hexa': 'Grid ( HEXA )',
+        'octa': 'Grid ( OCTA )',
+        'hexadecagon': 'Grid (HEXADECA )',
+        'hexa_octa': 'Grid ( OCXADEGON )'
     };
 
     // Fetch all historical invoices to power real product sales analytics
@@ -1400,8 +1400,36 @@ export const renderProducts = async (container, workspaceId) => {
                     </div>
                 </div>
 
-                <!-- GRID / LARGE-LIST CARDS VIEW (for all 6 finding layouts) -->
-                <div id="prd-grid-card-container" style="${currentLayout !== 'list' ? 'display:block;' : 'display:none;'}">
+                <!-- EXCEL SPREADSHEET VIEW (for EXCLE VIEW mode) -->
+                <div id="prd-excel-card-container" class="prd-excel-wrapper" style="${currentLayout === 'excel' ? 'display:block;' : 'display:none;'}">
+                    <div class="prd-excel-scroll-container">
+                        <table class="prd-excel-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px; text-align:center;">
+                                        <input type="checkbox" id="prd-excel-select-all" style="cursor:pointer; width:14px; height:14px; accent-color:#0f172a; border-radius:3px;">
+                                    </th>
+                                    <th style="width:42px; text-align:center;">IMG</th>
+                                    <th style="min-width:220px; text-align:left;">Product Name</th>
+                                    <th style="min-width:110px; text-align:right;">Quantity</th>
+                                    <th style="min-width:130px; text-align:left;">Category</th>
+                                    <th style="min-width:110px; text-align:left;">Size / Weight</th>
+                                    <th style="min-width:120px; text-align:right;">Sale Price</th>
+                                    <th style="min-width:110px; text-align:right;">Wholesale</th>
+                                    <th style="min-width:110px; text-align:right;">Base Cost</th>
+                                    <th style="min-width:130px; text-align:left;">UPC / Barcode</th>
+                                    <th style="min-width:100px; text-align:center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prd-excel-list-body">
+                                <!-- Dynamic Excel rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- GRID / CUBE CARDS VIEW (for all 5 Grid Finding layouts) -->
+                <div id="prd-grid-card-container" style="${(currentLayout !== 'list' && currentLayout !== 'excel') ? 'display:block;' : 'display:none;'}">
                     <!-- Injected dynamically -->
                 </div>
             </div>
@@ -1482,80 +1510,83 @@ export const renderProducts = async (container, workspaceId) => {
                         </div>
 
                         <div class="prd-layout-selector layout-drawer-options" id="prd-layout-selector">
-                            <!-- 1. Default List -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'list' ? 'active' : ''}" data-layout="list">
+                            <!-- 1. EXCLE VIEW (New Excel Spreadsheet Mode) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'excel' ? 'active' : ''}" data-layout="excel" style="border-radius: 4px !important;">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                                        <strong style="font-size:0.86rem; color:var(--text-primary);">List (Default Table)</strong>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><line x1="10" y1="9" x2="10" y2="9.01"></line></svg>
+                                        <div>
+                                            <strong style="font-size:0.88rem; color:#0f172a; display:block;">EXCLE VIEW</strong>
+                                            <span style="font-size:0.72rem; color:#64748b;">[] Image then Name | Quantity | Smooth Scroll</span>
+                                        </div>
                                     </div>
-                                    <span class="badge" style="background:var(--surface-100); color:var(--text-secondary); border:1px solid var(--border-color); font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Table</span>
+                                    <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Excel</span>
                                 </div>
                             </button>
 
-                            <!-- 2. Large List -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'large_list' ? 'active' : ''}" data-layout="large_list">
-                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-                                    <div style="display:flex; align-items:center; gap:0.6rem;">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="7" rx="2"></rect><rect x="3" y="14" width="18" height="7" rx="2"></rect></svg>
-                                        <strong style="font-size:0.86rem; color:#0f172a;">Large List</strong>
-                                    </div>
-                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Expanded</span>
-                                </div>
-                            </button>
-
-                            <!-- 3. Grid 4x4 (4 Cube View) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'grid_4' ? 'active' : ''}" data-layout="grid_4">
+                            <!-- 2. Grid ( 4x ) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'grid_4' ? 'active' : ''}" data-layout="grid_4" style="border-radius: 4px !important;">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                                        <strong style="font-size:0.86rem; color:#0f172a;">Grid 4x4 (4 Cube View)</strong>
+                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid ( 4x )</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">4 Cubes / Row</span>
                                 </div>
                             </button>
 
-                            <!-- 4. Hexa (6x6 Grid) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa' ? 'active' : ''}" data-layout="hexa">
+                            <!-- 3. Grid ( HEXA ) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa' ? 'active' : ''}" data-layout="hexa" style="border-radius: 4px !important;">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z"></path></svg>
-                                        <strong style="font-size:0.86rem; color:#0f172a;">Hexa (6 per Row)</strong>
+                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid ( HEXA )</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">6 Cubes / Row</span>
                                 </div>
                             </button>
 
-                            <!-- 5. Octa (8x8 Grid) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'octa' ? 'active' : ''}" data-layout="octa">
+                            <!-- 4. Grid ( OCTA ) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'octa' ? 'active' : ''}" data-layout="octa" style="border-radius: 4px !important;">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon></svg>
-                                        <strong style="font-size:0.86rem; color:#0f172a;">Octa (8 per Row)</strong>
+                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid ( OCTA )</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">8 Cubes / Row</span>
                                 </div>
                             </button>
 
-                            <!-- 6. Hexadecagon (16x16 Grid - 16 cubes in a row for maximum products) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexadecagon' ? 'active' : ''}" data-layout="hexadecagon">
+                            <!-- 5. Grid (HEXADECA ) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexadecagon' ? 'active' : ''}" data-layout="hexadecagon" style="border-radius: 4px !important;">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
-                                        <strong style="font-size:0.86rem; color:#0f172a;">16x16 Cube (16 in a Row)</strong>
+                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid (HEXADECA )</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">16 Cubes / Row</span>
                                 </div>
                             </button>
 
-                            <!-- 7. Hexa-Octa (32x32 Grid - 32 cubes in a row for maximum products) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa_octa' ? 'active' : ''}" data-layout="hexa_octa">
+                            <!-- 6. Grid ( OCXADEGON ) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa_octa' ? 'active' : ''}" data-layout="hexa_octa" style="border-radius: 4px !important;">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><line x1="2" y1="9" x2="22" y2="9"></line><line x1="2" y1="15" x2="22" y2="15"></line></svg>
-                                        <strong style="font-size:0.86rem; color:#0f172a;">32x32 Cube (32 in a Row)</strong>
+                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid ( OCXADEGON )</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">32 Cubes / Row</span>
+                                </div>
+                            </button>
+
+                            <!-- 7. Default Table (List) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'list' ? 'active' : ''}" data-layout="list" style="border-radius: 4px !important;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                        <strong style="font-size:0.88rem; color:var(--text-primary);">List (Default Table)</strong>
+                                    </div>
+                                    <span class="badge" style="background:var(--surface-100); color:var(--text-secondary); border:1px solid var(--border-color); font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Table</span>
                                 </div>
                             </button>
                         </div>
@@ -1647,9 +1678,21 @@ export const renderProducts = async (container, workspaceId) => {
         const countEl = container.querySelector('#product-count');
         if (countEl) countEl.textContent = `${totalItems} Product${totalItems === 1 ? '' : 's'}`;
 
-        // Toggle Table vs Grid Container cleanly
+        // Toggle Table vs Excel vs Grid Container cleanly
+        const excelCardContainer = container.querySelector('#prd-excel-card-container');
+        const excelTbody = container.querySelector('#prd-excel-list-body');
+
         if (currentLayout === 'list') {
             if (tableCardContainer) tableCardContainer.style.setProperty('display', 'block', 'important');
+            if (excelCardContainer) excelCardContainer.style.setProperty('display', 'none', 'important');
+            if (gridCardContainer) {
+                gridCardContainer.style.setProperty('display', 'none', 'important');
+                gridCardContainer.className = '';
+                gridCardContainer.innerHTML = '';
+            }
+        } else if (currentLayout === 'excel') {
+            if (tableCardContainer) tableCardContainer.style.setProperty('display', 'none', 'important');
+            if (excelCardContainer) excelCardContainer.style.setProperty('display', 'block', 'important');
             if (gridCardContainer) {
                 gridCardContainer.style.setProperty('display', 'none', 'important');
                 gridCardContainer.className = '';
@@ -1657,10 +1700,10 @@ export const renderProducts = async (container, workspaceId) => {
             }
         } else {
             if (tableCardContainer) tableCardContainer.style.setProperty('display', 'none', 'important');
+            if (excelCardContainer) excelCardContainer.style.setProperty('display', 'none', 'important');
             if (gridCardContainer) {
                 gridCardContainer.style.setProperty('display', 'grid', 'important');
                 const gridClassMap = {
-                    'large_list': 'prd-large-list',
                     'grid_4': 'prd-grid prd-grid-4',
                     'hexa': 'prd-grid prd-grid-hexa',
                     'octa': 'prd-grid prd-grid-octa',
@@ -1673,6 +1716,9 @@ export const renderProducts = async (container, workspaceId) => {
 
         if (totalItems === 0) {
             tbody.innerHTML = `<tr><td colspan="7" style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted);"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></td></tr>`;
+            if (excelTbody) {
+                excelTbody.innerHTML = `<tr><td colspan="11" style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted);"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></td></tr>`;
+            }
             if (gridCardContainer) {
                 gridCardContainer.innerHTML = `<div style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted); grid-column: 1 / -1;"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></div>`;
             }
@@ -1808,50 +1854,87 @@ export const renderProducts = async (container, workspaceId) => {
             `;
         }).join('');
 
-        // 2. Render Cards for Large List & Finding Grids
-        if (gridCardContainer) {
-            if (currentLayout === 'large_list') {
-                gridCardContainer.innerHTML = pageItems.map(prd => {
-                    const catObj = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category);
-                    const catName = catObj?.name || prd.category || 'General';
-                    const salePriceFormatted = formatCurrency(prd.salePrice || 0);
-                    const qty = Number(prd.quantity) || 0;
-                    const skuCode = prd.upcCode ? `UPC: ${prd.upcCode}` : (prd.uniqueId ? `#${prd.uniqueId.substring(0, 8)}` : `#${prd.id.substring(0, 8)}`);
+        // 2. Render Rows for EXCLE VIEW (Smooth spreadsheet experience with [] *image then name | Quantity)
+        if (excelTbody && currentLayout === 'excel') {
+            excelTbody.innerHTML = pageItems.map((prd, idx) => {
+                const catObj = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category);
+                const catName = catObj?.name || prd.category || 'General';
+                const qty = Number(prd.quantity) || 0;
+                const salePriceFormatted = formatCurrency(prd.salePrice || 0);
+                const wholesaleFormatted = formatCurrency(prd.price || 0);
+                const costFormatted = !userRestrictions.cannotSeeCost ? formatCurrency(prd.basePrice || 0) : '—';
+                const isCreatorSelf = (prd.creatorId && (
+                    prd.creatorId === currentUser.uid || 
+                    (currentUser.email && prd.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase())
+                )) || (prd.createdBy && (
+                    prd.createdBy === currentUser.uid || 
+                    (currentUser.email && prd.createdBy.toLowerCase() === (currentUser.email || '').toLowerCase())
+                ));
+                const canEdit = !userRestrictions.disableUpdate && (!userRestrictions.disableUpdateOthers || isCreatorSelf);
+                const canDelete = !userRestrictions.disableDelete && (!userRestrictions.disableDeleteOthers || isCreatorSelf);
 
-                    return `
-                        <div class="prd-large-list-card" data-id="${prd.id}">
-                            <div style="display:flex; align-items:center; padding-right:0.65rem;" onclick="event.stopPropagation();">
-                                <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px; accent-color:#0f172a; border-radius:4px;">
+                return `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <!-- 1. Checkbox [] -->
+                        <td style="width:36px; text-align:center; padding:0.45rem 0.5rem; background:#ffffff;">
+                            <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:15px; height:15px; accent-color:#0f172a; border-radius:3px;">
+                        </td>
+                        <!-- 2. Image Thumbnail -->
+                        <td style="width:42px; text-align:center; padding:0.35rem 0.5rem;">
+                            <div class="prd-excel-thumb-cell view-prd-img" data-id="${prd.id}" title="Click to view full image & details">
+                                ${prd.imageUri 
+                                    ? `<img src="${prd.imageUri}" alt="${prd.name}">` 
+                                    : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>`}
                             </div>
-                            <div style="display:flex; align-items:center; gap:1.15rem; flex:1; min-width:240px;">
-                                <div class="prd-thumb-box view-prd-img" data-id="${prd.id}" style="width:68px; height:68px; border-radius:12px; cursor:pointer; flex-shrink:0;">
-                                    ${prd.imageUri ? `<img src="${prd.imageUri}" alt="${prd.name}">` : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>`}
-                                </div>
-                                <div>
-                                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                                        <strong class="view-prd-title" data-id="${prd.id}" style="cursor:pointer; color:var(--text-primary); font-size:1rem; font-weight:700;">${prd.name}</strong>
-                                        <span class="badge" style="background:var(--surface-100); color:var(--text-primary); font-size:0.72rem; font-weight:700; padding:2px 7px; border-radius:5px; border:1px solid var(--border-color);">${catName}</span>
-                                    </div>
-                                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px; display:flex; gap:0.65rem; align-items:center;">
-                                        <span>${prd.sizeWeight || 'Standard'}</span>
-                                        <span>&bull;</span>
-                                        <code style="font-family:monospace; color:var(--text-muted);">${skuCode}</code>
-                                    </div>
-                                </div>
+                        </td>
+                        <!-- 3. Product Name -->
+                        <td style="padding:0.45rem 0.65rem;">
+                            <strong class="view-prd-title" data-id="${prd.id}" style="cursor:pointer; color:#0f172a; font-weight:700; font-size:0.86rem;" title="Click to inspect">${prd.name}</strong>
+                        </td>
+                        <!-- 4. Quantity -->
+                        <td style="text-align:right; padding:0.45rem 0.65rem; font-weight:700; color:${qty <= 0 ? '#dc2626' : (qty <= 5 ? '#d97706' : '#059669')};">
+                            ${qty}
+                        </td>
+                        <!-- 5. Category -->
+                        <td style="padding:0.45rem 0.65rem; color:#475569;">
+                            <span style="background:#f1f5f9; padding:2px 6px; border-radius:3px; border:1px solid #e2e8f0; font-size:0.75rem;">${catName}</span>
+                        </td>
+                        <!-- 6. Size / Weight -->
+                        <td style="padding:0.45rem 0.65rem; color:#64748b;">
+                            ${prd.sizeWeight || '—'}
+                        </td>
+                        <!-- 7. Sale Price -->
+                        <td style="text-align:right; padding:0.45rem 0.65rem; font-weight:800; color:#0f172a;">
+                            ${salePriceFormatted}
+                        </td>
+                        <!-- 8. Wholesale -->
+                        <td style="text-align:right; padding:0.45rem 0.65rem; color:#475569;">
+                            ${wholesaleFormatted}
+                        </td>
+                        <!-- 9. Base Cost -->
+                        <td style="text-align:right; padding:0.45rem 0.65rem; color:#64748b; font-family:monospace;">
+                            ${costFormatted}
+                        </td>
+                        <!-- 10. UPC / Barcode -->
+                        <td style="padding:0.45rem 0.65rem; font-family:monospace; font-size:0.75rem; color:#64748b;">
+                            ${prd.upcCode || (prd.uniqueId ? `#${prd.uniqueId.substring(0, 8)}` : '—')}
+                        </td>
+                        <!-- 11. Actions -->
+                        <td style="text-align:center; padding:0.35rem 0.5rem;">
+                            <div style="display:inline-flex; gap:0.25rem; align-items:center;">
+                                <button class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:2px 6px; font-size:0.72rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff;" title="View Detail">View</button>
+                                ${canEdit ? `<button class="btn btn-sm edit-prd" data-id="${prd.id}" style="padding:2px 6px; font-size:0.72rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff;" title="Edit">✏️</button>` : ''}
+                                ${canDelete ? `<button class="btn btn-sm del-prd" data-id="${prd.id}" style="padding:2px 6px; font-size:0.72rem; border-radius:4px; border:1px solid #fecaca; background:#ffffff; color:#dc2626;" title="Delete">🗑</button>` : ''}
                             </div>
-                            <div style="display:flex; align-items:center; gap:1.5rem;">
-                                <div style="text-align:right;">
-                                    <div style="font-weight:800; font-size:1.25rem; color:var(--text-primary);">${salePriceFormatted}</div>
-                                    <div style="font-size:0.8rem; font-weight:700; color:${qty > 0 ? '#059669' : '#dc2626'};">${qty > 0 ? `${qty} in stock` : 'Out of stock'}</div>
-                                </div>
-                                <button type="button" class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:0.4rem 0.85rem; font-size:0.85rem; font-weight:700; background:var(--surface-50); color:var(--text-primary); border:1px solid var(--border-color); border-radius:8px;">
-                                    View &rsaquo;
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } else if (currentLayout === 'hexa_octa') {
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 3. Render Cards for Finding Grids
+        if (gridCardContainer && currentLayout !== 'list' && currentLayout !== 'excel') {
+            if (currentLayout === 'hexa_octa') {
                 // 32x32 Cube: Photo square 1:1, followed by price only (no name)
                 gridCardContainer.innerHTML = pageItems.map(prd => {
                     const salePriceFormatted = formatCurrency(prd.salePrice || 0);
@@ -1917,14 +2000,11 @@ export const renderProducts = async (container, workspaceId) => {
             }
         }
         const selectAll = container.querySelector('#prd-select-all');
-        if (selectAll) {
-            const pageChk = container.querySelectorAll('.prd-select-chk');
-            if (pageChk.length > 0) {
-                selectAll.checked = Array.from(pageChk).every(c => c.checked);
-            } else {
-                selectAll.checked = false;
-            }
-        }
+        const excelSelectAll = container.querySelector('#prd-excel-select-all');
+        const pageChk = container.querySelectorAll('.prd-select-chk');
+        const isAllChecked = pageChk.length > 0 && Array.from(pageChk).every(c => c.checked);
+        if (selectAll) selectAll.checked = isAllChecked;
+        if (excelSelectAll) excelSelectAll.checked = isAllChecked;
     }
 
     function attachListEvents() {
@@ -2512,8 +2592,8 @@ export const renderProducts = async (container, workspaceId) => {
             });
         });
 
-        // 4. Select All Checkbox
-        container.querySelector('#prd-select-all')?.addEventListener('change', (e) => {
+        // 4. Select All Checkbox (List and Excel Views)
+        const handleSelectAllChange = (e) => {
             const isChecked = e.currentTarget.checked;
             container.querySelectorAll('.prd-select-chk').forEach(chk => {
                 chk.checked = isChecked;
@@ -2523,8 +2603,15 @@ export const renderProducts = async (container, workspaceId) => {
                     else selectedProductIds.delete(id);
                 }
             });
+            const sel1 = container.querySelector('#prd-select-all');
+            const sel2 = container.querySelector('#prd-excel-select-all');
+            if (sel1) sel1.checked = isChecked;
+            if (sel2) sel2.checked = isChecked;
             updateBatchBar();
-        });
+        };
+
+        container.querySelector('#prd-select-all')?.addEventListener('change', handleSelectAllChange);
+        container.querySelector('#prd-excel-select-all')?.addEventListener('change', handleSelectAllChange);
 
         // 5. Multi-Product Batch Actions
         // Batch Action A: Change Category

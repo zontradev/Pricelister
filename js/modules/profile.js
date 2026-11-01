@@ -5,6 +5,7 @@ import { getInvoiceService } from '../services/invoiceService.js';
 import { getPeopleService } from '../services/peopleService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { getSettingsService } from '../services/settingsService.js';
+import { userDataSafetyService } from '../services/userDataSafetyService.js';
 import { showAlert } from '../alert-handler.js';
 import { getRoleBadgeHtml, openAccountSwitcherModal, getUserRestrictions } from '../auth-handler.js';
 import { openExportModal } from './importExportModal.js';
@@ -167,6 +168,12 @@ export const renderProfile = async (container, workspaceId) => {
         const roleUpper = (role || 'WORKER').toUpperCase();
         const isCreator = roleUpper === 'CREATOR_ADMIN' || roleUpper === 'CREATOR' || isAdmin;
 
+        const isGoogleUser = Boolean(
+            (currentUser.providerData && currentUser.providerData.some(p => p.providerId === 'google.com')) || 
+            currentUser.authProvider === 'google.com' || 
+            currentUser.authProvider === 'google'
+        );
+
         let restrictionsCardHtml = '';
         if (isCreator) {
             restrictionsCardHtml = `
@@ -299,7 +306,15 @@ export const renderProfile = async (container, workspaceId) => {
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span style="color:var(--text-secondary);">Auth Provider</span>
-                                <span style="color:var(--text-primary); font-weight:500;">Google Authentication</span>
+                                <span style="color:var(--text-primary); font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+                                    ${isGoogleUser ? `
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                                        Google OAuth
+                                    ` : `
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                        Email & Password
+                                    `}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -416,6 +431,565 @@ export const renderProfile = async (container, workspaceId) => {
             </div>
 
             ${restrictionsCardHtml}
+
+            <!-- ======================================================== -->
+            <!-- SECURITY & PASSWORD MANAGEMENT                            -->
+            <!-- ======================================================== -->
+            ${isGoogleUser ? `
+                <div class="card" style="padding: 1.5rem 1.75rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); margin-bottom: 2rem; border-left: 4px solid #4285F4; background: var(--bg-card);">
+                    <div style="display:flex; align-items:center; gap:1rem;">
+                        <div style="width:44px; height:44px; border-radius:12px; background:rgba(66, 133, 244, 0.1); color:#4285F4; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="22" height="22" viewBox="0 0 48 48">
+                                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 style="margin:0 0 0.25rem 0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">Google Account Security</h4>
+                            <p style="margin:0; font-size:0.85rem; color:var(--text-secondary);">You are signed in with Google Authentication. Password changes are handled securely by Google &bull; In-app password reset is not required.</p>
+                        </div>
+                    </div>
+                </div>
+            ` : `
+                <div class="card" style="padding: 1.75rem 2rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); margin-bottom: 2rem;">
+                    <!-- Card Top Header -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.35rem; border-bottom:1px solid var(--border-color); padding-bottom:0.85rem;">
+                        <div>
+                            <h3 style="margin:0; font-size:1.18rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                Security & Password
+                            </h3>
+                            <p style="margin:0.25rem 0 0 0; font-size:0.84rem; color:var(--text-secondary);">Choose your password action to enter the dedicated management panel.</p>
+                        </div>
+                        <span class="badge" style="background:rgba(225,29,72,0.1); color:#e11d48; font-weight:700; font-size:0.75rem;">Email / Password</span>
+                    </div>
+
+                    <!-- 1. HUB SELECTION VIEW (Options not shown directly, choose first) -->
+                    <div id="prof-pwd-hub-selection" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
+                        <!-- CHOICE 1: UPDATE PASSWORD -->
+                        <div id="prof-card-opt-update" style="border:1.5px solid var(--border-color); border-radius:14px; padding:1.4rem; background:var(--surface-50); cursor:pointer; transition:all 0.2s ease; display:flex; flex-direction:column; justify-content:space-between; gap:1rem;">
+                            <div style="display:flex; align-items:flex-start; gap:0.85rem;">
+                                <div style="width:42px; height:42px; border-radius:10px; background:rgba(24,24,27,0.08); display:flex; align-items:center; justify-content:center; color:var(--text-primary); flex-shrink:0;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </div>
+                                <div>
+                                    <strong style="display:block; font-size:1.02rem; font-weight:700; color:var(--text-primary); margin-bottom:0.25rem;">Update Password</strong>
+                                    <span style="font-size:0.82rem; color:var(--text-secondary); line-height:1.45; display:block;">Change your password immediately using your current active password.</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:flex-end;">
+                                <button type="button" class="btn btn-sm btn-primary" style="font-weight:700; pointer-events:none; border-radius:8px;">
+                                    Update Password &rarr;
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- CHOICE 2: RESET PASSWORD (BY OTP) -->
+                        <div id="prof-card-opt-reset" style="border:1.5px solid var(--border-color); border-radius:14px; padding:1.4rem; background:var(--surface-50); cursor:pointer; transition:all 0.2s ease; display:flex; flex-direction:column; justify-content:space-between; gap:1rem;">
+                            <div style="display:flex; align-items:flex-start; gap:0.85rem;">
+                                <div style="width:42px; height:42px; border-radius:10px; background:rgba(225,29,72,0.1); display:flex; align-items:center; justify-content:center; color:#e11d48; flex-shrink:0;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                </div>
+                                <div>
+                                    <strong style="display:block; font-size:1.02rem; font-weight:700; color:var(--text-primary); margin-bottom:0.25rem;">Reset Password</strong>
+                                    <span style="font-size:0.82rem; color:var(--text-secondary); line-height:1.45; display:block;">Forgot your current password? Verify with a 6-digit OTP code sent to your email.</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:flex-end;">
+                                <button type="button" class="btn btn-sm btn-outline" style="font-weight:700; pointer-events:none; border-radius:8px; color:#e11d48; border-color:#e11d48;">
+                                    Reset by OTP &rarr;
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. DEDICATED PANEL: UPDATE PASSWORD (USING CURRENT PASSWORD) -->
+                    <div id="prof-panel-update-pwd" style="display:none;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+                            <button type="button" class="btn btn-sm btn-secondary btn-prof-back-hub" style="font-weight:700; display:flex; align-items:center; gap:0.35rem;">
+                                &larr; Back to Options
+                            </button>
+                            <span style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">Update Using Current Password</span>
+                        </div>
+
+                        <form id="prof-change-pwd-form" style="max-width:440px; display:flex; flex-direction:column; gap:1.1rem;">
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">Current Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-curr-pwd" required placeholder="Enter current password" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-curr-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">New Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-new-pwd" required minlength="6" placeholder="At least 6 characters" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-new-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">Confirm New Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-conf-pwd" required minlength="6" placeholder="Repeat new password" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-conf-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <button type="submit" id="btn-prof-save-pwd" class="btn btn-primary" style="font-weight:700; display:flex; align-items:center; gap:0.4rem;">
+                                    <span>Update Password</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 3. DEDICATED PANEL: RESET PASSWORD (BY EMAIL OTP) -->
+                    <div id="prof-panel-reset-otp" style="display:none;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+                            <button type="button" class="btn btn-sm btn-secondary btn-prof-back-hub" style="font-weight:700; display:flex; align-items:center; gap:0.35rem;">
+                                &larr; Back to Options
+                            </button>
+                            <span style="font-size:0.8rem; font-weight:700; color:#e11d48;">Reset by Email OTP</span>
+                        </div>
+
+                        <!-- Step 1: Send OTP -->
+                        <div id="prof-otp-step-1" style="max-width:440px;">
+                            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem; line-height:1.5;">
+                                We'll send a 6-digit verification code to your registered email address <strong>${email}</strong>.
+                            </p>
+                            <button type="button" id="btn-prof-trigger-otp" class="btn btn-primary" style="font-weight:700; background:#e11d48; border-color:#e11d48;">
+                                Send 6-Digit OTP Code &rarr;
+                            </button>
+                        </div>
+
+                        <!-- Step 2: Verify OTP FIRST (Password inputs are locked & hidden) -->
+                        <div id="prof-otp-step-2" style="display:none; max-width:440px; flex-direction:column; gap:1rem;">
+                            <div style="background:rgba(225, 29, 72, 0.08); padding:0.85rem 1rem; border-radius:10px; font-size:0.82rem; color:#be123c;">
+                                Verification code generated! <span id="prof-otp-hint" style="font-weight:700; display:block; margin-top:4px;"></span>
+                            </div>
+
+                            <div style="text-align:center;">
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.5rem; color:var(--text-primary);">Enter 6-Digit OTP Code</label>
+                                <div style="display:flex; justify-content:center; gap:0.55rem; margin-bottom:0.75rem;" id="prof-otp-blocks-wrap">
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="prof-digit-box" data-idx="0" style="width:50px; height:56px; text-align:center; font-family:var(--custom-user-font, 'Outfit', sans-serif); font-variant-numeric:tabular-nums; font-size:1.7rem; font-weight:800; border-radius:12px; border:2px solid var(--border-color); background:var(--surface-50); color:var(--text-primary); outline:none; transition:all 0.16s ease;">
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="prof-digit-box" data-idx="1" style="width:50px; height:56px; text-align:center; font-family:var(--custom-user-font, 'Outfit', sans-serif); font-variant-numeric:tabular-nums; font-size:1.7rem; font-weight:800; border-radius:12px; border:2px solid var(--border-color); background:var(--surface-50); color:var(--text-primary); outline:none; transition:all 0.16s ease;">
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="prof-digit-box" data-idx="2" style="width:50px; height:56px; text-align:center; font-family:var(--custom-user-font, 'Outfit', sans-serif); font-variant-numeric:tabular-nums; font-size:1.7rem; font-weight:800; border-radius:12px; border:2px solid var(--border-color); background:var(--surface-50); color:var(--text-primary); outline:none; transition:all 0.16s ease;">
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="prof-digit-box" data-idx="3" style="width:50px; height:56px; text-align:center; font-family:var(--custom-user-font, 'Outfit', sans-serif); font-variant-numeric:tabular-nums; font-size:1.7rem; font-weight:800; border-radius:12px; border:2px solid var(--border-color); background:var(--surface-50); color:var(--text-primary); outline:none; transition:all 0.16s ease;">
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="prof-digit-box" data-idx="4" style="width:50px; height:56px; text-align:center; font-family:var(--custom-user-font, 'Outfit', sans-serif); font-variant-numeric:tabular-nums; font-size:1.7rem; font-weight:800; border-radius:12px; border:2px solid var(--border-color); background:var(--surface-50); color:var(--text-primary); outline:none; transition:all 0.16s ease;">
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="prof-digit-box" data-idx="5" style="width:50px; height:56px; text-align:center; font-family:var(--custom-user-font, 'Outfit', sans-serif); font-variant-numeric:tabular-nums; font-size:1.7rem; font-weight:800; border-radius:12px; border:2px solid var(--border-color); background:var(--surface-50); color:var(--text-primary); outline:none; transition:all 0.16s ease;">
+                                </div>
+                            </div>
+
+                            <div>
+                                <button type="button" id="btn-prof-verify-otp-only" class="btn btn-primary" style="font-weight:700; background:#e11d48; border-color:#e11d48; width:100%;">
+                                    Verify OTP Code to Unlock &rarr;
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Unlocked Password Form (Only shown after valid OTP verification) -->
+                        <form id="prof-otp-step-3" style="display:none; max-width:440px; flex-direction:column; gap:1.1rem;">
+                            <div style="background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.3); padding:0.85rem 1rem; border-radius:10px; font-size:0.82rem; color:#059669; font-weight:700;">
+                                &#10004; OTP Code Verified! Password Reset Unlocked.
+                            </div>
+
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">New Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-otp-new-pwd" required minlength="6" placeholder="At least 6 characters" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-otp-new-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">Confirm New Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-otp-conf-pwd" required minlength="6" placeholder="Repeat new password" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-otp-conf-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <button type="submit" id="btn-prof-save-unlocked-pwd" class="btn btn-primary" style="font-weight:700; background:#e11d48; border-color:#e11d48; width:100%;">
+                                    Confirm & Update Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `}
+
+            <!-- ======================================================== -->
+            <!-- 1. PROFILE MAIN ITEMS (USER IDENTITY & WORKSPACE CARDS) -->
+            <!-- ======================================================== -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.75rem; margin-bottom: 2rem;">
+                
+                <!-- USER IDENTITY CARD -->
+                <div class="card" style="padding: 2rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:1.25rem; margin-bottom:1.5rem;">
+                            ${photoURL 
+                                ? `<img src="${photoURL}" alt="${displayName}" style="width:72px; height:72px; border-radius:50%; object-fit:cover; border:3px solid var(--surface-200); box-shadow:0 4px 10px rgba(0,0,0,0.1);">` 
+                                : `<div style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #334155, #0f172a); color:white; font-size:1.75rem; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">${initial}</div>`
+                            }
+                            <div>
+                                <h3 style="margin:0 0 0.25rem 0; font-size:1.35rem; color:var(--text-primary); font-weight:700;">${displayName}</h3>
+                                <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.5rem;">${email}</div>
+                                <div>
+                                    ${getRoleBadgeHtml(role)}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="background:var(--surface-50); padding:1.25rem; border-radius:10px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.75rem; font-size:0.88rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:var(--text-secondary);">Account Email</span>
+                                <strong style="color:var(--text-primary);">${email}</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:var(--text-secondary);">User ID</span>
+                                <code style="font-family:monospace; font-size:0.85rem; font-weight:700; color:var(--text-primary); background:rgba(0,0,0,0.05); padding:0.15rem 0.5rem; border-radius:4px;">${displayUserId}</code>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:var(--text-secondary);">Connected Workspace</span>
+                                <code style="font-family:monospace; font-size:0.85rem; font-weight:700; color:var(--primary); background:rgba(16,185,129,0.08); padding:0.15rem 0.5rem; border-radius:4px;">${displayWorkspaceId}</code>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:var(--text-secondary);">Active Role</span>
+                                <div>${getRoleBadgeHtml(role)}</div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:var(--text-secondary);">Auth Provider</span>
+                                <span style="color:var(--text-primary); font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+                                    ${isGoogleUser ? `
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                                        Google OAuth
+                                    ` : `
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                        Email & Password
+                                    `}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WORKSPACE DETAILS CARD -->
+                <div class="card" style="padding: 2rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
+                            <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary); font-weight:700;">
+                                Workspace Overview
+                            </h3>
+                            <span class="badge" style="background:${isVending ? 'rgba(16,185,129,0.12)' : 'rgba(100,116,139,0.1)'}; color:${isVending ? '#059669' : '#64748b'}; font-weight:700; font-size:0.75rem;">
+                                ${isVending ? 'Vending Mode Active' : 'Standard Mode'}
+                            </span>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:0.9rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
+                                <span style="color:var(--text-secondary);">Workspace Name</span>
+                                <strong style="color:var(--text-primary); font-size:1.05rem;">${workspaceName}</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
+                                <span style="color:var(--text-secondary);">Workspace Code</span>
+                                <code style="font-family:monospace; font-size:0.88rem; color:var(--primary); font-weight:700;">${displayWorkspaceId}</code>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
+                                <span style="color:var(--text-secondary);">Joined Workspace</span>
+                                <strong style="color:var(--text-primary);">${joinedDateFormatted}</strong>
+                            </div>
+                            
+                            <!-- Quick Metric Grid -->
+                            <div style="margin-top:0.75rem; display:grid; grid-template-columns: repeat(2, 1fr); gap:0.75rem;">
+                                <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
+                                    <div id="prof-overview-products" style="font-size:1.35rem; font-weight:800; color:var(--text-primary);">${liveProducts.length}</div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Active Products</div>
+                                </div>
+                                <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
+                                    <div id="prof-overview-invoices" style="font-size:1.35rem; font-weight:800; color:var(--primary);">${liveCustInvoices.length + liveBusInvoices.length}</div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Total Invoices</div>
+                                </div>
+                                <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
+                                    <div id="prof-overview-businesses" style="font-size:1.35rem; font-weight:800; color:var(--text-primary);">${liveBusinesses.length}</div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Businesses</div>
+                                </div>
+                                <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
+                                    <div id="prof-overview-customers" style="font-size:1.35rem; font-weight:800; color:var(--text-primary);">${liveCustomers.length + liveClients.length}</div>
+                                    <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Customers</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 2. MY CONTRIBUTIONS & CREATIONS DASHBOARD CARD           -->
+            <!-- ======================================================== -->
+            <div class="card" style="padding: 2rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); margin-bottom: 2rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-color); padding-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">
+                            ACTIVITY & CREATION DASHBOARD (LIVE)
+                        </div>
+                        <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                            My Creations & Activity Footprint
+                        </h3>
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--text-secondary); background:var(--surface-50); padding:0.4rem 0.85rem; border-radius:8px; border:1px solid var(--border-color);">
+                        Member since: <strong style="color:var(--text-primary);">${joinedDateFormatted}</strong>
+                    </div>
+                </div>
+
+                <!-- Clean Grid of Creation Metrics (Matching Android MembersScreen.kt) -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Products Created</span>
+                        <strong id="prof-metric-products" style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${initPCount}</strong>
+                    </div>
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Invoices Issued</span>
+                        <strong id="prof-metric-invoices" style="font-size:1.75rem; font-weight:800; color:var(--primary);">${initInvCount}</strong>
+                    </div>
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Categories Created</span>
+                        <strong id="prof-metric-categories" style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${initCatCount}</strong>
+                    </div>
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Clients Added</span>
+                        <strong id="prof-metric-clients" style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${initClientCount}</strong>
+                    </div>
+                    <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
+                        <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Businesses Added</span>
+                        <strong id="prof-metric-businesses" style="font-size:1.75rem; font-weight:800; color:var(--text-primary);">${initBusCount}</strong>
+                    </div>
+                </div>
+
+                <!-- Highlighted Deletion Tracker (Matching MembersScreen.kt DeleteSweep) -->
+                <div style="background:rgba(239, 68, 68, 0.08); border:1.5px solid rgba(239, 68, 68, 0.35); border-radius:10px; padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <div style="width:38px; height:38px; border-radius:8px; background:rgba(239, 68, 68, 0.15); color:#ef4444; display:flex; align-items:center; justify-content:center;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </div>
+                        <div>
+                            <strong style="color:#b91c1c; font-size:0.95rem; display:block;">Total Deletions Tracker</strong>
+                            <span style="color:#ef4444; font-size:0.8rem;">Recorded item removals & audit deletions</span>
+                        </div>
+                    </div>
+                    <div id="prof-metric-deletions" style="font-size:1.6rem; font-weight:900; color:#b91c1c; font-family:monospace; background:white; padding:0.25rem 0.85rem; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">
+                        ${String(initDelCount).padStart(2, '0')}
+                    </div>
+                </div>
+            </div>
+
+            ${restrictionsCardHtml}
+
+            <!-- ======================================================== -->
+            <!-- SECURITY & PASSWORD MANAGEMENT                            -->
+            <!-- ======================================================== -->
+            ${isGoogleUser ? `
+                <div class="card" style="padding: 1.5rem 1.75rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); margin-bottom: 2rem; border-left: 4px solid #4285F4; background: var(--bg-card);">
+                    <div style="display:flex; align-items:center; gap:1rem;">
+                        <div style="width:44px; height:44px; border-radius:12px; background:rgba(66, 133, 244, 0.1); color:#4285F4; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="22" height="22" viewBox="0 0 48 48">
+                                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 style="margin:0 0 0.25rem 0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">Google Account Security</h4>
+                            <p style="margin:0; font-size:0.85rem; color:var(--text-secondary);">You are signed in with Google Authentication. Password changes are handled securely by Google &bull; In-app password reset is not required.</p>
+                        </div>
+                    </div>
+                </div>
+            ` : `
+                <div class="card" style="padding: 1.75rem 2rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); margin-bottom: 2rem;">
+                    <!-- Card Top Header -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.35rem; border-bottom:1px solid var(--border-color); padding-bottom:0.85rem;">
+                        <div>
+                            <h3 style="margin:0; font-size:1.18rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                Security & Password
+                            </h3>
+                            <p style="margin:0.25rem 0 0 0; font-size:0.84rem; color:var(--text-secondary);">Choose your password action to enter the dedicated management panel.</p>
+                        </div>
+                        <span class="badge" style="background:rgba(225,29,72,0.1); color:#e11d48; font-weight:700; font-size:0.75rem;">Email / Password</span>
+                    </div>
+
+                    <!-- 1. HUB SELECTION VIEW (Options not shown directly, choose first) -->
+                    <div id="prof-pwd-hub-selection" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
+                        <!-- CHOICE 1: UPDATE PASSWORD -->
+                        <div id="prof-card-opt-update" style="border:1.5px solid var(--border-color); border-radius:14px; padding:1.4rem; background:var(--surface-50); cursor:pointer; transition:all 0.2s ease; display:flex; flex-direction:column; justify-content:space-between; gap:1rem;">
+                            <div style="display:flex; align-items:flex-start; gap:0.85rem;">
+                                <div style="width:42px; height:42px; border-radius:10px; background:rgba(24,24,27,0.08); display:flex; align-items:center; justify-content:center; color:var(--text-primary); flex-shrink:0;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </div>
+                                <div>
+                                    <strong style="display:block; font-size:1.02rem; font-weight:700; color:var(--text-primary); margin-bottom:0.25rem;">Update Password</strong>
+                                    <span style="font-size:0.82rem; color:var(--text-secondary); line-height:1.45; display:block;">Change your password immediately using your current active password.</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:flex-end;">
+                                <button type="button" class="btn btn-sm btn-primary" style="font-weight:700; pointer-events:none; border-radius:8px;">
+                                    Update Password &rarr;
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- CHOICE 2: RESET PASSWORD (BY OTP) -->
+                        <div id="prof-card-opt-reset" style="border:1.5px solid var(--border-color); border-radius:14px; padding:1.4rem; background:var(--surface-50); cursor:pointer; transition:all 0.2s ease; display:flex; flex-direction:column; justify-content:space-between; gap:1rem;">
+                            <div style="display:flex; align-items:flex-start; gap:0.85rem;">
+                                <div style="width:42px; height:42px; border-radius:10px; background:rgba(225,29,72,0.1); display:flex; align-items:center; justify-content:center; color:#e11d48; flex-shrink:0;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                </div>
+                                <div>
+                                    <strong style="display:block; font-size:1.02rem; font-weight:700; color:var(--text-primary); margin-bottom:0.25rem;">Reset Password</strong>
+                                    <span style="font-size:0.82rem; color:var(--text-secondary); line-height:1.45; display:block;">Forgot your current password? Verify with a 6-digit OTP code sent to your email.</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:flex-end;">
+                                <button type="button" class="btn btn-sm btn-outline" style="font-weight:700; pointer-events:none; border-radius:8px; color:#e11d48; border-color:#e11d48;">
+                                    Reset by OTP &rarr;
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. DEDICATED PANEL: UPDATE PASSWORD (USING CURRENT PASSWORD) -->
+                    <div id="prof-panel-update-pwd" style="display:none;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+                            <button type="button" class="btn btn-sm btn-secondary btn-prof-back-hub" style="font-weight:700; display:flex; align-items:center; gap:0.35rem;">
+                                &larr; Back to Options
+                            </button>
+                            <span style="font-size:0.8rem; font-weight:700; color:var(--text-secondary);">Update Using Current Password</span>
+                        </div>
+
+                        <form id="prof-change-pwd-form" style="max-width:440px; display:flex; flex-direction:column; gap:1.1rem;">
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">Current Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-curr-pwd" required placeholder="Enter current password" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-curr-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">New Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-new-pwd" required minlength="6" placeholder="At least 6 characters" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-new-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">Confirm New Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-conf-pwd" required minlength="6" placeholder="Repeat new password" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-conf-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <button type="submit" id="btn-prof-save-pwd" class="btn btn-primary" style="font-weight:700; display:flex; align-items:center; gap:0.4rem;">
+                                    <span>Update Password</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 3. DEDICATED PANEL: RESET PASSWORD (BY EMAIL OTP) -->
+                    <div id="prof-panel-reset-otp" style="display:none;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+                            <button type="button" class="btn btn-sm btn-secondary btn-prof-back-hub" style="font-weight:700; display:flex; align-items:center; gap:0.35rem;">
+                                &larr; Back to Options
+                            </button>
+                            <span style="font-size:0.8rem; font-weight:700; color:#e11d48;">Reset by Email OTP</span>
+                        </div>
+
+                        <!-- Step 1: Send OTP -->
+                        <div id="prof-otp-step-1" style="max-width:440px;">
+                            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem; line-height:1.5;">
+                                We'll send a 6-digit verification code to your registered email address <strong>${email}</strong>.
+                            </p>
+                            <button type="button" id="btn-prof-trigger-otp" class="btn btn-primary" style="font-weight:700; background:#e11d48; border-color:#e11d48;">
+                                Send 6-Digit OTP Code &rarr;
+                            </button>
+                        </div>
+
+                        <!-- Step 2: Verify OTP & Set New Password -->
+                        <form id="prof-otp-step-2" style="display:none; max-width:440px; flex-direction:column; gap:1.1rem;">
+                            <div style="background:rgba(225, 29, 72, 0.08); padding:0.85rem 1rem; border-radius:10px; font-size:0.82rem; color:#be123c;">
+                                Verification code generated! <span id="prof-otp-hint" style="font-weight:700; display:block; margin-top:4px;"></span>
+                            </div>
+
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">6-Digit OTP Code</label>
+                                <input type="text" id="prof-otp-code-input" placeholder="e.g. 548219" maxlength="6" required class="form-control" style="letter-spacing:0.2em; font-weight:800; font-size:1.1rem; text-align:center; height:42px;">
+                            </div>
+
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">New Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-otp-new-pwd" required minlength="6" placeholder="At least 6 characters" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-otp-new-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:var(--text-primary);">Confirm New Password</label>
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <input type="password" id="prof-otp-conf-pwd" required minlength="6" placeholder="Repeat new password" class="form-control" style="width:100%; padding-right:2.5rem; height:42px;">
+                                    <button type="button" class="prof-pwd-toggle" data-target="prof-otp-conf-pwd" style="position:absolute; right:0.75rem; background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        <svg class="eye-closed" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <button type="submit" id="btn-prof-verify-reset-pwd" class="btn btn-primary" style="font-weight:700; background:#e11d48; border-color:#e11d48;">
+                                    Verify OTP & Reset Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `}
 
             <!-- ======================================================== -->
             <!-- 3. ACCOUNT ACTIONS & QUICK LINKS                         -->
@@ -620,6 +1194,10 @@ export const renderProfile = async (container, workspaceId) => {
         container.querySelector('#btn-profile-leave-ws')?.addEventListener('click', async () => {
             if (await showAlert.confirm('Are you sure you want to leave this workspace? You will lose access until invited again.')) {
                 try {
+                    
+                    try {
+                        await userDataSafetyService.recordWorkspaceConnection(currentUser, workspaceId, wsData?.role || 'Worker', 'leave');
+                    } catch (e) {}
                     await firestoreService.leaveWorkspace(workspaceId, currentUser);
                     showAlert.success("You have left the workspace.");
                     window.location.href = 'index.html';
@@ -635,6 +1213,249 @@ export const renderProfile = async (container, workspaceId) => {
                 window.location.href = 'index.html';
             }
         });
+
+        // -------------------------------------------------------------
+        // IN-APP PASSWORD MANAGEMENT (TWO DEDICATED PANELS)
+        // -------------------------------------------------------------
+        const hubView = container.querySelector('#prof-pwd-hub-selection');
+        const updatePanel = container.querySelector('#prof-panel-update-pwd');
+        const resetPanel = container.querySelector('#prof-panel-reset-otp');
+
+        // Navigation between choice hub and dedicated panels
+        container.querySelector('#prof-card-opt-update')?.addEventListener('click', () => {
+            if (hubView) hubView.style.display = 'none';
+            if (updatePanel) updatePanel.style.display = 'block';
+            if (resetPanel) resetPanel.style.display = 'none';
+        });
+
+        container.querySelector('#prof-card-opt-reset')?.addEventListener('click', () => {
+            if (hubView) hubView.style.display = 'none';
+            if (updatePanel) updatePanel.style.display = 'none';
+            if (resetPanel) {
+                resetPanel.style.display = 'block';
+                const s1 = container.querySelector('#prof-otp-step-1');
+                const s2 = container.querySelector('#prof-otp-step-2');
+                if (s1) s1.style.display = 'block';
+                if (s2) s2.style.display = 'none';
+            }
+        });
+
+        container.querySelectorAll('.btn-prof-back-hub').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (hubView) hubView.style.display = 'grid';
+                if (updatePanel) updatePanel.style.display = 'none';
+                if (resetPanel) resetPanel.style.display = 'none';
+            });
+        });
+
+        // Password visibility eye toggles
+        container.querySelectorAll('.prof-pwd-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-target');
+                const input = container.querySelector('#' + targetId);
+                const eyeOpen = btn.querySelector('.eye-open');
+                const eyeClosed = btn.querySelector('.eye-closed');
+                if (input) {
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        if (eyeOpen) eyeOpen.style.display = 'none';
+                        if (eyeClosed) eyeClosed.style.display = 'block';
+                    } else {
+                        input.type = 'password';
+                        if (eyeOpen) eyeOpen.style.display = 'block';
+                        if (eyeClosed) eyeClosed.style.display = 'none';
+                    }
+                }
+            });
+        });
+
+        // 1. Submit Handler: Update Password (Using Current Password)
+        const pwdForm = container.querySelector('#prof-change-pwd-form');
+        if (pwdForm) {
+            pwdForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const currPwd = container.querySelector('#prof-curr-pwd')?.value || '';
+                const newPwd = container.querySelector('#prof-new-pwd')?.value || '';
+                const confPwd = container.querySelector('#prof-conf-pwd')?.value || '';
+                const submitBtn = container.querySelector('#btn-prof-save-pwd');
+
+                if (newPwd !== confPwd) {
+                    showAlert.error('New passwords do not match. Please verify.');
+                    return;
+                }
+                if (newPwd.length < 6) {
+                    showAlert.error('New password must be at least 6 characters.');
+                    return;
+                }
+
+                try {
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<span>Updating Password...</span>';
+                    }
+                    await authService.changePasswordInSettings(currPwd, newPwd);
+                    showAlert.success('Password updated successfully!');
+                    pwdForm.reset();
+                    // Return back to hub
+                    if (hubView) hubView.style.display = 'grid';
+                    if (updatePanel) updatePanel.style.display = 'none';
+                } catch (err) {
+                    console.error("Password change error:", err);
+                    showAlert.error(err.message || 'Failed to update password.');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<span>Update Password</span>';
+                    }
+                }
+            });
+        }
+
+        // 2. Step 1: Send OTP for Reset
+        const btnTriggerOtp = container.querySelector('#btn-prof-trigger-otp');
+        const otpStep1 = container.querySelector('#prof-otp-step-1');
+        const otpStep2 = container.querySelector('#prof-otp-step-2');
+        const otpStep3 = container.querySelector('#prof-otp-step-3');
+        const otpHint = container.querySelector('#prof-otp-hint');
+        const btnVerifyOtpOnly = container.querySelector('#btn-prof-verify-otp-only');
+        let verifiedOtpCode = '';
+
+        btnTriggerOtp?.addEventListener('click', async () => {
+            try {
+                btnTriggerOtp.disabled = true;
+                btnTriggerOtp.textContent = 'Sending OTP...';
+                const res = await authService.sendPasswordResetOTP(email);
+                showAlert.success('6-digit OTP code sent to ' + email);
+                if (otpHint) otpHint.textContent = 'Verification OTP: ' + res.code;
+                if (otpStep1) otpStep1.style.display = 'none';
+                if (otpStep2) otpStep2.style.display = 'flex';
+                if (otpStep3) otpStep3.style.display = 'none';
+            } catch (err) {
+                showAlert.error(err.message || 'Failed to generate OTP.');
+            } finally {
+                btnTriggerOtp.disabled = false;
+                btnTriggerOtp.textContent = 'Send 6-Digit OTP Code \u2192';
+            }
+        });
+
+        // 3. Modern 6-Block OTP Input UX in Profile
+        const profDigitBoxes = Array.from(container.querySelectorAll('.prof-digit-box'));
+        const getProfOtpValue = () => profDigitBoxes.map(b => b.value.trim()).join('');
+
+        // Restore remembered custom font from Critical Board
+        try {
+            const savedFontData = localStorage.getItem('pricelister_custom_font');
+            if (savedFontData) {
+                const parsed = JSON.parse(savedFontData);
+                if (parsed?.name) {
+                    container.style.setProperty('--custom-user-font', `'${parsed.name}', 'Outfit', sans-serif`);
+                }
+            }
+        } catch(e) {}
+
+        profDigitBoxes.forEach((box, idx) => {
+            box.addEventListener('input', (e) => {
+                const val = e.target.value.replace(/[^0-9]/g, '');
+                e.target.value = val ? val[0] : '';
+                if (e.target.value) {
+                    box.style.borderColor = 'var(--text-primary)';
+                    box.style.background = 'var(--surface-main, #ffffff)';
+                    box.style.transform = 'scale(1.15)';
+                    setTimeout(() => { box.style.transform = 'scale(1)'; }, 140);
+                    if (idx < 5) profDigitBoxes[idx + 1].focus();
+                } else {
+                    box.style.borderColor = 'var(--border-color)';
+                    box.style.transform = 'scale(1)';
+                }
+            });
+
+            box.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !box.value && idx > 0) {
+                    profDigitBoxes[idx - 1].focus();
+                    profDigitBoxes[idx - 1].value = '';
+                    profDigitBoxes[idx - 1].style.borderColor = 'var(--border-color)';
+                }
+            });
+
+            box.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pasteData = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+                if (pasteData) {
+                    pasteData.slice(0, 6).split('').forEach((digit, i) => {
+                        if (profDigitBoxes[i]) {
+                            profDigitBoxes[i].value = digit;
+                            profDigitBoxes[i].style.borderColor = 'var(--text-primary)';
+                        }
+                    });
+                    const nextFocus = Math.min(pasteData.length, 5);
+                    profDigitBoxes[nextFocus].focus();
+                }
+            });
+        });
+
+        // Step 2: Verify OTP FIRST to unlock password form
+        btnVerifyOtpOnly?.addEventListener('click', async () => {
+            const otpCode = getProfOtpValue();
+            if (!otpCode || otpCode.length !== 6) {
+                showAlert.error('Please enter the full 6-digit OTP code.');
+                return;
+            }
+
+            try {
+                btnVerifyOtpOnly.disabled = true;
+                btnVerifyOtpOnly.textContent = 'Verifying OTP...';
+                await authService.verifyOTPCode(email, otpCode);
+                verifiedOtpCode = otpCode;
+                showAlert.success('OTP verified! Reset password unlocked.');
+                if (otpStep2) otpStep2.style.display = 'none';
+                if (otpStep3) otpStep3.style.display = 'flex';
+            } catch (err) {
+                showAlert.error(err.message || 'Invalid or expired OTP code.');
+            } finally {
+                btnVerifyOtpOnly.disabled = false;
+                btnVerifyOtpOnly.textContent = 'Verify OTP Code to Unlock \u2192';
+            }
+        });
+
+        // 4. Step 3: Save Unlocked Password
+        if (otpStep3) {
+            otpStep3.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const newPwd = container.querySelector('#prof-otp-new-pwd')?.value || '';
+                const confPwd = container.querySelector('#prof-otp-conf-pwd')?.value || '';
+                const submitBtn = container.querySelector('#btn-prof-save-unlocked-pwd');
+
+                if (newPwd !== confPwd) {
+                    showAlert.error('New passwords do not match. Please verify.');
+                    return;
+                }
+                if (newPwd.length < 6) {
+                    showAlert.error('New password must be at least 6 characters.');
+                    return;
+                }
+
+                try {
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Saving New Password...';
+                    }
+                    await authService.verifyOTPAndResetPassword(email, verifiedOtpCode, newPwd);
+                    showAlert.success('Password successfully reset with OTP!');
+                    otpStep3.reset();
+                    // Return back to hub
+                    if (hubView) hubView.style.display = 'grid';
+                    if (resetPanel) resetPanel.style.display = 'none';
+                } catch (err) {
+                    console.error("OTP Reset error:", err);
+                    showAlert.error(err.message || 'Failed to reset password.');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Confirm & Update Password';
+                    }
+                }
+            });
+        }
 
     } catch (err) {
         console.error("renderProfile error:", err);

@@ -53,91 +53,170 @@ export function initFindWorkspace() {
     let activeFoundWorkspace = null;
 
     /**
-     * Comprehensive Workspace Lookup by Workspace ID
+     * Sanitize workspace data to prevent exposing sensitive internal fields,
+     * API keys, DB details, tokens, security configurations, or financial metadata.
+     * Only returns clean, public-safe metadata: Workspace name, Workspace ID, admin, etc.
+     */
+    function sanitizePublicWorkspace(docId, rawData) {
+        if (!rawData) return null;
+        const d = { ...rawData };
+
+        return {
+            id: docId,
+            data: {
+                workspaceId: d.workspaceId || docId,
+                name: d.name || d.tradeName || 'PriceLister Workspace',
+                tradeName: d.tradeName || d.name || '',
+                description: d.description || d.tagline || 'Enterprise catalog, pricing and customer invoice cloud workspace.',
+                originCountry: d.originCountry || d.country || d.countryName || 'Global',
+                country: d.country || d.originCountry || 'Global',
+                adminName: d.adminName || d.creatorName || 'Administrator',
+                adminEmail: d.adminEmail || d.email || '—',
+                workersCount: d.workersCount || d.memberCount || 1,
+                logoUrl: d.logoUrl || d.logo || 'pricelister_org.png',
+                workspaceStatus: d.workspaceStatus || 'Active'
+            }
+        };
+    }
+
+    /**
+     * Pure Firestore Workspace Lookup
+     * Scans and queries live Firestore Workspaces collection exclusively (no localStorage / demo store).
+     * Enforces strict data sanitization so no API keys, internal paths or sensitive tokens are ever exposed.
      */
     async function searchWorkspaceById(rawKey) {
         if (!rawKey) return null;
-        const key = rawKey.trim().replace(/^['"]|['"]$/g, '');
+        // Strip quotes, surrounding whitespace, zero-width chars, and leading '#' or 'ID:' prefix
+        let key = rawKey.trim().replace(/^['"]|['"]$/g, '').trim();
+        key = key.replace(/^#\s*/, '').replace(/^ID:\s*/i, '').trim();
         if (!key) return null;
 
-        // Mock / Sandbox Workspace Bypass
-        if (
-            key === 'dev-mock-uid' || 
-            key === 'ws_dev_mock' || 
-            key.toUpperCase() === 'DEMO-SANDBOX-01' || 
-            key.toLowerCase() === 'demo'
-        ) {
-            return {
-                id: 'ws_dev_mock',
-                data: {
-                    workspaceId: 'DEMO-SANDBOX-01',
-                    name: 'PriceLister Demo Enterprise',
-                    description: 'Enterprise catalog, real-time wholesale pricing matrix, and automated client billing.',
-                    originCountry: 'United States',
-                    country: 'United States',
-                    adminName: 'Demo Admin (Testing)',
-                    adminEmail: 'developer@local.test',
-                    adminId: 'DEV_MOCK_ADMIN_ID',
-                    workersCount: 2,
-                    logoUrl: 'pricelister_org.png',
-                    createdAt: Date.now() - (120 * 24 * 60 * 60 * 1000)
-                }
-            };
-        }
+        const cleanKey = key;
+        const upperKey = key.toUpperCase();
+        const lowerKey = key.toLowerCase();
 
         const collectionsToCheck = ['Workspaces', 'workspaces'];
+        const queryVariants = Array.from(new Set([cleanKey, upperKey, lowerKey]));
 
-        // 1. Direct Document Lookup by ID
+        let lastCaughtError = null;
+
+        // 1. Query by workspaceId field across Workspaces collection (Exact, Uppercase, Lowercase)
         for (const coll of collectionsToCheck) {
-            try {
-                const snap = await getDoc(doc(db, coll, key));
-                if (snap.exists()) {
-                    return { id: snap.id, data: snap.data() };
+            for (const val of queryVariants) {
+                try {
+                    const qWs = query(collection(db, coll), where('workspaceId', '==', val));
+                    const sWs = await getDocs(qWs);
+                    if (!sWs.empty) {
+                        console.info(`[PriceLister Finder] Match found in ${coll} via workspaceId == "${val}"`);
+                        return sanitizePublicWorkspace(sWs.docs[0].id, sWs.docs[0].data());
+                    }
+                } catch (e) {
+                    lastCaughtError = e;
+                    console.warn(`[PriceLister Finder] Query workspaceId=="${val}" on ${coll} failed:`, e?.code || e?.message || e);
                 }
-            } catch (e) {}
-        }
-
-        // 2. Query Workspaces by workspaceId field (Exact, Upper, Lower)
-        for (const coll of collectionsToCheck) {
-            try {
-                const qWs = query(collection(db, coll), where('workspaceId', '==', key));
-                const sWs = await getDocs(qWs);
-                if (!sWs.empty) return { id: sWs.docs[0].id, data: sWs.docs[0].data() };
-
-                if (key !== key.toUpperCase()) {
-                    const qUp = query(collection(db, coll), where('workspaceId', '==', key.toUpperCase()));
-                    const sUp = await getDocs(qUp);
-                    if (!sUp.empty) return { id: sUp.docs[0].id, data: sUp.docs[0].data() };
-                }
-
-                if (key !== key.toLowerCase()) {
-                    const qLow = query(collection(db, coll), where('workspaceId', '==', key.toLowerCase()));
-                    const sLow = await getDocs(qLow);
-                    if (!sLow.empty) return { id: sLow.docs[0].id, data: sLow.docs[0].data() };
-                }
-            } catch (e) {
-                console.warn(`Query search workspaceId on ${coll}:`, e);
             }
         }
 
-        // 3. Fallback: Deep Scan across Workspaces collection
+        // 2. Direct Document Lookup by Document ID (UID or Custom Key in Firestore)
+        for (const coll of collectionsToCheck) {
+            for (const idVariant of queryVariants) {
+                try {
+                    const snap = await getDoc(doc(db, coll, idVariant));
+                    if (snap.exists()) {
+                        console.info(`[PriceLister Finder] Match found in ${coll} via doc ID "${idVariant}"`);
+                        return sanitizePublicWorkspace(snap.id, snap.data());
+                    }
+                } catch (e) {
+                    lastCaughtError = e;
+                    console.warn(`[PriceLister Finder] Direct doc get on ${coll} (${idVariant}) failed:`, e?.code || e?.message || e);
+                }
+            }
+        }
+
+        // 3. Query Workspaces by creatorUid or adminUid in Firestore
+        for (const coll of collectionsToCheck) {
+            for (const uidVal of queryVariants) {
+                try {
+                    const qAdmin = query(collection(db, coll), where('creatorUid', '==', uidVal));
+                    const sAdmin = await getDocs(qAdmin);
+                    if (!sAdmin.empty) {
+                        return sanitizePublicWorkspace(sAdmin.docs[0].id, sAdmin.docs[0].data());
+                    }
+                } catch (e) {
+                    lastCaughtError = e;
+                }
+
+                try {
+                    const qAdmin2 = query(collection(db, coll), where('adminUid', '==', uidVal));
+                    const sAdmin2 = await getDocs(qAdmin2);
+                    if (!sAdmin2.empty) {
+                        return sanitizePublicWorkspace(sAdmin2.docs[0].id, sAdmin2.docs[0].data());
+                    }
+                } catch (e) {
+                    lastCaughtError = e;
+                }
+            }
+        }
+
+        // 4. Query Workspaces by Admin / Creator Email (if email entered)
+        if (cleanKey.includes('@')) {
+            for (const coll of collectionsToCheck) {
+                try {
+                    const qEmail = query(collection(db, coll), where('adminEmail', '==', lowerKey));
+                    const sEmail = await getDocs(qEmail);
+                    if (!sEmail.empty) {
+                        return sanitizePublicWorkspace(sEmail.docs[0].id, sEmail.docs[0].data());
+                    }
+                } catch (e) {
+                    lastCaughtError = e;
+                }
+
+                try {
+                    const qEmail2 = query(collection(db, coll), where('email', '==', lowerKey));
+                    const sEmail2 = await getDocs(qEmail2);
+                    if (!sEmail2.empty) {
+                        return sanitizePublicWorkspace(sEmail2.docs[0].id, sEmail2.docs[0].data());
+                    }
+                } catch (e) {
+                    lastCaughtError = e;
+                }
+            }
+        }
+
+        // 5. Deep Scan across Workspaces collection: Iterates live Firestore documents
+        // Finds matching workspaceId, docId, or name while ensuring full privacy sanitization
         for (const coll of collectionsToCheck) {
             try {
                 const allSnap = await getDocs(collection(db, coll));
-                const targetClean = key.toLowerCase();
+                const targetClean = lowerKey;
 
                 for (const d of allSnap.docs) {
                     const data = d.data();
                     const docId = d.id.toLowerCase();
                     const wsId = (data.workspaceId || '').toLowerCase();
+                    const wsName = (data.name || '').toLowerCase();
 
-                    if (docId === targetClean || wsId === targetClean) {
-                        return { id: d.id, data: data };
+                    // Match Firestore document ID, workspace ID (exact or partial), or workspace name
+                    if (
+                        docId === targetClean || 
+                        wsId === targetClean || 
+                        (targetClean.length >= 4 && wsId.includes(targetClean)) ||
+                        (targetClean.length >= 4 && docId.includes(targetClean)) ||
+                        wsName === targetClean
+                    ) {
+                        console.info(`[PriceLister Finder] Match found via deep scan in ${coll} for "${rawKey}"`);
+                        return sanitizePublicWorkspace(d.id, data);
                     }
                 }
             } catch (e) {
-                console.warn(`Deep scan on ${coll}:`, e);
+                lastCaughtError = e;
+                console.warn(`[PriceLister Finder] Firestore deep scan on ${coll} failed:`, e?.code || e?.message || e);
             }
+        }
+
+        // If all attempts failed due to permissions / index error, throw the actual error so the user is informed
+        if (lastCaughtError && (lastCaughtError.code === 'permission-denied' || lastCaughtError.code === 'failed-precondition')) {
+            throw lastCaughtError;
         }
 
         return null;
@@ -152,51 +231,29 @@ export function initFindWorkspace() {
         if (!cleanIdent) return null;
 
         // 1. Check Admin / Creator match
-        const admEmail = (wsData.adminEmail || wsData.email || '').toLowerCase();
-        const admId = (wsData.adminId || '').toLowerCase();
-        const docId = wsDocId.toLowerCase();
+        const admEmail = (wsData.adminEmail || '').toLowerCase();
         const admName = (wsData.adminName || '').toLowerCase();
 
-        if (cleanIdent === admEmail || cleanIdent === admId || cleanIdent === docId || cleanIdent === admName) {
+        if (cleanIdent === admEmail || cleanIdent === admName) {
             return {
                 exists: true,
                 name: wsData.adminName || 'Admin / Creator',
-                email: wsData.adminEmail || wsData.email || '—',
-                photoURL: wsData.photoURL || wsData.logoUrl || 'pricelister_org.png',
+                email: wsData.adminEmail || '—',
+                photoURL: wsData.logoUrl || 'pricelister_org.png',
                 role: 'ADMIN',
                 status: 'Creator & Administrator',
-                joinedAt: wsData.createdAt || Date.now() - (60 * 24 * 60 * 60 * 1000)
+                joinedAt: null
             };
         }
 
-        // 2. Demo Sandbox Members lookup
-        if (wsDocId === 'ws_dev_mock' || (wsData.workspaceId && wsData.workspaceId.toUpperCase() === 'DEMO-SANDBOX-01')) {
-            const demoMembers = [
-                { id: 'SARAH01', name: 'Sarah Jenkins', email: 'sarah.coadmin@pricelister.app', role: 'CO_ADMIN', joinedAt: Date.now() - (30 * 24 * 60 * 60 * 1000) },
-                { id: 'ALEX02', name: 'Alex Rivera', email: 'alex.worker@pricelister.app', role: 'WORKER', joinedAt: Date.now() - (15 * 24 * 60 * 60 * 1000) }
-            ];
-            const match = demoMembers.find(m => 
-                m.id.toLowerCase() === cleanIdent || 
-                m.email.toLowerCase() === cleanIdent || 
-                m.name.toLowerCase() === cleanIdent
-            );
-            if (match) {
-                return {
-                    exists: true,
-                    ...match,
-                    status: 'Active Member'
-                };
-            }
-        }
-
-        // 3. Check Members Subcollection
+        // 2. Check Live Firestore Members Subcollection (Workspaces/{id}/Members)
         for (const sub of ['Members', 'members']) {
             try {
-                // Direct lookup by doc ID (usually email)
+                // Direct lookup by doc ID (email or worker ID)
                 const mDocRef = doc(db, 'Workspaces', wsDocId, sub, cleanIdent);
                 const mSnap = await getDoc(mDocRef);
                 if (mSnap.exists()) {
-                    const d = mSnap.data();
+                    const d = mSnap.data() || {};
                     return {
                         exists: true,
                         name: d.name || d.displayName || 'Worker',
@@ -213,7 +270,7 @@ export function initFindWorkspace() {
                 const collRef = collection(db, 'Workspaces', wsDocId, sub);
                 const allMembersSnap = await getDocs(collRef);
                 for (const md of allMembersSnap.docs) {
-                    const d = md.data();
+                    const d = md.data() || {};
                     const mdId = md.id.toLowerCase();
                     const mdEmail = (d.email || '').toLowerCase();
                     const mdAppId = (d.appWorkerId || '').toLowerCase();
@@ -244,11 +301,11 @@ export function initFindWorkspace() {
             }
         }
 
-        // 4. Check Connections collection
+        // 3. Check Live Firestore Connections Collection
         try {
             const connSnap = await getDoc(doc(db, 'Connections', cleanIdent));
             if (connSnap.exists()) {
-                const conn = connSnap.data();
+                const conn = connSnap.data() || {};
                 if (conn.adminUid === wsDocId || (wsData.adminEmail && conn.adminEmail === wsData.adminEmail)) {
                     return {
                         exists: true,
@@ -361,11 +418,17 @@ export function initFindWorkspace() {
             }
 
         } catch (error) {
-            console.error('Error finding workspace:', error);
+            console.error('[PriceLister Finder] Error finding workspace:', error);
             if (loadingState) loadingState.style.display = 'none';
             if (errorState) errorState.style.display = 'block';
             if (errorMessage) {
-                errorMessage.textContent = 'Unable to search right now. Please check your network and try again.';
+                if (error?.code === 'permission-denied') {
+                    errorMessage.innerHTML = `<strong>Permission Denied by Firestore Rules.</strong><br>Your Firestore security rules do not allow reading the <code>Workspaces</code> collection. Please ensure your Firestore rules permit authenticated users to query or read <code>Workspaces</code>.`;
+                } else if (error?.code === 'failed-precondition') {
+                    errorMessage.innerHTML = `<strong>Missing Firestore Index.</strong><br>A composite index may be required for this query. Check your browser developer console (F12) for the direct index creation link.`;
+                } else {
+                    errorMessage.textContent = error?.message || 'Unable to search right now. Please check your network and try again.';
+                }
             }
         } finally {
             if (btn) {

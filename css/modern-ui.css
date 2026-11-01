@@ -6334,7 +6334,7 @@ button[disabled] {
     justify-content: space-between;
     padding: 0.75rem 1rem;
     border: 1.5px solid #cbd5e1;
-    border-radius: 12px;
+    border-radius: 4px !important; /* 4dp mini-round square shape */
     background: #ffffff;
     cursor: pointer;
     transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
@@ -6352,6 +6352,158 @@ button[disabled] {
     border-color: #0f172a !important;
     background: #f8fafc !important;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* ==========================================================================
+   EXCEL VIEW SPREADSHEET SYSTEM (Clean Excel/Sheets UI with Grey Dividers)
+   ========================================================================== */
+.prd-excel-wrapper {
+    width: 100%;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border-color, #d4d4d8);
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.prd-excel-scroll-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 275px);
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.prd-excel-scroll-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.prd-excel-scroll-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+.prd-excel-scroll-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+.prd-excel-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.prd-excel-table {
+    width: 100%;
+    min-width: 1280px;
+    border-collapse: collapse;
+    border-spacing: 0;
+    font-size: 0.82rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text-primary, #0f172a);
+    background: var(--surface-0, #ffffff);
+}
+
+.prd-excel-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid #cbd5e1;
+    border-top: none;
+    box-shadow: inset 0 -1px 0 #cbd5e1;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.prd-excel-table tbody tr {
+    transition: background-color 0.12s ease;
+}
+
+.prd-excel-table tbody tr:nth-child(even) {
+    background-color: #fcfdfe;
+}
+
+.prd-excel-table tbody tr:hover {
+    background-color: #f1f5f9 !important;
+}
+
+.prd-excel-table tbody td {
+    padding: 0.45rem 0.65rem;
+    border: 1px solid #e2e8f0;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.prd-excel-thumb-cell {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    max-width: 32px;
+    border-radius: 3px;
+    border: 1px solid #d4d4d8;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.prd-excel-thumb-cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ==========================================================================
+   MARKET INSERTER FULLSCREEN & POLISHED BOLD GREY UI
+   ========================================================================== */
+.market-inserter-page.mi-fullscreen-active {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 999999 !important;
+    background: var(--bg-main, #f8fafc) !important;
+    padding: 1.25rem 2rem !important;
+    overflow-y: auto !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.market-inserter-page.mi-fullscreen-active #mi-grid-container {
+    max-height: calc(100vh - 210px) !important;
+    min-height: 550px !important;
+}
+
+/* Bold grey aesthetic overrides for Market Inserter */
+.mi-bold-grey-badge {
+    background: #27272a !important;
+    color: #f4f4f5 !important;
+    border: 1px solid #3f3f46 !important;
+    font-weight: 700;
+}
+
+.mi-bold-grey-btn {
+    background: #18181b !important;
+    color: #ffffff !important;
+    border: 1.5px solid #27272a !important;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+
+.mi-bold-grey-btn:hover {
+    background: #27272a !important;
+    border-color: #3f3f46 !important;
+    color: #ffffff !important;
 }
 
 /* Floating Batch Action Bar */
@@ -6635,11 +6787,12 @@ button[disabled] {
 
 /* Critical Board Dialog Overlay & Window (Full Screen Panel) */
 .critical-board-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 2000;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 999999 !important;
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
     display: flex;
     align-items: stretch;
     justify-content: stretch;

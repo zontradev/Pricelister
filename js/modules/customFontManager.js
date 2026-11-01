@@ -209,6 +209,19 @@ export const initCustomFontAndLayout = () => {
  * Open the Critical Board / Advanced Browser Settings Modal
  */
 export const openCriticalBoardModal = (initialTab = 'font') => {
+    // Current layout configuration declared upfront
+    let currentLayoutConfig = {
+        sidebarPosition: 'left',
+        density: 'comfortable',
+        dividerStyle: 'minimal',
+        radius: '10px'
+    };
+
+    try {
+        const savedL = localStorage.getItem('pricelister_custom_layout');
+        if (savedL) currentLayoutConfig = { ...currentLayoutConfig, ...JSON.parse(savedL) };
+    } catch(e) {}
+
     // Inject dedicated modern CSS for Critical Board
     if (!document.getElementById('critical-board-injected-styles')) {
         const style = document.createElement('style');
@@ -678,11 +691,18 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
         `;
 
         document.body.appendChild(modalOverlay);
-        attachCriticalBoardEvents(modalOverlay);
+        try {
+            attachCriticalBoardEvents(modalOverlay, currentLayoutConfig);
+        } catch (e) {
+            console.error("Critical Board event attachment warning:", e);
+        }
     }
 
     // Show modal
-    modalOverlay.style.display = 'flex';
+    modalOverlay.style.setProperty('display', 'flex', 'important');
+    modalOverlay.style.setProperty('z-index', '999999', 'important');
+    modalOverlay.style.visibility = 'visible';
+    modalOverlay.style.opacity = '1';
     document.body.style.overflow = 'hidden';
 
     // Switch to initial tab
@@ -709,7 +729,7 @@ const switchCriticalBoardTab = (overlay, tabId) => {
 /**
  * Attach Critical Board Event Handlers
  */
-const attachCriticalBoardEvents = (overlay) => {
+const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
     const closeBtn = overlay.querySelector('#cb-close-btn');
     const closeModal = () => {
         overlay.style.display = 'none';
@@ -966,7 +986,7 @@ const attachCriticalBoardEvents = (overlay) => {
     // ==========================================
     // TAB 2: UI DIVIDERS & LAYOUT CONTROLLERS
     // ==========================================
-    let currentLayoutConfig = {
+    let currentLayoutConfig = existingLayoutConfig || {
         sidebarPosition: 'left',
         density: 'comfortable',
         dividerStyle: 'minimal',

@@ -121,68 +121,87 @@ export const renderMarketInserter = async (container, workspaceId) => {
                 </div>
             ` : ''}
 
-            <!-- 1. Header Toolbar Section -->
-            <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 0;">
-                <div>
-                    <h2 style="margin: 0 0 0.25rem 0;">${isBatchUpdateMode ? 'Market Updator' : 'Market Inserter'}</h2>
-                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
-                        ${isBatchUpdateMode 
-                            ? `Mass detail update — editing ${transferredProducts.length} selected products simultaneously with instant catalog sync` 
-                            : 'Fast spreadsheet grid — insert up to 250 products at once with live duplicate protection & instant image pickers'}
-                    </p>
+            <!-- 1. Header Toolbar Section (Google Dynamic Kotlin Reference Polish) -->
+            <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 0; background: var(--surface-0); padding: 1rem 1.25rem; border-radius: 10px; border: 1px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                    <div style="width: 40px; height: 40px; border-radius: 8px; background: #27272a; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 800; flex-shrink: 0;">
+                        ${isBatchUpdateMode ? '✏️' : '▦'}
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <h2 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #18181b; letter-spacing: -0.02em;">${isBatchUpdateMode ? 'Market Updator' : 'Market Inserter'}</h2>
+                            <span class="badge" style="background: #27272a; color: #f4f4f5; font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 4px;">Dynamic Grid</span>
+                        </div>
+                        <p style="margin: 0.2rem 0 0 0; font-size: 0.82rem; color: #52525b; font-weight: 500;">
+                            ${isBatchUpdateMode 
+                                ? `Mass detail update — editing ${transferredProducts.length} selected products simultaneously with instant catalog sync` 
+                                : 'Fast spreadsheet grid — insert up to 250 products at once with live duplicate protection & instant image pickers'}
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Quick Action Buttons -->
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 0.35rem; background: var(--surface-50); padding: 0.35rem 0.65rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.82rem; font-weight: 600;">
+                    <!-- Row Counter (Bold Grey) -->
+                    <div style="display: flex; align-items: center; gap: 0.35rem; background: #f4f4f5; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #d4d4d8; font-size: 0.82rem; font-weight: 600; color: #27272a;">
                         <span>Rows:</span>
-                        <span id="mi-row-counter" style="color: var(--primary); font-weight: 700;">${rowDataList.length} / 250</span>
+                        <span id="mi-row-counter" style="color: #18181b; font-weight: 800;">${rowDataList.length} / 250</span>
                     </div>
 
                     <!-- Add Row buttons -->
-                    <button id="mi-btn-add-1" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem; font-weight: 600;">+ 1 Row</button>
-                    <button id="mi-btn-add-5" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem; font-weight: 600;">+ 5 Rows</button>
-                    <button id="mi-btn-add-10" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem; font-weight: 600;">+ 10 Rows</button>
-                    <button id="mi-btn-add-50" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem; font-weight: 600;">+ 50 Rows</button>
+                    <button id="mi-btn-add-1" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.42rem 0.7rem; font-weight: 600; border-radius: 6px; border-color: #d4d4d8;">+ 1 Row</button>
+                    <button id="mi-btn-add-5" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.42rem 0.7rem; font-weight: 600; border-radius: 6px; border-color: #d4d4d8;">+ 5 Rows</button>
+                    <button id="mi-btn-add-10" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.42rem 0.7rem; font-weight: 600; border-radius: 6px; border-color: #d4d4d8;">+ 10 Rows</button>
+                    <button id="mi-btn-add-50" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.42rem 0.7rem; font-weight: 600; border-radius: 6px; border-color: #d4d4d8;">+ 50 Rows</button>
 
-                    <div style="height: 24px; width: 1px; background: var(--border-color); margin: 0 0.25rem;"></div>
+                    <div style="height: 24px; width: 1px; background: #d4d4d8; margin: 0 0.25rem;"></div>
 
                     <!-- Bulk category applicator -->
                     <div style="display: flex; align-items: center; gap: 0.35rem;">
-                        <select id="mi-bulk-cat-select" class="form-control" style="font-size: 0.8rem; padding: 0.4rem 0.65rem; max-width: 150px;">
+                        <select id="mi-bulk-cat-select" class="form-control" style="font-size: 0.8rem; padding: 0.4rem 0.65rem; max-width: 150px; border-radius: 6px; border-color: #d4d4d8;">
                             <option value="">Category for All...</option>
                             ${categories.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('')}
                         </select>
-                        <button id="mi-btn-apply-cat" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.7rem;" title="Apply selected category to all rows">Apply</button>
+                        <button id="mi-btn-apply-cat" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.42rem 0.7rem; border-radius: 6px; border-color: #d4d4d8;" title="Apply selected category to all rows">Apply</button>
                     </div>
 
-                    <button id="mi-btn-clear-empty" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem;" title="Remove rows that have no product name">Clear Empty</button>
+                    <button id="mi-btn-clear-empty" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.42rem 0.75rem; border-radius: 6px; border-color: #d4d4d8;" title="Remove rows that have no product name">Clear Empty</button>
+
+                    <div style="height: 24px; width: 1px; background: #d4d4d8; margin: 0 0.25rem;"></div>
+
+                    <!-- EXPAND / FULLSCREEN TOGGLE BUTTON (Preserved across reload) -->
+                    <button id="mi-btn-fullscreen-toggle" class="btn btn-secondary" style="font-size: 0.82rem; font-weight: 700; padding: 0.42rem 0.85rem; border-radius: 6px; border: 1.5px solid #27272a; background: #27272a; color: #ffffff; display: flex; align-items: center; gap: 0.45rem; cursor: pointer;" title="Toggle Fullscreen Canvas Mode">
+                        <span id="mi-fullscreen-icon" style="display: flex; align-items: center;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                        </span>
+                        <span id="mi-fullscreen-label">Expand</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- 2. Grid Table Card (In-Page Section) -->
-            <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; position: relative;">
+            <!-- 2. Grid Table Card (Freeing Columns & Rows with Smooth Scroll) -->
+            <div class="card" style="padding: 0; overflow: hidden; border-radius: 10px; border: 1px solid #d4d4d8; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; position: relative;">
                 
-                <div id="mi-grid-container" style="max-height: calc(100vh - 290px); min-height: 480px; overflow: auto; background: var(--surface-0);">
-                    <table id="mi-grid-table" style="width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1400px; font-size: 0.85rem;">
+                <div id="mi-grid-container" style="max-height: calc(100vh - 290px); min-height: 480px; overflow: auto; background: #ffffff;">
+                    <table id="mi-grid-table" style="width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1440px; font-size: 0.84rem;">
                         <thead>
-                            <tr style="position: sticky; top: 0; z-index: 10; background: var(--surface-100, #f1f5f9); color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 2px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                                <th style="width: 44px; padding: 0.65rem 0.4rem; text-align: center; border-bottom: 1px solid var(--border-color);">#</th>
-                                <th style="width: 76px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Image</th>
-                                <th style="min-width: 190px; padding: 0.65rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color);">Product Name *</th>
-                                <th style="width: 155px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Category *</th>
-                                <th style="width: 105px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Size / Weight</th>
-                                <th style="width: 90px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Stock (Qty)</th>
-                                <th style="width: 100px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Base Cost (${getAppCurrencySymbol()})</th>
-                                <th style="width: 100px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">Wholesale (${getAppCurrencySymbol()})</th>
-                                <th style="width: 110px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color); color: var(--primary);">Sale Price * (${getAppCurrencySymbol()})</th>
-                                <th style="width: 95px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border-color);">MRP (${getAppCurrencySymbol()})</th>
-                                <th style="width: 130px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">UPC / Barcode</th>
-                                <th style="width: 120px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Variations</th>
-                                <th style="width: 115px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Mfg Date</th>
-                                <th style="width: 115px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Exp Date</th>
-                                <th style="min-width: 140px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border-color);">Note</th>
-                                <th style="width: 75px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid var(--border-color);">Action</th>
+                            <tr style="position: sticky; top: 0; z-index: 10; background: #f4f4f5; color: #27272a; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 2px solid #d4d4d8; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+                                <th style="width: 44px; padding: 0.65rem 0.4rem; text-align: center; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">#</th>
+                                <th style="width: 76px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Image</th>
+                                <th style="min-width: 200px; padding: 0.65rem 0.75rem; text-align: left; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Product Name *</th>
+                                <th style="width: 155px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Category *</th>
+                                <th style="width: 105px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Size / Weight</th>
+                                <th style="width: 90px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Stock (Qty)</th>
+                                <th style="width: 105px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Base Cost (${getAppCurrencySymbol()})</th>
+                                <th style="width: 105px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Wholesale (${getAppCurrencySymbol()})</th>
+                                <th style="width: 115px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7; color: #18181b; background: #e4e4e7;">Sale Price * (${getAppCurrencySymbol()})</th>
+                                <th style="width: 95px; padding: 0.65rem 0.5rem; text-align: right; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">MRP (${getAppCurrencySymbol()})</th>
+                                <th style="width: 130px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">UPC / Barcode</th>
+                                <th style="width: 120px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Variations</th>
+                                <th style="width: 115px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Mfg Date</th>
+                                <th style="width: 115px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Exp Date</th>
+                                <th style="min-width: 140px; padding: 0.65rem 0.5rem; text-align: left; border-bottom: 1px solid #d4d4d8; border-right: 1px solid #e4e4e7;">Note</th>
+                                <th style="width: 75px; padding: 0.65rem 0.5rem; text-align: center; border-bottom: 1px solid #d4d4d8;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="mi-tbody">
@@ -342,101 +361,101 @@ export const renderMarketInserter = async (container, workspaceId) => {
             const varCount = (row.variations || []).length;
 
             return `
-                <tr data-index="${idx}" style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;">
+                <tr data-index="${idx}" style="border-bottom: 1px solid #e4e4e7; transition: background 0.15s ease;">
                     
                     <!-- 1. Index -->
-                    <td style="padding: 0.4rem; text-align: center; font-weight: 700; color: var(--text-muted); font-size: 0.78rem; background: var(--surface-50);">
+                    <td style="padding: 0.4rem; text-align: center; font-weight: 700; color: #71717a; font-size: 0.78rem; background: #f4f4f5; border-right: 1px solid #e4e4e7;">
                         ${idx + 1}
                     </td>
 
                     <!-- 2. Image Picker -->
-                    <td style="padding: 0.35rem 0.5rem; text-align: center;">
+                    <td style="padding: 0.35rem 0.5rem; text-align: center; border-right: 1px solid #e4e4e7;">
                         <input type="file" class="mi-file-input" data-index="${idx}" accept="image/*" style="display: none;">
-                        <div class="mi-image-box" data-index="${idx}" style="width: 40px; height: 40px; border-radius: 8px; border: 1px dashed ${hasImage ? 'var(--primary)' : 'var(--border-color)'}; background: ${hasImage ? `url('${row.previewUrl || row.imageUri}') center/cover no-repeat` : 'var(--surface-50)'}; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; margin: 0 auto;" title="Click to choose product image">
-                            ${!hasImage ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--text-muted);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>` : ''}
-                            ${hasImage ? `<button type="button" class="mi-remove-img" data-index="${idx}" style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; border-radius:50%; background:#ef4444; color:white; border:none; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;" title="Remove image">✕</button>` : ''}
+                        <div class="mi-image-box" data-index="${idx}" style="width: 38px; height: 38px; border-radius: 6px; border: 1.5px dashed ${hasImage ? '#27272a' : '#cbd5e1'}; background: ${hasImage ? `url('${row.previewUrl || row.imageUri}') center/cover no-repeat` : '#f4f4f5'}; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; margin: 0 auto;" title="Click to choose product image">
+                            ${!hasImage ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>` : ''}
+                            ${hasImage ? `<button type="button" class="mi-remove-img" data-index="${idx}" style="position:absolute; top:-4px; right:-4px; width:16px; height:16px; border-radius:50%; background:#dc2626; color:white; border:none; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;" title="Remove image">✕</button>` : ''}
                         </div>
                     </td>
 
                     <!-- 3. Product Name -->
-                    <td style="padding: 0.35rem 0.5rem; position: relative;">
+                    <td style="padding: 0.35rem 0.5rem; position: relative; border-right: 1px solid #e4e4e7;">
                         <div style="display: flex; align-items: center; gap: 0.3rem;">
-                            <input type="text" class="form-control mi-input mi-input-name" data-index="${idx}" data-field="name" value="${row.name || ''}" placeholder="e.g. Mango" style="width: 100%; padding: 0.4rem 0.55rem; font-size: 0.85rem; font-weight: 600;">
-                            <span class="mi-dup-badge badge" style="display: none; background: #f59e0b; color: white; font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px; white-space: nowrap;"></span>
+                            <input type="text" class="form-control mi-input mi-input-name" data-index="${idx}" data-field="name" value="${row.name || ''}" placeholder="e.g. Premium Basmati Rice" style="width: 100%; padding: 0.42rem 0.6rem; font-size: 0.85rem; font-weight: 600; border-radius: 5px; border-color: #cbd5e1;">
+                            <span class="mi-dup-badge badge" style="display: none; background: #ea580c; color: white; font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px; white-space: nowrap;"></span>
                         </div>
                     </td>
 
                     <!-- 4. Category -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <select class="form-control mi-input" data-index="${idx}" data-field="category" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 0.82rem;">
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <select class="form-control mi-input" data-index="${idx}" data-field="category" style="width: 100%; padding: 0.42rem 0.5rem; font-size: 0.82rem; border-radius: 5px; border-color: #cbd5e1;">
                             ${categories.map(c => `<option value="${c.uniqueId || c.id}" ${row.category === (c.uniqueId || c.id) || row.category === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
                         </select>
                     </td>
 
                     <!-- 5. Size / Weight -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="text" class="form-control mi-input" data-index="${idx}" data-field="sizeWeight" value="${row.sizeWeight || ''}" placeholder="350g" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 0.82rem;">
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <input type="text" class="form-control mi-input" data-index="${idx}" data-field="sizeWeight" value="${row.sizeWeight || ''}" placeholder="1 kg" style="width: 100%; padding: 0.42rem 0.5rem; font-size: 0.82rem; border-radius: 5px; border-color: #cbd5e1;">
                     </td>
 
                     <!-- 6. Quantity -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="number" class="form-control mi-input" data-index="${idx}" data-field="quantity" value="${row.quantity || 0}" min="0" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 0.82rem; text-align: right;">
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <input type="number" class="form-control mi-input" data-index="${idx}" data-field="quantity" value="${row.quantity || 0}" min="0" style="width: 100%; padding: 0.42rem 0.5rem; font-size: 0.84rem; font-weight: 600; text-align: right; border-radius: 5px; border-color: #cbd5e1;">
                     </td>
 
-                    <!-- 7. Base Price -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="number" class="form-control mi-input" data-index="${idx}" data-field="basePrice" value="${row.basePrice || 0}" step="any" min="0" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 0.82rem; text-align: right;">
+                    <!-- 7. Base Cost -->
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <input type="number" class="form-control mi-input" data-index="${idx}" data-field="basePrice" value="${row.basePrice || 0}" step="any" min="0" style="width: 100%; padding: 0.42rem 0.5rem; font-size: 0.84rem; text-align: right; border-radius: 5px; border-color: #cbd5e1;">
                     </td>
 
                     <!-- 8. Wholesale (Price) -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="number" class="form-control mi-input" data-index="${idx}" data-field="price" value="${row.price || 0}" step="any" min="0" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 0.82rem; text-align: right;">
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <input type="number" class="form-control mi-input" data-index="${idx}" data-field="price" value="${row.price || 0}" step="any" min="0" style="width: 100%; padding: 0.42rem 0.5rem; font-size: 0.84rem; text-align: right; border-radius: 5px; border-color: #cbd5e1;">
                     </td>
 
-                    <!-- 9. Sale Price -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="number" class="form-control mi-input mi-sale-price" data-index="${idx}" data-field="salePrice" value="${row.salePrice || 0}" step="any" min="0" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 0.85rem; font-weight: 700; text-align: right; border-color: var(--primary);">
+                    <!-- 9. Sale Price (Bold Grey Header & Highlight Border) -->
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7; background: #fafafa;">
+                        <input type="number" class="form-control mi-input mi-sale-price" data-index="${idx}" data-field="salePrice" value="${row.salePrice || 0}" step="any" min="0" style="width: 100%; padding: 0.42rem 0.5rem; font-size: 0.86rem; font-weight: 800; text-align: right; border-radius: 5px; border: 1.5px solid #27272a; color: #09090b;">
                     </td>
 
                     <!-- 10. MRP -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="number" class="form-control mi-input" data-index="${idx}" data-field="mrp" value="${row.mrp || 0}" step="any" min="0" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 0.82rem; text-align: right;">
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <input type="number" class="form-control mi-input" data-index="${idx}" data-field="mrp" value="${row.mrp || 0}" step="any" min="0" style="width: 100%; padding: 0.42rem 0.5rem; font-size: 0.84rem; text-align: right; border-radius: 5px; border-color: #cbd5e1;">
                     </td>
 
                     <!-- 11. UPC Code -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="text" class="form-control mi-input" data-index="${idx}" data-field="upcCode" value="${row.upcCode || ''}" placeholder="Barcode" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 0.82rem; font-family: monospace;">
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <input type="text" class="form-control mi-input" data-index="${idx}" data-field="upcCode" value="${row.upcCode || ''}" placeholder="Barcode" style="width: 100%; padding: 0.42rem 0.5rem; font-size: 0.82rem; font-family: monospace; border-radius: 5px; border-color: #cbd5e1;">
                     </td>
 
                     <!-- 12. Variations -->
-                    <td style="padding: 0.35rem 0.5rem; text-align: center;">
-                        <button type="button" class="btn btn-secondary mi-btn-vars" data-index="${idx}" style="font-size: 0.72rem; padding: 0.3rem 0.5rem; width: 100%; white-space: nowrap; ${varCount > 0 ? 'border-color: var(--primary); color: var(--primary); font-weight:700;' : ''}">
+                    <td style="padding: 0.35rem 0.5rem; text-align: center; border-right: 1px solid #e4e4e7;">
+                        <button type="button" class="btn btn-secondary mi-btn-vars" data-index="${idx}" style="font-size: 0.72rem; padding: 0.32rem 0.5rem; width: 100%; white-space: nowrap; border-radius: 5px; ${varCount > 0 ? 'border-color: #27272a; color: #18181b; background: #e4e4e7; font-weight:800;' : 'border-color: #cbd5e1;'}">
                             ${varCount > 0 ? `+ Vars (${varCount})` : '+ Vars'}
                         </button>
                     </td>
 
                     <!-- 13. Mfg Date -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="date" class="form-control mi-input" data-index="${idx}" data-field="mfgDate" value="${row.mfgDate || ''}" style="width: 100%; padding: 0.35rem 0.4rem; font-size: 0.75rem;">
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <input type="date" class="form-control mi-input" data-index="${idx}" data-field="mfgDate" value="${row.mfgDate || ''}" style="width: 100%; padding: 0.35rem 0.4rem; font-size: 0.75rem; border-radius: 5px; border-color: #cbd5e1;">
                     </td>
 
                     <!-- 14. Exp Date -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="date" class="form-control mi-input" data-index="${idx}" data-field="expDate" value="${row.expDate || ''}" style="width: 100%; padding: 0.35rem 0.4rem; font-size: 0.75rem;">
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <input type="date" class="form-control mi-input" data-index="${idx}" data-field="expDate" value="${row.expDate || ''}" style="width: 100%; padding: 0.35rem 0.4rem; font-size: 0.75rem; border-radius: 5px; border-color: #cbd5e1;">
                     </td>
 
                     <!-- 15. Note -->
-                    <td style="padding: 0.35rem 0.5rem;">
-                        <input type="text" class="form-control mi-input" data-index="${idx}" data-field="note" value="${row.note || ''}" placeholder="Optional description" style="width: 100%; padding: 0.4rem 0.5rem; font-size: 0.82rem;">
+                    <td style="padding: 0.35rem 0.5rem; border-right: 1px solid #e4e4e7;">
+                        <input type="text" class="form-control mi-input" data-index="${idx}" data-field="note" value="${row.note || ''}" placeholder="Optional note" style="width: 100%; padding: 0.42rem 0.5rem; font-size: 0.82rem; border-radius: 5px; border-color: #cbd5e1;">
                     </td>
 
                     <!-- 16. Actions -->
                     <td style="padding: 0.35rem 0.4rem; text-align: center;">
                         <div style="display:flex; justify-content:center; gap:0.25rem;">
-                            <button type="button" class="icon-btn mi-btn-dup" data-index="${idx}" style="width:26px; height:26px; border:none; background:transparent; cursor:pointer; color:var(--text-secondary); display:flex; align-items:center; justify-content:center;" title="Duplicate row">
+                            <button type="button" class="icon-btn mi-btn-dup" data-index="${idx}" style="width:26px; height:26px; border:1px solid #e4e4e7; border-radius:4px; background:#ffffff; cursor:pointer; color:#52525b; display:flex; align-items:center; justify-content:center;" title="Duplicate row">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             </button>
-                            <button type="button" class="icon-btn mi-btn-del" data-index="${idx}" style="width:26px; height:26px; border:none; background:transparent; cursor:pointer; color:var(--danger); display:flex; align-items:center; justify-content:center;" title="Delete row">
+                            <button type="button" class="icon-btn mi-btn-del" data-index="${idx}" style="width:26px; height:26px; border:1px solid #fecaca; border-radius:4px; background:#fff1f2; cursor:pointer; color:#dc2626; display:flex; align-items:center; justify-content:center;" title="Delete row">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
                         </div>
@@ -631,6 +650,58 @@ export const renderMarketInserter = async (container, workspaceId) => {
             });
         });
     };
+
+    // Fullscreen / Expand State Management (Preserved across reload in localStorage)
+    const pageWrapper = container.querySelector('.market-inserter-page');
+    const fullscreenBtn = container.querySelector('#mi-btn-fullscreen-toggle');
+    const fullscreenLabel = container.querySelector('#mi-fullscreen-label');
+    const fullscreenIcon = container.querySelector('#mi-fullscreen-icon');
+
+    const updateFullscreenUI = (isFullscreen) => {
+        if (!pageWrapper || !fullscreenBtn) return;
+        if (isFullscreen) {
+            pageWrapper.classList.add('mi-fullscreen-active');
+            if (fullscreenLabel) fullscreenLabel.textContent = 'Collapse';
+            if (fullscreenIcon) {
+                fullscreenIcon.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                        <path d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M10 4v6m0 0H4m6 0L3 3m10 7h6m-6 0V4m0 6l7-7"></path>
+                    </svg>
+                `;
+            }
+            fullscreenBtn.style.background = '#09090b';
+            fullscreenBtn.style.borderColor = '#18181b';
+            fullscreenBtn.title = 'Collapse to Normal View';
+        } else {
+            pageWrapper.classList.remove('mi-fullscreen-active');
+            if (fullscreenLabel) fullscreenLabel.textContent = 'Expand';
+            if (fullscreenIcon) {
+                fullscreenIcon.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                    </svg>
+                `;
+            }
+            fullscreenBtn.style.background = '#27272a';
+            fullscreenBtn.style.borderColor = '#27272a';
+            fullscreenBtn.title = 'Expand to Fullscreen Canvas';
+        }
+    };
+
+    // Initialize from localStorage
+    const savedFullscreenState = localStorage.getItem('pricelister_market_inserter_fullscreen') === 'true';
+    if (savedFullscreenState) {
+        updateFullscreenUI(true);
+    }
+
+    if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', () => {
+            const isCurrentlyFullscreen = pageWrapper.classList.contains('mi-fullscreen-active');
+            const newState = !isCurrentlyFullscreen;
+            localStorage.setItem('pricelister_market_inserter_fullscreen', newState ? 'true' : 'false');
+            updateFullscreenUI(newState);
+        });
+    }
 
     // Helper: Add N rows
     const addRows = (count) => {

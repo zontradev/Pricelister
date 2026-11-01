@@ -9,6 +9,10 @@ import { initRouter } from './router.js';
 import { setAppCurrencySymbol } from './utilities.js';
 import { openBannerPickerModal } from './modules/bannerModal.js';
 import { initGlobalSearch } from './modules/globalSearch.js';
+import { openCriticalBoardModal } from './modules/customFontManager.js';
+if (typeof window !== 'undefined') {
+    window.openCriticalBoardModal = openCriticalBoardModal;
+}
 import { CURRENCY_LIST, getCurrencyByCode } from './utils/currencyData.js';
 import { COUNTRIES_LIST, WORKSPACE_ROLES, getRoleLevel, getRoleMeta } from '../DataModel.js';
 
@@ -1270,21 +1274,19 @@ export const initAuthHandler = (pageType) => {
                     </div>
                 </div>
 
-                <!-- Critical Board Action Hero (New app option opener) -->
-                <div style="padding: 0.5rem 0.65rem 0.65rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.4rem;">
-                    <button type="button" id="topbar-open-critical-board-btn" style="width: 100%; border: 1px solid var(--border-color); background: var(--surface-50); display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0.75rem; border-radius: 10px; cursor: pointer; text-align: left; transition: all 0.18s ease;">
-                        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--surface-100); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color);">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                        </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <strong style="font-size: 0.85rem; color: var(--text-primary); font-weight: 800;">Critical Board</strong>
-                                <span style="font-size: 0.65rem; font-weight: 800; background: var(--text-primary); color: var(--surface-main); padding: 1px 6px; border-radius: 999px;">Customizer</span>
+                <!-- Critical Board Action Hero (Added per Reference Image) -->
+                <div style="padding: 0.45rem 0.65rem 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.4rem;">
+                    <button type="button" id="topbar-open-critical-board-btn" style="width: 100%; border: 1px solid var(--border-color); background: var(--surface-50); display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.75rem; border-radius: 9px; cursor: pointer; text-align: left; transition: all 0.18s ease;">
+                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                            <div style="width: 28px; height: 28px; border-radius: 7px; background: var(--surface-100); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color);">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                             </div>
-                            <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                Custom Fonts, UI Dividers &amp; Layout
+                            <div>
+                                <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-primary); line-height: 1.2;">Critical Board</div>
+                                <div style="font-size: 0.68rem; color: var(--text-secondary);">Custom Fonts &amp; Layout</div>
                             </div>
                         </div>
+                        <span style="font-size: 0.62rem; font-weight: 800; background: var(--text-primary); color: var(--surface-main); padding: 2px 6px; border-radius: 999px;">Custom</span>
                     </button>
                 </div>
 
@@ -1375,10 +1377,15 @@ export const initAuthHandler = (pageType) => {
 
         // Critical Board (Custom Font & Layout) Opener
         if (cbBtn) {
-            cbBtn.addEventListener('click', async () => {
-                dropdown.classList.remove('show');
-                const { openCriticalBoardModal } = await import('./modules/customFontManager.js');
-                openCriticalBoardModal('font');
+            cbBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (dropdown) dropdown.classList.remove('show');
+                if (typeof window.openCriticalBoard === 'function') {
+                    window.openCriticalBoard('font');
+                } else if (typeof openCriticalBoardModal === 'function') {
+                    openCriticalBoardModal('font');
+                }
             });
         }
 
@@ -1435,6 +1442,25 @@ export const initAuthHandler = (pageType) => {
                 if (await showAlert.confirm('Are you sure you want to sign out?')) {
                     await authService.logout();
                     window.location.href = 'index.html';
+                }
+            });
+        }
+
+        // Global fallback delegate for Critical Board opener
+        if (!window.__cbGlobalListenerAttached) {
+            window.__cbGlobalListenerAttached = true;
+            document.addEventListener('click', (e) => {
+                const cbTrigger = e.target.closest('#topbar-open-critical-board-btn, #nav-item-critical-board, [data-action="open-critical-board"], .open-critical-board-btn');
+                if (cbTrigger) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const dd = document.getElementById('topbar-profile-dropdown-menu');
+                    if (dd) dd.classList.remove('show');
+                    if (typeof window.openCriticalBoard === 'function') {
+                        window.openCriticalBoard('font');
+                    } else if (typeof openCriticalBoardModal === 'function') {
+                        openCriticalBoardModal('font');
+                    }
                 }
             });
         }
