@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/(home|explore|pricing|find|privacy|terms)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/Workspace/(.*)",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/workspace/(.*)",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/Workspace",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/workspace",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/demo",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/demo/(.*)",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/customer",
+      "destination": "/customer.html"
+    }
+  ]
+}
+
