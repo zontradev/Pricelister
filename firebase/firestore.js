@@ -85,19 +85,26 @@ export const firestoreService = {
 
         // Purely local mock session or demo request bypass
         if (hasMockSession || activeWsKey === 'ws_dev_mock' || activeWsKey === 'demo') {
+            let mockSaved = {};
+            try {
+                const raw = localStorage.getItem('pricelister_mock_settings');
+                if (raw) mockSaved = JSON.parse(raw) || {};
+            } catch (e) {}
+
             return {
                 id: 'ws_dev_mock',
                 workspaceId: 'DEMO-SANDBOX-01',
-                name: 'PriceLister Demo Enterprise',
-                description: 'UI Testing Sandbox',
-                email: email || 'developer@local.test',
+                name: mockSaved.name || mockSaved.shopName || 'PriceLister Demo Enterprise',
+                description: mockSaved.description || mockSaved.tagline || 'UI Testing Sandbox',
+                email: email || mockSaved.email || 'developer@local.test',
                 adminEmail: 'developer@local.test',
                 role: 'CREATOR_ADMIN',
-                currency: '$',
-                currencySymbol: '$',
-                phone: '+1 (555) 019-2834',
-                address: '100 Silicon Way, Suite 400, San Jose, CA',
-                isTestData: true
+                currency: mockSaved.currencySymbol || mockSaved.currency || '$',
+                currencySymbol: mockSaved.currencySymbol || mockSaved.currency || '$',
+                phone: mockSaved.phone || '+1 (555) 019-2834',
+                address: mockSaved.address || '100 Silicon Way, Suite 400, San Jose, CA',
+                isTestData: true,
+                ...mockSaved
             };
         }
 
@@ -831,7 +838,17 @@ export const firestoreService = {
             'CustomerProfiles',
             'Members',
             'AppSettings',
-            'ReceiptData'
+            'ReceiptData',
+            'Templates',
+            'CodeTemplates',
+            'CodeSequences',
+            'CodeReservations',
+            'CodeHistory',
+            'CodeBatches',
+            'FinanceAccounts',
+            'FinanceTransactions',
+            'EmiAccounts',
+            'EmiPayments'
         ];
 
         for (const sub of subcollections) {

@@ -140,7 +140,7 @@ export const openInvoiceDetailsModal = (invoice, options = {}) => {
             <!-- MODAL HEADER -->
             <div style="padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--surface-50);">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <span style="width: 38px; height: 38px; border-radius: 10px; background: rgba(225, 29, 72, 0.1); color: #e11d48; display: flex; align-items: center; justify-content: center;">
+                    <span style="width: 38px; height: 38px; border-radius: 10px; background: rgba(225, 29, 72, 0.1); color: #18181B; display: flex; align-items: center; justify-content: center;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                     </span>
                     <div>
@@ -159,7 +159,7 @@ export const openInvoiceDetailsModal = (invoice, options = {}) => {
 
                 <!-- TOP QUICK ACTIONS -->
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                    <button type="button" id="btn-view-export-pdf" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; background: linear-gradient(135deg, #e11d48, #be123c); border-color: #e11d48; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35); padding: 0.45rem 1rem; font-size: 0.85rem;" title="Open PDF Studio & Templates">
+                    <button type="button" id="btn-view-export-pdf" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; background: linear-gradient(135deg, #18181B, #27272A); border-color: #18181B; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35); padding: 0.45rem 1rem; font-size: 0.85rem;" title="Open PDF Studio & Templates">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                         Export PDF
                     </button>
@@ -171,7 +171,7 @@ export const openInvoiceDetailsModal = (invoice, options = {}) => {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         Edit
                     </button>
-                    <button type="button" id="btn-close-invoice-details-modal" class="icon-btn" style="background: none; border: none; font-size: 1.3rem; color: var(--text-secondary); cursor: pointer; padding: 0.25rem 0.5rem;" title="Close">✕</button>
+                    <button type="button" id="btn-close-invoice-details-modal" class="icon-btn" style="background: none; border: none; font-size: 1.3rem; color: var(--text-secondary); cursor: pointer; padding: 0.25rem 0.5rem;" title="Close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                 </div>
             </div>
 
@@ -185,13 +185,13 @@ export const openInvoiceDetailsModal = (invoice, options = {}) => {
                     <div style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: var(--radius-card); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
                         <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.65rem;">
                             <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">ISSUER (YOUR BUSINESS)</span>
-                            <span style="font-size: 0.72rem; font-weight: 700; background: rgba(225, 29, 72, 0.08); color: #e11d48; padding: 0.15rem 0.45rem; border-radius: 4px;">Issuer</span>
+                            <span style="font-size: 0.72rem; font-weight: 700; background: rgba(225, 29, 72, 0.08); color: #18181B; padding: 0.15rem 0.45rem; border-radius: 4px;">Issuer</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.85rem;">
                             ${busImage ? `
                                 <img src="${escapeHtml(busImage)}" alt="${escapeHtml(busName)}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color); flex-shrink: 0;">
                             ` : `
-                                <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0;">
+                                <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #18181B, #27272A); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0;">
                                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 11h2M6 15h2M10 11h2M10 15h2M14 11h2M14 15h2M18 11h2M18 15h2M9 3h6v4H9z"></path></svg>
                                 </div>
                             `}
@@ -298,7 +298,7 @@ export const openInvoiceDetailsModal = (invoice, options = {}) => {
                     <!-- EXECUTIVE PROFIT INTELLIGENCE -->
                     <div style="background: rgba(225, 29, 72, 0.03); border: 1px solid rgba(225, 29, 72, 0.15); border-radius: var(--radius-card); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
                         <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(225, 29, 72, 0.12); padding-bottom: 0.5rem;">
-                            <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #e11d48; letter-spacing: 0.04em;">FINANCIAL & PROFIT INTELLIGENCE</span>
+                            <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #18181B; letter-spacing: 0.04em;">FINANCIAL & PROFIT INTELLIGENCE</span>
                             <span style="font-size: 0.72rem; font-weight: 800; background: #059669; color: #ffffff; padding: 0.15rem 0.5rem; border-radius: 9999px;">
                                 ${profitMarginPct}% Margin
                             </span>
@@ -337,14 +337,14 @@ export const openInvoiceDetailsModal = (invoice, options = {}) => {
                         </div>
 
                         ${dPct > 0 ? `
-                            <div style="display: flex; justify-content: space-between; color: #e11d48;">
+                            <div style="display: flex; justify-content: space-between; color: #18181B;">
                                 <span>Discount (${dPct}%)</span>
                                 <strong>-${formatCurrency(discountAmt)}</strong>
                             </div>
                         ` : ''}
 
                         ${addCut > 0 ? `
-                            <div style="display: flex; justify-content: space-between; color: #e11d48;">
+                            <div style="display: flex; justify-content: space-between; color: #18181B;">
                                 <span>Additional Cut</span>
                                 <strong>-${formatCurrency(addCut)}</strong>
                             </div>
@@ -376,7 +376,7 @@ export const openInvoiceDetailsModal = (invoice, options = {}) => {
                                 <span style="font-size: 0.95rem; font-weight: 800; color: var(--text-primary); display: block;">Grand Total</span>
                                 <span style="font-size: 0.75rem; font-weight: 700; color: ${isPaid ? '#059669' : '#d97706'};">${isPaid ? 'Amount Paid in Full' : 'Payment Balance Due'}</span>
                             </div>
-                            <span style="font-size: 1.45rem; font-weight: 900; color: #e11d48; letter-spacing: -0.02em;">
+                            <span style="font-size: 1.45rem; font-weight: 900; color: #18181B; letter-spacing: -0.02em;">
                                 ${formatCurrency(grandTotal)}
                             </span>
                         </div>
@@ -394,7 +394,7 @@ export const openInvoiceDetailsModal = (invoice, options = {}) => {
                 <div style="display: flex; align-items: center; gap: 0.6rem;">
                     <button type="button" id="btn-footer-close" class="btn btn-secondary" style="padding: 0.45rem 1rem;">Close</button>
                     <button type="button" id="btn-footer-edit" class="btn btn-secondary" style="padding: 0.45rem 1rem; font-weight: 600;">Edit Invoice</button>
-                    <button type="button" id="btn-footer-export-pdf" class="btn btn-primary" style="padding: 0.45rem 1.25rem; font-weight: 700; background: linear-gradient(135deg, #e11d48, #be123c); border-color: #e11d48;">
+                    <button type="button" id="btn-footer-export-pdf" class="btn btn-primary" style="padding: 0.45rem 1.25rem; font-weight: 700; background: linear-gradient(135deg, #18181B, #27272A); border-color: #18181B;">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                         Export PDF & Templates
                     </button>

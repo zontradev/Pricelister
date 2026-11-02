@@ -332,7 +332,7 @@ export const renderWorkers = async (container, workspaceId) => {
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                                 Recent Activity
                             </h3>
-                            <a href="#/overview" style="font-size: 0.82rem; font-weight: 700; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            <a href="#/overview" style="font-size: 0.82rem; font-weight: 700; color: #18181B; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
                                 View all <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                             </a>
                         </div>
@@ -558,7 +558,7 @@ export const renderWorkers = async (container, workspaceId) => {
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                                     Base Currency:
                                 </span>
-                                <span style="font-weight: 800; color: var(--primary); font-family: monospace; font-size: 0.95rem;">${escapeHtml(wsInfo.currencySymbol || '$')}</span>
+                                <span style="font-weight: 800; color: #18181B; font-family: monospace; font-size: 0.95rem;">${escapeHtml(wsInfo.currencySymbol || '$')}</span>
                             </div>
 
                         </div>
@@ -621,156 +621,313 @@ export const renderWorkers = async (container, workspaceId) => {
             <!-- ======================================================== -->
             <!-- 5. INVITE WORKER MODAL / DRAWER                          -->
             <!-- ======================================================== -->
-            <div id="add-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
-                <div class="card" style="background: var(--bg-card); border-radius: 20px; max-width: 480px; width: 100%; box-shadow: var(--shadow-elevated); overflow: hidden; border: 1px solid var(--border-color); animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+            <!-- ======================================================== -->
+            <!-- ======================================================== -->
+            <!-- 5. INVITE WORKER MODAL / DRAWER (Wider 2-Col Layout)     -->
+            <!-- ======================================================== -->
+            <div id="add-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(9, 9, 11, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1.25rem;">
+                <div class="card" style="background: #FFFFFF !important; border-radius: 20px; max-width: 820px; width: 100%; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.22); overflow: hidden; border: 1px solid #E4E4E7 !important; animation: modalPop 0.24s cubic-bezier(0.16, 1, 0.3, 1);">
                     
-                    <div style="background: var(--surface-50); border-bottom: 1px solid var(--border-color); color: var(--text-primary); padding: 1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="margin: 0; font-size: 1.18rem; font-weight: 800; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem; letter-spacing:-0.015em;">
-                            <div style="width:32px; height:32px; border-radius:8px; background:var(--surface-100); color:var(--text-primary); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <!-- Header: Background & surface totally #FFFFFF & no border with clear spacing -->
+                    <div style="background: #FFFFFF !important; border: none !important; border-bottom: none !important; padding: 1.5rem 1.85rem 0.65rem 1.85rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 40px; height: 40px; border-radius: 12px; background: #F4F4F5; color: #09090B; display: flex; align-items: center; justify-content: center; border: 1px solid #E4E4E7; flex-shrink: 0;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
                             </div>
-                            Invite Team Member
-                        </h3>
-                        <button type="button" id="btn-close-invite-modal" style="background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 1.1rem; cursor: pointer; padding: 0.2rem 0.55rem; border-radius:8px; line-height:1; transition:all 0.15s ease;">✕</button>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #09090B; letter-spacing: -0.02em;">Invite Team Member</h3>
+                                <p style="margin: 0.15rem 0 0 0; font-size: 0.82rem; color: #71717A;">Invite a collaborator and customize their role permissions</p>
+                            </div>
+                        </div>
+                        <button type="button" id="btn-close-invite-modal" aria-label="Close" style="background: #F4F4F5; border: 1px solid #E4E4E7; color: #71717A; font-size: 1.25rem; cursor: pointer; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; line-height: 1; transition: all 0.15s ease;">&times;</button>
                     </div>
 
-                    <form id="add-worker-form" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.15rem; background: var(--bg-card);">
-                        <div class="form-group">
-                            <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem; display:block;">Worker Email Address *</label>
-                            <input type="email" id="worker-email" required class="form-control" style="width:100%; font-size:0.9rem; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.6rem 0.85rem;" placeholder="worker@gmail.com">
-                            <small style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem; display:block;">Must be a valid Gmail address ending with @gmail.com</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem; display:block;">Workspace Role</label>
-                            <select id="worker-role" class="form-control" style="width:100%; font-size:0.9rem; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.6rem 0.85rem;">
-                                <option value="WORKER">Worker (Standard Operator)</option>
-                                ${isAdmin ? '<option value="CO_ADMIN">Co-Admin (Elevated Manager - No Restrictions)</option>' : ''}
-                            </select>
-                        </div>
-
-                        <!-- Restrictions Container (Applies to Workers only; hidden when Co-Admin is selected) -->
-                        <div id="add-worker-restrictions-container" style="display:flex; flex-direction:column; gap:0.9rem;">
-                            <!-- Group A: Action Restriction -->
-                            <div class="form-group" style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.9rem 1rem;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.55rem;">
-                                    <label style="font-size:0.78rem; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">Action Restrictions (Group A)</label>
-                                    <span style="font-size:0.68rem; background:var(--surface-200); color:var(--text-secondary); padding:0.1rem 0.4rem; border-radius:4px; font-weight:700;">Worker Only</span>
+                    <!-- Wider 2-Column Grid Body: Left invite email & access choice | Right restrictions checksum -->
+                    <form id="add-worker-form" style="padding: 1rem 1.85rem 1.85rem 1.85rem; display: flex; flex-direction: column; gap: 1.35rem; background: #FFFFFF !important;">
+                        <div style="display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 1.75rem; align-items: start;">
+                            
+                            <!-- LEFT COLUMN: INVITE EMAIL & ACCESS CHOICE -->
+                            <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+                                <div class="form-group" style="margin: 0;">
+                                    <label style="font-size: 0.84rem; font-weight: 800; color: #09090B; margin-bottom: 0.45rem; display: block;">Member Email Address *</label>
+                                    <input type="email" id="worker-email" required class="form-control" style="width: 100%; height: 44px; font-size: 0.92rem; background: #F4F4F5; border: 1px solid #E4E4E7; color: #09090B; border-radius: 10px; padding: 0.6rem 0.85rem; box-sizing: border-box;" placeholder="colleague@gmail.com">
+                                    <small style="font-size: 0.74rem; color: #71717A; margin-top: 0.35rem; display: block;">Must be a valid Gmail address ending with @gmail.com</small>
                                 </div>
-                                <div style="display:flex; flex-direction:column; gap:0.55rem; font-size:0.85rem; color:var(--text-primary);">
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="worker-disable-add" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Add New Data
-                                    </label>
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="worker-disable-delete-others" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Delete Others Data
-                                    </label>
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="worker-disable-update-others" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Update Other Data
-                                    </label>
+                                
+                                <div class="form-group" style="margin: 0;">
+                                    <label style="font-size: 0.84rem; font-weight: 800; color: #09090B; margin-bottom: 0.45rem; display: block;">Workspace Role & Access Level</label>
+                                    <select id="worker-role" class="form-control" style="width: 100%; height: 44px; font-size: 0.92rem; background: #F4F4F5; border: 1px solid #E4E4E7; color: #09090B; border-radius: 10px; padding: 0.6rem 0.85rem; font-weight: 600; box-sizing: border-box;">
+                                        <option value="WORKER">Worker (Standard Operator)</option>
+                                        ${isAdmin ? '<option value="CO_ADMIN">Co-Admin (Elevated Manager - No Restrictions)</option>' : ''}
+                                    </select>
+                                </div>
+
+                                <!-- Dynamic Role Info Card -->
+                                <div id="invite-role-info-card" style="padding: 1rem; border-radius: 12px; background: #FAFAFA; border: 1px solid #E4E4E7;">
+                                    <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; font-weight: 800; color: #09090B; margin-bottom: 0.25rem;">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                        <span id="invite-role-info-title">Worker Privileges</span>
+                                    </div>
+                                    <p id="invite-role-info-desc" style="margin: 0; font-size: 0.78rem; color: #71717A; line-height: 1.45;">
+                                        Standard operator in the workspace. Fine-tune access and restrict specific capabilities using the checkboxes on the right.
+                                    </p>
                                 </div>
                             </div>
 
-                            <!-- Group B: Visibility Restriction -->
-                            <div class="form-group" style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.9rem 1rem;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.55rem;">
-                                    <label style="font-size:0.78rem; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">Visibility Restrictions (Group B)</label>
-                                    <span style="font-size:0.68rem; background:var(--surface-200); color:var(--text-secondary); padding:0.1rem 0.4rem; border-radius:4px; font-weight:700;">Worker Only</span>
+                            <!-- RIGHT COLUMN: RESTRICTIONS CHECKSUM -->
+                            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.15rem;">
+                                    <span style="font-size: 0.84rem; font-weight: 800; color: #09090B;">Restrictions Checksum</span>
+                                    <span id="invite-restrictions-badge" style="font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.65rem; border-radius: 999px; background: #F4F4F5; color: #09090B; border: 1px solid #E4E4E7;">
+                                        0 / 5 Restrictions Active
+                                    </span>
                                 </div>
-                                <div style="display:flex; flex-direction:column; gap:0.55rem; font-size:0.85rem; color:var(--text-primary);">
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="worker-cannot-see-cost" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to see Cost
-                                    </label>
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="worker-cannot-see-profit" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to see Profit Margin
-                                    </label>
+
+                                <!-- Co-Admin Locked Notice: Shown when Co-Admin role is selected -->
+                                <div id="invite-coadmin-locked-notice" style="display: none; padding: 0.85rem 1rem; border-radius: 12px; background: #FAFAFA; border: 1px dashed #E4E4E7; color: #71717A; font-size: 0.8rem; line-height: 1.45;">
+                                    <div style="display: flex; align-items: center; gap: 0.45rem; font-weight: 800; color: #09090B; margin-bottom: 0.2rem;">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#09090B" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                        Co-Admin Has Full Unrestricted Access
+                                    </div>
+                                    Co-Admins operate with full managerial privileges. All restriction checkboxes are disabled and existing selections have been revoked to empty boxes.
+                                </div>
+
+                                <!-- Checkbox Groups Container: Active for Worker, Disabled & Revoked for Co-Admin -->
+                                <div id="add-worker-restrictions-container" style="display: flex; flex-direction: column; gap: 0.85rem; transition: opacity 0.2s ease;">
+                                    <!-- Action Restrictions -->
+                                    <div class="form-group" style="background: #FAFAFA; border: 1px solid #E4E4E7; border-radius: 12px; padding: 0.85rem 1rem; margin: 0;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.55rem;">
+                                            <label style="font-size: 0.78rem; font-weight: 800; color: #09090B; text-transform: uppercase; letter-spacing: 0.04em;">Action Restrictions</label>
+                                            <span style="font-size: 0.68rem; background: #F4F4F5; color: #71717A; padding: 0.1rem 0.45rem; border-radius: 4px; font-weight: 700;">Worker Only</span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 0.55rem; font-size: 0.85rem; color: #09090B;">
+                                            <label class="invite-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="worker-disable-add" class="invite-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to Add New Data
+                                            </label>
+                                            <label class="invite-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="worker-disable-delete-others" class="invite-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to Delete Others Data
+                                            </label>
+                                            <label class="invite-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="worker-disable-update-others" class="invite-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to Update Other Data
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Visibility Restrictions -->
+                                    <div class="form-group" style="background: #FAFAFA; border: 1px solid #E4E4E7; border-radius: 12px; padding: 0.85rem 1rem; margin: 0;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.55rem;">
+                                            <label style="font-size: 0.78rem; font-weight: 800; color: #09090B; text-transform: uppercase; letter-spacing: 0.04em;">Visibility Restrictions</label>
+                                            <span style="font-size: 0.68rem; background: #F4F4F5; color: #71717A; padding: 0.1rem 0.45rem; border-radius: 4px; font-weight: 700;">Worker Only</span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 0.55rem; font-size: 0.85rem; color: #09090B;">
+                                            <label class="invite-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="worker-cannot-see-cost" class="invite-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to see Cost
+                                            </label>
+                                            <label class="invite-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="worker-cannot-see-profit" class="invite-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to see Profit Margin
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div style="display:flex; gap:0.75rem; margin-top:0.35rem;">
-                            <button type="submit" id="btn-submit-worker" class="btn btn-primary" style="flex:1; background:var(--btn-primary-bg); border:1px solid var(--btn-primary-border); color:var(--btn-primary-text); font-weight:700; border-radius:10px; padding:0.7rem; box-shadow:var(--shadow-subtle);">Send Invitation</button>
-                            <button type="button" id="btn-cancel-worker" class="btn btn-secondary" style="font-weight:700; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.7rem 1.25rem;">Cancel</button>
+                        <!-- Bottom Buttons -->
+                        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem; border-top: 1px solid #E4E4E7; padding-top: 1.25rem;">
+                            <button type="button" id="btn-cancel-worker" class="btn" style="height: 44px; font-weight: 700; background: #FFFFFF; border: 1.5px solid #E4E4E7; color: #09090B; border-radius: 12px; padding: 0 1.5rem; cursor: pointer; transition: all 0.15s ease;">Cancel</button>
+                            <button type="submit" id="btn-submit-worker" class="btn" style="height: 44px; background: #09090B; border: none; color: #FFFFFF; font-weight: 700; border-radius: 12px; padding: 0 1.75rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.15s ease;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                <span>Send Invitation</span>
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
 
             <!-- ======================================================== -->
-            <!-- 6. MANAGE WORKER MODAL                                   -->
+            <!-- 6. MANAGE WORKER MODAL (Wider 2-Col Layout with Promote/Demote & Temporary Blocked) -->
             <!-- ======================================================== -->
-            <div id="manage-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
-                <div class="card" style="background: var(--bg-card); border-radius: 20px; max-width: 520px; width: 100%; box-shadow: var(--shadow-elevated); overflow: hidden; border: 1px solid var(--border-color); animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div id="manage-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(9, 9, 11, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1.25rem;">
+                <div class="card" style="background: #FFFFFF !important; border-radius: 20px; max-width: 820px; width: 100%; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.22); overflow: hidden; border: 1px solid #E4E4E7 !important; animation: modalPop 0.24s cubic-bezier(0.16, 1, 0.3, 1);">
                     
-                    <div style="background: var(--surface-50); border-bottom: 1px solid var(--border-color); color: var(--text-primary); padding: 1.25rem 1.5rem; display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="margin: 0; font-size: 1.18rem; font-weight: 800; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem; letter-spacing:-0.015em;">
-                            <div style="width:32px; height:32px; border-radius:8px; background:var(--surface-100); color:var(--text-primary); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <!-- Header: Background & surface totally #FFFFFF & no border with clear spacing -->
+                    <div style="background: #FFFFFF !important; border: none !important; border-bottom: none !important; padding: 1.5rem 1.85rem 0.65rem 1.85rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 40px; height: 40px; border-radius: 12px; background: #F4F4F5; color: #09090B; display: flex; align-items: center; justify-content: center; border: 1px solid #E4E4E7; flex-shrink: 0;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                             </div>
-                            Manage Member
-                        </h3>
-                        <button type="button" id="btn-close-manage-modal" style="background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 1.1rem; cursor: pointer; padding: 0.2rem 0.55rem; border-radius:8px; line-height:1; transition:all 0.15s ease;">✕</button>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #09090B; letter-spacing: -0.02em;">Manage Team Member</h3>
+                                <p style="margin: 0.15rem 0 0 0; font-size: 0.82rem; color: #71717A;">Role transition, restriction enforcement, and temporary access suspension</p>
+                            </div>
+                        </div>
+                        <button type="button" id="btn-close-manage-modal" aria-label="Close" style="background: #F4F4F5; border: 1px solid #E4E4E7; color: #71717A; font-size: 1.25rem; cursor: pointer; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; line-height: 1; transition: all 0.15s ease;">&times;</button>
                     </div>
 
-                    <form id="manage-worker-form" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.15rem; background: var(--bg-card); max-height: 80vh; overflow-y: auto;">
+                    <!-- Wider 2-Column Body -->
+                    <form id="manage-worker-form" style="padding: 1rem 1.85rem 1.85rem 1.85rem; display: flex; flex-direction: column; gap: 1.35rem; background: #FFFFFF !important; max-height: 82vh; overflow-y: auto;">
                         <input type="hidden" id="manage-email">
-                        
-                        <div style="background: var(--surface-50); padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid var(--border-color);">
-                            <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 0.25rem; letter-spacing:0.04em;">Member Email</span>
-                            <div style="font-size: 0.96rem; font-weight: 800; color: var(--text-primary); word-break: break-all;" id="manage-email-display"></div>
+                        <input type="hidden" id="manage-prev-role" value="WORKER">
+
+                        <div style="display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 1.75rem; align-items: start;">
+                            
+                            <!-- LEFT COLUMN: MEMBER PROFILE & ROLE SHIFT (PROMOTE / DEMOTE) & TEMPORARY BLOCKED -->
+                            <div style="display: flex; flex-direction: column; gap: 1.15rem;">
+                                
+                                <!-- Identity Preview Card -->
+                                <div style="background: #FAFAFA; border: 1px solid #E4E4E7; border-radius: 14px; padding: 0.95rem 1.15rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div id="manage-avatar-circle" style="width: 44px; height: 44px; border-radius: 50%; background: #09090B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.05rem; flex-shrink: 0;">
+                                            M
+                                        </div>
+                                        <div style="overflow: hidden; flex: 1;">
+                                            <div id="manage-email-display" style="font-size: 0.94rem; font-weight: 800; color: #09090B; word-break: break-all;">member@gmail.com</div>
+                                            <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                                                <span id="manage-role-pill-badge" style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 6px; background: #F4F4F5; color: #09090B; border: 1px solid #E4E4E7;">Worker</span>
+                                                <span id="manage-status-pill-badge" style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 6px; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0;">Active</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Role Assignment with Promote / Demote UI -->
+                                <div class="form-group" style="background: #FFFFFF; border: 1px solid #E4E4E7; border-radius: 14px; padding: 1.1rem; margin: 0;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                                        <label style="font-size: 0.84rem; font-weight: 800; color: #09090B; margin: 0;">Role Assignment & Level</label>
+                                        <span id="manage-role-shift-tag" style="font-size: 0.72rem; color: #71717A; font-weight: 700;">Standard Operator</span>
+                                    </div>
+
+                                    ${isAdmin ? `
+                                        <select id="manage-role" class="form-control" style="width: 100%; height: 42px; font-size: 0.92rem; background: #F4F4F5; border: 1px solid #E4E4E7; color: #09090B; border-radius: 10px; padding: 0.55rem 0.85rem; font-weight: 700; box-sizing: border-box;">
+                                            <option value="WORKER">Worker (Standard Operator)</option>
+                                            <option value="CO_ADMIN">Co-Admin (Elevated Manager - Full Access)</option>
+                                        </select>
+                                    ` : '<input type="hidden" id="manage-role" value="WORKER">'}
+
+                                    <!-- Promote / Demote Quick Action Button -->
+                                    <div id="manage-role-action-box" style="margin-top: 0.85rem;">
+                                        <button type="button" id="btn-quick-shift-role" style="width: 100%; height: 42px; border-radius: 10px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.18s ease; border: 1.5px solid #09090B; background: #09090B; color: #FFFFFF;">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                            <span id="btn-quick-shift-text">Promote to Co-Admin</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- TEMPORARY BLOCKED OPTION & FUNCTIONAL BLOCK -->
+                                <div style="background: #FFFFFF; border: 1.5px solid #E4E4E7; border-radius: 14px; padding: 1.1rem;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                            <div style="width: 34px; height: 34px; border-radius: 9px; background: #F4F4F5; color: #09090B; display: flex; align-items: center; justify-content: center; border: 1px solid #E4E4E7; flex-shrink: 0;">
+                                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                            </div>
+                                            <div>
+                                                <strong style="font-size: 0.86rem; color: #09090B; display: block;">Temporary Blocked</strong>
+                                                <span style="font-size: 0.74rem; color: #71717A;">Suspend this worker's workspace access</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Self-contained custom switch toggle -->
+                                        <label style="position: relative; display: inline-flex; align-items: center; cursor: pointer; user-select: none;">
+                                            <input type="checkbox" id="manage-access-revoke-toggle" style="position: absolute; opacity: 0; width: 0; height: 0;">
+                                            <span id="manage-toggle-track" style="width: 44px; height: 24px; background: #E4E4E7; border-radius: 999px; transition: background 0.2s ease; display: inline-block; position: relative;">
+                                                <span id="manage-toggle-thumb" style="width: 18px; height: 18px; background: #FFFFFF; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 1px 3px rgba(0,0,0,0.25);"></span>
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Revocation details box shown when toggle is checked -->
+                                    <div id="manage-revoke-details-box" style="display: none; flex-direction: column; gap: 0.65rem; margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid #E4E4E7;">
+                                        <div style="font-size: 0.76rem; color: #71717A; display: flex; justify-content: space-between; align-items: center;">
+                                            <span>Suspension Duration:</span>
+                                            <span id="manage-revoke-duration-text" style="font-weight: 700; color: #09090B;">Now &mdash; Choose End</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                             <span style="font-size: 0.74rem; color: #71717A; white-space: nowrap;">Blocked Until:</span>
+                                             <input type="datetime-local" id="manage-revoke-end-input" class="form-control" style="flex: 1; height: 38px; font-size: 0.82rem; background: #F4F4F5; border: 1px solid #E4E4E7; border-radius: 8px; padding: 0.35rem 0.5rem; color: #09090B;">
+                                        </div>
+                                        <div style="font-size: 0.72rem; color: #09090B; background: #F4F4F5; padding: 0.45rem 0.65rem; border-radius: 8px; border: 1px solid #E4E4E7; line-height: 1.4;">
+                                            <strong>Functional Block Active:</strong> When saved, this worker will be instantly ejected and prevented from loading this workspace until unblocked.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT COLUMN: RESTRICTIONS CHECKBOXES & CO-ADMIN ENFORCEMENT GUARD -->
+                            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.15rem;">
+                                    <span style="font-size: 0.84rem; font-weight: 800; color: #09090B;">Worker Restrictions</span>
+                                    <span id="manage-restrictions-badge" style="font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.65rem; border-radius: 999px; background: #F4F4F5; color: #09090B; border: 1px solid #E4E4E7;">
+                                        Customizable for Worker
+                                    </span>
+                                </div>
+
+                                <!-- Co-Admin Restriction Guard Notice: Visible when role is CO_ADMIN -->
+                                <div id="manage-coadmin-guard-notice" style="display: none; padding: 1rem; border-radius: 12px; background: #FAFAFA; border: 1px dashed #E4E4E7; color: #71717A; font-size: 0.82rem; line-height: 1.5;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 800; color: #09090B; margin-bottom: 0.35rem;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#09090B" stroke-width="2.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                        Co-Admin Restriction Guard
+                                    </div>
+                                    Co-Admins have full managerial privileges and cannot be restricted. If you want to restrict this team member, <strong>you must demote them to Worker first</strong>.
+                                    <div style="margin-top: 0.75rem;">
+                                        <button type="button" id="btn-guard-demote-to-worker" style="padding: 0.45rem 0.95rem; font-size: 0.78rem; font-weight: 800; background: #FFFFFF; border: 1px solid #E4E4E7; color: #09090B; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.15s ease;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                                            Demote to Worker to Apply Restrictions
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Checkbox Groups Container -->
+                                <div id="manage-restrictions-container" style="display: flex; flex-direction: column; gap: 0.85rem; transition: opacity 0.2s ease;">
+                                    <!-- Action Restrictions -->
+                                    <div class="form-group" style="background: #FAFAFA; border: 1px solid #E4E4E7; border-radius: 12px; padding: 0.85rem 1rem; margin: 0;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.55rem;">
+                                            <label style="font-size: 0.78rem; font-weight: 800; color: #09090B; text-transform: uppercase; letter-spacing: 0.04em;">Action Restrictions</label>
+                                            <span style="font-size: 0.68rem; background: #F4F4F5; color: #71717A; padding: 0.1rem 0.45rem; border-radius: 4px; font-weight: 700;">Worker Only</span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 0.55rem; font-size: 0.85rem; color: #09090B;">
+                                            <label class="manage-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="manage-disable-add" class="manage-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to Add New Data
+                                            </label>
+                                            <label class="manage-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="manage-disable-delete-others" class="manage-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to Delete Others Data
+                                            </label>
+                                            <label class="manage-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="manage-disable-update-others" class="manage-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to Update Other Data
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Visibility Restrictions -->
+                                    <div class="form-group" style="background: #FAFAFA; border: 1px solid #E4E4E7; border-radius: 12px; padding: 0.85rem 1rem; margin: 0;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.55rem;">
+                                            <label style="font-size: 0.78rem; font-weight: 800; color: #09090B; text-transform: uppercase; letter-spacing: 0.04em;">Visibility Restrictions</label>
+                                            <span style="font-size: 0.68rem; background: #F4F4F5; color: #71717A; padding: 0.1rem 0.45rem; border-radius: 4px; font-weight: 700;">Worker Only</span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 0.55rem; font-size: 0.85rem; color: #09090B;">
+                                            <label class="manage-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="manage-cannot-see-cost" class="manage-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to see Cost
+                                            </label>
+                                            <label class="manage-restr-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; color: #09090B;">
+                                                <input type="checkbox" id="manage-cannot-see-profit" class="manage-restr-box" style="accent-color: #09090B; width: 16px; height: 16px; cursor: pointer;"> Unable to see Profit Margin
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
-                        ${isAdmin ? `
-                            <div class="form-group">
-                                <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.35rem; display:block;">Role Assignment</label>
-                                <select id="manage-role" class="form-control" style="width:100%; font-size:0.9rem; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.6rem 0.85rem;">
-                                    <option value="WORKER">Worker (Restricted Operator)</option>
-                                    <option value="CO_ADMIN">Co-Admin (Elevated Manager - No Restrictions)</option>
-                                </select>
+                        <!-- Action Footer -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; border-top: 1px solid #E4E4E7; padding-top: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                            <button type="button" id="btn-remove-worker" class="btn" style="color: #09090B; border: 1px solid #E4E4E7; background: #FFFFFF; font-weight: 700; border-radius: 12px; height: 44px; padding: 0 1.25rem; cursor: pointer; transition: all 0.15s ease;">
+                                Remove Member
+                            </button>
+                            <div style="display: flex; gap: 0.75rem;">
+                                <button type="button" id="btn-cancel-manage" class="btn" style="height: 44px; font-weight: 700; background: #FFFFFF; border: 1.5px solid #E4E4E7; color: #09090B; border-radius: 12px; padding: 0 1.4rem; cursor: pointer; transition: all 0.15s ease;">Cancel</button>
+                                <button type="submit" id="btn-save-manage" class="btn" style="height: 44px; background: #09090B; border: none; color: #FFFFFF; font-weight: 700; border-radius: 12px; padding: 0 1.75rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.15s ease;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Save Changes</span>
+                                </button>
                             </div>
-                        ` : '<input type="hidden" id="manage-role" value="WORKER">'}
-
-                        <!-- Restrictions Container (Applies to Workers only; hidden when Co-Admin is selected) -->
-                        <div id="manage-restrictions-container" style="display:flex; flex-direction:column; gap:0.9rem;">
-                            <!-- Group A: Action Restriction -->
-                            <div class="form-group" style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.9rem 1rem;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.55rem;">
-                                    <label style="font-size:0.78rem; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">Action Restrictions (Group A)</label>
-                                    <span style="font-size:0.68rem; background:var(--surface-200); color:var(--text-secondary); padding:0.1rem 0.4rem; border-radius:4px; font-weight:700;">Worker Only</span>
-                                </div>
-                                <div style="display:flex; flex-direction:column; gap:0.55rem; font-size:0.85rem; color:var(--text-primary);">
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="manage-disable-add" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Add New Data
-                                    </label>
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="manage-disable-delete-others" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Delete Others Data
-                                    </label>
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="manage-disable-update-others" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to Update Other Data
-                                    </label>
-                                </div>
-                            </div>
-
-                            <!-- Group B: Visibility Restriction -->
-                            <div class="form-group" style="background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.9rem 1rem;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.55rem;">
-                                    <label style="font-size:0.78rem; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">Visibility Restrictions (Group B)</label>
-                                    <span style="font-size:0.68rem; background:var(--surface-200); color:var(--text-secondary); padding:0.1rem 0.4rem; border-radius:4px; font-weight:700;">Worker Only</span>
-                                </div>
-                                <div style="display:flex; flex-direction:column; gap:0.55rem; font-size:0.85rem; color:var(--text-primary);">
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="manage-cannot-see-cost" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to see Cost
-                                    </label>
-                                    <label style="display:flex; align-items:center; gap:0.65rem; cursor:pointer; color:var(--text-primary);">
-                                        <input type="checkbox" id="manage-cannot-see-profit" style="accent-color: var(--text-primary); width:16px; height:16px;"> Unable to see Profit Margin
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div style="display:flex; gap:0.75rem; margin-top:0.35rem; flex-wrap:wrap;">
-                            <button type="submit" id="btn-save-manage" class="btn btn-primary" style="flex:1; background:var(--btn-primary-bg); border:1px solid var(--btn-primary-border); color:var(--btn-primary-text); font-weight:700; border-radius:10px; padding:0.7rem; box-shadow:var(--shadow-subtle);">Save Changes</button>
-                            <button type="button" id="btn-remove-worker" class="btn btn-outline" style="color: #dc2626; border: 1.5px solid rgba(239,68,68,0.4); background:rgba(239,68,68,0.06); font-weight:700; border-radius:10px; padding:0.7rem 1.1rem;">Remove</button>
-                            <button type="button" id="btn-cancel-manage" class="btn btn-secondary" style="font-weight:700; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:0.7rem 1.1rem;">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -821,6 +978,9 @@ export const renderWorkers = async (container, workspaceId) => {
         if (manageContainer) manageContainer.style.display = 'none';
         if (addContainer) {
             addContainer.style.display = 'flex';
+            const roleSelect = container.querySelector('#worker-role');
+            if (roleSelect) roleSelect.value = 'WORKER';
+            syncInviteRoleUI();
             container.querySelector('#worker-email')?.focus();
         }
     };
@@ -941,55 +1101,55 @@ export const renderWorkers = async (container, workspaceId) => {
             const nameInitial = ((m.email || 'M').charAt(0) || 'M').toUpperCase();
 
             // Role Badge styling
-            let rolePillBg = '#f1f5f9';
-            let rolePillColor = '#475569';
-            let rolePillBorder = '#e2e8f0';
+            let rolePillBg = '#FFFFFF';
+            let rolePillColor = '#71717A';
+            let rolePillBorder = '#E4E4E7';
             if (isCreator) {
-                rolePillBg = '#18181b';
-                rolePillColor = '#ffffff';
-                rolePillBorder = '#18181b';
+                rolePillBg = '#18181B';
+                rolePillColor = '#FFFFFF';
+                rolePillBorder = '#18181B';
             } else if (rUpper === 'ADMIN') {
-                rolePillBg = 'var(--surface-100)';
-                rolePillColor = 'var(--text-primary)';
-                rolePillBorder = 'var(--border-color)';
+                rolePillBg = '#27272A';
+                rolePillColor = '#FFFFFF';
+                rolePillBorder = '#27272A';
             } else if (rUpper === 'CO_ADMIN' || rUpper === 'CO-ADMIN') {
-                rolePillBg = '#eff6ff';
-                rolePillColor = '#2563eb';
-                rolePillBorder = '#bfdbfe';
+                rolePillBg = '#3F3F46';
+                rolePillColor = '#FFFFFF';
+                rolePillBorder = '#3F3F46';
             }
 
             // Status Indicator styling
-            let statusDotColor = '#10b981';
+            let statusDotColor = '#18181B';
             let statusBadgeHtml = `
-                <span style="font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 4px; background: #ecfdf5; color: #065f46;">
+                <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #FAFAFA; color: #09090B; border: 1px solid #E4E4E7;">
                     Joined
                 </span>
             `;
             if (isPending) {
-                statusDotColor = '#f59e0b';
+                statusDotColor = '#71717A';
                 statusBadgeHtml = `
-                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: rgba(245, 158, 11, 0.15); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.35);">
-                        (Pending)
+                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #FAFAFA; color: #71717A; border: 1px solid #E4E4E7;">
+                        Pending
                     </span>
                     ${m.hasExistingWorkspace ? `
-                        <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: rgba(37, 99, 235, 0.12); color: #1d4ed8; border: 1px solid rgba(37, 99, 235, 0.3);">
-                            (Connected in a Workspace)
+                        <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #FAFAFA; color: #71717A; border: 1px solid #E4E4E7;">
+                            Connected in Workspace
                         </span>
                     ` : ''}
                 `;
             } else if (isRestrictedWorker) {
-                statusDotColor = '#ef4444';
+                statusDotColor = '#71717A';
                 statusBadgeHtml = `
-                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 4px; background: #fee2e2; color: #991b1b;">
+                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #FAFAFA; color: #71717A; border: 1px solid #E4E4E7;">
                         Restricted
                     </span>
                 `;
             }
 
             if (m.accessRevoked || m.isAccessBlocked) {
-                statusDotColor = '#dc2626';
+                statusDotColor = '#18181B';
                 statusBadgeHtml += `
-                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #fee2e2; color: #991b1b; border: 1px solid #fecdd3; display:inline-flex; align-items:center; gap:3px;">
+                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #18181B; color: #FFFFFF; border: 1px solid #18181B; display:inline-flex; align-items:center; gap:3px;">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Access Blocked
                     </span>
                 `;
@@ -1000,7 +1160,7 @@ export const renderWorkers = async (container, workspaceId) => {
             if (canManageWorkers && !isSelf) {
                 if (isPending) {
                     actionBtnHtml = `
-                        <button type="button" class="btn btn-sm btn-cancel-invite" data-email="${escapeHtml(m.email)}" style="font-size:0.75rem; padding:0.25rem 0.6rem; color:#dc2626; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.25); border-radius:6px; font-weight:600; cursor:pointer;">
+                        <button type="button" class="btn btn-sm btn-cancel-invite" data-email="${escapeHtml(m.email)}" style="font-size:0.75rem; padding:0.25rem 0.6rem; color:#09090B; background:#FFFFFF; border:1px solid #E4E4E7; border-radius:6px; font-weight:600; cursor:pointer;">
                             Cancel
                         </button>
                     `;
@@ -1015,6 +1175,7 @@ export const renderWorkers = async (container, workspaceId) => {
                             data-del-others="${m.disableDeleteOthers ? '1' : '0'}"
                             data-upd-others="${m.disableUpdateOthers ? '1' : '0'}"
                             data-revoked="${m.accessRevoked ? '1' : '0'}"
+                            data-blocked="${m.isAccessBlocked ? '1' : '0'}"
                             data-revoke-start="${m.revokeStart || ''}"
                             data-revoke-end="${m.revokeEnd || ''}"
                             data-revoke-start-fmt="${escapeHtml(m.revokeStartFormatted || '')}"
@@ -1031,7 +1192,7 @@ export const renderWorkers = async (container, workspaceId) => {
                     <div style="display: flex; align-items: center; gap: 0.75rem; overflow: hidden;">
                         
                         <!-- Avatar / Initial -->
-                        <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%); color: #334155; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.88rem; flex-shrink: 0; position: relative;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: var(--surface-100); color: var(--text-primary); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.88rem; flex-shrink: 0; position: relative;">
                             ${nameInitial}
                             <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; border-radius: 50%; background: ${statusDotColor}; border: 2px solid #ffffff;"></span>
                         </div>
@@ -1042,7 +1203,7 @@ export const renderWorkers = async (container, workspaceId) => {
                                 <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;">
                                     ${escapeHtml(m.email || 'Member')}
                                 </div>
-                                ${isSelf ? '<span style="font-size:0.7rem; color:var(--primary); font-weight:700;">(You)</span>' : ''}
+                                ${isSelf ? '<span style="font-size:0.7rem; color: #18181B; font-weight:700;">(You)</span>' : ''}
                             </div>
                             <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.15rem; flex-wrap: wrap;">
                                 <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 4px; background: ${rolePillBg}; color: ${rolePillColor}; border: 1px solid ${rolePillBorder};">
@@ -1102,7 +1263,7 @@ export const renderWorkers = async (container, workspaceId) => {
                 const dAdd = e.currentTarget.getAttribute('data-add') === '1';
                 const dDelOthers = e.currentTarget.getAttribute('data-del-others') === '1';
                 const dUpdOthers = e.currentTarget.getAttribute('data-upd-others') === '1';
-                const isRevoked = e.currentTarget.getAttribute('data-revoked') === '1';
+                const isRevoked = e.currentTarget.getAttribute('data-revoked') === '1' || e.currentTarget.getAttribute('data-blocked') === '1';
                 const rStart = e.currentTarget.getAttribute('data-revoke-start');
                 const rEnd = e.currentTarget.getAttribute('data-revoke-end');
                 const rStartFmt = e.currentTarget.getAttribute('data-revoke-start-fmt');
@@ -1111,6 +1272,16 @@ export const renderWorkers = async (container, workspaceId) => {
                 container.querySelector('#manage-email').value = email;
                 container.querySelector('#manage-email-display').textContent = email;
                 
+                const prevRoleInput = container.querySelector('#manage-prev-role');
+                if (prevRoleInput) {
+                    prevRoleInput.value = (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? 'CO_ADMIN' : 'WORKER';
+                }
+                
+                const avatarCircle = container.querySelector('#manage-avatar-circle');
+                if (avatarCircle) {
+                    avatarCircle.textContent = (email.charAt(0) || 'M').toUpperCase();
+                }
+
                 const roleSelect = container.querySelector('#manage-role');
                 if (roleSelect) {
                     roleSelect.value = (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? 'CO_ADMIN' : 'WORKER';
@@ -1128,20 +1299,12 @@ export const renderWorkers = async (container, workspaceId) => {
                 if (delOthersBox) delOthersBox.checked = dDelOthers;
                 if (updOthersBox) updOthersBox.checked = dUpdOthers;
 
-                // Handle Restrictions Display depending on Role
-                const restrContainer = container.querySelector('#manage-restrictions-container');
-                if (restrContainer) {
-                    restrContainer.style.display = (roleSelect && roleSelect.value === 'CO_ADMIN') ? 'none' : 'flex';
-                }
+                // Sync Manage Role UI (star/demote icon, guard notice, disabled checkboxes for Co-Admin)
+                syncManageRoleUI(r);
 
                 // Handle Revocation Controls
-                const revokeToggle = container.querySelector('#manage-access-revoke-toggle');
-                const revokeBox = container.querySelector('#manage-revoke-details-box');
                 const startDisp = container.querySelector('#manage-revoke-start-disp');
                 const endInput = container.querySelector('#manage-revoke-end-input');
-
-                if (revokeToggle) revokeToggle.checked = isRevoked;
-                if (revokeBox) revokeBox.style.display = isRevoked ? 'flex' : 'none';
 
                 const nowMs = Date.now();
                 const effectiveStart = rStart ? Number(rStart) : nowMs;
@@ -1161,7 +1324,9 @@ export const renderWorkers = async (container, workspaceId) => {
                         endInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
                     }
                 }
-                updateRevocationDurationPreview();
+
+                // Sync Revocation & Temporary Blocked Switch UI
+                syncRevokeToggleUI(isRevoked);
                 
                 if (addContainer) addContainer.style.display = 'none';
                 if (manageContainer) {
@@ -1170,60 +1335,17 @@ export const renderWorkers = async (container, workspaceId) => {
 
                 initialManageSnapshot = {
                     role: (roleSelect ? roleSelect.value : 'WORKER'),
-                    cannotCost,
-                    cannotProfit,
-                    dAdd,
-                    dDelOthers,
-                    dUpdOthers,
+                    cannotCost: (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? false : cannotCost,
+                    cannotProfit: (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? false : cannotProfit,
+                    dAdd: (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? false : dAdd,
+                    dDelOthers: (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? false : dDelOthers,
+                    dUpdOthers: (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? false : dUpdOthers,
                     isRevoked,
                     endVal: endInput ? endInput.value : ''
                 };
                 checkManageDirty();
             });
         });
-
-        // Toggle Restrictions on Role Change
-        const manageRoleSelect = container.querySelector('#manage-role');
-        if (manageRoleSelect) {
-            manageRoleSelect.addEventListener('change', () => {
-                const restrContainer = container.querySelector('#manage-restrictions-container');
-                if (restrContainer) {
-                    restrContainer.style.display = manageRoleSelect.value === 'CO_ADMIN' ? 'none' : 'flex';
-                }
-                checkManageDirty();
-            });
-        }
-
-        const workerRoleSelect = container.querySelector('#worker-role');
-        if (workerRoleSelect) {
-            workerRoleSelect.addEventListener('change', () => {
-                const restrContainer = container.querySelector('#add-worker-restrictions-container');
-                if (restrContainer) {
-                    restrContainer.style.display = workerRoleSelect.value === 'CO_ADMIN' ? 'none' : 'flex';
-                }
-            });
-        }
-
-        // Revocation Toggle in Manage Form
-        const revokeToggleEl = container.querySelector('#manage-access-revoke-toggle');
-        const endInputEl = container.querySelector('#manage-revoke-end-input');
-        if (revokeToggleEl) {
-            revokeToggleEl.addEventListener('change', () => {
-                const revokeBox = container.querySelector('#manage-revoke-details-box');
-                if (revokeBox) {
-                    revokeBox.style.display = revokeToggleEl.checked ? 'flex' : 'none';
-                }
-                updateRevocationDurationPreview();
-                checkManageDirty();
-            });
-        }
-
-        if (endInputEl) {
-            endInputEl.addEventListener('input', () => {
-                updateRevocationDurationPreview();
-                checkManageDirty();
-            });
-        }
 
         container.querySelectorAll('.btn-cancel-invite').forEach(btn => {
             btn.addEventListener('click', async (e) => {
@@ -1387,6 +1509,195 @@ export const renderWorkers = async (container, workspaceId) => {
     }
 
     // -------------------------------------------------------------
+    // Helper: Sync Invite Team Member Role UI
+    // worker = restricable [] boxes clickable; co-admin = [] boxes unclickable, disabled & existing selection revoked to empty box
+    const syncInviteRoleUI = () => {
+        const roleSelect = container.querySelector('#worker-role');
+        const isCoAdmin = roleSelect && roleSelect.value === 'CO_ADMIN';
+        const boxes = container.querySelectorAll('.invite-restr-box');
+        const labels = container.querySelectorAll('.invite-restr-label');
+        const coadminNotice = container.querySelector('#invite-coadmin-locked-notice');
+        const restrBadge = container.querySelector('#invite-restrictions-badge');
+        const infoTitle = container.querySelector('#invite-role-info-title');
+        const infoDesc = container.querySelector('#invite-role-info-desc');
+
+        if (isCoAdmin) {
+            // Co-Admin: Unclickable, disabled & existing selection revoked to empty box
+            boxes.forEach(b => {
+                b.checked = false;
+                b.disabled = true;
+            });
+            labels.forEach(l => {
+                l.style.pointerEvents = 'none';
+                l.style.opacity = '0.45';
+            });
+            if (coadminNotice) coadminNotice.style.display = 'block';
+            if (restrBadge) {
+                restrBadge.textContent = '0 / 5 (Co-Admin: No Restrictions)';
+                restrBadge.style.background = '#F4F4F5';
+                restrBadge.style.color = '#09090B';
+                restrBadge.style.borderColor = '#E4E4E7';
+            }
+            if (infoTitle) infoTitle.textContent = 'Co-Admin Privileges';
+            if (infoDesc) infoDesc.textContent = 'Elevated manager with full workspace access. Restriction checkboxes are unclickable and disabled for co-admins.';
+        } else {
+            // Worker: Clickable & Selectable checkboxes
+            boxes.forEach(b => {
+                b.disabled = false;
+            });
+            labels.forEach(l => {
+                l.style.pointerEvents = 'auto';
+                l.style.opacity = '1';
+            });
+            if (coadminNotice) coadminNotice.style.display = 'none';
+
+            let count = 0;
+            boxes.forEach(b => { if (b.checked) count++; });
+            if (restrBadge) {
+                restrBadge.textContent = count > 0 ? `${count} / 5 Restrictions Active` : '0 / 5 Restrictions Active';
+                restrBadge.style.background = count > 0 ? '#18181B' : '#F4F4F5';
+                restrBadge.style.color = count > 0 ? '#FFFFFF' : '#09090B';
+                restrBadge.style.borderColor = count > 0 ? '#18181B' : '#E4E4E7';
+            }
+            if (infoTitle) infoTitle.textContent = 'Worker Privileges';
+            if (infoDesc) infoDesc.textContent = 'Standard operator in the workspace. Fine-tune access and restrict specific capabilities using the checkboxes on the right.';
+        }
+    };
+
+    // Helper: Sync Manage Team Member Role UI
+    // If co-admin: show Co-Admin guard notice, disable & revoke checkboxes. Co-admins cannot be restricted without demotion first!
+    const syncManageRoleUI = (targetRole) => {
+        const roleSelect = container.querySelector('#manage-role');
+        const role = targetRole || (roleSelect ? roleSelect.value : 'WORKER');
+        const isCoAdmin = (role === 'CO_ADMIN' || role === 'CO-ADMIN');
+
+        if (roleSelect && roleSelect.value !== (isCoAdmin ? 'CO_ADMIN' : 'WORKER')) {
+            roleSelect.value = isCoAdmin ? 'CO_ADMIN' : 'WORKER';
+        }
+
+        const shiftBtn = container.querySelector('#btn-quick-shift-role');
+        const shiftText = container.querySelector('#btn-quick-shift-text');
+        const shiftTag = container.querySelector('#manage-role-shift-tag');
+        const roleBadge = container.querySelector('#manage-role-pill-badge');
+        const guardNotice = container.querySelector('#manage-coadmin-guard-notice');
+        const restrBadge = container.querySelector('#manage-restrictions-badge');
+        const boxes = container.querySelectorAll('.manage-restr-box');
+        const labels = container.querySelectorAll('.manage-restr-label');
+
+        if (isCoAdmin) {
+            if (shiftBtn) {
+                shiftBtn.style.background = '#FFFFFF';
+                shiftBtn.style.color = '#09090B';
+                shiftBtn.style.border = '1px solid #E4E4E7';
+            }
+            if (shiftText) {
+                shiftText.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="display:inline-block; vertical-align:middle; margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                    Demote to Worker
+                `;
+            }
+            if (shiftTag) shiftTag.textContent = 'Elevated Manager (Full Access)';
+            if (roleBadge) {
+                roleBadge.textContent = 'Co-Admin';
+                roleBadge.style.background = '#27272A';
+                roleBadge.style.color = '#FFFFFF';
+                roleBadge.style.borderColor = '#27272A';
+            }
+
+            // Show Co-Admin Restriction Guard Notice
+            if (guardNotice) guardNotice.style.display = 'block';
+
+            // Co-admins cannot be restricted: checkboxes unclickable, disabled & revoked
+            boxes.forEach(b => {
+                b.checked = false;
+                b.disabled = true;
+            });
+            labels.forEach(l => {
+                l.style.pointerEvents = 'none';
+                l.style.opacity = '0.45';
+            });
+
+            if (restrBadge) {
+                restrBadge.textContent = 'Co-Admin: Unrestricted';
+                restrBadge.style.background = '#F4F4F5';
+                restrBadge.style.color = '#09090B';
+                restrBadge.style.borderColor = '#E4E4E7';
+            }
+        } else {
+            if (shiftBtn) {
+                shiftBtn.style.background = '#09090B';
+                shiftBtn.style.color = '#FFFFFF';
+                shiftBtn.style.border = 'none';
+            }
+            if (shiftText) {
+                shiftText.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    Promote to Co-Admin
+                `;
+            }
+            if (shiftTag) shiftTag.textContent = 'Standard Operator';
+            if (roleBadge) {
+                roleBadge.textContent = 'Worker';
+                roleBadge.style.background = '#F4F4F5';
+                roleBadge.style.color = '#09090B';
+                roleBadge.style.borderColor = '#E4E4E7';
+            }
+
+            // Hide Guard Notice
+            if (guardNotice) guardNotice.style.display = 'none';
+
+            // Checkboxes become active & clickable
+            boxes.forEach(b => {
+                b.disabled = false;
+            });
+            labels.forEach(l => {
+                l.style.pointerEvents = 'auto';
+                l.style.opacity = '1';
+            });
+
+            let count = 0;
+            boxes.forEach(b => { if (b.checked) count++; });
+            if (restrBadge) {
+                restrBadge.textContent = count > 0 ? `${count} / 5 Active` : 'Customizable for Worker';
+                restrBadge.style.background = count > 0 ? '#18181B' : '#F4F4F5';
+                restrBadge.style.color = count > 0 ? '#FFFFFF' : '#09090B';
+                restrBadge.style.borderColor = count > 0 ? '#18181B' : '#E4E4E7';
+            }
+        }
+    };
+
+    // Helper: Sync Temporary Blocked Switch & Details Box UI
+    const syncRevokeToggleUI = (isBlocked) => {
+        const toggle = container.querySelector('#manage-access-revoke-toggle');
+        const track = container.querySelector('#manage-toggle-track');
+        const thumb = container.querySelector('#manage-toggle-thumb');
+        const box = container.querySelector('#manage-revoke-details-box');
+        const statusBadge = container.querySelector('#manage-status-pill-badge');
+
+        const checked = (typeof isBlocked === 'boolean') ? isBlocked : (toggle ? toggle.checked : false);
+        if (toggle && toggle.checked !== checked) toggle.checked = checked;
+
+        if (track) track.style.background = checked ? '#18181B' : '#E4E4E7';
+        if (thumb) thumb.style.transform = checked ? 'translateX(20px)' : 'translateX(0)';
+        if (box) box.style.display = checked ? 'flex' : 'none';
+
+        if (statusBadge) {
+            if (checked) {
+                statusBadge.textContent = 'Temporary Blocked';
+                statusBadge.style.background = '#18181B';
+                statusBadge.style.color = '#FFFFFF';
+                statusBadge.style.borderColor = '#18181B';
+            } else {
+                statusBadge.textContent = 'Active';
+                statusBadge.style.background = '#F4F4F5';
+                statusBadge.style.color = '#09090B';
+                statusBadge.style.borderColor = '#E4E4E7';
+            }
+        }
+        updateRevocationDurationPreview();
+    };
+
+    // -------------------------------------------------------------
     // Manage Worker Dirty Check & Submissions
     // -------------------------------------------------------------
     let initialManageSnapshot = null;
@@ -1400,11 +1711,12 @@ export const renderWorkers = async (container, workspaceId) => {
 
         const roleSelect = container.querySelector('#manage-role');
         const currentRole = roleSelect ? roleSelect.value : 'WORKER';
-        const currentCost = Boolean(container.querySelector('#manage-cannot-see-cost')?.checked);
-        const currentProfit = Boolean(container.querySelector('#manage-cannot-see-profit')?.checked);
-        const currentDAdd = Boolean(container.querySelector('#manage-disable-add')?.checked);
-        const currentDDelOthers = Boolean(container.querySelector('#manage-disable-delete-others')?.checked);
-        const currentDUpdOthers = Boolean(container.querySelector('#manage-disable-update-others')?.checked);
+        const isCoAdmin = (currentRole === 'CO_ADMIN');
+        const currentCost = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-cost')?.checked);
+        const currentProfit = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-profit')?.checked);
+        const currentDAdd = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-add')?.checked);
+        const currentDDelOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-delete-others')?.checked);
+        const currentDUpdOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-update-others')?.checked);
         const currentRevoked = Boolean(container.querySelector('#manage-access-revoke-toggle')?.checked);
         const currentEndVal = container.querySelector('#manage-revoke-end-input')?.value || '';
 
@@ -1422,149 +1734,70 @@ export const renderWorkers = async (container, workspaceId) => {
         btnSave.disabled = !isDirty;
     };
 
-    ['#manage-role', '#manage-cannot-see-cost', '#manage-cannot-see-profit', '#manage-disable-add', '#manage-disable-delete-others', '#manage-disable-update-others', '#manage-access-revoke-toggle', '#manage-revoke-end-input'].forEach(sel => {
-        const el = container.querySelector(sel);
-        if (el) el.addEventListener('change', checkManageDirty);
+    // Wire Invite Modal Role & Checkbox Handlers
+    container.querySelector('#worker-role')?.addEventListener('change', () => {
+        syncInviteRoleUI();
     });
 
-    // Invite Submission with Image 5 Confirmation Alert
-    if (addForm) {
-        addForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btnSubmit = container.querySelector('#btn-submit-worker');
-            const emailInput = container.querySelector('#worker-email');
-            const roleSelect = container.querySelector('#worker-role');
-
-            const rawEmail = (emailInput.value || '').trim();
-            const email = rawEmail.toLowerCase();
-            const role = roleSelect ? roleSelect.value : 'WORKER';
-
-            // Validation: Gmail format
-            const isValidGmail = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(email);
-            if (!isValidGmail) {
-                showAlert.error("Please enter a valid Gmail address (e.g. worker@gmail.com). Must end with @gmail.com.");
-                emailInput.focus();
-                return;
-            }
-
-            // Validation: Cannot invite self
-            const myEmail = (currentUser.email || '').trim().toLowerCase();
-            if (email === myEmail) {
-                showAlert.error("You cannot invite yourself to the workspace.");
-                emailInput.focus();
-                return;
-            }
-
-            // Validation: Existing check
-            const existingMember = currentMembersList.find(m => (m.email || '').trim().toLowerCase() === email);
-            if (existingMember) {
-                const st = (existingMember.status || 'JOINED').toUpperCase();
-                if (st === 'PENDING') {
-                    showAlert.error(`An invitation is already pending for ${email}.`);
-                } else {
-                    showAlert.error(`${email} is already a member of this workspace.`);
-                }
-                emailInput.focus();
-                return;
-            }
-
-            const isCoAdmin = role === 'CO_ADMIN';
-            const cannotSeeCost = isCoAdmin ? false : Boolean(container.querySelector('#worker-cannot-see-cost')?.checked);
-            const cannotSeeProfit = isCoAdmin ? false : Boolean(container.querySelector('#worker-cannot-see-profit')?.checked);
-            const disableAdd = isCoAdmin ? false : Boolean(container.querySelector('#worker-disable-add')?.checked);
-            const disableDeleteOthers = isCoAdmin ? false : Boolean(container.querySelector('#worker-disable-delete-others')?.checked);
-            const disableUpdateOthers = isCoAdmin ? false : Boolean(container.querySelector('#worker-disable-update-others')?.checked);
-
-            // Confirm Dialog Matching Image 5 Style
-            const confirmed = await showAlert.confirm(
-                `Send team invitation to ${email}?`,
-                'Confirm Team Invitation',
-                {
-                    confirmText: 'Send Invitation',
-                    cancelText: 'Cancel',
-                    isDestructive: false,
-                    detailsHtml: `
-                        <div style="display:flex; align-items:center; gap:0.75rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:0.75rem 1rem; margin-top:0.4rem;">
-                            <div style="width:36px; height:36px; border-radius:50%; background:#18181b; color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.9rem;">
-                                ${email.charAt(0).toUpperCase()}
-                            </div>
-                            <div style="overflow:hidden; flex:1;">
-                                <div style="font-weight:700; font-size:0.88rem; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${email}</div>
-                                <div style="font-size:0.75rem; color:#64748b; margin-top:0.15rem;">
-                                    Assigned Role: <strong style="color:${isCoAdmin ? '#2563eb' : '#059669'};">${isCoAdmin ? 'Co-Admin (No Restrictions)' : 'Worker'}</strong>
-                                </div>
-                            </div>
-                        </div>
-                    `
-                }
-            );
-
-            if (!confirmed) return;
-
-            btnSubmit.disabled = true;
-            btnSubmit.textContent = 'Sending...';
-
-            try {
-                const memberRef = doc(db, 'Workspaces/' + workspaceId + '/Members', email);
-                const existingDoc = await getDoc(memberRef);
-                if (existingDoc.exists()) {
-                    showAlert.error(`${email} already exists in workspace.`);
-                    return;
-                }
-
-                // Check if user already has their own workspace in cloud
-                let hasExistingWs = false;
-                try {
-                    hasExistingWs = await firestoreService.checkUserHasWorkspace(email);
-                } catch (e) {
-                    console.warn("Workspace check warning:", e);
-                }
-
-                // Create Invite Doc
-                const inviteRef = doc(db, 'Invites', `${workspaceId}_${email}`);
-                await setDoc(inviteRef, {
-                    adminUid: workspaceId,
-                    adminEmail: wsInfo.adminEmail || currentUser.email,
-                    workerEmail: email,
-                    workspaceName: wsInfo.name || 'Workspace',
-                    role: role,
-                    cannotSeeCost: cannotSeeCost,
-                    cannotSeeProfit: cannotSeeProfit,
-                    disableAdd: disableAdd,
-                    disableDeleteOthers: disableDeleteOthers,
-                    disableUpdateOthers: disableUpdateOthers,
-                    hasExistingWorkspace: Boolean(hasExistingWs),
-                    timestamp: Date.now()
-                });
-
-                // Add to Members subcollection as PENDING
-                await setDoc(memberRef, {
-                    email: email,
-                    role: role,
-                    status: 'PENDING',
-                    cannotSeeCost: cannotSeeCost,
-                    cannotSeeProfit: cannotSeeProfit,
-                    disableAdd: disableAdd,
-                    disableDeleteOthers: disableDeleteOthers,
-                    disableUpdateOthers: disableUpdateOthers,
-                    hasExistingWorkspace: Boolean(hasExistingWs),
-                    addedAt: Date.now(),
-                    timestamp: Date.now()
-                });
-
-                showAlert.success(`Invitation sent to ${email}`);
-                closeInviteModal();
-            } catch (err) {
-                console.error("Invite error:", err);
-                showAlert.error("Failed to send invite. Check permissions.");
-            } finally {
-                btnSubmit.disabled = false;
-                btnSubmit.textContent = 'Send Invitation';
-            }
+    container.querySelectorAll('.invite-restr-box').forEach(b => {
+        b.addEventListener('change', () => {
+            syncInviteRoleUI();
         });
-    }
+    });
 
-    // Save Manage Changes with Group A, Group B and Temporary Revocation
+    // Wire Manage Modal Promote/Demote & Role Handlers
+    container.querySelector('#btn-quick-shift-role')?.addEventListener('click', () => {
+        const roleSelect = container.querySelector('#manage-role');
+        const currentRole = roleSelect ? roleSelect.value : 'WORKER';
+        const nextRole = (currentRole === 'CO_ADMIN') ? 'WORKER' : 'CO_ADMIN';
+        if (roleSelect) roleSelect.value = nextRole;
+        syncManageRoleUI(nextRole);
+        checkManageDirty();
+    });
+
+    container.querySelector('#btn-guard-demote-to-worker')?.addEventListener('click', () => {
+        const roleSelect = container.querySelector('#manage-role');
+        if (roleSelect) roleSelect.value = 'WORKER';
+        syncManageRoleUI('WORKER');
+        checkManageDirty();
+        showAlert.info("Member demoted to Worker. You can now configure restriction checkboxes below.");
+    });
+
+    container.querySelector('#manage-role')?.addEventListener('change', (e) => {
+        syncManageRoleUI(e.target.value);
+        checkManageDirty();
+    });
+
+    container.querySelectorAll('.manage-restr-box').forEach(b => {
+        b.addEventListener('change', () => {
+            const roleSelect = container.querySelector('#manage-role');
+            if (roleSelect && roleSelect.value !== 'CO_ADMIN') {
+                let count = 0;
+                container.querySelectorAll('.manage-restr-box').forEach(x => { if (x.checked) count++; });
+                const restrBadge = container.querySelector('#manage-restrictions-badge');
+                if (restrBadge) {
+                    restrBadge.textContent = count > 0 ? `${count} / 5 Active` : 'Customizable for Worker';
+                    restrBadge.style.background = count > 0 ? '#18181B' : '#F4F4F5';
+                    restrBadge.style.color = count > 0 ? '#FFFFFF' : '#09090B';
+                    restrBadge.style.borderColor = count > 0 ? '#18181B' : '#E4E4E7';
+                }
+            }
+            checkManageDirty();
+        });
+    });
+
+    // Wire Temporary Blocked Switch Handlers
+    container.querySelector('#manage-access-revoke-toggle')?.addEventListener('change', (e) => {
+        syncRevokeToggleUI(e.target.checked);
+        checkManageDirty();
+    });
+
+    container.querySelector('#manage-revoke-end-input')?.addEventListener('input', () => {
+        updateRevocationDurationPreview();
+        checkManageDirty();
+    });
+
+    // Save Manage Changes with Action Restrictions, Visibility Restrictions and Temporary Revocation
     if (manageForm) {
         manageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1572,18 +1805,20 @@ export const renderWorkers = async (container, workspaceId) => {
             btnSave.disabled = true;
 
             const email = container.querySelector('#manage-email').value;
+            const prevRole = container.querySelector('#manage-prev-role')?.value || 'WORKER';
             const roleSelect = container.querySelector('#manage-role');
             const newRole = roleSelect ? roleSelect.value : 'WORKER';
-            const isCoAdmin = newRole === 'CO_ADMIN';
+            const isCoAdmin = (newRole === 'CO_ADMIN');
             
+            // If Co-Admin, all restrictions are strictly disabled and cleared
             const cannotSeeCost = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-cost')?.checked);
             const cannotSeeProfit = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-profit')?.checked);
             const dAdd = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-add')?.checked);
             const dDelOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-delete-others')?.checked);
             const dUpdOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-update-others')?.checked);
             
-            // Temporary Revocation Logic
-            const accessRevoked = isCoAdmin ? false : Boolean(container.querySelector('#manage-access-revoke-toggle')?.checked);
+            // Temporary Revocation & Functional Block Logic
+            const accessRevoked = Boolean(container.querySelector('#manage-access-revoke-toggle')?.checked);
             let revokeStart = null;
             let revokeEnd = null;
             let revokeStartFormatted = '';
@@ -1611,14 +1846,16 @@ export const renderWorkers = async (container, workspaceId) => {
                 }
 
                 const nowMs = Date.now();
-                isAccessBlocked = (nowMs >= revokeStart && nowMs <= revokeEnd);
+                isAccessBlocked = (nowMs >= revokeStart && nowMs <= revokeEnd) || accessRevoked;
             }
 
             const isRestricted = cannotSeeCost || cannotSeeProfit || dAdd || dDelOthers || dUpdOthers || accessRevoked;
+            const isPromoted = (prevRole === 'WORKER' && newRole === 'CO_ADMIN');
+            const isDemoted = (prevRole === 'CO_ADMIN' && newRole === 'WORKER');
 
             try {
                 const memberRef = doc(db, 'Workspaces/' + workspaceId + '/Members', email);
-                await updateDoc(memberRef, {
+                const updatePayload = {
                     role: newRole,
                     cannotSeeCost: cannotSeeCost,
                     cannotSeeProfit: cannotSeeProfit,
@@ -1633,9 +1870,90 @@ export const renderWorkers = async (container, workspaceId) => {
                     revokeEndFormatted: revokeEndFormatted,
                     isAccessBlocked: isAccessBlocked,
                     updatedAt: Date.now()
-                });
+                };
+
+                // Notification Handler: Record in worker document & dispatch to console and Firestore
+                if (isPromoted) {
+                    updatePayload.lastNotification = {
+                        type: 'ROLE_PROMOTION',
+                        title: 'Promoted to Co-Admin',
+                        message: `Promoted by ${currentUser.email || 'Admin'}`,
+                        timestamp: Date.now()
+                    };
+                } else if (isDemoted) {
+                    updatePayload.lastNotification = {
+                        type: 'ROLE_DEMOTION',
+                        title: 'Demoted to Worker',
+                        message: `Shifted to Worker by ${currentUser.email || 'Admin'}`,
+                        timestamp: Date.now()
+                    };
+                }
+
+                await updateDoc(memberRef, updatePayload);
+
+                // Send Firestore Notification & Console Broadcast
+                if (isPromoted) {
+                    // Send to worker console
+                    console.log(
+                        '%c[PriceLister Firebase Firestore]%c Worker Promoted to Co-Admin: %c' + email + '%c. Notification dispatched to worker console and stored in Firestore.',
+                        'background: #18181B; color: #FFFFFF; font-weight: 800; padding: 2px 8px; border-radius: 4px;',
+                        'color: #09090B; font-weight: 700;',
+                        'color: #18181B; font-weight: 800;',
+                        'color: #71717A;'
+                    );
+
+                    try {
+                        const notifRef = doc(collection(db, 'Workspaces/' + workspaceId + '/Notifications'));
+                        await setDoc(notifRef, {
+                            type: 'ROLE_PROMOTION',
+                            targetEmail: email,
+                            promotedBy: currentUser.email || 'Admin',
+                            previousRole: 'WORKER',
+                            newRole: 'CO_ADMIN',
+                            title: 'You have been promoted to Co-Admin!',
+                            message: `Admin ${currentUser.email || 'Admin'} promoted you to Co-Admin in workspace ${wsInfo.name || 'PriceLister'}. You now have full management privileges.`,
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                    } catch (e) {
+                        console.warn("Could not save promotion notification doc:", e);
+                    }
+
+                    showAlert.success(`Worker ${email} promoted to Co-Admin! Notification sent to worker console and saved in Firebase Firestore.`);
+                } else if (isDemoted) {
+                    console.log(
+                        '%c[PriceLister Firebase Firestore]%c Co-Admin Demoted to Worker: %c' + email + '%c. Restrictions can now be applied.',
+                        'background: #18181B; color: #FFFFFF; font-weight: 800; padding: 2px 8px; border-radius: 4px;',
+                        'color: #09090B; font-weight: 700;',
+                        'color: #18181B; font-weight: 800;',
+                        'color: #71717A;'
+                    );
+
+                    try {
+                        const notifRef = doc(collection(db, 'Workspaces/' + workspaceId + '/Notifications'));
+                        await setDoc(notifRef, {
+                            type: 'ROLE_DEMOTION',
+                            targetEmail: email,
+                            demotedBy: currentUser.email || 'Admin',
+                            previousRole: 'CO_ADMIN',
+                            newRole: 'WORKER',
+                            title: 'Role Shifted to Worker',
+                            message: `Your role has been shifted to Worker in workspace ${wsInfo.name || 'PriceLister'}. Restrictions may now apply.`,
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                    } catch (e) {
+                        console.warn("Could not save demotion notification doc:", e);
+                    }
+
+                    showAlert.info(`Co-Admin ${email} demoted to Worker. Restrictions applied.`);
+                } else if (isAccessBlocked) {
+                    console.warn('[PriceLister Firebase Firestore] Worker ' + email + ' is now functionally BLOCKED from workspace ' + workspaceId);
+                    showAlert.warning(`Worker ${email} is now Temporarily Blocked and suspended from the workspace.`);
+                } else {
+                    showAlert.success(`Member settings updated for ${email}`);
+                }
                 
-                showAlert.success(`Member settings updated for ${email}`);
                 closeManageModal();
             } catch (err) {
                 console.error("Update member error:", err);

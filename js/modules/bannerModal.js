@@ -213,7 +213,7 @@ export const openBannerPickerModal = (currentBannerUrl = '', onSelectCallback) =
                             white-space: nowrap;
                             transition: all 0.15s ease;
                         ">
-                            ${cat === 'ALL' ? '✦ All Presets' : cat}
+                            ${cat === 'ALL' ? 'All Presets' : cat}
                         </button>
                     `).join('')}
                 </div>
@@ -338,7 +338,7 @@ export const openBannerPickerModal = (currentBannerUrl = '', onSelectCallback) =
 
                         <div style="margin-top: 0.65rem; display: flex; justify-content: flex-end;">
                             <button type="button" class="btn btn-xs ${isSelected ? 'btn-primary' : 'btn-secondary'}" style="font-size: 0.74rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 6px;">
-                                ${isSelected ? '✓ Selected' : 'Use Banner'}
+                                ${isSelected ? 'Selected' : 'Use Banner'}
                             </button>
                         </div>
                     </div>

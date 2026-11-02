@@ -5,8 +5,7 @@
     <title>PriceLister Workspace</title>
     <script>
         (function() {
-            try {
-                var path = window.location.pathname || '';
+            var path = window.location.pathname || '';
                 if (!localStorage.getItem('pricelister_active_ws')) {
                     localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
                 }

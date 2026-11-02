@@ -9,6 +9,7 @@ import { openExcelImportModal, openExportModal } from './importExportModal.js';
 import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { draftManager } from '../services/draftManager.js';
+import { getCodeStudioService } from '../services/codeStudioService.js';
 
 export const renderProducts = async (container, workspaceId) => {
     const productService = getProductService(workspaceId);
@@ -25,13 +26,13 @@ export const renderProducts = async (container, workspaceId) => {
     const pageSize = 15;
     let selectedProductIds = new Set();
     const layoutDisplayNames = {
-        'list': 'List (Default Table)',
-        'excel': 'EXCLE VIEW',
-        'grid_4': 'Grid ( 4x )',
-        'hexa': 'Grid ( HEXA )',
-        'octa': 'Grid ( OCTA )',
-        'hexadecagon': 'Grid (HEXADECA )',
-        'hexa_octa': 'Grid ( OCXADEGON )'
+        'list': 'List',
+        'large_list': 'Large List',
+        'grid_4': 'Grid (4x4)',
+        'hexa': 'Hexa (6x6)',
+        'octa': 'Octa (8x8)',
+        'hexadecagon': '16x16 Cube',
+        'hexa_octa': '32x32 Cube'
     };
 
     // Fetch all historical invoices to power real product sales analytics
@@ -332,8 +333,8 @@ export const renderProducts = async (container, workspaceId) => {
             <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; display:block;">
                 <defs>
                     <linearGradient id="prdGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="var(--theme-primary, #e11d48)" stop-opacity="0.32" />
-                        <stop offset="100%" stop-color="var(--theme-primary, #e11d48)" stop-opacity="0.01" />
+                        <stop offset="0%" stop-color="var(--theme-primary, #18181B)" stop-opacity="0.32" />
+                        <stop offset="100%" stop-color="var(--theme-primary, #18181B)" stop-opacity="0.01" />
                     </linearGradient>
                 </defs>
                 
@@ -351,12 +352,12 @@ export const renderProducts = async (container, workspaceId) => {
                 <path d="${areaD}" fill="url(#prdGrad)" class="trend-area-animated" />
 
                 <!-- Line Curve with Animated Draw -->
-                <path d="${lineD}" fill="none" stroke="var(--theme-primary, #e11d48)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="trend-curve-animated" />
+                <path d="${lineD}" fill="none" stroke="var(--theme-primary, #18181B)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="trend-curve-animated" />
 
                 <!-- Data Dots & X-Labels -->
                 ${points.map((p) => `
                     <g class="chart-point-group" style="cursor:pointer;">
-                        <circle cx="${p.x}" cy="${p.y}" r="5" fill="#ffffff" stroke="var(--theme-primary, #e11d48)" stroke-width="2.5" />
+                        <circle cx="${p.x}" cy="${p.y}" r="5" fill="#ffffff" stroke="var(--theme-primary, #18181B)" stroke-width="2.5" />
                         <text x="${p.x}" y="${height - 10}" font-size="11" fill="#64748b" text-anchor="middle" font-weight="600">${p.label}</text>
                         <title>${p.label}: ${formatCurrency(p.revenue)} (${p.units} units sold, ${formatCurrency(p.profit)} profit)</title>
                     </g>
@@ -393,7 +394,7 @@ export const renderProducts = async (container, workspaceId) => {
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
                             Schema Analysis
                         </button>
-                        <button type="button" id="btn-detail-edit" class="btn btn-primary" style="font-weight:700; display:inline-flex; align-items:center; gap:0.4rem; background: linear-gradient(135deg, #ff3366 0%, #e11d48 55%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35);">
+                        <button type="button" id="btn-detail-edit" class="btn btn-primary" style="font-weight:700; display:inline-flex; align-items:center; gap:0.4rem; background: linear-gradient(135deg, #ff3366 0%, #18181B 55%, #27272A 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35);">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             Edit Product
                         </button>
@@ -407,11 +408,11 @@ export const renderProducts = async (container, workspaceId) => {
                         <div style="position:relative; width:115px; height:115px; flex-shrink:0;">
                             ${prd.imageUri
                 ? `<img id="detail-prd-avatar" src="${prd.imageUri}" style="width:100%; height:100%; object-fit:cover; border-radius:14px; border:2px solid var(--border-color); box-shadow:0 4px 12px rgba(0,0,0,0.06);">`
-                : `<div id="detail-prd-avatar-placeholder" style="width:100%; height:100%; border-radius:14px; background:linear-gradient(135deg, #fce7f3 0%, #ffe4e6 100%); color:#e11d48; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid rgba(225,29,72,0.15);">
+                : `<div id="detail-prd-avatar-placeholder" style="width:100%; height:100%; border-radius:14px; background:linear-gradient(135deg, #fce7f3 0%, #F4F4F5 100%); color:#18181B; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid rgba(225,29,72,0.15);">
                                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                                    </div>`
             }
-                            <label for="detail-img-file-input" style="position:absolute; bottom:-6px; right:-6px; width:34px; height:34px; border-radius:50%; background:#e11d48; color:#ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 3px 8px rgba(225,29,72,0.4); border:2px solid #ffffff; transition:transform 0.2s;" title="Upload or change product photo">
+                            <label for="detail-img-file-input" style="position:absolute; bottom:-6px; right:-6px; width:34px; height:34px; border-radius:50%; background:#18181B; color:#ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 3px 8px rgba(225,29,72,0.4); border:2px solid #ffffff; transition:transform 0.2s;" title="Upload or change product photo">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                                 <input type="file" id="detail-img-file-input" accept="image/*" style="display:none;">
                             </label>
@@ -421,7 +422,7 @@ export const renderProducts = async (container, workspaceId) => {
                         <div style="flex:1; min-width:260px;">
                             <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.4rem;">
                                 <h1 style="margin:0; font-size:1.65rem; font-weight:800; color:var(--text-primary); letter-spacing:-0.02em;">${prd.name}</h1>
-                                <span class="badge" style="background:rgba(225,29,72,0.1); color:#e11d48; font-weight:700; padding:0.25rem 0.65rem; border-radius:6px;">${catName}</span>
+                                <span class="badge" style="background:rgba(225,29,72,0.1); color:#18181B; font-weight:700; padding:0.25rem 0.65rem; border-radius:6px;">${catName}</span>
                                 <span class="${analytics.demandBadgeClass}">${analytics.demandRating}</span>
                             </div>
 
@@ -442,7 +443,7 @@ export const renderProducts = async (container, workspaceId) => {
                             <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Selling Price</div>
                             <div style="font-size:1.6rem; font-weight:800; color:var(--primary); line-height:1.1;">${formatCurrency(prd.salePrice)}</div>
                             <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.2rem;">
-                                Cost: <strong>${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(prd.price || 0)}</strong> &bull; Profit: <strong style="color:#059669;">${userRestrictions.cannotSeeProfit ? '••••' : '+' + formatCurrency(analytics.unitGrossProfit)}</strong>
+                                Cost: <strong>${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(prd.price || 0)}</strong> &bull; Profit: <strong style="color:var(--text-primary);">${userRestrictions.cannotSeeProfit ? '••••' : '+' + formatCurrency(analytics.unitGrossProfit)}</strong>
                             </div>
                             <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border-color); font-size:0.82rem; font-weight:700; color:${(prd.quantity || 0) > 5 ? '#059669' : '#dc2626'}; display:flex; align-items:center; justify-content:flex-end; gap:4px;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
@@ -457,9 +458,9 @@ export const renderProducts = async (container, workspaceId) => {
                         <div class="detail-kpi-card highlight-red">
                             <div class="detail-kpi-label">
                                 <span>Invoices Generated</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                             </div>
-                            <div class="detail-kpi-value" style="color:#e11d48;">${analytics.invoiceCount}</div>
+                            <div class="detail-kpi-value" style="color:#18181B;">${analytics.invoiceCount}</div>
                             <div class="detail-kpi-sub">Total sales receipts issued</div>
                         </div>
 
@@ -467,7 +468,7 @@ export const renderProducts = async (container, workspaceId) => {
                         <div class="detail-kpi-card">
                             <div class="detail-kpi-label">
                                 <span>Total Revenue</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                             </div>
                             <div class="detail-kpi-value">${formatCurrency(analytics.totalRevenue)}</div>
                             <div class="detail-kpi-sub">Gross sales from this item</div>
@@ -477,9 +478,9 @@ export const renderProducts = async (container, workspaceId) => {
                         <div class="detail-kpi-card">
                             <div class="detail-kpi-label">
                                 <span>Gross Profit</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
                             </div>
-                            <div class="detail-kpi-value" style="color:#059669;">${userRestrictions.cannotSeeProfit ? '••••' : formatCurrency(analytics.totalProfit)}</div>
+                            <div class="detail-kpi-value" style="color:var(--text-primary);">${userRestrictions.cannotSeeProfit ? '••••' : formatCurrency(analytics.totalProfit)}</div>
                             <div class="detail-kpi-sub">${userRestrictions.cannotSeeProfit ? '•••• margin' : `${Math.round(analytics.overallMarginPercent)}% net gross margin`}</div>
                         </div>
 
@@ -487,7 +488,7 @@ export const renderProducts = async (container, workspaceId) => {
                         <div class="detail-kpi-card">
                             <div class="detail-kpi-label">
                                 <span>Total Units Sold</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                             </div>
                             <div class="detail-kpi-value">${analytics.totalUnitsSold}</div>
                             <div class="detail-kpi-sub">${analytics.monthlyVelocity} units / mo velocity</div>
@@ -497,7 +498,7 @@ export const renderProducts = async (container, workspaceId) => {
                         <div class="detail-kpi-card">
                             <div class="detail-kpi-label">
                                 <span>Last Sale Report</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                             </div>
                             <div class="detail-kpi-value" style="font-size:1.15rem; font-weight:700;">
                                 ${analytics.lastSale ? (analytics.lastSale.timestamp ? new Date(analytics.lastSale.timestamp).toLocaleDateString() : 'Recent') : 'No Sales Yet'}
@@ -511,7 +512,7 @@ export const renderProducts = async (container, workspaceId) => {
                         <div class="detail-kpi-card">
                             <div class="detail-kpi-label">
                                 <span>Stock Runout</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                             </div>
                             <div class="detail-kpi-value">${analytics.stockRunoutDays}</div>
                             <div class="detail-kpi-sub">${analytics.stockRunoutMsg}</div>
@@ -618,12 +619,12 @@ export const renderProducts = async (container, workspaceId) => {
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.15rem;">
                                 <div>
                                     <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:6px;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                                         Favorite Customers
                                     </h3>
                                     <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">Top buyers ranked by purchase volume & demand</p>
                                 </div>
-                                <span class="badge" style="background:rgba(225,29,72,0.1); color:#e11d48; font-weight:700;">
+                                <span class="badge" style="background:rgba(225,29,72,0.1); color:#18181B; font-weight:700;">
                                     ${analytics.topCustomers.length} Buyers
                                 </span>
                             </div>
@@ -656,7 +657,7 @@ export const renderProducts = async (container, workspaceId) => {
                         <!-- MARKET DEMAND & PRICING INTELLIGENCE -->
                         <div class="card" style="padding:1.5rem; border-radius:var(--radius-card); box-shadow:var(--shadow-float);">
                             <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:6px;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                                 Market Demand & Pricing
                             </h3>
                             <p style="margin:0 0 1.25rem 0; font-size:0.82rem; color:var(--text-secondary);">Demand velocity, price margins, and restocking analysis</p>
@@ -677,7 +678,7 @@ export const renderProducts = async (container, workspaceId) => {
                                 <!-- Restock Recommendation -->
                                 <div style="background:var(--surface-50); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
                                     <div style="font-size:0.82rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.25rem;">Smart Restock Recommendation</div>
-                                    <div style="font-size:1.15rem; font-weight:800; color:#2563eb;">Order +${analytics.recommendedReorder} Units</div>
+                                    <div style="font-size:1.15rem; font-weight:800; color:#18181B;">Order +${analytics.recommendedReorder} Units</div>
                                     <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.2rem;">Maintains a healthy 45-day supply buffer based on current burn rate.</div>
                                 </div>
 
@@ -700,7 +701,7 @@ export const renderProducts = async (container, workspaceId) => {
                                     ` : ''}
                                     <div style="display:flex; justify-content:space-between; padding-top:0.5rem; margin-top:0.5rem; border-top:1px solid var(--border-color); font-size:0.9rem;">
                                         <span style="font-weight:700; color:var(--text-primary);">Net Markup Margin:</span>
-                                        <strong style="color:#059669;">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurrency(analytics.unitGrossProfit)} (${Math.round(analytics.unitMarginPercent)}%)`}</strong>
+                                        <strong style="color:var(--text-primary);">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurrency(analytics.unitGrossProfit)} (${Math.round(analytics.unitMarginPercent)}%)`}</strong>
                                     </div>
                                 </div>
 
@@ -714,7 +715,7 @@ export const renderProducts = async (container, workspaceId) => {
                 <!-- Product Origin Section Divider -->
                 <div class="card origin-divider-card" style="margin-top:1.5rem; padding:1.5rem; border-radius:var(--radius-card); background:var(--bg-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float);">
                     <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding-bottom:0.6rem; border-bottom:1px solid var(--border-color);">
-                        <div style="width:28px; height:28px; border-radius:6px; background:var(--theme-subtle, rgba(225,29,72,0.1)); color:var(--theme-primary, #e11d48); display:flex; align-items:center; justify-content:center;">
+                        <div style="width:28px; height:28px; border-radius:6px; background:var(--theme-subtle, rgba(225,29,72,0.1)); color:var(--theme-primary, #18181B); display:flex; align-items:center; justify-content:center;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                         </div>
                         <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:var(--text-primary);">Product Origin</h3>
@@ -878,7 +879,7 @@ export const renderProducts = async (container, workspaceId) => {
             ['dragenter', 'dragover'].forEach(evtName => {
                 detailAvatarWrap.addEventListener(evtName, () => {
                     detailAvatarWrap.style.transform = 'scale(1.04)';
-                    detailAvatarWrap.style.outline = '3px dashed #e11d48';
+                    detailAvatarWrap.style.outline = '3px dashed #18181B';
                     detailAvatarWrap.style.outlineOffset = '2px';
                 });
             });
@@ -966,7 +967,7 @@ export const renderProducts = async (container, workspaceId) => {
                         Market Inserter
                     </button>
                     <button id="btn-import-excel" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.85rem; padding:0.6rem 1rem; border-radius:10px; border:1px solid var(--border-color); background:var(--surface-50); color:var(--text-primary);">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
                         Import Excel
                     </button>
                     `}
@@ -990,7 +991,7 @@ export const renderProducts = async (container, workspaceId) => {
                     <div>
                         <div style="font-size:0.78rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Total Products</div>
                         <div style="font-size:1.85rem; font-weight:800; color:var(--text-primary); margin-top:0.15rem; line-height:1.15;" id="kpi-total-products">${activeProducts.length}</div>
-                        <div style="font-size:0.75rem; color:#059669; font-weight:700; margin-top:0.35rem; display:flex; align-items:center; gap:4px;">
+                        <div style="font-size:0.75rem; color:var(--text-primary); font-weight:700; margin-top:0.35rem; display:flex; align-items:center; gap:4px;">
                             <span style="width:6px; height:6px; border-radius:50%; background:#10b981;"></span> Active in catalog
                         </div>
                     </div>
@@ -1035,9 +1036,9 @@ export const renderProducts = async (container, workspaceId) => {
                         <div>
                             <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Category Tag Color</label>
                             <div style="display:flex; gap:0.6rem; align-items:center;">
-                                <input type="color" id="quick-cat-color" value="#e11d48" class="form-control" style="width:48px; height:38px; padding:2px; border-radius:6px; cursor:pointer;">
+                                <input type="color" id="quick-cat-color" value="#18181B" class="form-control" style="width:48px; height:38px; padding:2px; border-radius:6px; cursor:pointer;">
                                 <div style="display:flex; gap:0.3rem; flex-wrap:wrap;">
-                                    <span class="quick-color-preset" data-color="#e11d48" style="width:22px; height:22px; border-radius:50%; background:#e11d48; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
+                                    <span class="quick-color-preset" data-color="#18181B" style="width:22px; height:22px; border-radius:50%; background:#18181B; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
                                     <span class="quick-color-preset" data-color="#10b981" style="width:22px; height:22px; border-radius:50%; background:#10b981; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
                                     <span class="quick-color-preset" data-color="#3b82f6" style="width:22px; height:22px; border-radius:50%; background:#3b82f6; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
                                     <span class="quick-color-preset" data-color="#f59e0b" style="width:22px; height:22px; border-radius:50%; background:#f59e0b; cursor:pointer; display:inline-block; border:1px solid rgba(0,0,0,0.1);"></span>
@@ -1069,7 +1070,7 @@ export const renderProducts = async (container, workspaceId) => {
                         </div>
                         <div>
                             <div style="display:flex; align-items:center; gap:0.5rem;">
-                                <span class="badge" id="prd-form-badge" style="background:rgba(225,29,72,0.12); color:var(--primary); font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">New Catalog Entry</span>
+                                <span class="badge" id="prd-form-badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">New Catalog Entry</span>
                                 <h3 id="prd-form-title" style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-primary);">Add New Product</h3>
                             </div>
                             <p style="margin:0; font-size:0.83rem; color:var(--text-secondary);">Configure pricing parameters, live profit margins, barcode & inventory stock</p>
@@ -1078,7 +1079,7 @@ export const renderProducts = async (container, workspaceId) => {
                     <div style="display:flex; gap:0.6rem; align-items:center;">
                         <button type="button" class="btn btn-secondary prd-cancel-trigger" style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.88rem; padding:0.5rem 1.1rem; border-radius:10px; border:1.5px solid #cbd5e1; background:#ffffff; color:#0f172a;">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                            &larr; Back to Products
+                            Back to Products
                         </button>
                     </div>
                 </div>
@@ -1120,12 +1121,18 @@ export const renderProducts = async (container, workspaceId) => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">UPC / Barcode</label>
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                                            <label style="font-size:0.82rem; font-weight:600; color:var(--text-primary); margin:0;">UPC / Product Code</label>
+                                            <span id="prd-code-status-pill" style="font-size:0.7rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:999px; background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7;">Unique Code</span>
+                                        </div>
                                         <div style="display:flex; gap:0.4rem;">
-                                            <input type="text" id="prd-upc" class="form-control" style="flex:1; padding:0.6rem 0.75rem; font-family:monospace;" placeholder="e.g. 012345678905">
-                                            <button type="button" id="btn-generate-upc" class="btn btn-secondary" style="padding:0.6rem 0.75rem; font-size:0.75rem; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:3px;" title="Generate Random 12-digit UPC Barcode">
+                                            <input type="text" id="prd-upc" class="form-control" style="flex:1; padding:0.6rem 0.75rem; font-family:monospace; font-weight:700;" placeholder="e.g. GROC-RET-000412">
+                                            <button type="button" id="btn-generate-upc" class="btn btn-secondary" style="padding:0.6rem 0.75rem; font-size:0.75rem; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:3px;" title="Auto-Generate Using Workspace Default Template">
                                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5v14"></path><path d="M8 5v14"></path><path d="M12 5v14"></path><path d="M17 5v14"></path><path d="M21 5v14"></path></svg>
-                                                Gen
+                                                Auto Gen
+                                            </button>
+                                            <button type="button" id="btn-code-assistant" class="btn btn-secondary" style="padding:0.6rem 0.75rem; font-size:0.75rem; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:3px;" title="Choose Code Template or Configure Options">
+                                                Templates &darr;
                                             </button>
                                         </div>
                                     </div>
@@ -1288,7 +1295,7 @@ export const renderProducts = async (container, workspaceId) => {
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
                                     <div class="prd-metric-box">
                                         <div class="prd-metric-label">Unit Profit</div>
-                                        <div class="prd-metric-value" id="calc-unit-profit" style="color:#10b981;">$0.00</div>
+                                        <div class="prd-metric-value" id="calc-unit-profit" style="color:#ffffff;">$0.00</div>
                                     </div>
                                     <div class="prd-metric-box">
                                         <div class="prd-metric-label">Markup %</div>
@@ -1315,8 +1322,8 @@ export const renderProducts = async (container, workspaceId) => {
                                         <strong id="calc-total-sale" style="color:#ffffff;">$0.00</strong>
                                     </div>
                                     <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding-top:0.35rem; border-top:1px solid rgba(255,255,255,0.1); margin-top:0.35rem;">
-                                        <span style="color:#10b981; font-weight:600;">Expected Batch Profit:</span>
-                                        <strong id="calc-total-profit" style="color:#10b981;">$0.00</strong>
+                                        <span style="color:#cbd5e1; font-weight:600;">Expected Batch Profit:</span>
+                                        <strong id="calc-total-profit" style="color:#ffffff;">$0.00</strong>
                                     </div>
                                 </div>
                             </div>
@@ -1400,36 +1407,8 @@ export const renderProducts = async (container, workspaceId) => {
                     </div>
                 </div>
 
-                <!-- EXCEL SPREADSHEET VIEW (for EXCLE VIEW mode) -->
-                <div id="prd-excel-card-container" class="prd-excel-wrapper" style="${currentLayout === 'excel' ? 'display:block;' : 'display:none;'}">
-                    <div class="prd-excel-scroll-container">
-                        <table class="prd-excel-table">
-                            <thead>
-                                <tr>
-                                    <th style="width:36px; text-align:center;">
-                                        <input type="checkbox" id="prd-excel-select-all" style="cursor:pointer; width:14px; height:14px; accent-color:#0f172a; border-radius:3px;">
-                                    </th>
-                                    <th style="width:42px; text-align:center;">IMG</th>
-                                    <th style="min-width:220px; text-align:left;">Product Name</th>
-                                    <th style="min-width:110px; text-align:right;">Quantity</th>
-                                    <th style="min-width:130px; text-align:left;">Category</th>
-                                    <th style="min-width:110px; text-align:left;">Size / Weight</th>
-                                    <th style="min-width:120px; text-align:right;">Sale Price</th>
-                                    <th style="min-width:110px; text-align:right;">Wholesale</th>
-                                    <th style="min-width:110px; text-align:right;">Base Cost</th>
-                                    <th style="min-width:130px; text-align:left;">UPC / Barcode</th>
-                                    <th style="min-width:100px; text-align:center;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="prd-excel-list-body">
-                                <!-- Dynamic Excel rows injected here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- GRID / CUBE CARDS VIEW (for all 5 Grid Finding layouts) -->
-                <div id="prd-grid-card-container" style="${(currentLayout !== 'list' && currentLayout !== 'excel') ? 'display:block;' : 'display:none;'}">
+                <!-- GRID / LARGE-LIST CARDS VIEW (for all 6 finding layouts) -->
+                <div id="prd-grid-card-container" style="${currentLayout !== 'list' ? 'display:block;' : 'display:none;'}">
                     <!-- Injected dynamically -->
                 </div>
             </div>
@@ -1466,7 +1445,7 @@ export const renderProducts = async (container, workspaceId) => {
                 <div class="modal-box" style="background:var(--bg-card); border-radius:14px; width:92%; max-width:440px; padding:1.5rem; box-shadow:var(--shadow-elevated); border:1px solid var(--border-color); color:var(--text-primary);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
                         <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:var(--text-primary);">Batch Change Category</h3>
-                        <button type="button" id="batch-cat-close" class="btn btn-secondary btn-sm" style="width:28px; height:28px; padding:0; border-radius:6px; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-secondary); cursor:pointer;">✕</button>
+                        <button type="button" id="batch-cat-close" class="btn btn-secondary btn-sm" style="width:28px; height:28px; padding:0; border-radius:6px; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-secondary); cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                     </div>
                     <p style="font-size:0.84rem; color:var(--text-secondary); margin-top:0; margin-bottom:1.25rem;">
                         Select the new category to apply to all <strong id="batch-cat-count" style="color:var(--text-primary);">0</strong> selected products:
@@ -1495,7 +1474,7 @@ export const renderProducts = async (container, workspaceId) => {
                         </h3>
                         <p style="margin:2px 0 0; font-size:0.78rem; color:var(--text-secondary);">Choose your preferred density and finding layout</p>
                     </div>
-                    <button type="button" id="prd-layout-drawer-close" class="app-drawer-close" title="Close Drawer">✕</button>
+                    <button type="button" id="prd-layout-drawer-close" class="app-drawer-close" title="Close Drawer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                 </div>
                 <div class="app-drawer-body">
                     
@@ -1510,83 +1489,80 @@ export const renderProducts = async (container, workspaceId) => {
                         </div>
 
                         <div class="prd-layout-selector layout-drawer-options" id="prd-layout-selector">
-                            <!-- 1. EXCLE VIEW (New Excel Spreadsheet Mode) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'excel' ? 'active' : ''}" data-layout="excel" style="border-radius: 4px !important;">
+                            <!-- 1. Default List -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'list' ? 'active' : ''}" data-layout="list">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><line x1="10" y1="9" x2="10" y2="9.01"></line></svg>
-                                        <div>
-                                            <strong style="font-size:0.88rem; color:#0f172a; display:block;">EXCLE VIEW</strong>
-                                            <span style="font-size:0.72rem; color:#64748b;">[] Image then Name | Quantity | Smooth Scroll</span>
-                                        </div>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                        <strong style="font-size:0.86rem; color:var(--text-primary);">List (Default Table)</strong>
                                     </div>
-                                    <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Excel</span>
+                                    <span class="badge" style="background:var(--surface-100); color:var(--text-secondary); border:1px solid var(--border-color); font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Table</span>
                                 </div>
                             </button>
 
-                            <!-- 2. Grid ( 4x ) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'grid_4' ? 'active' : ''}" data-layout="grid_4" style="border-radius: 4px !important;">
+                            <!-- 2. Large List -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'large_list' ? 'active' : ''}" data-layout="large_list">
+                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="7" rx="2"></rect><rect x="3" y="14" width="18" height="7" rx="2"></rect></svg>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">Large List</strong>
+                                    </div>
+                                    <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Expanded</span>
+                                </div>
+                            </button>
+
+                            <!-- 3. Grid 4x4 (4 Cube View) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'grid_4' ? 'active' : ''}" data-layout="grid_4">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid ( 4x )</strong>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">Grid 4x4 (4 Cube View)</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">4 Cubes / Row</span>
                                 </div>
                             </button>
 
-                            <!-- 3. Grid ( HEXA ) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa' ? 'active' : ''}" data-layout="hexa" style="border-radius: 4px !important;">
+                            <!-- 4. Hexa (6x6 Grid) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa' ? 'active' : ''}" data-layout="hexa">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z"></path></svg>
-                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid ( HEXA )</strong>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">Hexa (6 per Row)</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">6 Cubes / Row</span>
                                 </div>
                             </button>
 
-                            <!-- 4. Grid ( OCTA ) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'octa' ? 'active' : ''}" data-layout="octa" style="border-radius: 4px !important;">
+                            <!-- 5. Octa (8x8 Grid) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'octa' ? 'active' : ''}" data-layout="octa">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon></svg>
-                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid ( OCTA )</strong>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">Octa (8 per Row)</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">8 Cubes / Row</span>
                                 </div>
                             </button>
 
-                            <!-- 5. Grid (HEXADECA ) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexadecagon' ? 'active' : ''}" data-layout="hexadecagon" style="border-radius: 4px !important;">
+                            <!-- 6. Hexadecagon (16x16 Grid - 16 cubes in a row for maximum products) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexadecagon' ? 'active' : ''}" data-layout="hexadecagon">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
-                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid (HEXADECA )</strong>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">16x16 Cube (16 in a Row)</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">16 Cubes / Row</span>
                                 </div>
                             </button>
 
-                            <!-- 6. Grid ( OCXADEGON ) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa_octa' ? 'active' : ''}" data-layout="hexa_octa" style="border-radius: 4px !important;">
+                            <!-- 7. Hexa-Octa (32x32 Grid - 32 cubes in a row for maximum products) -->
+                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'hexa_octa' ? 'active' : ''}" data-layout="hexa_octa">
                                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                                     <div style="display:flex; align-items:center; gap:0.6rem;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><line x1="2" y1="9" x2="22" y2="9"></line><line x1="2" y1="15" x2="22" y2="15"></line></svg>
-                                        <strong style="font-size:0.88rem; color:#0f172a;">Grid ( OCXADEGON )</strong>
+                                        <strong style="font-size:0.86rem; color:#0f172a;">32x32 Cube (32 in a Row)</strong>
                                     </div>
                                     <span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">32 Cubes / Row</span>
-                                </div>
-                            </button>
-
-                            <!-- 7. Default Table (List) -->
-                            <button type="button" class="layout-drawer-card prd-layout-pill-btn ${currentLayout === 'list' ? 'active' : ''}" data-layout="list" style="border-radius: 4px !important;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-                                    <div style="display:flex; align-items:center; gap:0.6rem;">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                                        <strong style="font-size:0.88rem; color:var(--text-primary);">List (Default Table)</strong>
-                                    </div>
-                                    <span class="badge" style="background:var(--surface-100); color:var(--text-secondary); border:1px solid var(--border-color); font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Table</span>
                                 </div>
                             </button>
                         </div>
@@ -1678,21 +1654,9 @@ export const renderProducts = async (container, workspaceId) => {
         const countEl = container.querySelector('#product-count');
         if (countEl) countEl.textContent = `${totalItems} Product${totalItems === 1 ? '' : 's'}`;
 
-        // Toggle Table vs Excel vs Grid Container cleanly
-        const excelCardContainer = container.querySelector('#prd-excel-card-container');
-        const excelTbody = container.querySelector('#prd-excel-list-body');
-
+        // Toggle Table vs Grid Container cleanly
         if (currentLayout === 'list') {
             if (tableCardContainer) tableCardContainer.style.setProperty('display', 'block', 'important');
-            if (excelCardContainer) excelCardContainer.style.setProperty('display', 'none', 'important');
-            if (gridCardContainer) {
-                gridCardContainer.style.setProperty('display', 'none', 'important');
-                gridCardContainer.className = '';
-                gridCardContainer.innerHTML = '';
-            }
-        } else if (currentLayout === 'excel') {
-            if (tableCardContainer) tableCardContainer.style.setProperty('display', 'none', 'important');
-            if (excelCardContainer) excelCardContainer.style.setProperty('display', 'block', 'important');
             if (gridCardContainer) {
                 gridCardContainer.style.setProperty('display', 'none', 'important');
                 gridCardContainer.className = '';
@@ -1700,10 +1664,10 @@ export const renderProducts = async (container, workspaceId) => {
             }
         } else {
             if (tableCardContainer) tableCardContainer.style.setProperty('display', 'none', 'important');
-            if (excelCardContainer) excelCardContainer.style.setProperty('display', 'none', 'important');
             if (gridCardContainer) {
                 gridCardContainer.style.setProperty('display', 'grid', 'important');
                 const gridClassMap = {
+                    'large_list': 'prd-large-list',
                     'grid_4': 'prd-grid prd-grid-4',
                     'hexa': 'prd-grid prd-grid-hexa',
                     'octa': 'prd-grid prd-grid-octa',
@@ -1716,9 +1680,6 @@ export const renderProducts = async (container, workspaceId) => {
 
         if (totalItems === 0) {
             tbody.innerHTML = `<tr><td colspan="7" style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted);"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></td></tr>`;
-            if (excelTbody) {
-                excelTbody.innerHTML = `<tr><td colspan="11" style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted);"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></td></tr>`;
-            }
             if (gridCardContainer) {
                 gridCardContainer.innerHTML = `<div style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted); grid-column: 1 / -1;"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></div>`;
             }
@@ -1729,7 +1690,7 @@ export const renderProducts = async (container, workspaceId) => {
         tbody.innerHTML = pageItems.map(prd => {
             const catObj = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category);
             const catName = catObj?.name || prd.category || 'General';
-            const catColor = catObj?.color || '#e11d48';
+            const catColor = catObj?.color || '#18181B';
 
             const isCreatorSelf = (prd.creatorId && (
                 prd.creatorId === currentUser.uid || 
@@ -1752,7 +1713,7 @@ export const renderProducts = async (container, workspaceId) => {
                 mrpMarkup = `
                     <div style="display:flex; align-items:center; gap:4px; margin-top:2px;">
                         <span style="font-size:0.75rem; text-decoration:line-through; color:#94a3b8;">${formatCurrency(prd.mrp)}</span>
-                        <span style="background:rgba(16,185,129,0.12); color:#059669; font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:4px;">-${discountPct}%</span>
+                        <span style="background:#F4F4F5; border:1px solid #E4E4E7; color:var(--text-primary); font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:4px;">-${discountPct}%</span>
                     </div>
                 `;
             }
@@ -1774,7 +1735,7 @@ export const renderProducts = async (container, workspaceId) => {
 
             const creatorBadge = prd.creatorId
                 ? (isCreatorSelf
-                    ? `<span class="badge" style="background:rgba(16,185,129,0.12); color:#059669; font-size:0.7rem; padding:1px 5px; border-radius:4px; font-weight:700;" title="Created by you">By You</span>`
+                    ? `<span class="badge" style="background:#F4F4F5; border:1px solid #E4E4E7; color:var(--text-primary); font-size:0.7rem; padding:1px 5px; border-radius:4px; font-weight:700;" title="Created by you">By You</span>`
                     : `<span class="badge" style="background:rgba(100,116,139,0.1); color:#64748b; font-size:0.7rem; padding:1px 5px; border-radius:4px;" title="Created by member ${prd.creatorId}">Member</span>`)
                 : '';
 
@@ -1854,87 +1815,50 @@ export const renderProducts = async (container, workspaceId) => {
             `;
         }).join('');
 
-        // 2. Render Rows for EXCLE VIEW (Smooth spreadsheet experience with [] *image then name | Quantity)
-        if (excelTbody && currentLayout === 'excel') {
-            excelTbody.innerHTML = pageItems.map((prd, idx) => {
-                const catObj = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category);
-                const catName = catObj?.name || prd.category || 'General';
-                const qty = Number(prd.quantity) || 0;
-                const salePriceFormatted = formatCurrency(prd.salePrice || 0);
-                const wholesaleFormatted = formatCurrency(prd.price || 0);
-                const costFormatted = !userRestrictions.cannotSeeCost ? formatCurrency(prd.basePrice || 0) : '—';
-                const isCreatorSelf = (prd.creatorId && (
-                    prd.creatorId === currentUser.uid || 
-                    (currentUser.email && prd.creatorId.toLowerCase() === (currentUser.email || '').toLowerCase())
-                )) || (prd.createdBy && (
-                    prd.createdBy === currentUser.uid || 
-                    (currentUser.email && prd.createdBy.toLowerCase() === (currentUser.email || '').toLowerCase())
-                ));
-                const canEdit = !userRestrictions.disableUpdate && (!userRestrictions.disableUpdateOthers || isCreatorSelf);
-                const canDelete = !userRestrictions.disableDelete && (!userRestrictions.disableDeleteOthers || isCreatorSelf);
+        // 2. Render Cards for Large List & Finding Grids
+        if (gridCardContainer) {
+            if (currentLayout === 'large_list') {
+                gridCardContainer.innerHTML = pageItems.map(prd => {
+                    const catObj = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category);
+                    const catName = catObj?.name || prd.category || 'General';
+                    const salePriceFormatted = formatCurrency(prd.salePrice || 0);
+                    const qty = Number(prd.quantity) || 0;
+                    const skuCode = prd.upcCode ? `UPC: ${prd.upcCode}` : (prd.uniqueId ? `#${prd.uniqueId.substring(0, 8)}` : `#${prd.id.substring(0, 8)}`);
 
-                return `
-                    <tr style="border-bottom: 1px solid #e2e8f0;">
-                        <!-- 1. Checkbox [] -->
-                        <td style="width:36px; text-align:center; padding:0.45rem 0.5rem; background:#ffffff;">
-                            <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:15px; height:15px; accent-color:#0f172a; border-radius:3px;">
-                        </td>
-                        <!-- 2. Image Thumbnail -->
-                        <td style="width:42px; text-align:center; padding:0.35rem 0.5rem;">
-                            <div class="prd-excel-thumb-cell view-prd-img" data-id="${prd.id}" title="Click to view full image & details">
-                                ${prd.imageUri 
-                                    ? `<img src="${prd.imageUri}" alt="${prd.name}">` 
-                                    : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>`}
+                    return `
+                        <div class="prd-large-list-card" data-id="${prd.id}">
+                            <div style="display:flex; align-items:center; padding-right:0.65rem;" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px; accent-color:#0f172a; border-radius:4px;">
                             </div>
-                        </td>
-                        <!-- 3. Product Name -->
-                        <td style="padding:0.45rem 0.65rem;">
-                            <strong class="view-prd-title" data-id="${prd.id}" style="cursor:pointer; color:#0f172a; font-weight:700; font-size:0.86rem;" title="Click to inspect">${prd.name}</strong>
-                        </td>
-                        <!-- 4. Quantity -->
-                        <td style="text-align:right; padding:0.45rem 0.65rem; font-weight:700; color:${qty <= 0 ? '#dc2626' : (qty <= 5 ? '#d97706' : '#059669')};">
-                            ${qty}
-                        </td>
-                        <!-- 5. Category -->
-                        <td style="padding:0.45rem 0.65rem; color:#475569;">
-                            <span style="background:#f1f5f9; padding:2px 6px; border-radius:3px; border:1px solid #e2e8f0; font-size:0.75rem;">${catName}</span>
-                        </td>
-                        <!-- 6. Size / Weight -->
-                        <td style="padding:0.45rem 0.65rem; color:#64748b;">
-                            ${prd.sizeWeight || '—'}
-                        </td>
-                        <!-- 7. Sale Price -->
-                        <td style="text-align:right; padding:0.45rem 0.65rem; font-weight:800; color:#0f172a;">
-                            ${salePriceFormatted}
-                        </td>
-                        <!-- 8. Wholesale -->
-                        <td style="text-align:right; padding:0.45rem 0.65rem; color:#475569;">
-                            ${wholesaleFormatted}
-                        </td>
-                        <!-- 9. Base Cost -->
-                        <td style="text-align:right; padding:0.45rem 0.65rem; color:#64748b; font-family:monospace;">
-                            ${costFormatted}
-                        </td>
-                        <!-- 10. UPC / Barcode -->
-                        <td style="padding:0.45rem 0.65rem; font-family:monospace; font-size:0.75rem; color:#64748b;">
-                            ${prd.upcCode || (prd.uniqueId ? `#${prd.uniqueId.substring(0, 8)}` : '—')}
-                        </td>
-                        <!-- 11. Actions -->
-                        <td style="text-align:center; padding:0.35rem 0.5rem;">
-                            <div style="display:inline-flex; gap:0.25rem; align-items:center;">
-                                <button class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:2px 6px; font-size:0.72rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff;" title="View Detail">View</button>
-                                ${canEdit ? `<button class="btn btn-sm edit-prd" data-id="${prd.id}" style="padding:2px 6px; font-size:0.72rem; border-radius:4px; border:1px solid #cbd5e1; background:#ffffff;" title="Edit">✏️</button>` : ''}
-                                ${canDelete ? `<button class="btn btn-sm del-prd" data-id="${prd.id}" style="padding:2px 6px; font-size:0.72rem; border-radius:4px; border:1px solid #fecaca; background:#ffffff; color:#dc2626;" title="Delete">🗑</button>` : ''}
+                            <div style="display:flex; align-items:center; gap:1.15rem; flex:1; min-width:240px;">
+                                <div class="prd-thumb-box view-prd-img" data-id="${prd.id}" style="width:68px; height:68px; border-radius:12px; cursor:pointer; flex-shrink:0;">
+                                    ${prd.imageUri ? `<img src="${prd.imageUri}" alt="${prd.name}">` : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>`}
+                                </div>
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                                        <strong class="view-prd-title" data-id="${prd.id}" style="cursor:pointer; color:var(--text-primary); font-size:1rem; font-weight:700;">${prd.name}</strong>
+                                        <span class="badge" style="background:var(--surface-100); color:var(--text-primary); font-size:0.72rem; font-weight:700; padding:2px 7px; border-radius:5px; border:1px solid var(--border-color);">${catName}</span>
+                                    </div>
+                                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px; display:flex; gap:0.65rem; align-items:center;">
+                                        <span>${prd.sizeWeight || 'Standard'}</span>
+                                        <span>&bull;</span>
+                                        <code style="font-family:monospace; color:var(--text-muted);">${skuCode}</code>
+                                    </div>
+                                </div>
                             </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // 3. Render Cards for Finding Grids
-        if (gridCardContainer && currentLayout !== 'list' && currentLayout !== 'excel') {
-            if (currentLayout === 'hexa_octa') {
+                            <div style="display:flex; align-items:center; gap:1.5rem;">
+                                <div style="text-align:right;">
+                                    <div style="font-weight:800; font-size:1.25rem; color:var(--text-primary);">${salePriceFormatted}</div>
+                                    <div style="font-size:0.8rem; font-weight:700; color:${qty > 0 ? '#059669' : '#dc2626'};">${qty > 0 ? `${qty} in stock` : 'Out of stock'}</div>
+                                </div>
+                                <button type="button" class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:0.4rem 0.85rem; font-size:0.85rem; font-weight:700; background:var(--surface-50); color:var(--text-primary); border:1px solid var(--border-color); border-radius:8px;">
+                                    View &rsaquo;
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else if (currentLayout === 'hexa_octa') {
                 // 32x32 Cube: Photo square 1:1, followed by price only (no name)
                 gridCardContainer.innerHTML = pageItems.map(prd => {
                     const salePriceFormatted = formatCurrency(prd.salePrice || 0);
@@ -2000,11 +1924,14 @@ export const renderProducts = async (container, workspaceId) => {
             }
         }
         const selectAll = container.querySelector('#prd-select-all');
-        const excelSelectAll = container.querySelector('#prd-excel-select-all');
-        const pageChk = container.querySelectorAll('.prd-select-chk');
-        const isAllChecked = pageChk.length > 0 && Array.from(pageChk).every(c => c.checked);
-        if (selectAll) selectAll.checked = isAllChecked;
-        if (excelSelectAll) excelSelectAll.checked = isAllChecked;
+        if (selectAll) {
+            const pageChk = container.querySelectorAll('.prd-select-chk');
+            if (pageChk.length > 0) {
+                selectAll.checked = Array.from(pageChk).every(c => c.checked);
+            } else {
+                selectAll.checked = false;
+            }
+        }
     }
 
     function attachListEvents() {
@@ -2299,7 +2226,7 @@ export const renderProducts = async (container, workspaceId) => {
 
         if (unitProfitEl) {
             unitProfitEl.textContent = (unitProfit >= 0 ? '+' : '') + formatCurrency(unitProfit);
-            unitProfitEl.style.color = unitProfit >= 0 ? '#10b981' : '#ef4444';
+            unitProfitEl.style.color = '#ffffff';
         }
         if (markupEl) {
             markupEl.textContent = `${markupPct.toFixed(1)}%`;
@@ -2316,7 +2243,7 @@ export const renderProducts = async (container, workspaceId) => {
         if (totalSaleEl) totalSaleEl.textContent = formatCurrency(totalSaleVal);
         if (totalProfitEl) {
             totalProfitEl.textContent = (totalProfitVal >= 0 ? '+' : '') + formatCurrency(totalProfitVal);
-            totalProfitEl.style.color = totalProfitVal >= 0 ? '#10b981' : '#ef4444';
+            totalProfitEl.style.color = '#ffffff';
         }
 
         if (profitPill) {
@@ -2326,16 +2253,16 @@ export const renderProducts = async (container, workspaceId) => {
                 profitPill.style.color = '#cbd5e1';
             } else if (unitProfit > 0) {
                 profitPill.textContent = `Profitable (+${marginPct.toFixed(1)}% Margin)`;
-                profitPill.style.background = 'rgba(16, 185, 129, 0.2)';
-                profitPill.style.color = '#10b981';
+                profitPill.style.background = 'rgba(255, 255, 255, 0.15)';
+                profitPill.style.color = '#ffffff';
             } else if (unitProfit === 0) {
                 profitPill.textContent = 'Break-Even (0% Margin)';
-                profitPill.style.background = 'rgba(245, 158, 11, 0.2)';
-                profitPill.style.color = '#f59e0b';
+                profitPill.style.background = 'rgba(255, 255, 255, 0.1)';
+                profitPill.style.color = '#cbd5e1';
             } else {
                 profitPill.textContent = `Loss (${marginPct.toFixed(1)}% Margin)`;
-                profitPill.style.background = 'rgba(239, 68, 68, 0.2)';
-                profitPill.style.color = '#ef4444';
+                profitPill.style.background = 'rgba(255, 255, 255, 0.1)';
+                profitPill.style.color = '#cbd5e1';
             }
         }
     };
@@ -2546,7 +2473,7 @@ export const renderProducts = async (container, workspaceId) => {
         container.querySelector('#prd-layout-drawer-overlay')?.addEventListener('click', closeLayoutDrawer);
 
         // 2. Theme Selection inside Drawer
-        const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('pricelister_theme') || 'red';
+        const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('pricelister_theme') || 'monochrome';
         container.querySelectorAll('.prd-theme-btn').forEach(btn => {
             const th = btn.getAttribute('data-theme');
             if (th === currentTheme) {
@@ -2592,8 +2519,8 @@ export const renderProducts = async (container, workspaceId) => {
             });
         });
 
-        // 4. Select All Checkbox (List and Excel Views)
-        const handleSelectAllChange = (e) => {
+        // 4. Select All Checkbox
+        container.querySelector('#prd-select-all')?.addEventListener('change', (e) => {
             const isChecked = e.currentTarget.checked;
             container.querySelectorAll('.prd-select-chk').forEach(chk => {
                 chk.checked = isChecked;
@@ -2603,15 +2530,8 @@ export const renderProducts = async (container, workspaceId) => {
                     else selectedProductIds.delete(id);
                 }
             });
-            const sel1 = container.querySelector('#prd-select-all');
-            const sel2 = container.querySelector('#prd-excel-select-all');
-            if (sel1) sel1.checked = isChecked;
-            if (sel2) sel2.checked = isChecked;
             updateBatchBar();
-        };
-
-        container.querySelector('#prd-select-all')?.addEventListener('change', handleSelectAllChange);
-        container.querySelector('#prd-excel-select-all')?.addEventListener('change', handleSelectAllChange);
+        });
 
         // 5. Multi-Product Batch Actions
         // Batch Action A: Change Category
@@ -2780,15 +2700,162 @@ export const renderProducts = async (container, workspaceId) => {
             showProductEditorView();
         });
 
-        // Auto Generate UPC Barcode
-        container.querySelector('#btn-generate-upc')?.addEventListener('click', () => {
-            const randNum = Math.floor(10000000000 + Math.random() * 90000000000);
-            const upc = '8' + String(randNum).substring(0, 11);
-            const upcInput = container.querySelector('#prd-upc');
-            if (upcInput) {
-                upcInput.value = upc;
-                checkProductDirty();
+        // Product Code Generation Engine & Assistant
+        const codeService = getCodeStudioService(workspaceId);
+
+        // Mode A: Auto-Generate using Workspace Default Template
+        container.querySelector('#btn-generate-upc')?.addEventListener('click', async () => {
+            try {
+                const defaultTmpl = await codeService.getDefaultTemplate();
+                const nextSeq = await codeService.atomicGetNextSequence(defaultTmpl.id || 'default_supermarket');
+                const pName = container.querySelector('#prd-name')?.value.trim() || '';
+                const pCat = container.querySelector('#prd-category')?.value.trim() || '';
+
+                let candidate = codeService.assembleCode(defaultTmpl.blocks, defaultTmpl, {
+                    sequence: nextSeq,
+                    product: { name: pName, category: pCat }
+                });
+
+                // Collision detection verification
+                const check = await codeService.checkCodeUniqueness(candidate);
+                if (!check.isUnique) {
+                    // Advance sequence to resolve collision deterministically
+                    const fallbackSeq = await codeService.atomicGetNextSequence(defaultTmpl.id || 'default_supermarket');
+                    candidate = codeService.assembleCode(defaultTmpl.blocks, defaultTmpl, {
+                        sequence: fallbackSeq,
+                        product: { name: pName, category: pCat }
+                    });
+                }
+
+                // Reserve the code safely
+                await codeService.reserveCode(candidate, 'product_draft', 60, { template: defaultTmpl.name });
+
+                const upcInput = container.querySelector('#prd-upc');
+                if (upcInput) {
+                    upcInput.value = candidate;
+                    const pill = container.querySelector('#prd-code-status-pill');
+                    if (pill) {
+                        pill.textContent = 'Reserved & Unique';
+                        pill.style.background = '#18181B';
+                        pill.style.color = '#FFFFFF';
+                    }
+                    checkProductDirty();
+                    showAlert.success(`Generated code "${candidate}" using "${defaultTmpl.name}".`);
+                }
+            } catch (err) {
+                console.error("Auto code generation error:", err);
+                showAlert.error(`Code generation failed: ${err.message}`);
             }
+        });
+
+        // Mode B: Choose Template Modal
+        container.querySelector('#btn-code-assistant')?.addEventListener('click', async () => {
+            const templates = await codeService.getAllTemplates(false);
+            const modalId = 'modal-code-gen-picker';
+            let modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: rgba(0,0,0,0.45); z-index: 10000;
+                display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: #FFFFFF; border-radius: 14px; width: 100%; max-width: 520px; border: 1px solid #E4E4E7; box-shadow: 0 20px 40px rgba(0,0,0,0.15); overflow: hidden;">
+                    <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #E4E4E7; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #18181B;">Select Code Generation Template</h3>
+                            <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #71717A;">Choose a department template or generate the next atomic sequence.</p>
+                        </div>
+                        <button id="btn-close-picker-modal" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#71717A;">&times;</button>
+                    </div>
+                    <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; max-height: 70vh; overflow-y: auto;">
+                        ${templates.map(t => {
+                            const sample = codeService.assembleCode(t.blocks, t);
+                            return `
+                                <div class="tmpl-picker-item" data-id="${t.id}" style="padding: 1rem; border: 1px solid #E4E4E7; border-radius: 10px; cursor: pointer; transition: all 0.15s ease; background: #FAFAFA;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                        <strong style="color: #18181B; font-size: 0.95rem;">${escapeHtml(t.name)}</strong>
+                                        ${t.isDefault ? `<span class="badge" style="background:#18181B; color:#FFF; font-size:0.65rem; padding:0.15rem 0.45rem; border-radius:4px;">Default</span>` : ''}
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #71717A; margin-bottom: 0.5rem;">${escapeHtml(t.description || '')}</div>
+                                    <div style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: #18181B; background: #FFFFFF; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #E4E4E7;">
+                                        Preview: ${escapeHtml(sample)}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            const close = () => modal.remove();
+            modal.querySelector('#btn-close-picker-modal').onclick = close;
+
+            modal.querySelectorAll('.tmpl-picker-item').forEach(item => {
+                item.addEventListener('click', async () => {
+                    const tmpl = await codeService.getTemplateById(item.dataset.id);
+                    if (tmpl) {
+                        const nextSeq = await codeService.atomicGetNextSequence(tmpl.id);
+                        const pName = container.querySelector('#prd-name')?.value.trim() || '';
+                        const pCat = container.querySelector('#prd-category')?.value.trim() || '';
+                        const code = codeService.assembleCode(tmpl.blocks, tmpl, {
+                            sequence: nextSeq,
+                            product: { name: pName, category: pCat }
+                        });
+                        await codeService.reserveCode(code, 'product_draft', 60, { template: tmpl.name });
+                        const upcInput = container.querySelector('#prd-upc');
+                        if (upcInput) {
+                            upcInput.value = code;
+                            const pill = container.querySelector('#prd-code-status-pill');
+                            if (pill) {
+                                pill.textContent = 'Reserved & Unique';
+                                pill.style.background = '#18181B';
+                                pill.style.color = '#FFFFFF';
+                            }
+                            checkProductDirty();
+                            showAlert.success(`Applied template "${tmpl.name}". Generated: ${code}`);
+                        }
+                    }
+                    close();
+                });
+            });
+        });
+
+        // Mode C: Manual Entry Uniqueness Checking
+        let uniquenessTimer = null;
+        container.querySelector('#prd-upc')?.addEventListener('input', (e) => {
+            clearTimeout(uniquenessTimer);
+            const val = e.target.value.trim();
+            const pill = container.querySelector('#prd-code-status-pill');
+            if (!val) {
+                if (pill) {
+                    pill.textContent = 'Custom Code';
+                    pill.style.background = '#F4F4F5';
+                    pill.style.color = '#18181B';
+                }
+                return;
+            }
+            uniquenessTimer = setTimeout(async () => {
+                const check = await codeService.checkCodeUniqueness(val, container.querySelector('#prd-id')?.value);
+                if (pill) {
+                    if (check.isUnique) {
+                        pill.textContent = 'Unique Code';
+                        pill.style.background = '#F4F4F5';
+                        pill.style.color = '#18181B';
+                        pill.style.border = '1px solid #E4E4E7';
+                    } else {
+                        pill.textContent = 'Already in Use';
+                        pill.style.background = '#F4F4F5';
+                        pill.style.color = '#71717A';
+                        pill.style.border = '1px solid #18181B';
+                    }
+                }
+            }, 300);
         });
 
         // Quantity Stepper Buttons
@@ -2882,7 +2949,7 @@ export const renderProducts = async (container, workspaceId) => {
 
             ['dragenter', 'dragover'].forEach(evtName => {
                 prdDropzone.addEventListener(evtName, () => {
-                    prdDropzone.style.borderColor = '#e11d48';
+                    prdDropzone.style.borderColor = '#18181B';
                     prdDropzone.style.background = 'rgba(225, 29, 72, 0.05)';
                     prdDropzone.style.transform = 'scale(1.01)';
                 });
@@ -2930,7 +2997,7 @@ export const renderProducts = async (container, workspaceId) => {
         if (btnQuickCat) {
             btnQuickCat.addEventListener('click', () => {
                 catNameInput.value = '';
-                catColorInput.value = '#e11d48';
+                catColorInput.value = '#18181B';
                 btnSaveCat.disabled = true;
                 catModal.style.display = 'flex';
                 catNameInput.focus();
@@ -3107,6 +3174,11 @@ export const renderProducts = async (container, workspaceId) => {
                     showAlert.success('Product updated');
                 } else {
                     await productService.addProduct(data, currentUser.uid, userRestrictions);
+                    if (data.upcCode) {
+                        try {
+                            await codeService.commitReservedCode(data.upcCode, id || 'catalog');
+                        } catch (e) {}
+                    }
                     showAlert.success('Product added');
                 }
 

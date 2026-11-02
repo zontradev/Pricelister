@@ -140,85 +140,85 @@ export const renderMembers = async (container, workspaceId) => {
         container.innerHTML = `
             <div class="module-header" style="margin-bottom: 1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                 <div>
-                    <h2 style="margin:0 0 0.35rem 0;">Workspace Members</h2>
-                    <p style="color: var(--text-secondary); margin: 0;">View activity, creations, and deletion statistics for all connected members.</p>
+                    <h2 style="margin:0 0 0.35rem 0; font-size:1.65rem; font-weight:800; color:var(--text-primary); letter-spacing:-0.02em;">Workspace Members &amp; Contributions</h2>
+                    <p style="color: var(--text-secondary); margin: 0; font-size:0.88rem;">Monitor team distribution, real-time activity metrics, and contribution logs.</p>
                 </div>
                 <div style="display:flex; gap:0.75rem;">
-                    <button class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+                    <button class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="font-weight:700; display:flex; align-items:center; gap:0.45rem; padding:0.55rem 1rem; border:1px solid var(--border-color); background:#ffffff; color:var(--text-primary); border-radius:10px;">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                        Permissions & Invite
+                        Permissions &amp; Invite
                     </button>
                 </div>
             </div>
 
-            <!-- 1. WORKSPACE HEADER SECTION (Android Parity) -->
-            <div class="card" style="padding: 1.75rem 2rem; border-radius: 14px; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--surface-0), var(--surface-50)); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+            <!-- 1. WORKSPACE MANAGEMENT HEADER & KPI METRICS -->
+            <div class="card" style="padding: 1.5rem 1.75rem; border-radius: 14px; margin-bottom: 1.5rem; background: #ffffff; border: 1px solid var(--border-color); box-shadow: var(--shadow-subtle);">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem;">
                     <div style="display:flex; align-items:center; gap:1.25rem;">
                         <!-- Square-Rounded Elevated Workspace Logo Box -->
-                        <div style="width:72px; height:72px; border-radius:16px; background:#ffffff; border:1.5px solid var(--border-color); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; flex-shrink:0;">
+                        <div style="width:64px; height:64px; border-radius:14px; background:#ffffff; border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.04); overflow:hidden; flex-shrink:0;">
                             ${(wsInfo.logoUrl || wsInfo.logo) ? `
-                                <img src="${wsInfo.logoUrl || wsInfo.logo}" alt="Workspace Logo" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, #f1f5f9, #e2e8f0);color:var(--text-muted);font-weight:800;font-size:1.5rem;\\'>${(wsInfo.name || 'W').substring(0, 2).toUpperCase()}</div>';">
+                                <img src="${wsInfo.logoUrl || wsInfo.logo}" alt="Workspace Logo" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f4f4f5;color:var(--text-primary);font-weight:800;font-size:1.35rem;\\'>${(wsInfo.name || 'W').substring(0, 2).toUpperCase()}</div>';">
                             ` : `
-                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #f1f5f9, #e2e8f0); color:var(--text-muted); font-weight:800; font-size:1.5rem;">
+                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#f4f4f5; color:var(--text-primary); font-weight:800; font-size:1.35rem;">
                                     ${(wsInfo.name || 'W').substring(0, 2).toUpperCase()}
                                 </div>
                             `}
                         </div>
                         <div>
-                            <div style="font-size:0.72rem; font-weight:800; color:var(--primary); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.35rem;">
+                            <div style="font-size:0.72rem; font-weight:800; color:var(--text-secondary); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:0.25rem;">
                                 WORKSPACE ACTIVITY HUB
                             </div>
-                            <h1 style="font-size:1.6rem; font-weight:800; color:var(--text-primary); margin:0 0 0.4rem 0;">
+                            <h1 style="font-size:1.45rem; font-weight:800; color:var(--text-primary); margin:0 0 0.25rem 0;">
                                 ${wsInfo.name || 'Workspace'}
                             </h1>
-                            <p style="color: var(--text-secondary); font-size:0.92rem; margin:0;">
-                                Tracking creation contributions and deletion audits across all team members.
+                            <p style="color: var(--text-secondary); font-size:0.85rem; margin:0;">
+                                Real-time contribution logs, catalog additions, and deletion audits across all team members.
                             </p>
                         </div>
                     </div>
-                    <div style="background:var(--surface-100); padding:0.6rem 1rem; border-radius:10px; border:1px solid var(--border-color); font-size:0.85rem;">
+                    <div style="background:#ffffff; padding:0.5rem 0.85rem; border-radius:8px; border:1px solid var(--border-color); font-size:0.82rem;">
                         <span style="color:var(--text-secondary);">Workspace ID:</span> 
                         <code style="font-family:monospace; font-weight:700; color:var(--text-primary); margin-left:4px;">${wsInfo.workspaceId || adminUid}</code>
                     </div>
                 </div>
 
-                <!-- Aggregate Statistics Overview -->
-                <div style="margin-top:1.5rem; display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; border-top:1px solid var(--border-color); padding-top:1.25rem;">
-                    <div style="text-align:center;">
-                        <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Members</div>
-                        <div style="font-size:1.45rem; font-weight:800; color:var(--text-primary);">${allMemberList.length}</div>
+                <!-- 5 Executive KPI Metric Tiles -->
+                <div style="margin-top:1.5rem; display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:0.85rem; border-top:1px solid var(--border-color); padding-top:1.25rem;">
+                    <div style="background:#fafafa; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem 1rem;">
+                        <div style="font-size:0.72rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Team Members</div>
+                        <div style="font-size:1.45rem; font-weight:800; color:var(--text-primary); margin-top:0.2rem;">${allMemberList.length}</div>
                     </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Products Created</div>
-                        <div style="font-size:1.45rem; font-weight:800; color:var(--text-primary);">${totalTeamProducts}</div>
+                    <div style="background:#fafafa; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem 1rem;">
+                        <div style="font-size:0.72rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Products Created</div>
+                        <div style="font-size:1.45rem; font-weight:800; color:var(--text-primary); margin-top:0.2rem;">${totalTeamProducts}</div>
                     </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Invoices Created</div>
-                        <div style="font-size:1.45rem; font-weight:800; color:var(--primary);">${totalTeamInvoices}</div>
+                    <div style="background:#fafafa; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem 1rem;">
+                        <div style="font-size:0.72rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Invoices Created</div>
+                        <div style="font-size:1.45rem; font-weight:800; color:var(--text-primary); margin-top:0.2rem;">${totalTeamInvoices}</div>
                     </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Categories</div>
-                        <div style="font-size:1.45rem; font-weight:800; color:var(--text-primary);">${totalTeamCategories}</div>
+                    <div style="background:#fafafa; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem 1rem;">
+                        <div style="font-size:0.72rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Categories</div>
+                        <div style="font-size:1.45rem; font-weight:800; color:var(--text-primary); margin-top:0.2rem;">${totalTeamCategories}</div>
                     </div>
-                    <div style="text-align:center;">
-                        <div style="font-size:0.75rem; font-weight:600; color:#b91c1c; text-transform:uppercase;">Total Deletions</div>
-                        <div style="font-size:1.45rem; font-weight:800; color:#b91c1c;">${totalTeamDeletions}</div>
+                    <div style="background:#fafafa; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem 1rem;">
+                        <div style="font-size:0.72rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Audit Deletions</div>
+                        <div style="font-size:1.45rem; font-weight:800; color:var(--text-primary); margin-top:0.2rem;">${totalTeamDeletions}</div>
                     </div>
                 </div>
             </div>
 
             <!-- Search Filter Bar -->
             <div style="margin-bottom: 1.5rem; display:flex; gap:0.75rem;">
-                <input type="text" id="members-search-input" placeholder="Search members by email, name or ID..." style="flex:1; padding:0.65rem 1rem; border-radius:10px; border:1px solid var(--border-color); font-size:0.9rem; background:var(--surface-0); color:var(--text-primary);">
+                <input type="text" id="members-search-input" placeholder="Search members by email, name or ID..." style="flex:1; padding:0.65rem 1rem; border-radius:10px; border:1px solid var(--border-color); font-size:0.88rem; background:#ffffff; color:var(--text-primary); box-shadow:var(--shadow-subtle);">
             </div>
 
-            <!-- 2. MEMBERS LIST SECTION (Android Parity) -->
-            <div id="members-container-list" style="display:flex; flex-direction:column; gap:1.75rem;">
+            <!-- 2. MEMBERS LIST SECTION -->
+            <div id="members-container-list" style="display:flex; flex-direction:column; gap:1.5rem;">
                 
                 <!-- SECTION: ADMINISTRATOR -->
                 <div class="member-group-section" data-group="admin">
-                    <div style="font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.75rem; padding-left:0.25rem;">
+                    <div style="font-size:0.75rem; font-weight:800; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.65rem; padding-left:0.25rem;">
                         ADMINISTRATOR
                     </div>
                     ${renderMemberRowHtml(adminData, true)}
@@ -227,10 +227,10 @@ export const renderMembers = async (container, workspaceId) => {
                 <!-- SECTION: CO-ADMINS -->
                 ${coAdmins.length > 0 ? `
                     <div class="member-group-section" data-group="coadmin">
-                        <div style="font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.75rem; padding-left:0.25rem;">
+                        <div style="font-size:0.75rem; font-weight:800; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.65rem; padding-left:0.25rem;">
                             CO-ADMINS (${coAdmins.length})
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:0.85rem;">
+                        <div style="display:flex; flex-direction:column; gap:0.75rem;">
                             ${coAdmins.map(ca => renderMemberRowHtml(ca, false)).join('')}
                         </div>
                     </div>
@@ -239,19 +239,19 @@ export const renderMembers = async (container, workspaceId) => {
                 <!-- SECTION: WORKERS -->
                 ${workers.length > 0 ? `
                     <div class="member-group-section" data-group="worker">
-                        <div style="font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.75rem; padding-left:0.25rem;">
+                        <div style="font-size:0.75rem; font-weight:800; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.65rem; padding-left:0.25rem;">
                             WORKERS (${workers.length})
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:0.85rem;">
+                        <div style="display:flex; flex-direction:column; gap:0.75rem;">
                             ${workers.map(w => renderMemberRowHtml(w, false)).join('')}
                         </div>
                     </div>
                 ` : ''}
 
                 ${coAdmins.length === 0 && workers.length === 0 ? `
-                    <div class="card" style="padding: 2rem; text-align:center; color:var(--text-secondary); border-radius:12px;">
-                        <p style="margin:0;">No additional workers or co-admins joined this workspace yet.</p>
-                        <button class="btn btn-sm btn-primary mt-12" onclick="window.location.hash='#/workspace'" style="margin-top:0.75rem;">Invite Worker</button>
+                    <div class="card" style="padding: 2rem; text-align:center; color:var(--text-secondary); border-radius:12px; background:#ffffff; border:1px solid var(--border-color);">
+                        <p style="margin:0; font-size:0.9rem;">No additional workers or co-admins joined this workspace yet.</p>
+                        <button class="btn btn-sm btn-primary mt-12" onclick="window.location.hash='#/workspace'" style="margin-top:0.75rem; font-weight:700;">Invite Worker</button>
                     </div>
                 ` : ''}
             </div>
@@ -288,7 +288,7 @@ export const renderMembers = async (container, workspaceId) => {
     } catch (err) {
         console.error("renderMembers error:", err);
         container.innerHTML = `
-            <div class="card" style="padding:2rem; text-align:center; color:var(--danger);">
+            <div class="card" style="padding:2rem; text-align:center; color:var(--text-primary); background:#ffffff; border:1px solid var(--border-color);">
                 Failed to load members activity. Please refresh the page.
             </div>
         `;
@@ -323,14 +323,14 @@ const mapMemberData = (m) => {
 const renderMemberRowHtml = (member, defaultExpanded = false) => {
     const uniqueRowId = 'member-row-' + Math.random().toString(36).substring(2, 9);
     
-    // Status dot color logic matching MembersScreen.kt
-    let dotColor = '#10b981'; // Joined Green
+    // Status dot color logic in monochrome
+    let dotColor = '#18181B'; // Joined Charcoal
     let statusText = 'Joined';
     if (member.isPending) {
-        dotColor = '#f59e0b'; // Pending Orange
+        dotColor = '#71717A'; // Pending Grey
         statusText = 'Pending';
     } else if (member.isRestricted) {
-        dotColor = '#ef4444'; // Restricted Red
+        dotColor = '#71717A'; // Restricted Grey
         statusText = 'Restricted';
     }
 
@@ -342,81 +342,92 @@ const renderMemberRowHtml = (member, defaultExpanded = false) => {
         return isNaN(d.getTime()) ? 'Active' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     })();
 
+    const initial = ((member.email || 'M').charAt(0) || 'M').toUpperCase();
+
     return `
-        <div class="member-card-wrapper card" style="padding:0; border-radius:12px; border:1px solid var(--border-color); overflow:hidden; box-shadow:var(--shadow-sm); margin-bottom:0.75rem;">
+        <div class="member-card-wrapper card" style="padding:0; border-radius:12px; border:1px solid var(--border-color); overflow:hidden; box-shadow:var(--shadow-subtle); margin-bottom:0.75rem; background:#ffffff;">
             <!-- Header Row -->
-            <div class="member-row-header" data-target="${uniqueRowId}" style="padding:1.15rem 1.5rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:var(--surface-0); transition:background 0.15s ease;">
-                <div style="display:flex; align-items:center; gap:1rem; overflow:hidden;">
-                    <!-- Status dot -->
-                    <div style="width:10px; height:10px; min-width:10px; border-radius:50%; background:${dotColor}; box-shadow:0 0 6px ${dotColor}80;"></div>
+            <div class="member-row-header" data-target="${uniqueRowId}" style="padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:#ffffff; transition:background 0.15s ease;">
+                <div style="display:flex; align-items:center; gap:0.85rem; overflow:hidden;">
+                    <!-- Avatar Circle with initial -->
+                    <div style="width:36px; height:36px; border-radius:50%; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.88rem; flex-shrink:0; position:relative;">
+                        ${initial}
+                        <span style="position:absolute; bottom:0; right:0; width:9px; height:9px; border-radius:50%; background:${dotColor}; border:1.5px solid #ffffff;"></span>
+                    </div>
                     
                     <div style="overflow:hidden;">
                         <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                            <strong style="font-size:1rem; color:var(--text-primary);">${member.email}</strong>
+                            <strong style="font-size:0.92rem; color:var(--text-primary);">${member.email}</strong>
                             ${getRoleBadgeHtml(member.role)}
                         </div>
-                        <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:0.15rem;">
-                            <span style="font-weight:600; color:${member.isPending ? dotColor : 'var(--text-primary)'};">${member.name}</span>
-                            ${member.id !== 'N/A' ? ` • <code style="font-family:monospace; font-size:0.78rem;">ID: ${member.id}</code>` : ''}
+                        <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:0.15rem;">
+                            <span style="font-weight:600; color:var(--text-primary);">${member.name}</span>
+                            ${member.id !== 'N/A' ? ` &bull; <code style="font-family:monospace; font-size:0.75rem; color:var(--text-secondary);">ID: ${member.id}</code>` : ''}
+                            &bull; <span>Joined: ${joinedDateFormatted}</span>
                         </div>
                     </div>
                 </div>
 
-                <div style="display:flex; align-items:center; gap:1rem;">
-                    <div style="text-align:right; font-size:0.8rem; color:var(--text-muted); display:none; @media(min-width:600px){display:block;}">
-                        <div>Created: <strong style="color:var(--text-primary);">${member.productCount + member.invoiceCount}</strong></div>
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <span style="font-size:0.75rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:6px; background:var(--surface-50); border:1px solid var(--border-color); color:var(--text-primary);" title="Products and invoices created">
+                            Creations: ${member.productCount + member.invoiceCount}
+                        </span>
+                        <span style="font-size:0.75rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:6px; background:var(--surface-50); border:1px solid var(--border-color); color:var(--text-secondary);" title="Total items deleted">
+                            Deletions: ${member.totalDeleted}
+                        </span>
                     </div>
-                    <button type="button" class="icon-btn" aria-label="Toggle Details" style="pointer-events:none;">
-                        <svg class="expand-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s ease; transform:${defaultExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};">
+                    <button type="button" class="icon-btn" aria-label="Toggle Details" style="pointer-events:none; width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:none; border:none; cursor:pointer;">
+                        <svg class="expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="transition:transform 0.2s ease; transform:${defaultExpanded ? 'rotate(180deg)' : 'rotate(0deg)'}; color:var(--text-secondary);">
                             <polyline points="6 9 12 15 18 9"></polyline>
                         </svg>
                     </button>
                 </div>
             </div>
 
-            <!-- Expandable Metrics Body (Matching Android ExpandableMemberRow) -->
+            <!-- Expandable Metrics Body -->
             <div id="${uniqueRowId}" class="member-row-body" style="display:${defaultExpanded ? 'block' : 'none'}; padding:1.25rem 1.5rem; background:var(--surface-50); border-top:1px solid var(--border-color);">
-                <div style="font-size:0.72rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:1rem;">
-                    JOINED: ${joinedDateFormatted.toUpperCase()}
+                <div style="font-size:0.72rem; font-weight:800; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.85rem;">
+                    CREATION AUDIT &amp; ACTIVITY METRICS
                 </div>
 
                 <!-- Clean Grid of Member Creations -->
-                <div style="background:var(--surface-0); border:1px solid var(--border-color); border-radius:10px; padding:1.25rem; margin-bottom:1rem;">
-                    <div style="font-size:0.88rem; font-weight:700; color:var(--text-primary); margin-bottom:1rem; display:flex; align-items:center; gap:0.4rem;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                        Creation Contributions
+                <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:1.15rem; margin-bottom:0.85rem;">
+                    <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.85rem; display:flex; align-items:center; gap:0.4rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        Contribution Breakdown
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:1rem;">
-                        <div>
-                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Products</div>
-                            <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary); margin-top:2px;">${member.productCount}</div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap:0.75rem;">
+                        <div style="background:var(--surface-50); border:1px solid var(--border-color); border-radius:8px; padding:0.65rem 0.85rem;">
+                            <div style="font-size:0.72rem; color:var(--text-secondary); font-weight:600;">Products</div>
+                            <div style="font-size:1.25rem; font-weight:800; color:var(--text-primary); margin-top:2px;">${member.productCount}</div>
                         </div>
-                        <div>
-                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Invoices</div>
-                            <div style="font-size:1.35rem; font-weight:800; color:var(--primary); margin-top:2px;">${member.invoiceCount}</div>
+                        <div style="background:var(--surface-50); border:1px solid var(--border-color); border-radius:8px; padding:0.65rem 0.85rem;">
+                            <div style="font-size:0.72rem; color:var(--text-secondary); font-weight:600;">Invoices</div>
+                            <div style="font-size:1.25rem; font-weight:800; color:var(--text-primary); margin-top:2px;">${member.invoiceCount}</div>
                         </div>
-                        <div>
-                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Categories</div>
-                            <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary); margin-top:2px;">${member.categoryCount}</div>
+                        <div style="background:var(--surface-50); border:1px solid var(--border-color); border-radius:8px; padding:0.65rem 0.85rem;">
+                            <div style="font-size:0.72rem; color:var(--text-secondary); font-weight:600;">Categories</div>
+                            <div style="font-size:1.25rem; font-weight:800; color:var(--text-primary); margin-top:2px;">${member.categoryCount}</div>
                         </div>
-                        <div>
-                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Clients</div>
-                            <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary); margin-top:2px;">${member.clientCount}</div>
+                        <div style="background:var(--surface-50); border:1px solid var(--border-color); border-radius:8px; padding:0.65rem 0.85rem;">
+                            <div style="font-size:0.72rem; color:var(--text-secondary); font-weight:600;">Clients</div>
+                            <div style="font-size:1.25rem; font-weight:800; color:var(--text-primary); margin-top:2px;">${member.clientCount}</div>
                         </div>
-                        <div>
-                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Businesses</div>
-                            <div style="font-size:1.35rem; font-weight:800; color:var(--text-primary); margin-top:2px;">${member.businessCount}</div>
+                        <div style="background:var(--surface-50); border:1px solid var(--border-color); border-radius:8px; padding:0.65rem 0.85rem;">
+                            <div style="font-size:0.72rem; color:var(--text-secondary); font-weight:600;">Businesses</div>
+                            <div style="font-size:1.25rem; font-weight:800; color:var(--text-primary); margin-top:2px;">${member.businessCount}</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Highlighted Deletion Tracker -->
-                <div style="background:rgba(239, 68, 68, 0.08); border:1.5px solid rgba(239, 68, 68, 0.3); border-radius:8px; padding:0.85rem 1.15rem; display:flex; align-items:center; justify-content:space-between;">
+                <!-- Deletion Tracker in clean grey outline -->
+                <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem 1.15rem; display:flex; align-items:center; justify-content:space-between;">
                     <div style="display:flex; align-items:center; gap:0.6rem;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:#ef4444;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        <strong style="color:#b91c1c; font-size:0.88rem;">Total Deletions</strong>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="color:var(--text-primary);"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <strong style="color:var(--text-primary); font-size:0.86rem;">Total Deletions Audit</strong>
                     </div>
-                    <div style="font-size:1.35rem; font-weight:900; color:#b91c1c; font-family:monospace; background:white; padding:0.15rem 0.65rem; border-radius:6px; border:1px solid rgba(239,68,68,0.25);">
+                    <div style="font-size:1.2rem; font-weight:800; color:var(--text-primary); font-family:monospace; background:var(--surface-50); padding:0.15rem 0.65rem; border-radius:6px; border:1px solid var(--border-color);">
                         ${String(member.totalDeleted).padStart(2, '0')}
                     </div>
                 </div>

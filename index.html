@@ -21,17 +21,90 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script type="module" src="/config.js"></script>
+    <script src="js/libs/jsbarcode.min.js"></script>
+    <script src="js/libs/qrcode.min.js"></script>
+    <script type="module" src="./config.js"></script>
 
-    <!-- Multi-View Routing State (Hash-based / Default safe routing) -->
+    <!-- Clean URL Initializer & Service Worker: Immediately strip index.html and # hash symbol, showing /home (or /explore, etc.) -->
     <script>
         (function() {
             try {
+                // Restore remembered custom font from Critical Board immediately to prevent FOUT & on reload / reback
+                var savedFont = localStorage.getItem('pricelister_custom_font');
+                if (savedFont) {
+                    var parsedFont = JSON.parse(savedFont);
+                    if (parsedFont && parsedFont.name) {
+                        var fontName = parsedFont.name;
+                        var fontCss = '';
+                        if (parsedFont.dataUrl && parsedFont.dataUrl.indexOf('data:') === 0) {
+                            fontCss += '@font-face { font-family: "' + fontName + '"; src: url("' + parsedFont.dataUrl + '"); font-display: swap; }\n';
+                        } else if (!parsedFont.isSystem) {
+                            var linkId = 'font-link-preboot-' + fontName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                            if (!document.getElementById(linkId)) {
+                                var lk = document.createElement('link');
+                                lk.id = linkId;
+                                lk.rel = 'stylesheet';
+                                lk.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(fontName) + ':wght@400;500;600;700;800&display=swap';
+                                document.head.appendChild(lk);
+                            }
+                        }
+                        fontCss += 'html, body, button, input, select, textarea, h1, h2, h3, h4, h5, h6, .btn, .nav-link, .nav-links, .brand-title, .explore-nav-btn, .hero-title-rich, .explore-hero-title, .cta-banner-deep, .landing-footer-elevated { font-family: "' + fontName + '", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }\n';
+                        fontCss += ':root { --font-sans: "' + fontName + '", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }';
+                        
+                        var styleEl = document.getElementById('pricelister-custom-font-style');
+                        if (!styleEl) {
+                            styleEl = document.createElement('style');
+                            styleEl.id = 'pricelister-custom-font-style';
+                            document.head.appendChild(styleEl);
+                        }
+                        styleEl.textContent = fontCss;
+                    }
+                }
+
+                window.addEventListener('pageshow', function() {
+                    try {
+                        var recheck = localStorage.getItem('pricelister_custom_font');
+                        if (recheck) {
+                            var p = JSON.parse(recheck);
+                            if (p && p.name) {
+                                var curEl = document.getElementById('pricelister-custom-font-style');
+                                if (!curEl) {
+                                    curEl = document.createElement('style');
+                                    curEl.id = 'pricelister-custom-font-style';
+                                    document.head.appendChild(curEl);
+                                }
+                                curEl.textContent = 'html, body, button, input, select, textarea, h1, h2, h3, h4, h5, h6, .btn, .nav-link { font-family: "' + p.name + '", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }';
+                            }
+                        }
+                    } catch(e) {}
+                });
+
                 if ('serviceWorker' in navigator && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
-                    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function(e) {
+                    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(e) {
                         console.debug("Service worker skipped on index:", e);
                     });
                 }
+
+                var path = window.location.pathname || '';
+                var hash = window.location.hash || '';
+                var savedLandingView = '';
+                try { savedLandingView = sessionStorage.getItem('pricelister_last_landing_view') || ''; } catch(e) {}
+
+                var validViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms'];
+                var pathView = path.replace(/\/index\.html$/i, '').replace(/^\/+/, '').toLowerCase();
+                var hashView = hash.replace(/^#\/?/, '').replace(/\/$/, '').toLowerCase();
+
+                var view = 'home';
+                if (validViews.includes(pathView)) {
+                    view = pathView;
+                } else if (validViews.includes(hashView)) {
+                    view = hashView;
+                } else if (savedLandingView && validViews.includes(savedLandingView.toLowerCase())) {
+                    view = savedLandingView.toLowerCase();
+                }
+
+                var cleanPath = '/' + view;
+                window.history.replaceState({ view: view }, '', cleanPath);
             } catch(e) {}
         })();
     </script>
@@ -2130,14 +2203,7 @@
             const el = document.getElementById('loader-error');
             if (el) {
                 el.style.display = 'block';
-                let msg = '<strong>Script Error:</strong> ' + (e.message || 'Unknown');
-                if (e.filename) {
-                    msg += '<br><small><strong>File:</strong> ' + e.filename + ' (Line ' + e.lineno + ', Col ' + e.colno + ')</small>';
-                }
-                if (e.error && e.error.stack) {
-                    msg += '<pre style="text-align:left; background:rgba(255,0,0,0.08); padding:8px; border-radius:4px; font-size:11px; margin-top:6px; overflow-x:auto;">' + e.error.stack + '</pre>';
-                }
-                el.innerHTML = msg;
+                el.innerHTML = '<strong>Script Error:</strong> ' + (e.message || 'Unknown');
                 const s = document.querySelector('.spinner');
                 if (s) s.style.display = 'none';
             }
@@ -2146,11 +2212,7 @@
             const el = document.getElementById('loader-error');
             if (el) {
                 el.style.display = 'block';
-                let msg = '<strong>Promise Error:</strong> ' + (e.reason?.message || 'Unknown');
-                if (e.reason && e.reason.stack) {
-                    msg += '<pre style="text-align:left; background:rgba(255,0,0,0.08); padding:8px; border-radius:4px; font-size:11px; margin-top:6px; overflow-x:auto;">' + e.reason.stack + '</pre>';
-                }
-                el.innerHTML = msg;
+                el.innerHTML = '<strong>Promise Error:</strong> ' + (e.reason?.message || 'Unknown');
                 const s = document.querySelector('.spinner');
                 if (s) s.style.display = 'none';
             }
@@ -2187,7 +2249,7 @@
                 <div class="header-actions" id="landing-header-actions" style="display:flex; align-items:center; gap:0.6rem;">
                     <!-- 1. Logged Out State: (Login) (Enter Workspace ->) 2 Buttons -->
                     <div id="header-auth-logged-out" style="display:flex; align-items:center; gap:0.55rem;">
-                        <a href="login.html" id="header-btn-login" class="btn-glass-cta" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; padding:0.48rem 1.15rem; font-weight:700; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer;">
+                        <a href="login.html" id="header-btn-login" class="btn-glass-cta" style="text-decoration:none; display:inline-flex; align-items:center; padding:0.48rem 1.15rem; font-weight:700; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer;">
                             <span>Login</span>
                         </a>
                         <button type="button" id="header-btn-enter-ws" class="btn-glass-cta open-login-modal" style="padding:0.48rem 1.15rem; font-weight:700; border-radius:9999px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer; display:flex; align-items:center; gap:0.4rem;">
@@ -2869,34 +2931,34 @@
                             <tbody>
                                 <tr>
                                     <td><strong>Real-Time Cloud Synchronization</strong></td>
-                                    <td><span class="comp-cross">✕ Desync & conflicts</span></td>
-                                    <td><span class="comp-check">✓ Yes</span></td>
-                                    <td class="highlight"><span class="comp-check">✓ Instant Real-time Sync</span></td>
+                                    <td><span class="comp-cross" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Desync & conflicts</span></td>
+                                    <td><span class="comp-check" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Yes</span></td>
+                                    <td class="highlight"><span class="comp-check" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Instant Real-time Sync</span></td>
                                 </tr>
                                 <tr>
                                     <td><strong>Public Customer Storefront & Cart</strong></td>
-                                    <td><span class="comp-cross">✕ Not available</span></td>
-                                    <td><span class="comp-cross">✕ Expensive add-on</span></td>
-                                    <td class="highlight"><span class="comp-check">✓ Built-in 1-Click Portal</span></td>
+                                    <td><span class="comp-cross" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Not available</span></td>
+                                    <td><span class="comp-cross" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Expensive add-on</span></td>
+                                    <td class="highlight"><span class="comp-check" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Built-in 1-Click Portal</span></td>
                                 </tr>
                                 <tr>
                                     <td><strong>Pro PDF Invoice Designer</strong></td>
-                                    <td><span class="comp-cross">✕ Manual copy-paste</span></td>
-                                    <td><span class="comp-cross">✕ Clunky formatting</span></td>
-                                    <td class="highlight"><span class="comp-check">✓ 4 High-Converting Templates</span>
+                                    <td><span class="comp-cross" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Manual copy-paste</span></td>
+                                    <td><span class="comp-cross" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Clunky formatting</span></td>
+                                    <td class="highlight"><span class="comp-check" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> 4 High-Converting Templates</span>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td><strong>Instant WhatsApp Order Forwarding</strong></td>
-                                    <td><span class="comp-cross">✕ None</span></td>
-                                    <td><span class="comp-cross">✕ Custom API dev needed</span></td>
-                                    <td class="highlight"><span class="comp-check">✓ Native 1-Tap WhatsApp</span></td>
+                                    <td><span class="comp-cross" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> None</span></td>
+                                    <td><span class="comp-cross" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Custom API dev needed</span></td>
+                                    <td class="highlight"><span class="comp-check" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Native 1-Tap WhatsApp</span></td>
                                 </tr>
                                 <tr>
                                     <td><strong>Role Security (Admin vs Worker)</strong></td>
-                                    <td><span class="comp-cross">✕ Zero row protection</span></td>
-                                    <td><span class="comp-check">✓ Overcomplicated</span></td>
-                                    <td class="highlight"><span class="comp-check">✓ 3 Clean Built-in Roles</span></td>
+                                    <td><span class="comp-cross" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Zero row protection</span></td>
+                                    <td><span class="comp-check" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Overcomplicated</span></td>
+                                    <td class="highlight"><span class="comp-check" style="display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> 3 Clean Built-in Roles</span></td>
                                 </tr>
                                 <tr>
                                     <td><strong>Time to Get Started</strong></td>
@@ -2924,7 +2986,7 @@
                     <div class="testimonial-grid">
                         <div class="testimonial-card-rich">
                             <div class="stars-row">
-                                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                                <span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>
                             </div>
                             <div class="test-quote">
                                 “The Smart Price Lister and Customer Portal transformed our wholesale distribution. Our
@@ -2945,7 +3007,7 @@
 
                         <div class="testimonial-card-rich">
                             <div class="stars-row">
-                                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                                <span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>
                             </div>
                             <div class="test-quote">
                                 “The dedicated PDF invoice designer creates the most professional bills our clients have
@@ -2966,7 +3028,7 @@
 
                         <div class="testimonial-card-rich">
                             <div class="stars-row">
-                                <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                                <span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span><span style="color:#f59e0b; display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>
                             </div>
                             <div class="test-quote">
                                 “Real-time stock tracking with barcode scanning eliminated our stockout surprises. We
@@ -3286,21 +3348,21 @@
                                 <!-- 3 Compact Storefront Item Rows -->
                                 <div style="padding:0.35rem 0.5rem; display:flex; flex-direction:column; gap:0.35rem; background:#ffffff;">
                                     <div style="display:flex; align-items:center; gap:0.4rem; padding:0.25rem; border-radius:6px; background:#f8fafc; border:1px solid #f1f5f9;">
-                                        <div style="width:26px; height:26px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">📦</div>
+                                        <div style="width:26px; height:26px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; color:#52525b;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
                                         <div style="flex:1; min-width:0;">
                                             <div style="font-size:0.62rem; font-weight:700; color:#18181b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Twinkle Baby Diaper</div>
                                             <div style="font-size:0.58rem; color:#16a34a; font-weight:700;">৳ 32 - 42</div>
                                         </div>
                                     </div>
                                     <div style="display:flex; align-items:center; gap:0.4rem; padding:0.25rem; border-radius:6px; background:#f8fafc; border:1px solid #f1f5f9;">
-                                        <div style="width:26px; height:26px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">🧴</div>
+                                        <div style="width:26px; height:26px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; color:#52525b;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2h4"></path><path d="M10 5h4"></path><path d="M10 2v3"></path><path d="M14 2v3"></path><path d="M9 8h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"></path></svg></div>
                                         <div style="flex:1; min-width:0;">
                                             <div style="font-size:0.62rem; font-weight:700; color:#18181b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Baby Wipes 80pcs</div>
                                             <div style="font-size:0.58rem; color:#16a34a; font-weight:700;">৳ 120</div>
                                         </div>
                                     </div>
                                     <div style="display:flex; align-items:center; gap:0.4rem; padding:0.25rem; border-radius:6px; background:#f8fafc; border:1px solid #f1f5f9;">
-                                        <div style="width:26px; height:26px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">🥛</div>
+                                        <div style="width:26px; height:26px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; color:#52525b;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2h4"></path><path d="M10 5h4"></path><path d="M10 2v3"></path><path d="M14 2v3"></path><path d="M9 8h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"></path></svg></div>
                                         <div style="flex:1; min-width:0;">
                                             <div style="font-size:0.62rem; font-weight:700; color:#18181b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Formula Milk 400g</div>
                                             <div style="font-size:0.58rem; color:#16a34a; font-weight:700;">৳ 850</div>
@@ -3465,7 +3527,7 @@
                                     <tbody>
                                         <tr style="border-bottom:1px solid #f1f5f9;">
                                             <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b; display:flex; align-items:center; gap:0.4rem;">
-                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">📦</div>
+                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; color:#52525b;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
                                                 <span>Twinkle Baby Diaper</span>
                                             </td>
                                             <td style="padding:0.55rem 0.75rem; color:#64748b;">Twinkle</td>
@@ -3478,7 +3540,7 @@
                                         </tr>
                                         <tr style="border-bottom:1px solid #f1f5f9;">
                                             <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b; display:flex; align-items:center; gap:0.4rem;">
-                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">📦</div>
+                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; color:#52525b;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
                                                 <span>Avonee Diaper</span>
                                             </td>
                                             <td style="padding:0.55rem 0.75rem; color:#64748b;">Avonee</td>
@@ -3491,7 +3553,7 @@
                                         </tr>
                                         <tr style="border-bottom:1px solid #f1f5f9;">
                                             <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b; display:flex; align-items:center; gap:0.4rem;">
-                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">🧴</div>
+                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; color:#52525b;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2h4"></path><path d="M10 5h4"></path><path d="M10 2v3"></path><path d="M14 2v3"></path><path d="M9 8h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"></path></svg></div>
                                                 <span>Baby Wipes</span>
                                             </td>
                                             <td style="padding:0.55rem 0.75rem; color:#64748b;">Pure &amp; Soft</td>
@@ -3504,7 +3566,7 @@
                                         </tr>
                                         <tr>
                                             <td style="padding:0.55rem 0.75rem; font-weight:700; color:#18181b; display:flex; align-items:center; gap:0.4rem;">
-                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; font-size:10px;">🥛</div>
+                                                <div style="width:24px; height:24px; border-radius:4px; background:#e4e4e7; display:flex; align-items:center; justify-content:center; color:#52525b;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2h4"></path><path d="M10 5h4"></path><path d="M10 2v3"></path><path d="M14 2v3"></path><path d="M9 8h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"></path></svg></div>
                                                 <span>Formula Milk</span>
                                             </td>
                                             <td style="padding:0.55rem 0.75rem; color:#64748b;">Nestl&eacute;</td>
@@ -4318,49 +4380,49 @@
                                 <tbody>
                                     <tr>
                                         <td><strong>POS Billing & Create Invoices</strong></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Full Access</span></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Full Access</span></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Allowed</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Full Access</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Full Access</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Allowed</span></td>
                                     </tr>
                                     <tr>
                                         <td><strong>Generate & Export Price Lists</strong></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Full Access</span></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Full Access</span></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Allowed</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Full Access</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Full Access</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Allowed</span></td>
                                     </tr>
                                     <tr>
                                         <td><strong>Add & Edit Product Master Catalog</strong></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Full Access</span></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Full Access</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Full Access</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Full Access</span></td>
                                         <td><span style="color:#d97706; font-weight:700;">Limited Fields</span></td>
                                     </tr>
                                     <tr>
                                         <td><strong>View Purchase Cost Prices & Margins</strong></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Visible</span></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Visible</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Visible</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Visible</span></td>
                                         <td><span style="color:#71717a; font-weight:700;">Restricted</span></td>
                                     </tr>
                                     <tr>
                                         <td><strong>Delete Master Products & Records</strong></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Authorized</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Authorized</span></td>
                                         <td><span style="color:#94a3b8; font-weight:600;">Restricted</span></td>
                                         <td><span style="color:#71717a; font-weight:700;">Restricted</span></td>
                                     </tr>
                                     <tr>
                                         <td><strong>Publish & Configure Customer Storefront</strong></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Full Control</span></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ View & Share</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Full Control</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> View & Share</span></td>
                                         <td><span style="color:#94a3b8; font-weight:600;">Read-Only</span></td>
                                     </tr>
                                     <tr>
                                         <td><strong>Invite Team Members & Assign Roles</strong></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Full Authority</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Full Authority</span></td>
                                         <td><span style="color:#94a3b8; font-weight:600;">Restricted</span></td>
                                         <td><span style="color:#71717a; font-weight:700;">Restricted</span></td>
                                     </tr>
                                     <tr>
                                         <td><strong>Workspace Plan & Billing Ownership</strong></td>
-                                        <td><span style="color:#059669; font-weight:800;">✓ Sole Owner</span></td>
+                                        <td><span style="color:#059669; font-weight:800; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Sole Owner</span></td>
                                         <td><span style="color:#94a3b8; font-weight:600;">Restricted</span></td>
                                         <td><span style="color:#71717a; font-weight:700;">Restricted</span></td>
                                     </tr>
@@ -4992,62 +5054,90 @@
     </div>
 
     <!-- ===== LOGIN MODAL ===== -->
+    <!-- ===== LOGIN MODAL ===== -->
     <div id="login-modal-container" style="display: none;" role="dialog" aria-modal="true"
         aria-labelledby="login-dialog-title" aria-describedby="login-dialog-desc">
         <div class="login-dialog" role="document">
             <button type="button" class="login-close-btn" id="close-login-modal"
                 aria-label="Close login dialog">&times;</button>
             <div class="text-center">
-                <div class="login-logo">
-                    <img src="pricelister_org.png" alt="PriceLister"
-                        style="width:52px; height:52px; object-fit:contain;">
+                <div class="login-logo" style="margin-bottom: 0.65rem;">
+                    <img src="Workspace/pricelister_org.png" alt="PriceLister"
+                        style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
                 </div>
-                <h2 id="login-dialog-title" class="login-title">Welcome to PriceLister</h2>
-                <p id="login-dialog-desc" class="login-subtitle">Sign in with Google to access your secure business
-                    workspace.</p>
+                <h2 id="login-dialog-title" class="login-title" style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin-bottom: 0.2rem;">Welcome Back</h2>
+                <p id="login-dialog-desc" class="login-subtitle" style="font-size: 0.84rem; color: #64748b; margin-bottom: 1.15rem;">Sign in to your PriceLister workspace</p>
             </div>
-            <div style="display:flex; flex-direction:column; gap:0.85rem; margin-top:1.25rem;">
+
+            <!-- EMAIL & PASSWORD LOGIN FORM -->
+            <form id="modal-email-login-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="text-align: left;">
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #334155; margin-bottom: 0.3rem;">Email Address</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <span style="position: absolute; left: 12px; color: #94a3b8; display: flex; align-items: center; pointer-events: none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                        </span>
+                        <input type="email" id="modal-login-email" placeholder="name@company.com" required style="width: 100%; height: 42px; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 0.85rem 0 2.45rem; font-size: 0.88rem; color: #0f172a; outline: none; transition: border-color 0.15s ease;">
+                    </div>
+                </div>
+
+                <div style="text-align: left;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                        <label style="font-size: 0.76rem; font-weight: 700; color: #334155;">Password</label>
+                        <a href="login.html#forgot" style="font-size: 0.75rem; color: #e11d48; text-decoration: none; font-weight: 700;">Forgot password?</a>
+                    </div>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <span style="position: absolute; left: 12px; color: #94a3b8; display: flex; align-items: center; pointer-events: none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </span>
+                        <input type="password" id="modal-login-password" placeholder="••••••••" required style="width: 100%; height: 42px; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 2.5rem 0 2.45rem; font-size: 0.88rem; color: #0f172a; outline: none; transition: border-color 0.15s ease;">
+                        <button type="button" id="modal-login-pwd-toggle" style="position: absolute; right: 8px; background: none; border: none; color: #64748b; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Hide/Unhide Password">
+                            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <svg class="eye-closed" style="display: none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Sign In -->
+                <button type="submit" id="modal-email-submit-btn" class="btn" style="width: 100%; height: 42px; background: #0f172a; color: #ffffff; font-weight: 700; border-radius: 10px; border: none; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(15,23,42,0.18); transition: all 0.15s ease; margin-top: 0.25rem;">
+                    <span>Sign In with Email</span> &rarr;
+                </button>
+            </form>
+
+            <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 0.85rem;">
+                <!-- OR DIVIDER -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin: 0.15rem 0;">
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                    <span style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em;">or</span>
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                </div>
+
                 <!-- PRODUCTION GOOGLE SIGN IN -->
                 <button type="button" id="modal-google-login-btn" class="btn-google"
-                    style="width:100%; justify-content:center;">
-                    <svg class="google-icon" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-                        <path fill="#EA4335"
-                            d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-                        <path fill="#4285F4"
-                            d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-                        <path fill="#FBBC05"
-                            d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-                        <path fill="#34A853"
-                            d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                    style="width: 100%; justify-content: center; height: 40px; border-radius: 10px;">
+                    <svg class="google-icon" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
                     </svg>
-                    <span class="btn-text">Continue with Google</span>
+                    <span class="btn-text" style="font-size: 0.85rem; font-weight: 700;">Continue with Google</span>
                     <span class="spinner-sm" aria-hidden="true"></span>
                 </button>
 
-                <!-- DEDICATED LOGIN / EMAIL AUTH BUTTON -->
-                <a href="login.html" id="modal-dedicated-login-btn" class="btn"
-                    style="text-decoration:none; width:100%; padding:0.75rem 1rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:0.5rem; background:#ffffff; color:#0f172a; border:1.5px solid #e2e8f0; border-radius:10px; font-size:0.92rem; transition:all 0.15s ease;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                    <span>Sign in with Email / Dedicated Login &rarr;</span>
-                </a>
-
-                <!-- OR DIVIDER -->
-                <div style="display:flex; align-items:center; gap:0.75rem; margin:0.25rem 0;">
-                    <div style="flex:1; height:1px; background:#e2e8f0;"></div>
-                    <span
-                        style="font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">Testing
-                        & UI Demo</span>
-                    <div style="flex:1; height:1px; background:#e2e8f0;"></div>
-                </div>
-
                 <!-- TEST ENTER / DEMO DATA BUTTON -->
                 <button type="button" id="modal-test-login-btn" class="btn"
-                    style="width:100%; padding:0.8rem 1rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:0.5rem; background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color:#ffffff; border:1px solid #334155; border-radius:10px; box-shadow:0 4px 14px rgba(15,23,42,0.18); cursor:pointer; font-size:0.92rem; transition:transform 0.15s, box-shadow 0.15s;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2">
+                    style="width: 100%; padding: 0.6rem 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border: 1px solid #334155; border-radius: 10px; cursor: pointer; font-size: 0.84rem;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2">
                         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                     </svg>
                     <span>Test Enter &bull; Demo UI Sandbox</span>
                 </button>
+
+                <!-- FOOTER LINK -->
+                <div style="text-align: center; margin-top: 0.35rem; font-size: 0.8rem; color: #64748b;">
+                    Don't have an account? <a href="login.html" style="color: #e11d48; font-weight: 700; text-decoration: none;">Sign Up / Open Dedicated Login</a>
+                </div>
             </div>
         </div>
     </div>
@@ -5477,7 +5567,7 @@
                             </div>
                             
                             <div id="ws-country-help" style="font-size:0.72rem;color:var(--text-muted);line-height:1.35;margin-top:0.1rem;">
-                                💡 Country and currency operate independently. For example, your workspace can operate in <strong>England (United Kingdom)</strong> with accounts in <strong>EUR (€)</strong> or <strong>GBP (£)</strong>.
+                                Country and currency operate independently. For example, your workspace can operate in <strong>England (United Kingdom)</strong> with accounts in <strong>EUR (€)</strong> or <strong>GBP (£)</strong>.
                             </div>
                         </div>
                     </div>
@@ -5629,22 +5719,18 @@
                 // Scroll to top of main content
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // Keep default browser URL safe without forcing root path redirects
+                // Update URL location cleanly without revealing index.html or #
+                const cleanUrl = getCleanLandingUrl(name);
                 try {
                     sessionStorage.setItem('pricelister_last_landing_view', name);
-                    if (name !== 'home') {
-                        if (push) {
-                            history.pushState({ view: name }, '', '#' + name);
-                        } else {
-                            history.replaceState({ view: name }, '', '#' + name);
-                        }
+                    if (push) {
+                        history.pushState({ view: name }, '', cleanUrl);
                     } else {
-                        // On home view, do not append /home
-                        if (window.location.hash) {
-                            history.replaceState({ view: 'home' }, '', window.location.pathname);
-                        }
+                        history.replaceState({ view: name }, '', cleanUrl);
                     }
-                } catch (e) {}
+                } catch (e) {
+                    try { history.replaceState({ view: name }, '', '#' + name); } catch (err) {}
+                }
             }
 
             // Universal Click handlers for nav links and landing routes
@@ -5654,7 +5740,7 @@
                 
                 // Do not intercept external links or app links
                 const href = link.getAttribute('href') || '';
-                if (href === 'app.html' || href.startsWith('http://') || href.startsWith('https://')) return;
+                if (href === 'app.html' || href.includes('login.html') || href.startsWith('http://') || href.startsWith('https://')) return;
 
                 const view = link.dataset.view || href.replace(/^(\/|#)+/, '').toLowerCase();
                 if (view && views[view]) {

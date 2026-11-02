@@ -93,9 +93,9 @@ export const renderOrders = async (container, workspaceId) => {
                     <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#b45309;">Pending Confirmation</span>
                     <h3 style="font-size:1.75rem; margin:0.25rem 0 0 0; font-weight:800; color:#b45309;">${pendingCount}</h3>
                 </div>
-                <div class="card" style="padding:1.25rem; border-left:4px solid #3b82f6; background:#ffffff;">
-                    <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#1d4ed8;">Confirmed / Processing</span>
-                    <h3 style="font-size:1.75rem; margin:0.25rem 0 0 0; font-weight:800; color:#1d4ed8;">${confirmedCount}</h3>
+                <div class="card" style="padding:1.25rem; border-left:4px solid #18181B; background:#ffffff;">
+                    <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#27272A;">Confirmed / Processing</span>
+                    <h3 style="font-size:1.75rem; margin:0.25rem 0 0 0; font-weight:800; color:#27272A;">${confirmedCount}</h3>
                 </div>
                 <div class="card" style="padding:1.25rem; border-left:4px solid #10b981; background:#ffffff;">
                     <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#065f46;">Order Volume</span>
@@ -252,7 +252,7 @@ export const renderOrders = async (container, workspaceId) => {
                                                     <button type="button" class="btn btn-secondary btn-sm btn-convert-invoice" data-order-id="${order.id || order.uniqueId}" style="font-size:0.78rem; font-weight:600; padding:0.35rem 0.65rem; color:var(--primary);" title="Create Invoice from this Order">
                                                         Invoice
                                                     </button>
-                                                    <button type="button" class="btn btn-secondary btn-sm btn-delete-order" data-order-id="${order.id || order.uniqueId}" style="font-size:0.78rem; padding:0.35rem 0.5rem; color:#e11d48;" title="Delete Order">
+                                                    <button type="button" class="btn btn-secondary btn-sm btn-delete-order" data-order-id="${order.id || order.uniqueId}" style="font-size:0.78rem; padding:0.35rem 0.5rem; color:#18181B;" title="Delete Order">
                                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                                     </button>
                                                 </div>
@@ -275,7 +275,7 @@ export const renderOrders = async (container, workspaceId) => {
             case 'PENDING':
                 return '<span style="background:#fef3c7; color:#b45309; padding:0.2rem 0.5rem; border-radius:999px; font-size:0.75rem; font-weight:700;">Pending</span>';
             case 'CONFIRMED':
-                return '<span style="background:#dbeafe; color:#1d4ed8; padding:0.2rem 0.5rem; border-radius:999px; font-size:0.75rem; font-weight:700;">Confirmed</span>';
+                return '<span style="background:#F4F4F5; color:#27272A; padding:0.2rem 0.5rem; border-radius:999px; font-size:0.75rem; font-weight:700;">Confirmed</span>';
             case 'PROCESSING':
                 return '<span style="background:#f3e8ff; color:#7e22ce; padding:0.2rem 0.5rem; border-radius:999px; font-size:0.75rem; font-weight:700;">Processing</span>';
             case 'SHIPPED':
@@ -386,8 +386,8 @@ export const renderOrders = async (container, workspaceId) => {
                 <div class="card" style="background:#ffffff; border-radius:18px; max-width:520px; width:100%; box-shadow:0 25px 60px -15px rgba(0,0,0,0.4); overflow:hidden; border:1px solid rgba(225,29,72,0.2); animation:modalPop 0.25s ease;">
                     
                     <!-- SLIP HEADER -->
-                    <div style="background:linear-gradient(135deg, #881337 0%, #e11d48 50%, #be123c 100%); padding:1.5rem; text-align:center; color:#ffffff; position:relative;">
-                        <button type="button" id="btn-close-slip" style="position:absolute; right:1rem; top:1rem; background:rgba(255,255,255,0.2); border:none; color:#ffffff; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center;">✕</button>
+                    <div style="background:linear-gradient(135deg, #881337 0%, #18181B 50%, #27272A 100%); padding:1.5rem; text-align:center; color:#ffffff; position:relative;">
+                        <button type="button" id="btn-close-slip" style="position:absolute; right:1rem; top:1rem; background:rgba(255,255,255,0.2); border:none; color:#ffffff; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                         <h3 style="margin:0 0 0.25rem 0; font-size:1.3rem; font-weight:800;">Order Slip</h3>
                         <p style="margin:0; font-size:0.82rem; opacity:0.9;">Customer Order Summary & Packing Slip</p>
                     </div>

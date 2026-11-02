@@ -10,7 +10,11 @@ export const getSettingsService = (workspaceId) => {
     const isMock = !workspaceId || 
                    workspaceId === 'ws_dev_mock' || 
                    workspaceId === 'demo' || 
-                   workspaceId === 'dev-mock-uid';
+                   workspaceId === 'dev-mock-uid' ||
+                   workspaceId === 'DEMO-SANDBOX-01' ||
+                   authService.getCurrentUser()?.uid === 'dev-mock-uid' ||
+                   Boolean(localStorage.getItem('mock_dev_session')) ||
+                   (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo'));
 
     return {
         getWorkspaceSettings: async () => {

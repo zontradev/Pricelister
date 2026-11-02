@@ -174,26 +174,26 @@
 }
 
 .nav-item:hover {
-    background-color: #f8fafc;
-    border-color: #e2e8f0;
-    color: #0f172a;
+    background-color: #F4F4F5;
+    border-color: #E4E4E7;
+    color: #09090B;
 }
 
 .nav-item:hover .nav-icon {
-    color: #0f172a;
+    color: #09090B;
     transform: scale(1.06);
 }
 
 .nav-item.active {
-    background: #ffffff !important;
-    color: #0f172a !important;
+    background: #F8FAFC !important;
+    color: #09090B !important;
     font-weight: 700 !important;
-    border: 1.5px solid #cbd5e1 !important;
+    border: 1px solid #E4E4E7 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
 .nav-item.active .nav-icon {
-    color: #0f172a !important;
+    color: #09090B !important;
 }
 
 /* Footer & Profile */
@@ -411,8 +411,8 @@
 }
 
 .account-card-item.active {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.06);
+    border-color: #18181B;
+    background: #F4F4F5;
 }
 
 .account-card-left {
@@ -448,8 +448,9 @@
 .account-card-badge-active {
     font-size: 0.7rem;
     font-weight: 700;
-    color: #059669;
-    background: rgba(16, 185, 129, 0.15);
+    color: #18181B;
+    background: #FAFAFA;
+    border: 1px solid #E4E4E7;
     padding: 0.15rem 0.5rem;
     border-radius: 9999px;
     display: flex;
@@ -962,9 +963,8 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #10b981;
+    background: #18181B;
     display: inline-block;
-    animation: livePulse 2s infinite cubic-bezier(0.45, 0, 0.55, 1);
 }
 
 /* Invoice Status Badges */
@@ -975,9 +975,9 @@
     font-weight: 800;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
-    background: rgba(16, 185, 129, 0.12);
-    color: #059669;
-    border: 1px solid rgba(16, 185, 129, 0.25);
+    background: #FAFAFA;
+    color: #18181B;
+    border: 1px solid #E4E4E7;
     letter-spacing: 0.02em;
 }
 
@@ -988,9 +988,9 @@
     font-weight: 800;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
-    background: rgba(225, 29, 72, 0.12);
-    color: #e11d48;
-    border: 1px solid rgba(225, 29, 72, 0.25);
+    background: #F4F4F5;
+    color: #18181B;
+    border: 1px solid #E4E4E7;
     letter-spacing: 0.02em;
 }
 
@@ -1185,4 +1185,234 @@
     padding: 1.25rem;
     overflow-y: auto;
     max-height: calc(84vh - 110px);
+}
+
+/* ==========================================================================
+   PRICELISTER HIERARCHICAL TREE NAVIGATION SYSTEM
+   Professional IDE / Enterprise File Explorer Architecture
+   ========================================================================== */
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.75rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.sidebar-content::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar-content::-webkit-scrollbar-thumb {
+    background: #E4E4E7;
+    border-radius: 4px;
+}
+
+/* Tree Group Container */
+.nav-tree-group {
+    margin-bottom: 0.25rem;
+    position: relative;
+}
+
+/* Parent Header (Expandable Folder Node) */
+.nav-tree-group-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.42rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #71717A;
+    letter-spacing: 0.05em;
+    user-select: none;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-tree-group-header:hover {
+    background: #F4F4F5;
+    color: #18181B;
+}
+
+.nav-tree-group.tree-group-has-active .nav-tree-group-header {
+    color: #18181B;
+    font-weight: 800;
+}
+
+/* Caret / Chevron */
+.tree-caret {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    color: #A1A1AA;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.nav-tree-group.expanded .tree-caret {
+    transform: rotate(90deg);
+    color: #18181B;
+}
+
+.group-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #71717A;
+    flex-shrink: 0;
+}
+
+.nav-tree-group.tree-group-has-active .group-icon {
+    color: #18181B;
+}
+
+.group-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: uppercase;
+}
+
+.group-count {
+    font-size: 0.65rem;
+    color: #A1A1AA;
+    padding: 0.05rem 0.35rem;
+    border-radius: 4px;
+    background: #F4F4F5;
+    font-family: monospace;
+    font-weight: 600;
+}
+
+/* Tree Children (Indented vertical trunk) */
+.nav-tree-children {
+    list-style: none;
+    margin: 0.15rem 0 0.25rem 1.15rem;
+    padding: 0 0 0 0.65rem;
+    border-left: 1px solid #E4E4E7;
+    position: relative;
+    max-height: 800px;
+    overflow: hidden;
+    transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    opacity: 1;
+}
+
+.nav-tree-group:not(.expanded) .nav-tree-children {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* Tree Node Item */
+.tree-node {
+    position: relative;
+    margin: 0.12rem 0;
+}
+
+/* Subtle Horizontal Branch Line (File Explorer style) */
+.tree-node::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -0.65rem;
+    width: 0.5rem;
+    height: 1px;
+    background: #E4E4E7;
+    pointer-events: none;
+}
+
+/* Tree Node Link Item */
+.tree-node .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.38rem 0.55rem;
+    border-radius: 6px;
+    color: #71717A;
+    text-decoration: none;
+    font-size: 0.81rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    position: relative;
+    line-height: 1.25;
+}
+
+.tree-node .nav-item:hover {
+    background: #F4F4F5;
+    color: #18181B;
+}
+
+.tree-node .nav-item.active {
+    background: #F4F4F5;
+    color: #18181B;
+    font-weight: 700;
+    border-left: 2px solid #18181B;
+    padding-left: calc(0.55rem - 2px);
+}
+
+.tree-node .nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: inherit;
+}
+
+.tree-node .nav-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+/* MINI SIDEBAR MODE COMPATIBILITY */
+.sidebar-mini .nav-tree-group {
+    margin-bottom: 0.5rem;
+}
+
+.sidebar-mini .nav-tree-group-header {
+    justify-content: center;
+    padding: 0.5rem;
+    margin: 0 0.2rem 0.2rem;
+}
+
+.sidebar-mini .tree-caret,
+.sidebar-mini .group-title,
+.sidebar-mini .group-count,
+.sidebar-mini .nav-label,
+.sidebar-mini .tree-node::before {
+    display: none !important;
+}
+
+.sidebar-mini .nav-tree-children {
+    margin: 0;
+    padding: 0;
+    border-left: none;
+    max-height: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+.sidebar-mini .tree-node .nav-item {
+    justify-content: center;
+    padding: 0.55rem;
+    margin: 0.15rem 0.25rem;
+    border-radius: 8px;
+    border-left: none !important;
+}
+
+.sidebar-mini .tree-node .nav-item.active {
+    background: #18181B;
+    color: #FFFFFF;
 }

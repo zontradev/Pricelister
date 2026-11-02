@@ -296,7 +296,7 @@ export const renderOverview = async (container, workspaceId) => {
                     </div>
                     <div class="dash-kpi-value" id="kpi-revenue" style="font-size:1.65rem; font-weight:800; color:var(--text-primary); line-height:1.15;">...</div>
                     <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
-                        <span style="color:#059669; font-weight:700;">▲ Active Trend</span>
+                        <span style="color:var(--text-secondary); font-weight:700;">▲ Active Trend</span>
                         <span style="color:var(--text-muted);">&bull; Total billed sales</span>
                     </div>
                     <!-- Sparkline Wave -->
@@ -316,25 +316,25 @@ export const renderOverview = async (container, workspaceId) => {
                 <div class="dash-kpi-card" style="background:var(--bg-card); border-radius:14px; padding:1.25rem; border:1px solid var(--border-color); box-shadow:var(--shadow-float); position:relative; overflow:hidden;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
                         <div style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Net Gross Profit</div>
-                        <span style="width:30px; height:30px; border-radius:8px; background:rgba(16,185,129,0.12); color:#10b981; display:flex; align-items:center; justify-content:center; border:1px solid rgba(16,185,129,0.3);">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                        <span style="width:30px; height:30px; border-radius:8px; background:var(--surface-100); color:var(--text-primary); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
                         </span>
                     </div>
-                    <div class="dash-kpi-value" id="kpi-profit" style="font-size:1.65rem; font-weight:800; color:#10b981; line-height:1.15;">...</div>
+                    <div class="dash-kpi-value" id="kpi-profit" style="font-size:1.65rem; font-weight:800; color:var(--text-primary); line-height:1.15;">...</div>
                     <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.4rem; font-size:0.78rem;">
-                        <span id="kpi-margin-pct" style="color:#10b981; font-weight:700;">0% Margin</span>
+                        <span id="kpi-margin-pct" style="color:var(--text-secondary); font-weight:700;">0% Margin</span>
                         <span style="color:var(--text-muted);">&bull; Revenue minus COGS</span>
                     </div>
                     <!-- Sparkline Wave -->
                     <svg class="dash-sparkline-svg" viewBox="0 0 240 45" preserveAspectRatio="none" style="width:100%; height:32px; margin-top:0.4rem;">
                         <defs>
                             <linearGradient id="grad-profit-dash" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
-                                <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
+                                <stop offset="0%" stop-color="var(--text-primary)" stop-opacity="0.18"/>
+                                <stop offset="100%" stop-color="var(--text-primary)" stop-opacity="0.0"/>
                             </linearGradient>
                         </defs>
-                        <path d="M0,35 Q30,18 60,30 T120,15 T180,24 T240,8 L240,45 L0,45 Z" fill="url(#grad-profit-dash)"/>
-                        <path d="M0,35 Q30,18 60,30 T120,15 T180,24 T240,8" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M0,35 Q30,18 60,30 T120,15 T180,24 T240,8 L240,45 L0,45 Z" fill="url(#grad-profit-dash)" style="color:var(--text-primary);"/>
+                        <path d="M0,35 Q30,18 60,30 T120,15 T180,24 T240,8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color:var(--text-primary);"/>
                     </svg>
                 </div>
 
@@ -408,8 +408,8 @@ export const renderOverview = async (container, workspaceId) => {
                             <span style="display:inline-flex; align-items:center; gap:0.35rem; color:var(--text-primary);">
                                 <span style="width:8px; height:8px; border-radius:50%; background:var(--text-primary);"></span> Revenue
                             </span>
-                            <span style="display:inline-flex; align-items:center; gap:0.35rem; color:#10b981;">
-                                <span style="width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Net Profit
+                            <span style="display:inline-flex; align-items:center; gap:0.35rem; color:var(--text-secondary);">
+                                <span style="width:8px; height:8px; border-radius:50%; background:#71717A;"></span> Net Profit
                             </span>
                             <span style="display:inline-flex; align-items:center; gap:0.35rem; color:var(--text-muted);">
                                 <span style="width:8px; height:8px; border-radius:50%; background:var(--text-muted);"></span> COGS (Cost)
@@ -426,8 +426,8 @@ export const renderOverview = async (container, workspaceId) => {
                                     <stop offset="100%" stop-color="var(--text-primary)" stop-opacity="0.01"/>
                                 </linearGradient>
                                 <linearGradient id="chartProfitGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
-                                    <stop offset="100%" stop-color="#10b981" stop-opacity="0.01"/>
+                                    <stop offset="0%" stop-color="#71717A" stop-opacity="0.15"/>
+                                    <stop offset="100%" stop-color="#71717A" stop-opacity="0.01"/>
                                 </linearGradient>
                             </defs>
 
@@ -453,7 +453,7 @@ export const renderOverview = async (container, workspaceId) => {
                             <path id="chart-revenue-area" d="" fill="url(#chartRevGrad)" />
                             <path id="chart-profit-area" d="" fill="url(#chartProfitGrad)" />
                             <path id="chart-revenue-line" d="" fill="none" stroke="var(--text-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                            <path id="chart-profit-line" d="" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                            <path id="chart-profit-line" d="" fill="none" stroke="#71717A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
                             <path id="chart-cost-line" d="" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-dasharray="3 3" stroke-linecap="round" stroke-linejoin="round" />
 
                             <!-- Interactive Coordinate Circles -->
@@ -474,8 +474,8 @@ export const renderOverview = async (container, workspaceId) => {
                                 <strong id="tooltip-rev-text">$0</strong>
                             </div>
                             <div class="tooltip-row" style="display:flex; justify-content:space-between; gap:0.75rem; margin-bottom:0.2rem;">
-                                <span style="color:#10b981;">Profit:</span>
-                                <strong id="tooltip-profit-text" style="color:#10b981;">$0</strong>
+                                <span style="color:var(--text-secondary);">Profit:</span>
+                                <strong id="tooltip-profit-text" style="color:var(--text-primary);">$0</strong>
                             </div>
                             <div class="tooltip-row" style="display:flex; justify-content:space-between; gap:0.75rem;">
                                 <span style="color:var(--text-muted);">Orders:</span>
@@ -515,14 +515,14 @@ export const renderOverview = async (container, workspaceId) => {
                     <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-color);">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem; font-size:0.82rem;">
                             <span style="font-weight:700; color:var(--text-primary);">Collection Efficiency</span>
-                            <span id="dash-collection-pct" style="font-weight:800; color:#10b981;">0% Paid</span>
+                            <span id="dash-collection-pct" style="font-weight:800; color:var(--text-primary);">0% Paid</span>
                         </div>
                         <div class="perf-bar-wrap" style="height:8px; background:var(--surface-100); border-radius:4px; overflow:hidden;">
-                            <div class="perf-bar-fill" id="dash-collection-bar" style="width:0%; background:#10b981; height:100%;"></div>
+                            <div class="perf-bar-fill" id="dash-collection-bar" style="width:0%; background:var(--text-primary); height:100%;"></div>
                         </div>
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-top:0.35rem;">
                             <span id="dash-paid-collected">Collected: $0</span>
-                            <span id="dash-due-receivable" style="color:#d97706;">Due: $0</span>
+                            <span id="dash-due-receivable" style="color:var(--text-secondary);">Due: $0</span>
                         </div>
                     </div>
                 </div>
@@ -997,7 +997,7 @@ export const renderOverview = async (container, workspaceId) => {
         if (elDataDots) {
             elDataDots.innerHTML = pointsRev.map((pt, i) => `
                 <circle cx="${pt.x}" cy="${pt.y}" r="4.5" fill="var(--bg-card)" stroke="var(--text-primary)" stroke-width="2.5" />
-                <circle cx="${pointsProfit[i].x}" cy="${pointsProfit[i].y}" r="4" fill="var(--bg-card)" stroke="#10b981" stroke-width="2.2" />
+                <circle cx="${pointsProfit[i].x}" cy="${pointsProfit[i].y}" r="4" fill="var(--bg-card)" stroke="#71717A" stroke-width="2" />
             `).join('');
         }
 
@@ -1073,10 +1073,10 @@ export const renderOverview = async (container, workspaceId) => {
         const effectiveTotal = totalCount > 0 ? totalCount : 1;
 
         const statusColors = {
-            Paid: '#10b981',
-            Pending: '#f59e0b',
-            Processing: '#3b82f6',
-            Cancelled: '#ef4444'
+            Paid: '#18181B',
+            Processing: '#52525B',
+            Pending: '#A1A1AA',
+            Cancelled: '#D4D4D8'
         };
 
         const donutSegmentsEl = container.querySelector('#donut-segments');
@@ -1146,7 +1146,7 @@ export const renderOverview = async (container, workspaceId) => {
                         </td>
                         <td style="padding:0.65rem; text-align:center; font-weight:700; color:var(--text-primary);">${p.units}</td>
                         <td style="padding:0.65rem; text-align:right; font-weight:700;">${formatCurr(p.revenue)}</td>
-                        <td style="padding:0.65rem 1rem; text-align:right; font-weight:700; color:#059669;">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurr(p.profit)}`}</td>
+                        <td style="padding:0.65rem 1rem; text-align:right; font-weight:700; color:var(--text-primary);">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurr(p.profit)}`}</td>
                     </tr>
                 `).join('');
             }
@@ -1168,7 +1168,7 @@ export const renderOverview = async (container, workspaceId) => {
                     <tr style="border-bottom:1px solid var(--border-color);">
                         <td style="padding:0.65rem 1rem;">
                             <div style="display:flex; align-items:center; gap:0.5rem;">
-                                <span style="width:24px; height:24px; border-radius:50%; background:${idx === 0 ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' : 'var(--surface-200)'}; color:${idx === 0 ? '#ffffff' : 'var(--text-primary)'}; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800;">
+                                <span style="width:24px; height:24px; border-radius:50%; background:${idx === 0 ? '#18181B' : 'var(--surface-100)'}; color:${idx === 0 ? '#FFFFFF' : 'var(--text-primary)'}; border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800;">
                                     ${idx === 0 ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>' : (idx + 1)}
                                 </span>
                                 <div>

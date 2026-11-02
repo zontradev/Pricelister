@@ -112,9 +112,9 @@ class DraftManager {
             display: none;
             align-items: center;
             gap: 0.5rem;
-            background: rgba(225, 29, 72, 0.08);
-            border: 1px solid rgba(225, 29, 72, 0.28);
-            color: #e11d48;
+            background: #FFFFFF;
+            border: 1px solid #E4E4E7;
+            color: #18181B;
             padding: 0.35rem 0.85rem;
             border-radius: 999px;
             font-size: 0.78rem;
@@ -122,25 +122,25 @@ class DraftManager {
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             user-select: none;
-            box-shadow: 0 2px 8px rgba(225, 29, 72, 0.12);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         `;
 
         pill.innerHTML = `
-            <span class="unsaved-pulse-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #e11d48; display: inline-block; animation: pulseGlow 1.5s infinite;"></span>
+            <span class="unsaved-pulse-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #18181B; display: inline-block; animation: pulseGlow 1.5s infinite;"></span>
             <span class="unsaved-label">Unsaved changes detected</span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
         `;
 
         pill.addEventListener('mouseenter', () => {
-            pill.style.background = 'rgba(225, 29, 72, 0.14)';
+            pill.style.background = '#F4F4F5';
             pill.style.transform = 'translateY(-1px)';
-            pill.style.boxShadow = '0 4px 12px rgba(225, 29, 72, 0.2)';
+            pill.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)';
         });
 
         pill.addEventListener('mouseleave', () => {
-            pill.style.background = 'rgba(225, 29, 72, 0.08)';
+            pill.style.background = '#FFFFFF';
             pill.style.transform = 'none';
-            pill.style.boxShadow = '0 2px 8px rgba(225, 29, 72, 0.12)';
+            pill.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
         });
 
         pill.addEventListener('click', (e) => {
@@ -192,15 +192,15 @@ class DraftManager {
             : 'You have modified fields or media in this form. Progressive state protection is active, but remember to click <strong>Update / Save Changes</strong> to sync your latest updates with the cloud.';
 
         modal.innerHTML = `
-            <div class="card" style="background: #ffffff; border-radius: 16px; border: 1.5px solid #fecdd3; box-shadow: 0 20px 45px -10px rgba(225, 29, 72, 0.25); max-width: 460px; width: 100%; padding: 1.75rem; text-align: left; position: relative;">
+            <div class="card" style="background: #ffffff; border-radius: 16px; border: 1.5px solid #E4E4E7; box-shadow: 0 20px 45px -10px rgba(0,0,0,0.08); max-width: 460px; width: 100%; padding: 1.75rem; text-align: left; position: relative;">
                 
                 <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem;">
-                    <div style="width: 46px; height: 46px; border-radius: 12px; background: #fff1f2; border: 1.5px solid #fecdd3; color: #e11d48; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(225,29,72,0.15);">
+                    <div style="width: 46px; height: 46px; border-radius: 12px; background: #FAFAFA; border: 1.5px solid #E4E4E7; color: #18181B; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                     </div>
                     <div>
                         <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">${titleText}</h3>
-                        <span style="font-size: 0.76rem; font-weight: 700; color: #e11d48; text-transform: uppercase; letter-spacing: 0.05em;">Anti-Reload &amp; Draft Protected</span>
+                        <span style="font-size: 0.76rem; font-weight: 700; color: #18181B; text-transform: uppercase; letter-spacing: 0.05em;">Anti-Reload &amp; Draft Protected</span>
                     </div>
                 </div>
 
@@ -209,7 +209,7 @@ class DraftManager {
                 </p>
 
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem 0.95rem; font-size: 0.8rem; color: #475569; margin-bottom: 1.5rem; display: flex; gap: 0.6rem; align-items: center;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                     <span>Your text and selections will not be lost if you refresh this tab.</span>
                 </div>
 

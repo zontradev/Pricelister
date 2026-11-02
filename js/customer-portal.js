@@ -654,7 +654,7 @@ const renderCustomerCatalogUI = () => {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     </span>
                     <input type="text" id="cp-search-input" class="cp-search-input" placeholder="Search products, size, description, barcode..." autocomplete="off">
-                    <button type="button" id="cp-clear-search-btn" class="cp-clear-search" title="Clear">✕</button>
+                    <button type="button" id="cp-clear-search-btn" class="cp-clear-search" title="Clear"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                 </div>
 
                 <!-- Smart Region & Currency Selector Pill -->
@@ -789,7 +789,7 @@ const renderCustomerCatalogUI = () => {
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                         <span>Your Shopping Cart</span>
                     </div>
-                    <button type="button" id="cp-close-cart-btn" class="cp-cart-close-btn" title="Close cart">✕</button>
+                    <button type="button" id="cp-close-cart-btn" class="cp-cart-close-btn" title="Close cart"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                 </div>
 
                 <div class="cp-cart-body" id="cp-cart-items-list">
@@ -1449,7 +1449,7 @@ const showCustomerTermsModal = () => {
         <div class="cp-modal-overlay" id="cp-terms-modal-overlay" style="display:flex; animation:fadeIn 0.2s ease;">
             <div class="cp-modal-card" style="max-width:480px; border-radius:18px; overflow:hidden; box-shadow:0 25px 60px -15px rgba(0,0,0,0.5); animation:modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
                 <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:1.25rem 1.5rem; text-align:center; color:#ffffff; position:relative;">
-                    <button type="button" class="cp-cart-close-btn" id="btn-close-terms-modal" style="position:absolute; right:1rem; top:1rem; color:#94a3b8; font-size:1.4rem;">✕</button>
+                    <button type="button" class="cp-cart-close-btn" id="btn-close-terms-modal" style="position:absolute; right:1rem; top:1rem; color:#94a3b8; font-size:1.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                     <h3 style="margin:0; font-size:1.2rem; font-weight:800;">Terms &amp; Policies</h3>
                 </div>
                 <div style="padding:1.5rem; background:#ffffff; font-size:0.88rem; color:var(--text-secondary); line-height:1.6; white-space:pre-line; max-height:60vh; overflow-y:auto;">
@@ -1584,7 +1584,7 @@ const showCustomerRegionSwitcherModal = () => {
                 
                 <!-- HEADER -->
                 <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:1.35rem 1.5rem; text-align:center; color:#ffffff; position:relative;">
-                    <button type="button" class="cp-cart-close-btn" id="btn-close-region-modal" style="position:absolute; right:1rem; top:1rem; color:#94a3b8; font-size:1.4rem;">✕</button>
+                    <button type="button" class="cp-cart-close-btn" id="btn-close-region-modal" style="position:absolute; right:1rem; top:1rem; color:#94a3b8; font-size:1.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                     <div style="width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,0.1); display:inline-flex; align-items:center; justify-content:center; margin-bottom:0.5rem; color:#ffffff;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                     </div>
@@ -1737,7 +1737,7 @@ const showCustomerContactModal = () => {
                 
                 <!-- HEADER -->
                 <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:1.5rem; text-align:center; color:#ffffff; position:relative;">
-                    <button type="button" class="cp-cart-close-btn" id="btn-close-contact-modal" style="position:absolute; right:1rem; top:1rem; color:#94a3b8; font-size:1.4rem;">✕</button>
+                    <button type="button" class="cp-cart-close-btn" id="btn-close-contact-modal" style="position:absolute; right:1rem; top:1rem; color:#94a3b8; font-size:1.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                     
                     <div style="width:58px; height:58px; border-radius:14px; background:#ffffff; display:flex; align-items:center; justify-content:center; margin:0 auto 0.75rem; padding:4px; box-shadow:0 6px 16px rgba(0,0,0,0.25);">
                         <img src="${escapeHtml(brandLogoSrc)}" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:10px;" onerror="this.src='pricelister_org.png';">
@@ -2127,7 +2127,7 @@ window.cpOpenQuickView = (productId) => {
             <div class="cp-modal-card">
                 <div class="cp-modal-header">
                     <h3 style="margin:0; font-size:1.15rem; font-weight:700;">${escapeHtml(p.name)}</h3>
-                    <button type="button" class="cp-cart-close-btn" onclick="document.getElementById('cp-qv-overlay').remove()">✕</button>
+                    <button type="button" class="cp-cart-close-btn" onclick="document.getElementById('cp-qv-overlay').remove()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                 </div>
                 <div class="cp-modal-body">
                     <div class="cp-qv-grid">
@@ -2191,7 +2191,7 @@ const openTermsModal = () => {
             <div class="cp-modal-card" style="max-width:500px;">
                 <div class="cp-modal-header">
                     <h3 style="margin:0; font-size:1.15rem; font-weight:700;">Terms & Ordering Policies</h3>
-                    <button type="button" class="cp-cart-close-btn" onclick="document.getElementById('cp-terms-overlay').remove()">✕</button>
+                    <button type="button" class="cp-cart-close-btn" onclick="document.getElementById('cp-terms-overlay').remove()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                 </div>
                 <div class="cp-modal-body">
                     <div style="font-size:0.92rem; color:var(--text-secondary); line-height:1.6; white-space:pre-line;">

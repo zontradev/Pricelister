@@ -122,7 +122,7 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
                         <p style="color:var(--text-secondary); margin:0; font-size:0.95rem;">Select any report to view deep analytics, trends, rankings, and financial breakdowns.</p>
                     </div>
                     <div style="display:flex; gap:0.75rem;">
-                        <button class="btn btn-secondary" onclick="window.location.hash='#/overview'">&larr; Back to Overview</button>
+                        <button class="btn btn-secondary" onclick="window.location.hash='#/overview'">Back to Overview</button>
                     </div>
                 </div>
 
@@ -636,7 +636,7 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
                             return `
                                 <div style="flex:1; min-width:40px; display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
                                     <div style="display:flex; align-items:flex-end; gap:4px; height:160px;">
-                                        <div title="Sales: ${formatCurr(b.sales)}" style="width:16px; height:${Math.max(Number(salesHeight), 4)}px; background:linear-gradient(180deg, #ff3366, #e11d48); border-radius:4px 4px 0 0; transition:height 0.3s ease;"></div>
+                                        <div title="Sales: ${formatCurr(b.sales)}" style="width:16px; height:${Math.max(Number(salesHeight), 4)}px; background:linear-gradient(180deg, #ff3366, #18181B); border-radius:4px 4px 0 0; transition:height 0.3s ease;"></div>
                                         <div title="Profit: ${formatCurr(b.profit)}" style="width:16px; height:${Math.max(Number(profitHeight), 2)}px; background:linear-gradient(180deg, #a78bfa, #7c3aed); border-radius:4px 4px 0 0; transition:height 0.3s ease;"></div>
                                     </div>
                                     <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-align:center; white-space:nowrap;">

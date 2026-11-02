@@ -585,7 +585,7 @@ const performSearch = (query, filter = 'ALL') => {
                     subtitle: `Product Category • ${c.itemCount || 0} items listed`,
                     badge: 'Category',
                     badgeClass: 'badge-category',
-                    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c.color || '#3b82f6'}" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
+                    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c.color || '#18181B'}" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
                     score: score + 2,
                     categoryLabel: 'Categories',
                     handler: () => {
@@ -853,11 +853,11 @@ const createGlobalSearchModalDOM = () => {
                 <!-- Category Filter Pills -->
                 <div class="palette-filters-bar">
                     <button type="button" class="palette-filter-pill active" data-filter="ALL">All</button>
-                    <button type="button" class="palette-filter-pill" data-filter="ACTION">⚡ Actions</button>
-                    <button type="button" class="palette-filter-pill" data-filter="PRODUCT">📦 Products</button>
-                    <button type="button" class="palette-filter-pill" data-filter="NAV">🧭 Pages</button>
-                    <button type="button" class="palette-filter-pill" data-filter="CATEGORY">🏷️ Categories</button>
-                    <button type="button" class="palette-filter-pill" data-filter="INVOICE">🧾 Invoices</button>
+                    <button type="button" class="palette-filter-pill" data-filter="ACTION"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Actions</button>
+                    <button type="button" class="palette-filter-pill" data-filter="PRODUCT"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>Products</button>
+                    <button type="button" class="palette-filter-pill" data-filter="NAV"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>Pages</button>
+                    <button type="button" class="palette-filter-pill" data-filter="CATEGORY"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>Categories</button>
+                    <button type="button" class="palette-filter-pill" data-filter="INVOICE"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>Invoices</button>
                     <span class="palette-result-count" id="palette-result-count">0 found</span>
                 </div>
             </div>
@@ -874,10 +874,10 @@ const createGlobalSearchModalDOM = () => {
                     <div class="palette-empty-title">No matching results <span class="palette-empty-query"></span></div>
                     <p class="palette-empty-desc">Try searching for <strong>Import</strong>, <strong>Export</strong>, <strong>Add Product</strong>, <strong>Currency</strong>, <strong>Profile</strong>, or an item name.</p>
                     <div class="palette-quick-suggestions">
-                        <button type="button" class="palette-suggestion-chip" data-query="import">📥 Import Products</button>
-                        <button type="button" class="palette-suggestion-chip" data-query="export">📤 Export Pricelist</button>
-                        <button type="button" class="palette-suggestion-chip" data-query="currency">💱 Currency</button>
-                        <button type="button" class="palette-suggestion-chip" data-query="add product">➕ Add Product</button>
+                        <button type="button" class="palette-suggestion-chip" data-query="import"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Import Products</button>
+                        <button type="button" class="palette-suggestion-chip" data-query="export"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>Export Pricelist</button>
+                        <button type="button" class="palette-suggestion-chip" data-query="currency"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Currency</button>
+                        <button type="button" class="palette-suggestion-chip" data-query="add product"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add Product</button>
                     </div>
                 </div>
             </div>
@@ -1010,7 +1010,7 @@ const setupTopbarSearchTrigger = () => {
         searchTrigger.setAttribute('type', 'button');
         searchTrigger.setAttribute('title', `Search anything in workspace (${shortcutText})`);
         searchTrigger.innerHTML = `
-            <svg class="search-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <svg class="search-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <span class="search-btn-text">Search anything (e.g. Products, Import, Currency, Profile...)</span>
             <kbd class="search-btn-shortcut">${shortcutText}</kbd>
         `;

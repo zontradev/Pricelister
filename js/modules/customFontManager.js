@@ -30,23 +30,51 @@ export const applyCustomFont = async (fontName, dataUrl = '', isSystem = false) 
 
         // If it's a binary font data URL, register it in document.fonts
         if (dataUrl && dataUrl.startsWith('data:')) {
-            const fontFace = new FontFace(fontName, `url(${dataUrl})`);
-            await fontFace.load();
-            document.fonts.add(fontFace);
+            try {
+                const fontFace = new FontFace(fontName, `url(${dataUrl})`);
+                await fontFace.load();
+                document.fonts.add(fontFace);
+            } catch (loadErr) {
+                console.warn("FontFace load warning:", loadErr);
+            }
+        } else {
+            // Check if font matches a curated Google Font preset, load link tag if not present
+            const presetMatch = FONT_PRESETS.find(p => p.id.toLowerCase() === fontName.toLowerCase() || p.name.toLowerCase() === fontName.toLowerCase());
+            if (presetMatch && presetMatch.webUrl) {
+                const linkId = 'font-link-' + presetMatch.id.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                if (!document.getElementById(linkId)) {
+                    const lk = document.createElement('link');
+                    lk.id = linkId;
+                    lk.rel = 'stylesheet';
+                    lk.href = presetMatch.webUrl;
+                    document.head.appendChild(lk);
+                }
+            } else if (!isSystem) {
+                // Try Google Fonts dynamic load for any standard web font name
+                const genericLinkId = 'font-link-custom-' + fontName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                if (!document.getElementById(genericLinkId)) {
+                    const lk = document.createElement('link');
+                    lk.id = genericLinkId;
+                    lk.rel = 'stylesheet';
+                    lk.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;500;600;700;800&display=swap`;
+                    document.head.appendChild(lk);
+                }
+            }
         }
 
-        // Generate dynamic CSS rule injecting everywhere
+        // Generate dynamic CSS rule injecting everywhere across the entire document
         let fontCss = '';
         if (dataUrl && dataUrl.startsWith('data:')) {
             fontCss += `@font-face { font-family: "${fontName}"; src: url("${dataUrl}"); font-display: swap; }\n`;
         }
 
         fontCss += `
-            html, body, button, input, select, textarea, .topbar, .sidebar, .card, table, kbd, .btn, .nav-item {
+            html, body, button, input, select, textarea, .topbar, .sidebar, .card, table, kbd, .btn, .nav-item, h1, h2, h3, h4, h5, h6, .brand-title, .nav-link, .nav-label {
                 font-family: "${fontName}", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             }
             :root {
                 --font-sans: "${fontName}", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                --custom-user-font: "${fontName}", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             }
         `;
 
@@ -274,12 +302,12 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                 width: 40px;
                 height: 40px;
                 border-radius: 4px;
-                background: rgba(37, 99, 235, 0.1);
-                color: var(--primary, #2563eb);
+                background: rgba(24, 24, 27, 0.1);
+                color: var(--primary, #18181B);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                border: 1px solid rgba(37, 99, 235, 0.2);
+                border: 1px solid rgba(24, 24, 27, 0.2);
                 flex-shrink: 0;
             }
             .cb-badge {
@@ -366,14 +394,14 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
             }
             .cb-preset-btn:hover {
                 background: var(--surface-100, #f1f5f9) !important;
-                border-color: var(--primary, #2563eb) !important;
+                border-color: var(--primary, #18181B) !important;
                 transform: translateY(-1px);
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
             }
             .cb-preset-btn.active {
-                background: rgba(37, 99, 235, 0.08) !important;
-                border-color: var(--primary, #2563eb) !important;
-                box-shadow: 0 0 0 1px var(--primary, #2563eb) !important;
+                background: rgba(24, 24, 27, 0.08) !important;
+                border-color: var(--primary, #18181B) !important;
+                box-shadow: 0 0 0 1px var(--primary, #18181B) !important;
             }
             .cb-border-swatch, .cb-accent-swatch {
                 border-radius: 4px !important;
@@ -413,7 +441,7 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                             <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--text-secondary);">Advanced Browser PriceLister Settings: Custom Font Manager, UI Divider Block Positions &amp; Workspace Layout.</p>
                         </div>
                     </div>
-                    <button type="button" id="cb-close-btn" class="cb-close-btn" title="Close (Esc)">✕</button>
+                    <button type="button" id="cb-close-btn" class="cb-close-btn" title="Close (Esc)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                 </div>
 
                 <!-- NAVIGATION TABS -->
@@ -442,7 +470,7 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                             <!-- Font Upload Dropzone -->
                             <div style="background:var(--surface-50); border:1.5px dashed var(--border-color); border-radius:12px; padding:1.25rem; text-align:center; cursor:pointer;" id="cb-font-dropzone">
                                 <input type="file" id="cb-font-file-input" accept=".ttf,.otf,.woff,.woff2" style="display:none;">
-                                <div style="width:44px; height:44px; border-radius:10px; background:rgba(37,99,235,0.1); color:var(--primary, #2563eb); display:flex; align-items:center; justify-content:center; margin:0 auto 0.65rem;">
+                                <div style="width:44px; height:44px; border-radius:10px; background:rgba(24, 24, 27,0.1); color:var(--primary, #18181B); display:flex; align-items:center; justify-content:center; margin:0 auto 0.65rem;">
                                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                 </div>
                                 <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary); margin-bottom:0.25rem;">Upload Custom Font File</div>
@@ -473,7 +501,7 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                             <div style="background:var(--bg-card); border:1.5px solid var(--border-color); border-radius:12px; padding:1.25rem; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; border-bottom:1px solid var(--border-color); padding-bottom:0.4rem;">
                                     <span style="font-weight:700; font-size:0.82rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-secondary);">Interactive Font Preview Sandbox</span>
-                                    <span id="cb-preview-active-font-badge" style="font-size:0.72rem; font-weight:700; color:var(--primary, #2563eb); background:rgba(37,99,235,0.08); padding:2px 8px; border-radius:999px;">Current: Inter</span>
+                                    <span id="cb-preview-active-font-badge" style="font-size:0.72rem; font-weight:700; color:var(--primary, #18181B); background:rgba(24, 24, 27,0.08); padding:2px 8px; border-radius:999px;">Current: Inter</span>
                                 </div>
 
                                 <div id="cb-live-font-sandbox" style="display:flex; flex-direction:column; gap:0.65rem; transition: font-family 0.15s ease;">
@@ -497,7 +525,7 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                                         <button type="button" class="cb-preset-btn" data-font="${p.id}" style="border-radius:4px !important; padding:0.65rem 0.85rem; min-height:62px; background:var(--surface-50); border:1.5px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; text-align:left; transition:all 0.18s cubic-bezier(0.16, 1, 0.3, 1); box-sizing:border-box;">
                                             <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; width:100%;">
                                                 <span class="cb-preset-name" style="font-family:${p.fontStack}; font-size:0.88rem; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;">${p.name}</span>
-                                                <span class="cb-preset-check" style="font-size:0.75rem; font-weight:800; color:var(--primary, #2563eb); display:none;">✓</span>
+                                                <span class="cb-preset-check" style="display:none; color:var(--primary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                                             </div>
                                             <div style="font-size:0.68rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                                 ${p.category}
@@ -536,16 +564,16 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                                 <p style="font-size:0.8rem; color:var(--text-secondary); margin:0 0 0.75rem 0;">Choose whether navigation sidebar docks to the Left, Right, Top, or Bottom side of PriceLister.</p>
                                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.5rem;" id="cb-layout-sidebar-group">
                                     <button type="button" class="btn btn-sm btn-primary cb-layout-sidebar-btn" data-pos="left" style="font-size:0.82rem; font-weight:700; padding:0.45rem 0.65rem; justify-content:center;">
-                                        ◀ Left Sidebar
+                                        Left Sidebar
                                     </button>
                                     <button type="button" class="btn btn-sm btn-secondary cb-layout-sidebar-btn" data-pos="right" style="font-size:0.82rem; font-weight:700; padding:0.45rem 0.65rem; justify-content:center;">
-                                        Right Sidebar ▶
+                                        Right Sidebar
                                     </button>
                                     <button type="button" class="btn btn-sm btn-secondary cb-layout-sidebar-btn" data-pos="top" style="font-size:0.82rem; font-weight:700; padding:0.45rem 0.65rem; justify-content:center;">
-                                        ▲ Top Dock
+                                        Top Dock
                                     </button>
                                     <button type="button" class="btn btn-sm btn-secondary cb-layout-sidebar-btn" data-pos="bottom" style="font-size:0.82rem; font-weight:700; padding:0.45rem 0.65rem; justify-content:center;">
-                                        ▼ Bottom Dock
+                                        Bottom Dock
                                     </button>
                                 </div>
                             </div>
@@ -806,10 +834,10 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
         try {
             if (statusBanner) {
                 statusBanner.style.display = 'flex';
-                statusBanner.style.background = 'rgba(37,99,235,0.08)';
-                statusBanner.style.color = '#2563eb';
-                statusBanner.style.border = '1px solid rgba(37,99,235,0.2)';
-                statusBanner.innerHTML = `<span>⏳</span><span>Verifying font usability and rendering glyphs...</span>`;
+                statusBanner.style.background = 'rgba(24, 24, 27,0.08)';
+                statusBanner.style.color = '#18181B';
+                statusBanner.style.border = '1px solid rgba(24, 24, 27,0.2)';
+                statusBanner.innerHTML = `<span>Verifying font usability and rendering glyphs...</span>`;
             }
 
             // Create and load FontFace
@@ -825,7 +853,7 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
                 statusBanner.style.background = 'rgba(21,128,61,0.08)';
                 statusBanner.style.color = '#15803d';
                 statusBanner.style.border = '1px solid rgba(21,128,61,0.25)';
-                statusBanner.innerHTML = `<span>✓</span><span><strong>Font Verified &amp; Usable!</strong> "${name}" is valid and ready to apply across PriceLister.</span>`;
+                statusBanner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-2px;"><polyline points="20 6 9 17 4 12"></polyline></svg><span><strong>Font Verified &amp; Usable!</strong> "${name}" is valid and ready to apply across PriceLister.</span>`;
             }
         } catch (err) {
             console.warn("Font test failed:", err);
@@ -834,7 +862,7 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
                 statusBanner.style.background = 'rgba(220,38,38,0.08)';
                 statusBanner.style.color = '#dc2626';
                 statusBanner.style.border = '1px solid rgba(220,38,38,0.25)';
-                statusBanner.innerHTML = `<span>✕</span><span>Could not parse font file: ${err.message || 'Corrupt or unsupported font.'}</span>`;
+                statusBanner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-2px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><span>Could not parse font file: ${err.message || 'Corrupt or unsupported font.'}</span>`;
             }
         }
     };
@@ -851,8 +879,8 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
 
     dropzone?.addEventListener('dragover', (e) => {
         e.preventDefault();
-        dropzone.style.borderColor = 'var(--primary, #2563eb)';
-        dropzone.style.background = 'rgba(37,99,235,0.04)';
+        dropzone.style.borderColor = 'var(--primary, #18181B)';
+        dropzone.style.background = 'rgba(24, 24, 27,0.04)';
     });
     dropzone?.addEventListener('dragleave', () => {
         dropzone.style.borderColor = 'var(--border-color)';
@@ -888,7 +916,7 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
                 statusBanner.style.background = 'rgba(21,128,61,0.08)';
                 statusBanner.style.color = '#15803d';
                 statusBanner.style.border = '1px solid rgba(21,128,61,0.25)';
-                statusBanner.innerHTML = `<span>✓</span><span>Testing font stack for "${name}".</span>`;
+                statusBanner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-2px;"><polyline points="20 6 9 17 4 12"></polyline></svg><span>Testing font stack for "${name}".</span>`;
             }
         }
     });
@@ -911,8 +939,8 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
             overlay.querySelectorAll('.cb-preset-btn').forEach(b => {
                 const isMatch = b.getAttribute('data-font') === fontId;
                 b.classList.toggle('active', isMatch);
-                b.style.borderColor = isMatch ? 'var(--primary, #2563eb)' : 'var(--border-color)';
-                b.style.background = isMatch ? 'rgba(37,99,235,0.08)' : 'var(--surface-50)';
+                b.style.borderColor = isMatch ? 'var(--primary, #18181B)' : 'var(--border-color)';
+                b.style.background = isMatch ? 'rgba(24, 24, 27,0.08)' : 'var(--surface-50)';
                 const check = b.querySelector('.cb-preset-check');
                 if (check) check.style.display = isMatch ? 'inline-block' : 'none';
             });
@@ -929,7 +957,7 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
                 statusBanner.style.background = 'rgba(21,128,61,0.08)';
                 statusBanner.style.color = '#15803d';
                 statusBanner.style.border = '1px solid rgba(21,128,61,0.25)';
-                statusBanner.innerHTML = `<span>✓</span><span>Preset "${preset.name}" selected. Click "Apply Font Everywhere" to set as active.</span>`;
+                statusBanner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-2px;"><polyline points="20 6 9 17 4 12"></polyline></svg><span>Preset "${preset.name}" selected. Click "Apply Font Everywhere" to set as active.</span>`;
             }
         });
     });
@@ -975,10 +1003,10 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
         if (activeFontBadge) activeFontBadge.textContent = 'Default: Inter';
         if (statusBanner) {
             statusBanner.style.display = 'flex';
-            statusBanner.style.background = 'rgba(37,99,235,0.08)';
-            statusBanner.style.color = '#2563eb';
-            statusBanner.style.border = '1px solid rgba(37,99,235,0.2)';
-            statusBanner.innerHTML = `<span>✓</span><span>Restored default system Inter font.</span>`;
+            statusBanner.style.background = 'rgba(24, 24, 27,0.08)';
+            statusBanner.style.color = '#18181B';
+            statusBanner.style.border = '1px solid rgba(24, 24, 27,0.2)';
+            statusBanner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-2px;"><polyline points="20 6 9 17 4 12"></polyline></svg><span>Restored default system Inter font.</span>`;
         }
         showAlert.success("Restored default Inter font.");
     });

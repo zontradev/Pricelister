@@ -416,7 +416,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                                         <button type="button" id="btn-cp-use-ws-logo" class="btn btn-xs btn-outline" style="font-size:0.78rem; padding:0.35rem 0.65rem;">
                                             Use Workspace Logo
                                         </button>
-                                        <button type="button" id="btn-cp-remove-logo" class="btn btn-xs" style="color:#e11d48; background:transparent; border:none; font-weight:600; font-size:0.78rem; cursor:pointer;">
+                                        <button type="button" id="btn-cp-remove-logo" class="btn btn-xs" style="color:#18181B; background:transparent; border:none; font-weight:600; font-size:0.78rem; cursor:pointer;">
                                             Reset
                                         </button>
                                     </div>
@@ -522,7 +522,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                                         ${country.iso ? `
                                             <img src="https://flagcdn.com/w40/${country.iso}.png" alt="${escapeHtml(country.name)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.outerHTML='<span style=\\'font-size:0.75rem; font-weight:700; color:var(--text-secondary);\\'>${country.code}</span>';">
                                         ` : `
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                                         `}
                                     </div>
 
@@ -612,7 +612,7 @@ export const renderCustomerPanelSetup = async (container, workspaceId) => {
                     return `
                                     <label style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; background:#ffffff; border:1px solid var(--border-color); border-radius:6px; cursor:pointer;">
                                         <input type="checkbox" class="cp-cat-checkbox" value="${escapeHtml(cat.name)}" ${isChecked ? 'checked' : ''}>
-                                        <span style="width:10px; height:10px; border-radius:50%; background:${cat.color || '#3b82f6'}; flex-shrink:0;"></span>
+                                        <span style="width:10px; height:10px; border-radius:50%; background:${cat.color || '#18181B'}; flex-shrink:0;"></span>
                                         <span style="font-size:0.85rem; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(cat.name)}</span>
                                     </label>
                                 `;

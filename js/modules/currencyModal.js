@@ -39,7 +39,7 @@ export const openCurrencyPickerModal = (currentSymbol = '$', onSelect = () => {}
                         Search country name, currency name, or currency code
                     </p>
                 </div>
-                <button type="button" id="cpm-close-btn" class="icon-btn" style="background:none; border:none; font-size:1.5rem; color:var(--text-secondary); cursor:pointer; padding:0.25rem; line-height:1;">✕</button>
+                <button type="button" id="cpm-close-btn" class="icon-btn" style="background:none; border:none; font-size:1.5rem; color:var(--text-secondary); cursor:pointer; padding:0.25rem; line-height:1;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </div>
 
             <!-- Search Bar -->
@@ -119,7 +119,7 @@ export const openCurrencyPickerModal = (currentSymbol = '$', onSelect = () => {}
                         <span style="font-family: monospace; font-size: 1.25rem; font-weight: 700; color: var(--primary); min-width: 32px; text-align: center;">
                             ${c.symbol}
                         </span>
-                        ${isSelected ? `<span style="color: var(--primary); font-size: 0.85rem; font-weight: 700;">✓</span>` : ''}
+                        ${isSelected ? `<span style="color: var(--primary); font-size: 0.85rem; font-weight: 700;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>` : ''}
                     </div>
                 </div>
             `;

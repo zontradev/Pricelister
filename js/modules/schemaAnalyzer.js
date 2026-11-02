@@ -317,15 +317,15 @@ export const renderSchemaAnalyzer = async (container, workspaceId, activeParam =
                             Relational Breadcrumb Trail
                         </div>
                         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.45rem; font-size:0.78rem; font-weight:700;">
-                            <span style="background:#18181b; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">🏢 Workspace</span>
+                            <span style="background:#18181b; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="22" x2="9" y2="22.01"></line><line x1="15" y1="22" x2="15" y2="22.01"></line></svg> Workspace</span>
                             <span style="color:#94a3b8; font-weight:800;">&rarr;</span>
-                            <span style="background:#0284c7; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">📁 ${category ? category.name : 'Category'}</span>
+                            <span style="background:#0284c7; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> ${category ? category.name : 'Category'}</span>
                             <span style="color:#94a3b8; font-weight:800;">&rarr;</span>
-                            <span style="background:#059669; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">📦 ${product.name || 'Product'}</span>
+                            <span style="background:#059669; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg> ${product.name || 'Product'}</span>
                             <span style="color:#94a3b8; font-weight:800;">&rarr;</span>
-                            <span style="background:#d97706; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">📑 ${invoices.length} Invoices</span>
+                            <span style="background:#d97706; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg> ${invoices.length} Invoices</span>
                             <span style="color:#94a3b8; font-weight:800;">&rarr;</span>
-                            <span style="background:#7c3aed; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">👥 ${topBuyers.length} Buyers</span>
+                            <span style="background:#7c3aed; color:#fff; padding:0.25rem 0.6rem; border-radius:6px; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> ${topBuyers.length} Buyers</span>
                         </div>
                     </div>
 
@@ -634,7 +634,7 @@ export const renderSchemaAnalyzer = async (container, workspaceId, activeParam =
                 <!-- Floating Pill Trigger (Pinned Bottom-Right) -->
                 <button id="schema-floating-pill-trigger" class="schema-floating-pill" style="${isFloatingDrawerOpen ? 'display:none;' : ''}" title="Inspect deep entity lineage & mathematical calculations">
                     <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; box-shadow:0 0 8px #10B981;"></span>
-                    <span>⚡ Connection Inspector: <strong>${(product.name || 'Product').slice(0, 16)}${(product.name || '').length > 16 ? '...' : ''}</strong></span>
+                    <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>Connection Inspector: <strong>${(product.name || 'Product').slice(0, 16)}${(product.name || '').length > 16 ? '...' : ''}</strong></span>
                     <span style="font-size:0.7rem; background:rgba(255,255,255,0.22); padding:0.12rem 0.5rem; border-radius:999px; font-weight:800;">
                         ${invoices.length} Links &bull; ${topPair ? topPair.lift + 'x Lift' : 'Apriori'}
                     </span>

@@ -195,7 +195,7 @@ export const renderCategories = async (container, workspaceId) => {
                         <small class="text-muted" style="font-family:monospace; font-size:0.75rem;">${cat.uniqueId || cat.id}</small>
                     </td>
                     <td style="padding:1rem;">
-                        <span class="badge" style="background:rgba(74,144,226,0.12); color:#2563eb; font-weight:600; font-size:0.8rem;">
+                        <span class="badge" style="background:rgba(74,144,226,0.12); color:#18181B; font-weight:600; font-size:0.8rem;">
                             ${prodCount} ${prodCount === 1 ? 'Product' : 'Products'}
                         </span>
                     </td>

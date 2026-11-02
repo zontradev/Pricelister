@@ -124,8 +124,8 @@ export const openExcelImportModal = async (workspaceId, onImportSuccess) => {
                             <div id="stat-skipped-rows" style="font-size: 1.4rem; font-weight: 800; color: #dc2626; margin-top: 0.15rem;">0</div>
                         </div>
                         <div style="background: rgba(59, 130, 246, 0.08); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.3);">
-                            <span style="font-size: 0.72rem; font-weight: 700; color: #2563eb; text-transform: uppercase;">New Categories</span>
-                            <div id="stat-new-categories" style="font-size: 1.4rem; font-weight: 800; color: #2563eb; margin-top: 0.15rem;">0</div>
+                            <span style="font-size: 0.72rem; font-weight: 700; color: #18181B; text-transform: uppercase;">New Categories</span>
+                            <div id="stat-new-categories" style="font-size: 1.4rem; font-weight: 800; color: #18181B; margin-top: 0.15rem;">0</div>
                         </div>
                     </div>
 
@@ -321,7 +321,7 @@ export const openExcelImportModal = async (workspaceId, onImportSuccess) => {
                 <span style="width: 10px; height: 10px; border-radius: 50%; background: ${info.color}; display: inline-block;"></span>
                 <span>${info.canonicalName}</span>
                 <span style="opacity: 0.65; font-size: 0.7rem;">(${info.count} items)</span>
-                ${info.isNew ? '<span style="font-size:0.65rem; color:#2563eb; background:#eff6ff; padding:1px 5px; border-radius:4px;">NEW</span>' : ''}
+                ${info.isNew ? '<span style="font-size:0.65rem; color:#18181B; background:#FAFAFA; padding:1px 5px; border-radius:4px;">NEW</span>' : ''}
             `;
             categoryChips.appendChild(chip);
         });
@@ -513,7 +513,7 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
             <!-- Header -->
             <div style="padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--surface-50, #f8fafc);">
                 <div style="display:flex; align-items:center; gap:0.75rem;">
-                    <div style="width:36px; height:36px; border-radius:10px; background: rgba(59, 130, 246, 0.15); display:flex; align-items:center; justify-content:center; color: #2563eb;">
+                    <div style="width:36px; height:36px; border-radius:10px; background: rgba(59, 130, 246, 0.15); display:flex; align-items:center; justify-content:center; color: #18181B;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     </div>
                     <div>
@@ -550,7 +550,7 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
                         </div>
                         <div id="card-format-pdf" class="export-format-card" style="border: 1px solid var(--border-color); background: var(--surface-50); border-radius: 12px; padding: 1.1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; opacity: 0.75;">
                             <div class="format-check-pill" style="position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-color); display: none; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;"></div>
-                            <div style="margin-bottom: 0.5rem; display: flex; justify-content: center; color: #e11d48;">
+                            <div style="margin-bottom: 0.5rem; display: flex; justify-content: center; color: #18181B;">
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15h6"></path></svg>
                             </div>
                             <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.2rem;">Printable PDF</strong>
@@ -558,7 +558,7 @@ export const openExportModal = async (workspaceId, preloadedData = {}) => {
                         </div>
                         <div id="card-format-backup" class="export-format-card" style="border: 1px solid var(--border-color); background: var(--surface-50); border-radius: 12px; padding: 1.1rem 0.75rem; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; opacity: 0.75;">
                             <div class="format-check-pill" style="position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border-color); display: none; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;"></div>
-                            <div style="margin-bottom: 0.5rem; display: flex; justify-content: center; color: #3b82f6;">
+                            <div style="margin-bottom: 0.5rem; display: flex; justify-content: center; color: #18181B;">
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                             </div>
                             <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.2rem;">Full Backup (JSON)</strong>

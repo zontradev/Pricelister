@@ -143,7 +143,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                     <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
                         <button class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="border-radius: 8px;">Workspace Hub</button>
                         <button class="btn btn-primary" onclick="window.location.hash='#/invoices/customer'" style="border-radius: 8px;">Create Invoices</button>
-                        <button id="btn-worker-leave-ws" class="btn btn-outline" style="color:#e11d48; border-color:rgba(225,29,72,0.3); border-radius: 8px;">Leave Workspace</button>
+                        <button id="btn-worker-leave-ws" class="btn btn-outline" style="color:#18181B; border-color:rgba(225,29,72,0.3); border-radius: 8px;">Leave Workspace</button>
                     </div>
                 </div>
             `;
@@ -185,7 +185,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         const wsRegion = currentSettings.region || wsData.region || 'England';
         const wsCurrencyCode = (currentSettings.currencyCode || wsData.currencyCode || 'EUR').toUpperCase();
         const wsCurrencyName = currentSettings.currencyName || wsData.currencyName || 'Euro';
-        const matchedCountry = COUNTRIES_LIST.find(c => c.name.toLowerCase() === wsCountry.toLowerCase() || c.code === wsCountryCode) || { flag: '🌐', name: wsCountry };
+        const matchedCountry = COUNTRIES_LIST.find(c => c.name.toLowerCase() === wsCountry.toLowerCase() || c.code === wsCountryCode) || { flag: '', name: wsCountry };
         const isVendingActive = Boolean(currentSettings.enableVending);
         const printCustName = Boolean(currentSettings.customerName);
         const printCustPhone = Boolean(currentSettings.customerNumber);
@@ -204,36 +204,36 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
 
         // Render Advanced Settings Interface
         container.innerHTML = `
-            <div class="advanced-settings-wrapper" style="max-width: 1220px; margin: 0 auto; padding-bottom: 5rem;">
+            <div class="advanced-settings-wrapper" style="width: 100%; margin: 0; padding: 0.25rem 0 3.5rem;">
                 
                 <!-- TOP HEADER HERO -->
-                <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 20px; padding: 1.75rem 2rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem; box-shadow: 0 8px 30px -5px rgba(0,0,0,0.03);">
-                    <div style="display: flex; align-items: center; gap: 1.15rem;">
-                        <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; font-weight: 800; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); flex-shrink: 0;">
+                <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1rem 1.35rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 20px -3px rgba(0,0,0,0.03);">
+                    <div style="display: flex; align-items: center; gap: 0.9rem;">
+                        <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 800; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); flex-shrink: 0;">
                             ${escapeHtml((wsDisplayName.charAt(0) || 'W').toUpperCase())}
                         </div>
                         <div>
-                            <div style="display: flex; align-items: center; gap: 0.6rem;">
-                                <h2 style="margin: 0; font-size: 1.45rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">Workspace Settings &amp; Brand</h2>
-                                <span style="font-size: 0.72rem; font-weight: 700; padding: 0.18rem 0.6rem; border-radius: 9999px; background: ${isAdmin ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(22, 163, 74, 0.12)'}; color: ${isAdmin ? '#ffffff' : '#16a34a'}; border: 1px solid ${isAdmin ? 'rgba(5, 150, 105, 0.8)' : 'rgba(22, 163, 74, 0.35)'};">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <h2 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">Workspace Settings &amp; Brand</h2>
+                                <span style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px; background: #FAFAFA; color: #18181B; border: 1px solid #E4E4E7;">
                                     ${isAdmin ? 'Creator Admin' : 'Co-Admin'}
                                 </span>
                             </div>
-                            <p style="margin: 0.25rem 0 0 0; color: var(--text-muted); font-size: 0.88rem;">
+                            <p style="margin: 0.15rem 0 0 0; color: var(--text-muted); font-size: 0.82rem;">
                                 Configure workspace logo (1:1), high-res cover banner (16:9 / 1920×1080), brand credentials, regional currency, automated stock vending, and receipts.
                             </p>
                         </div>
                     </div>
 
-                    <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
-                        <button type="button" class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; font-weight: 600; padding: 0.6rem 1rem; border-radius: 10px;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <div style="display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.hash='#/workspace'" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 600; padding: 0.5rem 0.85rem; border-radius: 8px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                             <span>Workspace Hub</span>
                         </button>
-                        <button type="button" id="btn-header-save-settings" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; font-weight: 700; padding: 0.6rem 1.35rem; border-radius: 10px; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; transition: all 0.2s ease;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        <button type="button" id="btn-header-save-settings" class="btn btn-save-clean" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.84rem; font-weight: 700; padding: 0.5rem 1.15rem; border-radius: 8px; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; cursor: pointer; transition: all 0.2s ease;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                             <span class="btn-save-label">Save Settings</span>
-                            <span id="header-unsaved-dot" style="display: none; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 6px #f59e0b;"></span>
+                            <span id="header-unsaved-dot" style="display: none; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; border: 1px solid #d97706;"></span>
                         </button>
                     </div>
                 </div>
@@ -241,41 +241,41 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 <!-- LIVE INTERACTIVE BRAND HERO PREVIEW CARD -->
                 <div id="settings-live-brand-hero" style="
                     position: relative;
-                    border-radius: 20px;
+                    border-radius: 16px;
                     overflow: hidden;
                     background: ${bannerUrl ? `url('${escapeHtml(bannerUrl)}') center/cover no-repeat, #18181b` : 'linear-gradient(135deg, #09090b 0%, #18181b 50%, #27272a 100%)'};
                     color: #ffffff;
-                    box-shadow: 0 16px 40px -10px rgba(0,0,0,0.25);
+                    box-shadow: 0 12px 32px -8px rgba(0,0,0,0.22);
                     border: 1.5px solid rgba(255,255,255,0.12);
-                    margin-bottom: 1.75rem;
+                    margin-bottom: 0.75rem;
                     transition: background 0.3s ease;
                 ">
                     <!-- Dark Gradient Overlay for Readability -->
                     <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(9,9,11,0.4) 0%, rgba(9,9,11,0.88) 100%); backdrop-filter: blur(${bannerUrl ? '1px' : '0px'});"></div>
                     
-                    <div style="position: relative; z-index: 2; padding: 2rem 2.25rem 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1.5rem;">
-                        <div style="display: flex; gap: 1.25rem; align-items: center;">
+                    <div style="position: relative; z-index: 2; padding: 1.6rem 1.85rem 1.25rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1.25rem;">
+                        <div style="display: flex; gap: 1.15rem; align-items: center;">
                             <!-- 1:1 Square Logo Preview Box -->
-                            <div id="hero-live-logo-wrap" style="width: 76px; height: 76px; border-radius: 16px; background: rgba(255,255,255,0.18); backdrop-filter: blur(12px); border: 2px solid rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; box-shadow: 0 8px 20px rgba(0,0,0,0.3);">
+                            <div id="hero-live-logo-wrap" style="width: 70px; height: 70px; border-radius: 14px; background: rgba(255,255,255,0.18); backdrop-filter: blur(12px); border: 2px solid rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; box-shadow: 0 6px 16px rgba(0,0,0,0.28);">
                                 <img id="hero-live-logo-img" src="${escapeHtml(logoUrl)}" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; padding: 4px; ${logoUrl ? '' : 'display:none;'}">
-                                <span id="hero-live-logo-fallback" style="font-size: 2.1rem; font-weight: 800; color: #ffffff; ${logoUrl ? 'display:none;' : 'display:flex;'}">
+                                <span id="hero-live-logo-fallback" style="font-size: 1.9rem; font-weight: 800; color: #ffffff; ${logoUrl ? 'display:none;' : 'display:flex;'}">
                                     ${escapeHtml((wsDisplayName.charAt(0) || 'W').toUpperCase())}
                                 </span>
                             </div>
 
                             <div>
-                                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                                    <h1 id="hero-live-title" style="margin: 0; font-size: 1.75rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">
+                                <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
+                                    <h1 id="hero-live-title" style="margin: 0; font-size: 1.55rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">
                                         ${escapeHtml(wsDisplayName)}
                                     </h1>
-                                    <span id="hero-live-industry-pill" style="font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.65rem; border-radius: 999px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(8px); text-transform: uppercase;">
+                                    <span id="hero-live-industry-pill" style="font-size: 0.7rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 999px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(8px); text-transform: uppercase;">
                                         ${escapeHtml(wsIndustry)}
                                     </span>
-                                    <span style="font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.65rem; border-radius: 999px; background: rgba(16,185,129,0.25); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.4); backdrop-filter: blur(8px);">
-                                        ✓ Verified Workspace
+                                    <span style="font-size: 0.7rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 999px; background: rgba(255,255,255,0.15); color: #ffffff; border: 1px solid rgba(255,255,255,0.25); backdrop-filter: blur(8px);">
+                                        Verified Workspace
                                     </span>
                                 </div>
-                                <p id="hero-live-tagline" style="margin: 0.35rem 0 0 0; font-size: 0.92rem; color: #e4e4e7; max-width: 650px; line-height: 1.4;">
+                                <p id="hero-live-tagline" style="margin: 0.25rem 0 0 0; font-size: 0.88rem; color: #e4e4e7; max-width: 650px; line-height: 1.4;">
                                     ${escapeHtml(wsTagline)}
                                 </p>
                             </div>
@@ -283,33 +283,33 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
 
                         <!-- Live Banner Switcher Quick Button -->
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <button type="button" id="btn-hero-change-banner" class="btn" style="background: rgba(255,255,255,0.92); color: #18181b; font-weight: 700; font-size: 0.82rem; padding: 0.5rem 1rem; border-radius: 10px; border: none; box-shadow: 0 4px 14px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            <button type="button" id="btn-hero-change-banner" class="btn" style="background: rgba(255,255,255,0.92); color: #18181b; font-weight: 700; font-size: 0.8rem; padding: 0.45rem 0.85rem; border-radius: 8px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.18); display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                                 <span>Change Banner Image</span>
                             </button>
                         </div>
                     </div>
 
                     <!-- Bottom Glass Info Strip (Separate Country, Region & Currency) -->
-                    <div style="background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(14px); border-top: 1px solid rgba(255,255,255,0.15); padding: 0.75rem 2.25rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; font-size: 0.8rem; color: #f1f5f9;">
+                    <div style="background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(14px); border-top: 1px solid rgba(255,255,255,0.15); padding: 0.65rem 1.85rem; display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap; font-size: 0.78rem; color: #f1f5f9;">
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
-                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.04em;">Workspace ID:</span>
-                            <code style="font-family: monospace; font-weight: 700; color: #ffffff; background: rgba(255,255,255,0.12); padding: 0.15rem 0.5rem; border-radius: 6px;">${escapeHtml(wsIdText)}</code>
+                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.04em;">Workspace ID:</span>
+                            <code style="font-family: monospace; font-weight: 700; color: #ffffff; background: rgba(255,255,255,0.12); padding: 0.12rem 0.45rem; border-radius: 5px;">${escapeHtml(wsIdText)}</code>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
-                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.72rem;">Country:</span>
+                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.7rem;">Country:</span>
                             <strong id="hero-live-country" style="color: #ffffff; display: flex; align-items: center; gap: 0.3rem;">
-                                <span>${escapeHtml(matchedCountry.flag || '🌐')}</span>
+                                <span>${escapeHtml(matchedCountry.flag || '')}</span>
                                 <span>${escapeHtml(wsCountry)}</span>
                             </strong>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
-                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.72rem;">Region:</span>
+                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.7rem;">Region:</span>
                             <strong id="hero-live-region" style="color: #cbd5e1;">${escapeHtml(wsRegion || 'Global')}</strong>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
-                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.72rem;">Currency:</span>
-                            <strong id="hero-live-currency" style="color: #6ee7b7; font-family: monospace; font-size: 0.95rem;">
+                            <span style="opacity: 0.75; text-transform: uppercase; font-size: 0.7rem;">Currency:</span>
+                            <strong id="hero-live-currency" style="color: #ffffff; font-family: monospace; font-size: 0.9rem;">
                                 ${escapeHtml(wsCurrencyCode)} (${escapeHtml(wsCurrency)})
                             </strong>
                         </div>
@@ -319,9 +319,58 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                     </div>
                 </div>
 
-                <!-- MAIN SETTINGS SPLIT LAYOUT (PANE CONTENT + RIGHT FLOATING DIVER RAIL) -->
-                <div class="settings-layout-split">
-                    <div class="settings-main-column">
+                <!-- ======================================================== -->
+                <!-- SETTINGS SECTIONS: TOP STICKY NAVIGATION BAR              -->
+                <!-- ======================================================== -->
+                <div class="settings-top-sections-bar" style="position: sticky; top: 0.5rem; z-index: 35; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 14px; padding: 0.65rem 1rem; margin-bottom: 0.75rem; box-shadow: 0 4px 20px -3px rgba(0,0,0,0.04); backdrop-filter: blur(12px);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem; margin-bottom: 0.55rem;">
+                        <div style="display: flex; align-items: center; gap: 0.55rem;">
+                            <div style="width: 28px; height: 28px; border-radius: 7px; background: #18181b; color: #ffffff; display: flex; align-items: center; justify-content: center;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                            </div>
+                            <span style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-primary);">Settings Sections</span>
+                            <span id="rail-unsaved-pill" style="display: none; font-size: 0.68rem; font-weight: 700; padding: 0.12rem 0.55rem; border-radius: 999px; background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); margin-left: 0.35rem;">Unsaved Changes</span>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 0.55rem; margin-left: auto;">
+                            <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.74rem; color: var(--text-muted); background: #f4f4f5; padding: 0.22rem 0.55rem; border-radius: 6px; border: 1px solid #e4e4e7;">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: ${isMock ? '#10B981' : '#18181b'};"></span>
+                                <span>${isMock ? 'Demo Sandbox · Local' : 'Cloud Firestore · Live'}</span>
+                            </span>
+                            <button type="button" id="btn-top-save-settings" class="btn btn-save-clean" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 700; padding: 0.45rem 1rem; border-radius: 8px; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; cursor: pointer; transition: all 0.2s ease;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                <span class="btn-save-label">Save Settings</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <nav id="settings-top-nav" style="display: flex; gap: 0.45rem; overflow-x: auto; padding-top: 0.65rem; border-top: 1px solid var(--border-color); scrollbar-width: thin;">
+                        <button type="button" class="settings-tab-btn settings-top-btn active" data-tab="tab-general">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                            <span>General, Brand &amp; Media</span>
+                        </button>
+                        <button type="button" class="settings-tab-btn settings-top-btn" data-tab="tab-currency">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                            <span>Country &amp; Currency</span>
+                        </button>
+                        <button type="button" class="settings-tab-btn settings-top-btn" data-tab="tab-receipts">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                            <span>Receipts &amp; Invoicing</span>
+                        </button>
+                        <button type="button" class="settings-tab-btn settings-top-btn" data-tab="tab-vending">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                            <span>Automation &amp; Stock</span>
+                        </button>
+                        <button type="button" class="settings-tab-btn settings-top-btn" data-tab="tab-data">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>Data &amp; Excel Tools</span>
+                        </button>
+                        <button type="button" class="settings-tab-btn settings-top-btn" data-tab="tab-security">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            <span>Security &amp; Danger Zone</span>
+                        </button>
+                    </nav>
+                </div>
 
                 <!-- ======================================================== -->
                 <!-- TAB 1: GENERAL, BRAND & MEDIA -->
@@ -351,7 +400,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
                                                 Workspace Logo
                                             </label>
-                                            <span style="font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px; background: rgba(59,130,246,0.1); color: #2563eb; border: 1px solid rgba(59,130,246,0.3);">
+                                            <span style="font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px; background: #FAFAFA; color: #18181B; border: 1px solid #E4E4E7;">
                                                 1:1 Recommended
                                             </span>
                                         </div>
@@ -398,7 +447,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg>
                                                 Cover Banner
                                             </label>
-                                            <span style="font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px; background: rgba(16,185,129,0.12); color: #059669; border: 1px solid rgba(16,185,129,0.3);">
+                                            <span style="font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px; background: #FAFAFA; color: #18181B; border: 1px solid #E4E4E7;">
                                                 1920×1080 (16:9) Recommended
                                             </span>
                                         </div>
@@ -457,7 +506,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                         <!-- SECTION 2: BUSINESS CREDENTIALS & REGISTRATION -->
                         <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
                             <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-                                <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(59, 130, 246, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(59, 130, 246, 0.08); color: #18181B; display: flex; align-items: center; justify-content: center;">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                 </div>
                                 <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Business Identity &amp; Classification</h3>
@@ -466,7 +515,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
                                 
                                 <div class="form-group">
-                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Workspace Display Name <span style="color:#e11d48;">*</span></label>
+                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Workspace Display Name <span style="color:#18181B;">*</span></label>
                                     <input type="text" id="set-name" class="form-control" value="${escapeHtml(wsDisplayName)}" required style="border-radius: 8px; font-weight: 600;">
                                     <small style="color: var(--text-muted); font-size: 0.74rem;">Visible across navigation header and internal staff logs.</small>
                                 </div>
@@ -504,91 +553,10 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             </div>
                         </div>
 
-                        <!-- SECTION: WORKSPACE APPEARANCE & COLOR THEME -->
-                        <div style="background: var(--bg-card, #ffffff); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-                                <div style="display: flex; align-items: center; gap: 0.65rem;">
-                                    <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(37, 99, 235, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center;">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                                    </div>
-                                    <div>
-                                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Appearance &amp; Theme Mode</h3>
-                                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Select your preferred workspace visual theme. Instant switch between Enterprise Light and Dark modes.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;" id="settings-theme-cards-container">
-                                <!-- Light Card -->
-                                <div class="settings-theme-card ${currentColorMode === 'light' ? 'active' : ''}" data-mode="light" style="border: 2px solid ${currentColorMode === 'light' ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; border-radius: 14px; padding: 1.25rem; background: #ffffff; cursor: pointer; transition: all 0.2s ease; position: relative;">
-                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: #f0f4fa; color: #2563eb; display: flex; align-items: center; justify-content: center;">
-                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                                            </div>
-                                            <strong style="font-size: 0.95rem; color: #202431;">Enterprise Light</strong>
-                                        </div>
-                                        <span class="theme-status-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; background: ${currentColorMode === 'light' ? '#15803d' : '#e2e7ef'}; color: ${currentColorMode === 'light' ? '#ffffff' : '#687386'};">
-                                            ${currentColorMode === 'light' ? 'Active' : 'Select'}
-                                        </span>
-                                    </div>
-                                    <p style="font-size: 0.8rem; color: #687386; margin: 0; line-height: 1.4;">Crisp enterprise layout with #F5F7FA background, clean white cards, and #2563EB accent.</p>
-                                </div>
-
-                                <!-- Dark Card -->
-                                <div class="settings-theme-card ${currentColorMode === 'dark' ? 'active' : ''}" data-mode="dark" style="border: 2px solid ${currentColorMode === 'dark' ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; border-radius: 14px; padding: 1.25rem; background: #111827; cursor: pointer; transition: all 0.2s ease; position: relative;">
-                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: #1f2937; color: #60a5fa; display: flex; align-items: center; justify-content: center;">
-                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                                            </div>
-                                            <strong style="font-size: 0.95rem; color: #f9fafb;">Enterprise Dark</strong>
-                                        </div>
-                                        <span class="theme-status-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; background: ${currentColorMode === 'dark' ? '#15803d' : '#374151'}; color: #ffffff;">
-                                            ${currentColorMode === 'dark' ? 'Active' : 'Select'}
-                                        </span>
-                                    </div>
-                                    <p style="font-size: 0.8rem; color: #9ca3af; margin: 0; line-height: 1.4;">Balanced dark workspace with #101010 background and #1C1C1C surfaces.</p>
-                                </div>
-
-                                <!-- Deep Dark Card -->
-                                <div class="settings-theme-card ${currentColorMode === 'deep-dark' ? 'active' : ''}" data-mode="deep-dark" style="border: 2px solid ${currentColorMode === 'deep-dark' ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; border-radius: 14px; padding: 1.25rem; background: #000000; cursor: pointer; transition: all 0.2s ease; position: relative;">
-                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: #0a0a0a; border: 1px solid #222222; color: #ffffff; display: flex; align-items: center; justify-content: center;">
-                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="3"></rect></svg>
-                                            </div>
-                                            <strong style="font-size: 0.95rem; color: #ffffff;">Deep Dark Mode</strong>
-                                        </div>
-                                        <span class="theme-status-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; background: ${currentColorMode === 'deep-dark' ? '#15803d' : '#1a1a1a'}; color: #ffffff;">
-                                            ${currentColorMode === 'deep-dark' ? 'Active' : 'Select'}
-                                        </span>
-                                    </div>
-                                    <p style="font-size: 0.8rem; color: #888888; margin: 0; line-height: 1.4;">Pitch black OLED #000000 mode with #0A0A0A surfaces and ultra-crisp borders.</p>
-                                </div>
-
-                                <!-- System Auto Card -->
-                                <div class="settings-theme-card ${currentColorMode === 'system' ? 'active' : ''}" data-mode="system" style="border: 2px solid ${currentColorMode === 'system' ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; border-radius: 14px; padding: 1.25rem; background: var(--surface-50); cursor: pointer; transition: all 0.2s ease; position: relative;">
-                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--surface-100); color: var(--text-primary); display: flex; align-items: center; justify-content: center;">
-                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                                            </div>
-                                            <strong style="font-size: 0.95rem; color: var(--text-primary);">System Match</strong>
-                                        </div>
-                                        <span class="theme-status-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px; background: ${currentColorMode === 'system' ? '#15803d' : 'var(--surface-200)'}; color: ${currentColorMode === 'system' ? '#ffffff' : 'var(--text-secondary)'};">
-                                            ${currentColorMode === 'system' ? 'Active' : 'Select'}
-                                        </span>
-                                    </div>
-                                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">Automatically syncs with your operating system light and dark color scheme.</p>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- SECTION 3: OFFICIAL CONTACT & PHYSICAL LOCATION -->
                         <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
                             <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-                                <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(16, 185, 129, 0.08); color: #059669; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 34px; height: 34px; border-radius: 9px; background: #F4F4F5; color: #18181B; display: flex; align-items: center; justify-content: center;">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                                 </div>
                                 <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Official Contact &amp; Physical Location</h3>
@@ -596,7 +564,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
 
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
                                 <div class="form-group">
-                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Official Business Email <span style="color:#e11d48;">*</span></label>
+                                    <label style="font-weight: 700; font-size: 0.83rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">Official Business Email <span style="color:#18181B;">*</span></label>
                                     <input type="email" id="set-email" class="form-control" value="${escapeHtml(wsEmail)}" required style="border-radius: 8px;">
                                 </div>
 
@@ -617,22 +585,8 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             </div>
                         </div>
 
-                        <!-- TAB 1 FOOTER ACTIONS -->
-                        <div style="margin-top: 1.5rem; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
-                            <div>
-                                <strong style="display: block; font-size: 0.92rem; color: var(--text-primary);">Save Brand &amp; Identity Settings</strong>
-                                <span style="font-size: 0.8rem; color: var(--text-secondary);">Updates your logo, cover banner, business registration, contact and location information.</span>
-                            </div>
-                            <div style="display: flex; gap: 0.65rem; align-items: center;">
-                                <button type="button" class="btn btn-secondary btn-tab-discard" style="border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.5rem 1rem;">Discard</button>
-                                <button type="button" class="btn btn-primary btn-tab-save" style="border-radius: 8px; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; cursor: pointer;">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                                    <span class="btn-save-label">Save Settings</span>
-                                </button>
-                            </div>
-                        </div>
-
                     </div>
+
                 </div>
 
                 <!-- ======================================================== -->
@@ -657,7 +611,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             <div style="background: #fafaf9; border: 1.5px solid #e4e4e7; padding: 0.6rem 1.25rem; border-radius: 12px; display: flex; align-items: center; gap: 0.75rem;">
                                 <span style="font-size: 0.75rem; font-weight: 700; color: #52525b; text-transform: uppercase;">Live Ledger Preview:</span>
                                 <strong id="currency-live-preview" style="color: #09090b; font-family: monospace; font-size: 1.1rem; font-weight: 800;">
-                                    ${escapeHtml(matchedCountry.flag || '🌐')} ${escapeHtml(wsCountry)} • ${escapeHtml(wsCurrencyCode)} (${escapeHtml(wsCurrency)}) 1,450.00
+                                    ${escapeHtml(matchedCountry.flag || '')} ${escapeHtml(wsCountry)} • ${escapeHtml(wsCurrencyCode)} (${escapeHtml(wsCurrency)}) 1,450.00
                                 </strong>
                             </div>
                         </div>
@@ -681,13 +635,13 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             <!-- Card 1: Country & Jurisdiction -->
                             <div style="background: var(--surface-50); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.35rem; display: flex; flex-direction: column; gap: 1.15rem;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.65rem;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                                     <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">1. Operating Jurisdiction</h4>
                                 </div>
 
                                 <div class="form-group">
                                     <label style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">
-                                        Workspace Country <span style="color:#e11d48;">*</span>
+                                        Workspace Country <span style="color:#18181B;">*</span>
                                     </label>
                                     <select id="set-country" class="form-control" style="border-radius: 8px; font-weight: 600; cursor: pointer;">
                                         ${COUNTRIES_LIST.map(c => `
@@ -715,13 +669,13 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             <!-- Card 2: Accounting Currency Standard -->
                             <div style="background: var(--surface-50); border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.35rem; display: flex; flex-direction: column; gap: 1.15rem;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.65rem;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                                     <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">2. Monetary Currency (ISO 4217)</h4>
                                 </div>
 
                                 <div class="form-group">
                                     <label style="font-weight: 700; font-size: 0.84rem; color: var(--text-primary); margin-bottom: 0.35rem; display: block;">
-                                        Select Currency Code (ISO 4217) <span style="color:#e11d48;">*</span>
+                                        Select Currency Code (ISO 4217) <span style="color:#18181B;">*</span>
                                     </label>
                                     <select id="set-currency-code" class="form-control" style="border-radius: 8px; font-weight: 700; font-family: monospace; cursor: pointer;">
                                         ${CURRENCY_LIST.map(c => `
@@ -765,29 +719,14 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                                 Instant 1-Click Currency Presets:
                             </label>
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="currency-presets-container">
-                                <button type="button" class="btn-currency-quick" data-code="USD" data-name="US Dollar" data-symbol="$" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">💵 $ USD</button>
-                                <button type="button" class="btn-currency-quick" data-code="EUR" data-name="Euro" data-symbol="€" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">💶 € EUR</button>
-                                <button type="button" class="btn-currency-quick" data-code="GBP" data-name="British Pound" data-symbol="£" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">💷 £ GBP</button>
+                                <button type="button" class="btn-currency-quick" data-code="USD" data-name="US Dollar" data-symbol="$" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">$ USD</button>
+                                <button type="button" class="btn-currency-quick" data-code="EUR" data-name="Euro" data-symbol="€" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">€ EUR</button>
+                                <button type="button" class="btn-currency-quick" data-code="GBP" data-name="British Pound" data-symbol="£" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">£ GBP</button>
                                 <button type="button" class="btn-currency-quick" data-code="BDT" data-name="Bangladeshi Taka" data-symbol="৳" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">৳ BDT</button>
                                 <button type="button" class="btn-currency-quick" data-code="INR" data-name="Indian Rupee" data-symbol="₹" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">₹ INR</button>
-                                <button type="button" class="btn-currency-quick" data-code="AED" data-name="UAE Dirham" data-symbol="AED" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇦🇪 AED</button>
-                                <button type="button" class="btn-currency-quick" data-code="CAD" data-name="Canadian Dollar" data-symbol="CA$" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">🇨🇦 CA$</button>
-                                <button type="button" class="btn-currency-quick" data-code="JPY" data-name="Japanese Yen" data-symbol="¥" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">💴 ¥ JPY</button>
-                            </div>
-                        </div>
-
-                        <!-- TAB 2 FOOTER ACTIONS -->
-                        <div style="margin-top: 1.5rem; background: #fafaf9; border: 1.5px solid #e4e4e7; border-radius: 16px; padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                            <div>
-                                <strong style="display: block; font-size: 0.92rem; color: var(--text-primary);">Save Currency &amp; Regional Preferences</strong>
-                                <span style="font-size: 0.8rem; color: var(--text-secondary);">Applies accounting currency, symbol, country ISO code and regional jurisdiction.</span>
-                            </div>
-                            <div style="display: flex; gap: 0.65rem; align-items: center;">
-                                <button type="button" class="btn btn-secondary btn-tab-discard" style="border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.5rem 1rem;">Discard</button>
-                                <button type="button" class="btn btn-primary btn-tab-save" style="border-radius: 8px; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; cursor: pointer;">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                                    <span class="btn-save-label">Save Settings</span>
-                                </button>
+                                <button type="button" class="btn-currency-quick" data-code="AED" data-name="UAE Dirham" data-symbol="AED" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">AED</button>
+                                <button type="button" class="btn-currency-quick" data-code="CAD" data-name="Canadian Dollar" data-symbol="CA$" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">CA$</button>
+                                <button type="button" class="btn-currency-quick" data-code="JPY" data-name="Japanese Yen" data-symbol="¥" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-50); cursor: pointer;">¥ JPY</button>
                             </div>
                         </div>
 
@@ -803,7 +742,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                         <!-- Left Form -->
                         <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
                             <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(225, 29, 72, 0.08); color: #e11d48; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(225, 29, 72, 0.08); color: #18181B; display: flex; align-items: center; justify-content: center;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                                 </div>
                                 <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">Printout &amp; Ticket Details</h3>
@@ -824,12 +763,12 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                                     <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.65rem;">Customer Information on Invoices</div>
                                     
                                     <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.86rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">
-                                        <input type="checkbox" id="set-show-cust-name" ${printCustName ? 'checked' : ''} style="width:16px; height:16px; accent-color:#e11d48;">
+                                        <input type="checkbox" id="set-show-cust-name" ${printCustName ? 'checked' : ''} style="width:16px; height:16px; accent-color:#18181B;">
                                         <span>Print Customer Name on POS Invoices</span>
                                     </label>
 
                                     <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.86rem; font-weight: 600; color: var(--text-primary);">
-                                        <input type="checkbox" id="set-show-cust-num" ${printCustPhone ? 'checked' : ''} style="width:16px; height:16px; accent-color:#e11d48;">
+                                        <input type="checkbox" id="set-show-cust-num" ${printCustPhone ? 'checked' : ''} style="width:16px; height:16px; accent-color:#18181B;">
                                         <span>Print Customer Phone Number on Receipts</span>
                                     </label>
                                 </div>
@@ -865,28 +804,13 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                                     </div>
                                     <div style="display: flex; justify-content: space-between; padding: 0.2rem 0; border-top: 1px dashed #cbd5e1; margin-top: 0.4rem; font-weight: 800;">
                                         <span>TOTAL DUE</span>
-                                        <span id="preview-ticket-total" style="color: #e11d48;">${escapeHtml(wsCurrency)} 32.00</span>
+                                        <span id="preview-ticket-total" style="color: var(--text-primary);">${escapeHtml(wsCurrency)} 32.00</span>
                                     </div>
                                 </div>
 
                                 <div style="text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 0.75rem; margin-top: 1rem; font-size: 0.74rem; color: #64748b;" id="preview-footer-note">
                                     ${escapeHtml(wsEndMsg)}
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- TAB 3 FOOTER ACTIONS -->
-                        <div style="grid-column: 1 / -1; margin-top: 0.5rem; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
-                            <div>
-                                <strong style="display: block; font-size: 0.92rem; color: var(--text-primary);">Save Receipts &amp; Invoicing Template</strong>
-                                <span style="font-size: 0.8rem; color: var(--text-secondary);">Updates shop title header, customer details toggle, and return/warranty footer note.</span>
-                            </div>
-                            <div style="display: flex; gap: 0.65rem; align-items: center;">
-                                <button type="button" class="btn btn-secondary btn-tab-discard" style="border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.5rem 1rem;">Discard</button>
-                                <button type="button" class="btn btn-primary btn-tab-save" style="border-radius: 8px; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; cursor: pointer;">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                                    <span class="btn-save-label">Save Settings</span>
-                                </button>
                             </div>
                         </div>
 
@@ -901,7 +825,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1.25rem; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 260px;">
                                 <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
-                                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(225, 29, 72, 0.08); color: #e11d48; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--surface-100); color: var(--text-primary); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
                                     </div>
                                     <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">Vending Mode (Automated Stock Deductions)</h3>
@@ -912,26 +836,11 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             </div>
 
                             <label class="switch-toggle" style="position: relative; display: inline-flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                                <input type="checkbox" id="set-vending" ${isVendingActive ? 'checked' : ''} style="width: 22px; height: 22px; accent-color: #e11d48;">
-                                <span id="vending-status-text" style="font-size: 0.9rem; font-weight: 800; color: ${isVendingActive ? '#059669' : 'var(--text-muted)'};">
+                                <input type="checkbox" id="set-vending" ${isVendingActive ? 'checked' : ''} style="width: 22px; height: 22px; accent-color: #18181b;">
+                                <span id="vending-status-text" style="font-size: 0.9rem; font-weight: 800; color: ${isVendingActive ? 'var(--text-primary)' : 'var(--text-muted)'};">
                                     ${isVendingActive ? 'ENABLED' : 'DISABLED'}
                                 </span>
                             </label>
-                        </div>
-                    </div>
-
-                    <!-- TAB 4 FOOTER ACTIONS -->
-                    <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 1.15rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02); margin-bottom: 1.5rem;">
-                        <div>
-                            <strong style="display: block; font-size: 0.92rem; color: var(--text-primary);">Save Automation &amp; Stock Configuration</strong>
-                            <span style="font-size: 0.8rem; color: var(--text-secondary);">Updates real-time automatic stock inventory deduction settings for POS and invoicing.</span>
-                        </div>
-                        <div style="display: flex; gap: 0.65rem; align-items: center;">
-                            <button type="button" class="btn btn-secondary btn-tab-discard" style="border-radius: 8px; font-size: 0.82rem; font-weight: 600; padding: 0.5rem 1rem;">Discard</button>
-                            <button type="button" class="btn btn-primary btn-tab-save" style="border-radius: 8px; font-size: 0.85rem; font-weight: 700; padding: 0.55rem 1.25rem; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border: 1px solid #18181b; cursor: pointer;">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                                <span class="btn-save-label">Save Settings</span>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -945,7 +854,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                         <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between;">
                             <div>
                                 <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem;">
-                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); color: #18181B; display: flex; align-items: center; justify-content: center;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                     </div>
                                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Excel &amp; CSV Migration Tools</h3>
@@ -974,7 +883,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                         <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between;">
                             <div>
                                 <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem;">
-                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.08); color: #059669; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: #F4F4F5; color: #18181B; display: flex; align-items: center; justify-content: center;">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3h18v18H3z"></path><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
                                     </div>
                                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Market Inserter &amp; Export Backup</h3>
@@ -1006,7 +915,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                         <!-- Unique ID & Audit Card -->
                         <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
                             <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.08); color: #18181B; display: flex; align-items: center; justify-content: center;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                                 </div>
                                 <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">Unique Identifier &amp; Audit Trail</h3>
@@ -1057,7 +966,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
 
                             <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                                 ${isAdmin ? `
-                                    <button type="button" id="btn-delete-workspace" class="btn btn-outline" style="color: #ffffff; background: #e11d48; border-color: #be123c; font-weight: 700; font-size: 0.85rem; padding: 0.6rem 1.25rem; border-radius: 10px;">
+                                    <button type="button" id="btn-delete-workspace" class="btn btn-outline" style="color: #ffffff; background: #18181B; border-color: #27272A; font-weight: 700; font-size: 0.85rem; padding: 0.6rem 1.25rem; border-radius: 10px;">
                                         Delete Entire Workspace
                                     </button>
                                 ` : `
@@ -1068,111 +977,6 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                             </div>
                         </div>
 
-                    </div>
-                </div>
-
-                    </div> <!-- End of settings-main-column -->
-
-                    <!-- ======================================================== -->
-                    <!-- RIGHT FLOATING DIVIDER / RAIL NAVIGATION DOCK            -->
-                    <!-- ======================================================== -->
-                    <aside class="settings-floating-rail" id="settings-floating-rail">
-                        <div class="settings-rail-card" style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.25rem 1rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.04);">
-                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.25rem 0.5rem 0.75rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.75rem;">
-                                <span style="font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                                    Settings Sections
-                                </span>
-                                <span id="rail-unsaved-pill" style="display: none; font-size: 0.68rem; font-weight: 700; padding: 0.12rem 0.5rem; border-radius: 999px; background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3);">Unsaved</span>
-                            </div>
-
-                            <nav id="settings-rail-nav" style="display: flex; flex-direction: column; gap: 0.35rem;">
-                                <button type="button" class="settings-tab-btn settings-rail-btn active" data-tab="tab-general">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-                                    <span>General, Brand &amp; Media</span>
-                                </button>
-                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-currency">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="6" x2="12" y2="18"></line><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                                    <span>Country &amp; Currency</span>
-                                </button>
-                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-receipts">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                    <span>Receipts &amp; Invoicing</span>
-                                </button>
-                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-vending">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
-                                    <span>Automation &amp; Stock</span>
-                                </button>
-                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-data">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                    <span>Data &amp; Excel Tools</span>
-                                </button>
-                                <button type="button" class="settings-tab-btn settings-rail-btn" data-tab="tab-security">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                                    <span>Security &amp; Danger Zone</span>
-                                </button>
-                            </nav>
-
-                            <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px dashed var(--border-color);">
-                                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                                    <span style="display: flex; align-items: center; gap: 0.4rem;">
-                                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);"></span>
-                                        Firestore &amp; Supabase
-                                    </span>
-                                    <strong style="color: #059669; font-weight: 700;">Live Sync</strong>
-                                </div>
-                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                    <button type="button" id="btn-rail-save-settings" class="btn btn-primary btn-tab-save btn-disabled" style="width: 100%; font-size: 0.84rem; font-weight: 700; padding: 0.6rem 1rem; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" disabled>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                                        <span>Save Changes</span>
-                                    </button>
-                                    <button type="button" id="btn-rail-discard-settings" class="btn btn-secondary btn-tab-discard" style="width: 100%; font-size: 0.8rem; font-weight: 600; padding: 0.45rem 1rem; border-radius: 10px; display: none; align-items: center; justify-content: center; gap: 0.4rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-                                        <span>Discard Changes</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </aside>
-                </div> <!-- End of settings-layout-split -->
-
-                <!-- ======================================================== -->
-                <!-- FLOATING SAVE / DISCARD ACTION BAR -->
-                <!-- ======================================================== -->
-                <div id="settings-floating-bar" style="
-                    position: fixed;
-                    bottom: 1.5rem;
-                    left: 50%;
-                    transform: translateX(-50%) translateY(100px);
-                    background: #18181b;
-                    color: #ffffff;
-                    border: 1.5px solid rgba(255,255,255,0.18);
-                    border-radius: 16px;
-                    padding: 0.85rem 1.5rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 1.5rem;
-                    box-shadow: 0 20px 45px -10px rgba(0,0,0,0.4);
-                    z-index: 1000;
-                    opacity: 0;
-                    pointer-events: none;
-                    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-                    min-width: 380px;
-                    max-width: 90vw;
-                ">
-                    <div style="display: flex; align-items: center; gap: 0.65rem;">
-                        <span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block; animation: pulse 1.5s infinite;"></span>
-                        <span style="font-size: 0.88rem; font-weight: 600;">You have unsaved changes</span>
-                    </div>
-
-                    <div style="display: flex; gap: 0.6rem; align-items: center;">
-                        <button type="button" id="btn-discard-settings" class="btn btn-sm btn-secondary" style="font-size: 0.82rem; font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.12); color:#ffffff; border: 1px solid rgba(255,255,255,0.2);">
-                            Discard
-                        </button>
-                        <button type="button" id="btn-save-settings" class="btn btn-sm btn-primary" style="font-size: 0.82rem; font-weight: 700; padding: 0.45rem 1.15rem; border-radius: 8px; background: #ffffff; color: #18181b; border: none; box-shadow: 0 2px 8px rgba(255,255,255,0.2);">
-                            Save Changes
-                        </button>
                     </div>
                 </div>
 
@@ -1187,11 +991,17 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             btn.addEventListener('click', () => {
                 const targetTab = btn.getAttribute('data-tab');
                 tabBtns.forEach(b => {
-                    const isActive = b === btn;
+                    const isActive = b.getAttribute('data-tab') === targetTab;
                     b.classList.toggle('active', isActive);
-                    b.style.border = isActive ? '1px solid var(--border-color)' : '1px solid transparent';
-                    b.style.background = isActive ? '#ffffff' : 'transparent';
-                    b.style.color = isActive ? 'var(--text-primary)' : 'var(--text-secondary)';
+                    if (b.classList.contains('settings-top-btn')) {
+                        b.style.background = isActive ? '#18181b' : 'transparent';
+                        b.style.color = isActive ? '#ffffff' : 'var(--text-secondary)';
+                        b.style.borderColor = isActive ? '#18181b' : 'transparent';
+                    } else {
+                        b.style.border = isActive ? '1px solid var(--border-color)' : '1px solid transparent';
+                        b.style.background = isActive ? '#ffffff' : 'transparent';
+                        b.style.color = isActive ? 'var(--text-primary)' : 'var(--text-secondary)';
+                    }
                 });
                 tabPanes.forEach(p => {
                     p.style.display = p.id === targetTab ? 'block' : 'none';
@@ -1200,29 +1010,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             });
         });
 
-        // Appearance & Color Theme Mode Switcher
-        const themeCards = container.querySelectorAll('.settings-theme-card');
-        themeCards.forEach(card => {
-            card.addEventListener('click', () => {
-                const mode = card.getAttribute('data-mode');
-                localStorage.setItem('pricelister_color_mode', mode);
-                document.documentElement.setAttribute('data-color-mode', mode);
-                document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : (localStorage.getItem('pricelister_theme') || 'enterprise'));
-                window.dispatchEvent(new CustomEvent('pricelister-color-mode-changed', { detail: { mode } }));
-                showAlert.success(`Switched to Enterprise ${mode === 'dark' ? 'Dark' : 'Light'} Mode.`);
-                
-                themeCards.forEach(c => {
-                    const isCardActive = c.getAttribute('data-mode') === mode;
-                    c.style.borderColor = isCardActive ? 'var(--primary, #2563eb)' : 'var(--border-color)';
-                    const badge = c.querySelector('.theme-status-badge');
-                    if (badge) {
-                        badge.textContent = isCardActive ? 'Active' : 'Select';
-                        badge.style.background = isCardActive ? '#15803d' : (c.getAttribute('data-mode') === 'dark' ? '#374151' : '#e2e7ef');
-                        badge.style.color = isCardActive ? '#ffffff' : (c.getAttribute('data-mode') === 'dark' ? '#ffffff' : '#687386');
-                    }
-                });
-            });
-        });
+        // Theme Mode removed from workspace settings per theme rules
 
         // Vending Switch
         const vendingInput = container.querySelector('#set-vending');
@@ -1231,7 +1019,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             vendingInput.addEventListener('change', () => {
                 const checked = vendingInput.checked;
                 vendingLabel.textContent = checked ? 'ENABLED' : 'DISABLED';
-                vendingLabel.style.color = checked ? '#059669' : 'var(--text-muted)';
+                vendingLabel.style.color = checked ? '#18181B' : 'var(--text-muted)';
                 checkDirty();
             });
         }
@@ -1280,7 +1068,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             const code = (currencyCodeSelect?.value || 'EUR').toUpperCase();
             const countryName = countrySelect?.value || wsCountry || 'United Kingdom';
             const selectedOpt = countrySelect?.selectedOptions && countrySelect.selectedOptions[0];
-            const flag = (selectedOpt && selectedOpt.getAttribute('data-flag')) || matchedCountry.flag || '🌐';
+            const flag = (selectedOpt && selectedOpt.getAttribute('data-flag')) || matchedCountry.flag || '';
             const regionVal = (regionInput?.value || '').trim() || 'Global';
 
             if (currencyPreview) {
@@ -1442,6 +1230,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 return;
             }
             selectedWsLogoFile = file;
+            checkDirty();
             const reader = new FileReader();
             reader.onload = (ev) => {
                 const dataUrl = ev.target?.result;
@@ -1519,6 +1308,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 return;
             }
             selectedWsBannerFile = file;
+            checkDirty();
             const reader = new FileReader();
             reader.onload = (ev) => {
                 const dataUrl = ev.target?.result;
@@ -1616,127 +1406,100 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         });
 
         // Snapshot & Dirty Checking for All Save Buttons & Floating Bar
-        let savedSnapshot = {
-            enableVending: isVendingActive,
-            currencySymbol: wsCurrency,
-            currencyCode: wsCurrencyCode,
-            currencyName: wsCurrencyName,
-            country: wsCountry,
-            countryCode: wsCountryCode,
-            region: wsRegion,
-            name: wsDisplayName,
-            tradeName: wsTradeName,
-            industry: wsIndustry,
-            tagline: wsTagline,
-            website: wsWebsite,
-            taxId: wsTaxId,
-            email: wsEmail,
-            phone: wsPhone,
-            supportPhone: wsSupportPhone,
-            address: wsAddress,
-            shopName: wsShopName,
-            endMessage: wsEndMsg,
-            customerName: printCustName,
-            customerNumber: printCustPhone,
-            logoUrl: logoUrl,
-            bannerUrl: bannerUrl
-        };
+        const captureFormState = () => ({
+            enableVending: Boolean(vendingInput?.checked),
+            currencySymbol: (currencyInput?.value || '$').trim().substring(0, 3) || '$',
+            currencyCode: (currencyCodeSelect?.value || wsCurrencyCode || 'USD').toUpperCase(),
+            currencyName: (currencyNameInput?.value || wsCurrencyName || '').trim(),
+            country: (countrySelect?.value || wsCountry || '').trim(),
+            countryCode: (countrySelect?.selectedOptions?.[0]?.getAttribute('data-code') || wsCountryCode || '').trim(),
+            region: (regionInput?.value || wsRegion || '').trim(),
+            name: (nameInput?.value || wsDisplayName || '').trim(),
+            tradeName: (tradeNameInput?.value || wsTradeName || '').trim(),
+            industry: industrySelect?.value || wsIndustry || 'General Commercial',
+            tagline: (taglineInput?.value || wsTagline || '').trim(),
+            website: (websiteInput?.value || wsWebsite || '').trim(),
+            taxId: (taxIdInput?.value || wsTaxId || '').trim(),
+            email: (emailInput?.value || wsEmail || '').trim(),
+            phone: (phoneInput?.value || wsPhone || '').trim(),
+            supportPhone: (supportPhoneInput?.value || wsSupportPhone || '').trim(),
+            address: (addressInput?.value || wsAddress || '').trim(),
+            shopName: (setShopName?.value || wsShopName || '').trim(),
+            endMessage: (setEndMsg?.value || wsEndMsg || '').trim(),
+            customerName: Boolean(setCustName?.checked),
+            customerNumber: Boolean(setCustNum?.checked),
+            logoUrl: (logoUrlInput?.value || logoUrl || '').trim(),
+            bannerUrl: (bannerUrlInput?.value || bannerUrl || '').trim(),
+            hasLogoFile: Boolean(selectedWsLogoFile),
+            hasBannerFile: Boolean(selectedWsBannerFile)
+        });
+
+        let savedSnapshot = captureFormState();
 
         const btnHeaderSave = container.querySelector('#btn-header-save-settings');
+        const btnTopSave = container.querySelector('#btn-top-save-settings');
         const headerUnsavedDot = container.querySelector('#header-unsaved-dot');
-        const floatingBar = container.querySelector('#settings-floating-bar');
-        const btnFloatingSave = container.querySelector('#btn-save-settings');
-        const btnFloatingDiscard = container.querySelector('#btn-discard-settings');
-
-        const btnRailSave = container.querySelector('#btn-rail-save-settings');
-        const btnRailDiscard = container.querySelector('#btn-rail-discard-settings');
         const railUnsavedPill = container.querySelector('#rail-unsaved-pill');
 
         const getAllSaveButtons = () => {
-            return [
-                btnHeaderSave,
-                btnFloatingSave,
-                btnRailSave,
-                ...container.querySelectorAll('.btn-tab-save')
-            ].filter(Boolean);
+            return [btnHeaderSave, btnTopSave].filter(Boolean);
         };
 
         const getAllDiscardButtons = () => {
-            return [
-                btnFloatingDiscard,
-                btnRailDiscard,
-                ...container.querySelectorAll('.btn-tab-discard')
-            ].filter(Boolean);
+            return [];
         };
 
         const checkDirty = () => {
-            const curVending = Boolean(vendingInput?.checked);
-            const curSymbol = (currencyInput?.value || '$').trim().substring(0, 3) || '$';
-            const curCode = (currencyCodeSelect?.value || 'EUR').toUpperCase();
-            const curCurrName = (currencyNameInput?.value || '').trim();
-            const curCountry = (countrySelect?.value || wsCountry || '').trim();
-            const curRegion = (regionInput?.value || '').trim();
-            const curName = (nameInput?.value || '').trim();
-            const curTradeName = (tradeNameInput?.value || '').trim();
-            const curIndustry = industrySelect?.value || 'General Commercial';
-            const curTagline = (taglineInput?.value || '').trim();
-            const curWebsite = (websiteInput?.value || '').trim();
-            const curTaxId = (taxIdInput?.value || '').trim();
-            const curEmail = (emailInput?.value || '').trim();
-            const curPhone = (phoneInput?.value || '').trim();
-            const curSupportPhone = (supportPhoneInput?.value || '').trim();
-            const curAddress = (addressInput?.value || '').trim();
-            const curShop = (setShopName?.value || '').trim();
-            const curEndMsg = (setEndMsg?.value || '').trim();
-            const curCustName = Boolean(setCustName?.checked);
-            const curCustPhone = Boolean(setCustNum?.checked);
-            const curLogoUrl = (logoUrlInput?.value || '').trim();
-            const curBannerUrl = (bannerUrlInput?.value || '').trim();
-
-            const isLogoDirty = Boolean(selectedWsLogoFile) || (curLogoUrl !== (savedSnapshot.logoUrl || ''));
-            const isBannerDirty = Boolean(selectedWsBannerFile) || (curBannerUrl !== (savedSnapshot.bannerUrl || ''));
-
+            const current = captureFormState();
             const isDirty = (
-                curVending !== Boolean(savedSnapshot.enableVending) ||
-                curSymbol !== (savedSnapshot.currencySymbol || '$') ||
-                curCode !== (savedSnapshot.currencyCode || 'EUR') ||
-                curCurrName !== (savedSnapshot.currencyName || '') ||
-                curCountry !== (savedSnapshot.country || '') ||
-                curRegion !== (savedSnapshot.region || '') ||
-                curName !== (savedSnapshot.name || '') ||
-                curTradeName !== (savedSnapshot.tradeName || '') ||
-                curIndustry !== (savedSnapshot.industry || 'General Commercial') ||
-                curTagline !== (savedSnapshot.tagline || '') ||
-                curWebsite !== (savedSnapshot.website || '') ||
-                curTaxId !== (savedSnapshot.taxId || '') ||
-                curEmail !== (savedSnapshot.email || '') ||
-                curPhone !== (savedSnapshot.phone || '') ||
-                curSupportPhone !== (savedSnapshot.supportPhone || '') ||
-                curAddress !== (savedSnapshot.address || '') ||
-                curShop !== (savedSnapshot.shopName || '') ||
-                curEndMsg !== (savedSnapshot.endMessage || '') ||
-                curCustName !== Boolean(savedSnapshot.customerName) ||
-                curCustPhone !== Boolean(savedSnapshot.customerNumber) ||
-                isLogoDirty ||
-                isBannerDirty
+                current.enableVending !== savedSnapshot.enableVending ||
+                current.currencySymbol !== savedSnapshot.currencySymbol ||
+                current.currencyCode !== savedSnapshot.currencyCode ||
+                current.currencyName !== savedSnapshot.currencyName ||
+                current.country !== savedSnapshot.country ||
+                current.region !== savedSnapshot.region ||
+                current.name !== savedSnapshot.name ||
+                current.tradeName !== savedSnapshot.tradeName ||
+                current.industry !== savedSnapshot.industry ||
+                current.tagline !== savedSnapshot.tagline ||
+                current.website !== savedSnapshot.website ||
+                current.taxId !== savedSnapshot.taxId ||
+                current.email !== savedSnapshot.email ||
+                current.phone !== savedSnapshot.phone ||
+                current.supportPhone !== savedSnapshot.supportPhone ||
+                current.address !== savedSnapshot.address ||
+                current.shopName !== savedSnapshot.shopName ||
+                current.endMessage !== savedSnapshot.endMessage ||
+                current.customerName !== savedSnapshot.customerName ||
+                current.customerNumber !== savedSnapshot.customerNumber ||
+                current.logoUrl !== savedSnapshot.logoUrl ||
+                current.bannerUrl !== savedSnapshot.bannerUrl ||
+                current.hasLogoFile ||
+                current.hasBannerFile
             );
 
-            // Save Buttons: strictly disabled and non-clickable unless isDirty is TRUE
+            // Save Buttons: always active and responsive; highlighted when unsaved changes exist
             const allSaveBtns = getAllSaveButtons();
             allSaveBtns.forEach(btn => {
-                btn.disabled = !isDirty;
+                btn.removeAttribute('disabled');
+                btn.style.setProperty('pointer-events', 'auto', 'important');
+                btn.style.setProperty('cursor', 'pointer', 'important');
                 if (isDirty) {
-                    btn.removeAttribute('disabled');
-                    btn.style.opacity = '1';
-                    btn.style.cursor = 'pointer';
-                    btn.style.pointerEvents = 'auto';
-                    btn.classList.remove('btn-disabled');
+                    btn.classList.add('btn-save-dirty');
+                    btn.classList.remove('btn-save-clean', 'btn-disabled');
+                    btn.style.setProperty('background', '#18181b', 'important');
+                    btn.style.setProperty('color', '#ffffff', 'important');
+                    btn.style.setProperty('border', '1.5px solid #18181b', 'important');
+                    btn.style.setProperty('opacity', '1', 'important');
+                    btn.style.setProperty('box-shadow', '0 4px 14px rgba(0, 0, 0, 0.25)', 'important');
                 } else {
-                    btn.setAttribute('disabled', 'true');
-                    btn.style.opacity = '0.45';
-                    btn.style.cursor = 'not-allowed';
-                    btn.style.pointerEvents = 'none';
-                    btn.classList.add('btn-disabled');
+                    btn.classList.remove('btn-save-dirty');
+                    btn.classList.add('btn-save-clean');
+                    btn.style.setProperty('background', '#ffffff', 'important');
+                    btn.style.setProperty('color', '#18181b', 'important');
+                    btn.style.setProperty('border', '1.5px solid #d4d4d8', 'important');
+                    btn.style.setProperty('opacity', '1', 'important');
+                    btn.style.setProperty('box-shadow', 'none', 'important');
                 }
             });
 
@@ -1753,29 +1516,6 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             }
             if (railUnsavedPill) {
                 railUnsavedPill.style.display = isDirty ? 'inline-block' : 'none';
-            }
-
-            if (btnHeaderSave) {
-                if (isDirty) {
-                    btnHeaderSave.style.boxShadow = '0 4px 18px rgba(245, 158, 11, 0.4)';
-                    btnHeaderSave.style.borderColor = '#f59e0b';
-                } else {
-                    btnHeaderSave.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.2)';
-                    btnHeaderSave.style.borderColor = '#18181b';
-                }
-            }
-
-            // Bottom Floating Bar: only reveals when unsaved changes exist
-            if (floatingBar) {
-                if (isDirty) {
-                    floatingBar.style.opacity = '1';
-                    floatingBar.style.pointerEvents = 'auto';
-                    floatingBar.style.transform = 'translateX(-50%) translateY(0)';
-                } else {
-                    floatingBar.style.opacity = '0';
-                    floatingBar.style.pointerEvents = 'none';
-                    floatingBar.style.transform = 'translateX(-50%) translateY(100px)';
-                }
             }
         };
 
@@ -1818,7 +1558,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             if (vendingInput) vendingInput.checked = savedSnapshot.enableVending;
             if (vendingLabel) {
                 vendingLabel.textContent = savedSnapshot.enableVending ? 'ENABLED' : 'DISABLED';
-                vendingLabel.style.color = savedSnapshot.enableVending ? '#059669' : 'var(--text-muted)';
+                vendingLabel.style.color = savedSnapshot.enableVending ? '#18181B' : 'var(--text-muted)';
             }
             updateCurrencyPreview(savedSnapshot.currencySymbol);
             updateTicketPreview();
@@ -1894,8 +1634,8 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             const chosenCountry = (countrySelect?.value || wsCountry || 'United Kingdom').trim();
             const chosenCountryCode = countrySelect?.selectedOptions?.[0]?.getAttribute('data-code') || wsCountryCode || 'GB';
             const chosenRegion = (regionInput?.value || wsRegion || '').trim();
-            const chosenCurrencyCode = (currencyCodeSelect?.value || wsCurrencyCode || 'EUR').toUpperCase();
-            const chosenCurrencyName = (currencyNameInput?.value || wsCurrencyName || 'Euro').trim();
+            const chosenCurrencyCode = (currencyCodeSelect?.value || wsCurrencyCode || 'USD').toUpperCase();
+            const chosenCurrencyName = (currencyNameInput?.value || wsCurrencyName || 'US Dollar').trim();
 
             const updatedPayload = {
                 enableVending: Boolean(vendingInput?.checked),
@@ -1929,54 +1669,39 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
 
             const resetSaveButtons = () => {
                 saveBtns.forEach(btn => {
-                    btn.innerHTML = `
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        <span class="btn-save-label">Save Settings</span>
-                    `;
+                    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg><span class="btn-save-label">Save Settings</span><span id="header-unsaved-dot" style="display:none; width:8px; height:8px; border-radius:50%; background:#18181b; border:1px solid #E4E4E7;"></span>`;
                 });
-                checkDirty();
             };
 
-            if (!updatedPayload.name) {
-                showAlert.warning("Workspace name cannot be empty.");
-                resetSaveButtons();
-                return;
-            }
-            if (!updatedPayload.email) {
-                showAlert.warning("Business email cannot be empty.");
-                resetSaveButtons();
-                return;
-            }
-
             try {
-                await settingsService.saveWorkspaceSettings(updatedPayload);
+                const settingsSvc = getSettingsService(workspaceId);
+                await settingsSvc.saveWorkspaceSettings(updatedPayload);
+
+                if (!isMock) {
+                    try {
+                        await firestoreService.updateWorkspaceSettings(workspaceId, updatedPayload);
+                    } catch (fsErr) {
+                        console.warn("Direct firestore update notice:", fsErr);
+                    }
+                }
+
+                // Cache in localStorage so local demo & offline always work flawlessly
+                try {
+                    localStorage.setItem('pricelister_mock_settings', JSON.stringify(updatedPayload));
+                    localStorage.setItem('pricelister_offline_settings_' + workspaceId, JSON.stringify(updatedPayload));
+                } catch (storeErr) {
+                    console.warn("Local cache save notice:", storeErr);
+                }
+
+                currentSettings = { ...currentSettings, ...updatedPayload };
                 selectedWsLogoFile = null;
                 selectedWsBannerFile = null;
-                savedSnapshot = { ...updatedPayload };
-                
-                if (logoUrlInput) logoUrlInput.value = finalLogoUrl;
-                if (bannerUrlInput) bannerUrlInput.value = finalBannerUrl;
-                
-                updateLogoDisplay(finalLogoUrl);
-                updateBannerDisplay(finalBannerUrl);
-                updateCurrencyPreview();
+
+                savedSnapshot = captureFormState();
                 checkDirty();
 
-                // Live UI sync for workspace logos, banners & names across app
-                if (window.__activeWorkspace) {
-                    window.__activeWorkspace.logoUrl = finalLogoUrl;
-                    window.__activeWorkspace.logo = finalLogoUrl;
-                    window.__activeWorkspace.bannerUrl = finalBannerUrl;
-                    window.__activeWorkspace.banner = finalBannerUrl;
-                    window.__activeWorkspace.name = updatedPayload.name;
-                    window.__activeWorkspace.tradeName = updatedPayload.tradeName;
-                    window.__activeWorkspace.industry = updatedPayload.industry;
-                    window.__activeWorkspace.country = updatedPayload.country;
-                    window.__activeWorkspace.region = updatedPayload.region;
-                    window.__activeWorkspace.currency = updatedPayload.currency;
-                    window.__activeWorkspace.currencySymbol = updatedPayload.currencySymbol;
-                }
-                const sidebarLogo = document.querySelector('.sidebar-logo');
+                // Live update sidebar logo if present
+                const sidebarLogo = document.querySelector('#sidebar-workspace-logo');
                 if (sidebarLogo && finalLogoUrl) {
                     sidebarLogo.src = finalLogoUrl;
                 }
@@ -1987,6 +1712,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 showAlert.error("Failed to save settings: " + (err.message || 'Unknown error'));
             } finally {
                 resetSaveButtons();
+                checkDirty();
             }
         };
 
@@ -2064,7 +1790,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             }
         });
 
-    } catch (err) {
+        } catch (err) {
         console.error("Render settings error:", err);
         showAlert.error("Failed to load workspace settings.");
     }

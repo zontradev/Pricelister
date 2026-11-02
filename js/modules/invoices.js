@@ -15,6 +15,16 @@ import { openInvoiceDetailsModal } from './invoiceDetailsModal.js';
 import { storageService } from '../../supabase/storage.js';
 import { draftManager } from '../services/draftManager.js';
 
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 export const renderInvoices = async (container, workspaceId, isBusinessInvoice) => {
     const invoiceService = getInvoiceService(workspaceId);
     const productService = getProductService(workspaceId);
@@ -176,127 +186,128 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <form id="invoice-form" style="display:flex; flex-direction:column; gap:1.75rem;">
                         
                         <!-- SECTION 1: ISSUER (YOUR BUSINESS) -->
-                        <div class="form-section" style="background: rgba(241, 245, 249, 0.4); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap:wrap; gap:0.5rem;">
-                                <div style="display:flex; align-items:center; gap:0.5rem;">
-                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:var(--primary, #2563eb); color:white; font-size:0.75rem; font-weight:800;">1</span>
-                                    <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Issuer (Your Business) <span style="color:var(--danger);">*</span></h4>
+                        <div class="form-section" style="background: #ffffff; border: 1.5px solid #d4d4d8; border-radius: 12px; padding: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap:wrap; gap:0.5rem;">
+                                <div style="display:flex; align-items:center; gap:0.6rem;">
+                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:#FAFAFA; border:1.5px solid #D4D4D8; color:#18181B; font-size:0.8rem; font-weight:800;">1</span>
+                                    <h4 style="margin: 0; color: #18181B; font-size: 0.92rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">Issuer (Your Business) <span style="color:#71717a;">*</span></h4>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:0.4rem;">
-                                    <button type="button" id="btn-browse-inv-business" class="btn btn-sm btn-primary" style="display:inline-flex; align-items:center; gap:5px; font-weight:700; font-size:0.78rem; padding:0.3rem 0.75rem;">
+                                    <button type="button" id="btn-browse-inv-business" class="btn btn-sm" style="display:inline-flex; align-items:center; gap:5px; font-weight:700; font-size:0.8rem; padding:0.35rem 0.8rem; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
                                         Browse Business
                                     </button>
-                                    <button type="button" id="btn-quick-add-business" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.3rem 0.65rem; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+                                    <button type="button" id="btn-quick-add-business" class="btn btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; display:inline-flex; align-items:center; gap:4px; font-weight:700; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>New Business
                                     </button>
                                 </div>
                             </div>
                             
-                            <div style="margin-bottom: 0.75rem; position:relative;">
+                            <!-- Search & Dropdown Wrapper (Hidden when contract card is active) -->
+                            <div id="wrap-search-inv-business" style="margin-bottom: 0.5rem; position:relative;">
                                 <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Select Business Profile (Search or Browse All)</label>
                                 <div style="display:flex; gap:0.5rem; align-items:center;">
                                     <div style="position:relative; flex:1;">
-                                        <input type="text" id="search-inv-business" class="form-control" placeholder="Search business by name, phone, email... or click Browse All" style="width:100%; padding:0.55rem 0.75rem; font-size:0.85rem;" autocomplete="off">
-                                        <div id="dropdown-inv-business" class="entity-search-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1000; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 10px 20px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto;">
+                                        <input type="text" id="search-inv-business" class="form-control" placeholder="Search business by name, phone, email... or click Browse All" style="width:100%; padding:0.55rem 0.75rem; font-size:0.85rem; border:1.5px solid #d4d4d8; border-radius:8px;" autocomplete="off">
+                                        <div id="dropdown-inv-business" class="entity-search-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1000; background:#ffffff; border:1.5px solid #d4d4d8; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto;">
                                             <!-- populated dynamically -->
                                         </div>
                                     </div>
-                                    <button type="button" id="btn-trigger-inv-business-drawer" class="btn btn-secondary" style="padding:0.55rem 0.95rem; font-weight:700; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;" title="Open drawer to view and search all businesses">
+                                    <button type="button" id="btn-trigger-inv-business-drawer" class="btn" style="padding:0.55rem 0.95rem; font-weight:700; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;" title="Open drawer to view and search all businesses">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
                                         Browse Drawer
                                     </button>
                                 </div>
-                                <select id="inv-business" class="form-control" style="width:100%; padding:0.6rem; font-weight:600; display:none;" required>
+                                <select id="inv-business" style="display:none !important;" required>
                                     <option value="">Loading businesses...</option>
                                 </select>
                             </div>
 
-                            <!-- BUSINESS PROFILE CARD PREVIEW (Round Avatar / SVG + Details) -->
-                            <div id="inv-business-preview-card" style="display:none; background:var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                            <!-- BUSINESS PROFILE CARD PREVIEW (Dedicated Full Contract Card) -->
+                            <div id="inv-business-preview-card" style="display:none;">
                                 <!-- rendered dynamically -->
                             </div>
                         </div>
 
                         <!-- SECTION 2: BILLED TO (SMART PROFILE SELECTOR: Customer Profile | Client Business | Custom Walk-in) -->
-                        <div class="form-section" style="background: rgba(241, 245, 249, 0.4); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap:wrap; gap:0.5rem;">
-                                <div style="display:flex; align-items:center; gap:0.5rem;">
-                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:var(--primary, #2563eb); color:white; font-size:0.75rem; font-weight:800;">2</span>
-                                    <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Billed To (Recipient) <span style="color:var(--danger);">*</span></h4>
+                        <div class="form-section" style="background: #ffffff; border: 1.5px solid #d4d4d8; border-radius: 12px; padding: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap:wrap; gap:0.5rem;">
+                                <div style="display:flex; align-items:center; gap:0.6rem;">
+                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:#FAFAFA; border:1.5px solid #D4D4D8; color:#18181B; font-size:0.8rem; font-weight:800;">2</span>
+                                    <h4 style="margin: 0; color: #18181B; font-size: 0.92rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">Billed To (Recipient) <span style="color:#71717a;">*</span></h4>
                                 </div>
                                 <div style="display:flex; gap:0.4rem; align-items:center;">
-                                    <button type="button" id="btn-browse-inv-recipient" class="btn btn-sm btn-primary" style="display:inline-flex; align-items:center; gap:5px; font-weight:700; font-size:0.78rem; padding:0.3rem 0.75rem;">
+                                    <button type="button" id="btn-browse-inv-recipient" class="btn btn-sm" style="display:inline-flex; align-items:center; gap:5px; font-weight:700; font-size:0.8rem; padding:0.35rem 0.8rem; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
                                         <span id="btn-browse-recipient-label">Browse Client</span>
                                     </button>
-                                    <button type="button" id="btn-quick-add-customer" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.3rem 0.65rem; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+                                    <button type="button" id="btn-quick-add-customer" class="btn btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; display:inline-flex; align-items:center; gap:4px; font-weight:700; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Customer
                                     </button>
-                                    <button type="button" id="btn-quick-add-client" class="btn btn-sm btn-secondary" style="font-size: 0.78rem; padding: 0.3rem 0.65rem; display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+                                    <button type="button" id="btn-quick-add-client" class="btn btn-sm" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; display:inline-flex; align-items:center; gap:4px; font-weight:700; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Client
                                     </button>
                                 </div>
                             </div>
 
-                            <!-- Smart Profile Switcher Pills -->
-                            <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; background: var(--bg-card); padding: 0.3rem; border-radius: 8px; border: 1px solid var(--border-color); width: fit-content;" id="recipient-type-pills">
-                                <button type="button" class="btn btn-sm ${recipientMode === 'customer' ? 'btn-primary' : 'btn-secondary'}" data-mode="customer" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 600; display:inline-flex; align-items:center; gap:5px;">
+                            <!-- Smart Profile Switcher Pills (Enterprise Grey & Black) -->
+                            <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; background: #fafafa; padding: 0.3rem; border-radius: 8px; border: 1.5px solid #d4d4d8; width: fit-content;" id="recipient-type-pills">
+                                <button type="button" class="btn btn-sm" data-mode="customer" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 700; display:inline-flex; align-items:center; gap:5px; border-radius:6px; ${recipientMode === 'customer' ? 'background:#18181B; color:#ffffff; border:1.5px solid #18181B;' : 'background:#ffffff; color:#18181B; border:1.5px solid #d4d4d8;'}">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                     Customer Profile
                                 </button>
-                                <button type="button" class="btn btn-sm ${recipientMode === 'client' ? 'btn-primary' : 'btn-secondary'}" data-mode="client" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 600; display:inline-flex; align-items:center; gap:5px;">
+                                <button type="button" class="btn btn-sm" data-mode="client" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 700; display:inline-flex; align-items:center; gap:5px; border-radius:6px; ${recipientMode === 'client' ? 'background:#18181B; color:#ffffff; border:1.5px solid #18181B;' : 'background:#ffffff; color:#18181B; border:1.5px solid #d4d4d8;'}">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
                                     Client Business
                                 </button>
-                                <button type="button" class="btn btn-sm ${recipientMode === 'walkin' ? 'btn-primary' : 'btn-secondary'}" data-mode="walkin" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 600; display:inline-flex; align-items:center; gap:5px;">
+                                <button type="button" class="btn btn-sm" data-mode="walkin" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 700; display:inline-flex; align-items:center; gap:5px; border-radius:6px; ${recipientMode === 'walkin' ? 'background:#18181B; color:#ffffff; border:1.5px solid #18181B;' : 'background:#ffffff; color:#18181B; border:1.5px solid #d4d4d8;'}">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                     Custom / Walk-in
                                 </button>
                             </div>
 
-                            <!-- Customer Profile Selector -->
+                            <!-- Customer Profile Selector Wrapper -->
                             <div id="wrap-recipient-customer" style="position:relative; ${recipientMode === 'customer' ? 'display:block;' : 'display:none;'}">
                                 <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Select Customer Profile (Search or Browse All)</label>
                                 <div style="display:flex; gap:0.5rem; align-items:center;">
                                     <div style="position:relative; flex:1;">
-                                        <input type="text" id="search-inv-customer" class="form-control" placeholder="Search customer by name, phone, email... or click Browse All" style="width:100%; padding:0.55rem 0.75rem; font-size:0.85rem;" autocomplete="off">
-                                        <div id="dropdown-inv-customer" class="entity-search-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1000; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 10px 20px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto;">
+                                        <input type="text" id="search-inv-customer" class="form-control" placeholder="Search customer by name, phone, email... or click Browse All" style="width:100%; padding:0.55rem 0.75rem; font-size:0.85rem; border:1.5px solid #d4d4d8; border-radius:8px;" autocomplete="off">
+                                        <div id="dropdown-inv-customer" class="entity-search-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1000; background:#ffffff; border:1.5px solid #d4d4d8; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto;">
                                             <!-- populated dynamically -->
                                         </div>
                                     </div>
-                                    <button type="button" id="btn-trigger-inv-customer-drawer" class="btn btn-secondary" style="padding:0.55rem 0.95rem; font-weight:700; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;" title="Open drawer to view and search all customers">
+                                    <button type="button" id="btn-trigger-inv-customer-drawer" class="btn" style="padding:0.55rem 0.95rem; font-weight:700; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;" title="Open drawer to view and search all customers">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
                                         Browse Drawer
                                     </button>
                                 </div>
-                                <select id="inv-customer" class="form-control" style="width:100%; padding:0.6rem; font-weight:600; display:none;">
+                                <select id="inv-customer" style="display:none !important;">
                                     <option value="">Select saved customer...</option>
                                 </select>
                             </div>
 
-                            <!-- Client Profile Selector -->
+                            <!-- Client Profile Selector Wrapper -->
                             <div id="wrap-recipient-client" style="position:relative; ${recipientMode === 'client' ? 'display:block;' : 'display:none;'}">
                                 <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Select Client Profile (Search or Browse All)</label>
                                 <div style="display:flex; gap:0.5rem; align-items:center;">
                                     <div style="position:relative; flex:1;">
-                                        <input type="text" id="search-inv-client" class="form-control" placeholder="Search client by name, phone, email... or click Browse All" style="width:100%; padding:0.55rem 0.75rem; font-size:0.85rem;" autocomplete="off">
-                                        <div id="dropdown-inv-client" class="entity-search-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1000; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 10px 20px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto;">
+                                        <input type="text" id="search-inv-client" class="form-control" placeholder="Search client by name, phone, email... or click Browse All" style="width:100%; padding:0.55rem 0.75rem; font-size:0.85rem; border:1.5px solid #d4d4d8; border-radius:8px;" autocomplete="off">
+                                        <div id="dropdown-inv-client" class="entity-search-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1000; background:#ffffff; border:1.5px solid #d4d4d8; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto;">
                                             <!-- populated dynamically -->
                                         </div>
                                     </div>
-                                    <button type="button" id="btn-trigger-inv-client-drawer" class="btn btn-secondary" style="padding:0.55rem 0.95rem; font-weight:700; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;" title="Open drawer to view and search all clients">
+                                    <button type="button" id="btn-trigger-inv-client-drawer" class="btn" style="padding:0.55rem 0.95rem; font-weight:700; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;" title="Open drawer to view and search all clients">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
                                         Browse Drawer
                                     </button>
                                 </div>
-                                <select id="inv-client" class="form-control" style="width:100%; padding:0.6rem; font-weight:600; display:none;">
+                                <select id="inv-client" style="display:none !important;">
                                     <option value="">Select saved client...</option>
                                 </select>
                             </div>
 
-                            <!-- RECIPIENT PROFILE CARD PREVIEW (Round Avatar / SVG + Details) -->
-                            <div id="inv-recipient-preview-card" style="display:none; margin-top: 0.75rem; background:var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                            <!-- RECIPIENT PROFILE CARD PREVIEW (Dedicated Full Contract Card) -->
+                            <div id="inv-recipient-preview-card" style="display:none; margin-top: 0.5rem;">
                                 <!-- rendered dynamically -->
                             </div>
 
@@ -305,19 +316,19 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.75rem;">
                                     <div>
                                         <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Recipient / Customer Name <span style="color:var(--danger);">*</span></label>
-                                        <input type="text" id="inv-customer-name" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. John Doe or Acme Corp">
+                                        <input type="text" id="inv-customer-name" class="form-control" style="width:100%; padding:0.55rem; border:1.5px solid #d4d4d8; border-radius:8px;" placeholder="e.g. John Doe or Acme Corp">
                                     </div>
                                     <div>
                                         <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Phone Number</label>
-                                        <input type="text" id="inv-customer-phone" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. +123456789">
+                                        <input type="text" id="inv-customer-phone" class="form-control" style="width:100%; padding:0.55rem; border:1.5px solid #d4d4d8; border-radius:8px;" placeholder="e.g. +123456789">
                                     </div>
                                     <div>
                                         <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Email Address</label>
-                                        <input type="email" id="inv-customer-email" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. client@example.com">
+                                        <input type="email" id="inv-customer-email" class="form-control" style="width:100%; padding:0.55rem; border:1.5px solid #d4d4d8; border-radius:8px;" placeholder="e.g. client@example.com">
                                     </div>
                                     <div>
                                         <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Address</label>
-                                        <input type="text" id="inv-customer-address" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. 123 Main St, City">
+                                        <input type="text" id="inv-customer-address" class="form-control" style="width:100%; padding:0.55rem; border:1.5px solid #d4d4d8; border-radius:8px;" placeholder="e.g. 123 Main St, City">
                                     </div>
                                 </div>
                             </div>
@@ -326,7 +337,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <!-- SECTION 3: INVOICE IDENTIFICATION & METADATA -->
                         <div class="form-section">
                             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0.75rem;">
-                                <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:#e11d48; color:white; font-size:0.75rem; font-weight:800;">3</span>
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:#FAFAFA; border:1.5px solid #D4D4D8; color:#18181B; font-size:0.8rem; font-weight:800;">3</span>
                                 <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Invoice Details</h4>
                             </div>
                             
@@ -342,7 +353,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Re-roll
                                         </button>
                                     </div>
-                                    <input type="text" id="inv-number-input" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; color: #e11d48;" required>
+                                    <input type="text" id="inv-number-input" class="form-control" style="width:100%; padding:0.55rem; font-family: monospace; font-weight: 700; color: #18181B;" required>
                                 </div>
                                 <div>
                                     <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block;">Payment Status</label>
@@ -359,13 +370,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <div class="form-section">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
                                 <div style="display:flex; align-items:center; gap:0.5rem;">
-                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:var(--theme-primary, #e11d48); color:white; font-size:0.75rem; font-weight:800;">4</span>
+                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:#FAFAFA; border:1.5px solid #D4D4D8; color:#18181B; font-size:0.8rem; font-weight:800;">4</span>
                                     <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Line Items <span style="color:var(--danger);">*</span></h4>
                                 </div>
                                 <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
                                     <button type="button" id="btn-open-scanner" class="btn" style="font-size: 0.82rem; padding: 0.4rem 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.45rem; background:#ffffff; color:#0f172a; border:1.5px solid #cbd5e1; border-radius:8px;">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                                        <span>📷 / 🔍 Scanner</span>
+                                        <span>Scanner</span>
                                     </button>
                                     <button type="button" id="btn-toggle-picker" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.45rem;">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
@@ -400,11 +411,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 <!-- Picker Footer Actions -->
                                 <div class="picker-footer">
                                     <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                        Selected: <strong id="picker-count-disp" style="color: #e11d48;">0</strong> products (<strong id="picker-units-disp">0</strong> units) &bull; Est. Total: <strong id="picker-subtotal-disp" style="color: var(--text-primary);">${formatCurrency(0)}</strong>
+                                        Selected: <strong id="picker-count-disp" style="color: #18181B;">0</strong> products (<strong id="picker-units-disp">0</strong> units) &bull; Est. Total: <strong id="picker-subtotal-disp" style="color: var(--text-primary);">${formatCurrency(0)}</strong>
                                     </div>
                                     <div style="display: flex; gap: 0.5rem;">
                                         <button type="button" id="picker-close-btn" class="btn btn-secondary">Hide Picker</button>
-                                        <button type="button" id="picker-add-to-inv-btn" class="btn btn-primary" style="background:#e11d48; border-color:#e11d48;">Add Selected to Invoice</button>
+                                        <button type="button" id="picker-add-to-inv-btn" class="btn btn-primary" style="background:#18181B; border-color:#18181B;">Add Selected to Invoice</button>
                                     </div>
                                 </div>
                             </div>
@@ -433,7 +444,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <!-- SECTION 5: CHARGES & ADJUSTMENTS (Discount, Additional Cut, Tax, Shipping - for both Invoice types) -->
                         <div class="form-section" style="background: rgba(241, 245, 249, 0.4); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
                             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0.85rem;">
-                                <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:#e11d48; color:white; font-size:0.75rem; font-weight:800;">5</span>
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:#FAFAFA; border:1.5px solid #D4D4D8; color:#18181B; font-size:0.8rem; font-weight:800;">5</span>
                                 <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Discounts, Tax & Shipping Adjustments</h4>
                             </div>
                             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:0.85rem;">
@@ -447,7 +458,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 <div>
                                     <label style="font-weight: 600; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: var(--text-secondary);">Additional Cut / Surcharge (${getAppCurrencySymbol()})</label>
                                     <div style="display:flex; gap:4px; align-items:center;">
-                                        <button type="button" id="inv-add-cut-sign-btn" data-sign="-" class="btn" style="padding:0.45rem 0.75rem; font-weight:800; font-size:1.05rem; line-height:1; background:#ffffff; color:#e11d48; border:1.5px solid #e11d48; border-radius:8px;" title="Click to shift between Cut (-) and Surcharge (+)">-</button>
+                                        <button type="button" id="inv-add-cut-sign-btn" data-sign="-" class="btn" style="padding:0.45rem 0.75rem; font-weight:800; font-size:1.05rem; line-height:1; background:#ffffff; color:#18181B; border:1.5px solid #18181B; border-radius:8px;" title="Click to shift between Cut (-) and Surcharge (+)">-</button>
                                         <div style="position:relative; flex:1;">
                                             <input type="number" id="inv-add-cut" value="0" min="0" step="0.01" class="form-control" style="width:100%; padding:0.55rem 0.65rem 0.55rem 1.5rem; font-weight:600;">
                                             <span style="position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:0.8rem; color:var(--text-muted); font-weight:700;">${getAppCurrencySymbol()}</span>
@@ -474,7 +485,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <!-- SECTION 6: NOTE / PAYMENT TERMS -->
                         <div class="form-section">
                             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom: 0.5rem;">
-                                <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:#e11d48; color:white; font-size:0.75rem; font-weight:800;">6</span>
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:6px; background:#FAFAFA; border:1.5px solid #D4D4D8; color:#18181B; font-size:0.8rem; font-weight:800;">6</span>
                                 <h4 style="margin: 0; color: var(--text-primary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Notes & Terms</h4>
                             </div>
                             <textarea id="inv-note" class="form-control" style="width:100%; padding:0.6rem; min-height: 70px;" placeholder="Optional payment terms, delivery instructions, or bank details..."></textarea>
@@ -484,10 +495,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
                 <!-- RIGHT COLUMN: STICKY LIVE FINANCIAL SUMMARY CARD -->
                 <div style="position: sticky; top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-                    <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); border: 1px solid var(--border-color);">
-                        <h4 style="margin: 0 0 1rem 0; color: var(--text-primary); font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; justify-content: space-between;">
+                    <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); border: 1.5px solid #d4d4d8; background: #ffffff;">
+                        <h4 style="margin: 0 0 1rem 0; color: #18181B; font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; justify-content: space-between;">
                             <span>Financial Summary</span>
-                            <span id="summary-items-count" style="font-size: 0.78rem; font-weight: 600; background: rgba(225, 29, 72, 0.1); color: #e11d48; padding: 0.2rem 0.55rem; border-radius: 9999px;">0 items</span>
+                            <span id="summary-items-count" class="badge" style="font-size: 0.75rem; font-weight: 700; background: #FAFAFA; border: 1.5px solid #D4D4D8; color: #18181B; padding: 0.22rem 0.65rem; border-radius: 6px;">0 products (0 units)</span>
                         </h4>
 
                         <div id="inv-live-totals" style="font-size: 0.9rem; line-height: 1.75; display: flex; flex-direction: column; gap: 0.35rem;">
@@ -495,20 +506,20 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         </div>
 
                         <!-- Action Buttons -->
-                        <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
-                            <button type="button" class="btn btn-primary" id="inv-submit-btn" style="width: 100%; padding: 0.75rem 1rem; font-weight: 700; font-size: 0.95rem; background: #ffffff !important; border: 1.5px solid #cbd5e1 !important; color: #0f172a !important; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1.25rem; border-top: 1.5px solid #e4e4e7; padding-top: 1.25rem;">
+                            <button type="button" class="btn" id="inv-submit-btn" style="width: 100%; padding: 0.75rem 1rem; font-weight: 700; font-size: 0.95rem; background: #18181B !important; border: 1.5px solid #18181B !important; color: #FFFFFF !important; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                                 Save Invoice
                             </button>
-                            <button type="button" class="btn btn-secondary" id="inv-cancel-btn" style="width: 100%; padding: 0.6rem 1rem; font-weight: 600; font-size: 0.85rem;">
+                            <button type="button" class="btn btn-secondary" id="inv-cancel-btn" style="width: 100%; padding: 0.6rem 1rem; font-weight: 600; font-size: 0.85rem; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
                                 Cancel & Discard
                             </button>
                         </div>
                     </div>
 
                     <!-- Quick tips card -->
-                    <div style="background: rgba(241, 245, 249, 0.6); border: 1px dashed var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
-                        <strong style="color: var(--text-primary); display:flex; align-items:center; gap:4px; margin-bottom: 2px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    <div style="background: #fafafa; border: 1.5px dashed #d4d4d8; border-radius: 10px; padding: 0.85rem 1rem; font-size: 0.78rem; color: #52525b; line-height: 1.5;">
+                        <strong style="color: #18181B; display:flex; align-items:center; gap:4px; margin-bottom: 2px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                             Financial Calculation Note
                         </strong>
                         Tax % is calculated on the subtotal after subtracting discounts and additional cuts. Shipping is added directly to grand total.
@@ -517,62 +528,63 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             </div>
         </div>
 
-        <!-- ================= INVOICE ENTITY SLIDE-OVER DRAWER (Find Business & Find Clients) ================= -->
-        <div id="inv-entity-drawer-overlay" class="app-drawer-overlay" style="display:none;"></div>
-        <div id="inv-entity-drawer" class="app-drawer invoice-entity-drawer" style="display:none; width:520px; max-width:95vw;">
-            <div class="app-drawer-header" style="padding:1.15rem 1.4rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-color); background:var(--bg-card);">
-                <div style="display:flex; align-items:center; gap:0.65rem;">
-                    <div id="inv-drawer-icon" style="width:34px; height:34px; border-radius:8px; background:rgba(37,99,235,0.1); color:var(--primary, #2563eb); display:flex; align-items:center; justify-content:center;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+        <!-- ================= INVOICE ENTITY MODAL (Find Business & Find Contracts - Floating Middle) ================= -->
+        <div id="inv-entity-drawer-overlay" class="invoice-entity-modal-overlay" style="display:none;">
+            <div id="inv-entity-drawer" class="invoice-entity-drawer floating-middle-modal" role="dialog" aria-modal="true" style="display:none;">
+                <div class="app-drawer-header" style="padding:1.15rem 1.4rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1.5px solid #e4e4e7; background:#fafafa;">
+                    <div style="display:flex; align-items:center; gap:0.65rem;">
+                        <div id="inv-drawer-icon" style="width:34px; height:34px; border-radius:8px; background:#f4f4f5; color:#18181B; border:1px solid #d4d4d8; display:flex; align-items:center; justify-content:center;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+                        </div>
+                        <div>
+                            <h3 id="inv-drawer-title" class="app-drawer-title" style="font-size:1.05rem; font-weight:800; margin:0; color:#18181b;">Find Business</h3>
+                            <div id="inv-drawer-count" style="font-size:0.75rem; color:#71717a; margin-top:2px;">Showing all entries</div>
+                        </div>
                     </div>
-                    <div>
-                        <h3 id="inv-drawer-title" class="app-drawer-title" style="font-size:1.05rem; font-weight:800; margin:0; color:var(--text-primary);">Find Business</h3>
-                        <div id="inv-drawer-count" style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">Showing all entries</div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <button type="button" id="inv-drawer-btn-quick-add" class="btn btn-sm" style="font-size:0.78rem; font-weight:700; padding:0.35rem 0.75rem; display:inline-flex; align-items:center; gap:4px; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                            <span id="inv-drawer-btn-quick-add-text">Add New</span>
+                        </button>
+                        <button type="button" id="inv-drawer-close-btn" class="app-drawer-close" aria-label="Close Modal" title="Close (Esc)" style="border:1.5px solid #d4d4d8; border-radius:8px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:#ffffff; color:#18181b; cursor:pointer;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.4rem;">
-                    <button type="button" id="inv-drawer-btn-quick-add" class="btn btn-sm btn-secondary" style="font-size:0.75rem; font-weight:700; padding:0.35rem 0.65rem; display:inline-flex; align-items:center; gap:4px;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                        <span id="inv-drawer-btn-quick-add-text">Add New</span>
-                    </button>
-                    <button type="button" id="inv-drawer-close-btn" class="app-drawer-close" aria-label="Close Drawer" title="Close (Esc)">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-            </div>
 
-            <!-- SEARCH BAR & TOGGLES AT TOP OF DRAWER -->
-            <div style="padding:0.9rem 1.4rem; background:var(--bg-main, #f5f7fa); border-bottom:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.6rem;">
-                
-                <!-- Client - Customer toggle pills (shown when in Find Clients mode) -->
-                <div id="inv-drawer-client-toggle-wrap" style="display:none; gap:0.35rem; background:var(--bg-card); padding:0.25rem; border-radius:8px; border:1px solid var(--border-color); width:fit-content;">
-                    <button type="button" id="inv-drawer-tab-clients" class="btn btn-sm btn-primary" style="padding:0.25rem 0.75rem; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-                        Clients
-                    </button>
-                    <button type="button" id="inv-drawer-tab-customers" class="btn btn-sm btn-secondary" style="padding:0.25rem 0.75rem; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        Customers
-                    </button>
-                </div>
+                <!-- SEARCH BAR & TOGGLES AT TOP OF DRAWER -->
+                <div style="padding:0.9rem 1.4rem; background:#ffffff; border-bottom:1.5px solid #e4e4e7; display:flex; flex-direction:column; gap:0.6rem;">
+                    
+                    <!-- Client - Customer toggle pills (shown when in Find Clients mode) -->
+                    <div id="inv-drawer-client-toggle-wrap" style="display:none; gap:0.35rem; background:#fafafa; padding:0.25rem; border-radius:8px; border:1.5px solid #d4d4d8; width:fit-content;">
+                        <button type="button" id="inv-drawer-tab-clients" class="btn btn-sm" style="padding:0.3rem 0.85rem; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; border-radius:6px; background:#18181B; color:#ffffff; border:1.5px solid #18181B;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                            Clients
+                        </button>
+                        <button type="button" id="inv-drawer-tab-customers" class="btn btn-sm" style="padding:0.3rem 0.85rem; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; border-radius:6px; background:#ffffff; color:#18181B; border:1.5px solid #d4d4d8;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            Customers
+                        </button>
+                    </div>
 
-                <!-- Search Input -->
-                <div style="position:relative;">
-                    <svg style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="inv-drawer-search-input" class="form-control" placeholder="Search by name, phone, email, address..." style="width:100%; padding:0.6rem 2.2rem 0.6rem 2.4rem; font-size:0.88rem; border-radius:8px;" autocomplete="off">
-                    <button type="button" id="inv-drawer-search-clear" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.85rem; display:none;">✕</button>
+                    <!-- Search Input -->
+                    <div style="position:relative;">
+                        <svg style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#71717a; pointer-events:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" id="inv-drawer-search-input" class="form-control" placeholder="Search by name, phone, email, address..." style="width:100%; padding:0.6rem 2.2rem 0.6rem 2.4rem; font-size:0.88rem; border-radius:8px; border:1.5px solid #d4d4d8;" autocomplete="off">
+                        <button type="button" id="inv-drawer-search-clear" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#71717a; cursor:pointer; font-size:0.85rem; display:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                    </div>
+
+                    <!-- Primary Business rule banner (shown when in Find Business mode) -->
+                    <div id="inv-drawer-primary-note" style="display:none; font-size:0.75rem; color:#52525b; background:#fafafa; border:1.5px solid #d4d4d8; border-radius:6px; padding:0.45rem 0.75rem; align-items:center; gap:6px;">
+                        <span style="font-size:0.85rem; color:#18181b;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>
+                        <span><strong>Primary Business:</strong> Only one business can be primary at a time. The primary business is automatically preselected for all new invoices.</span>
+                    </div>
                 </div>
 
-                <!-- Primary Business rule banner (shown when in Find Business mode) -->
-                <div id="inv-drawer-primary-note" style="display:none; font-size:0.75rem; color:var(--text-secondary); background:rgba(37,99,235,0.06); border:1px solid rgba(37,99,235,0.18); border-radius:6px; padding:0.35rem 0.65rem; align-items:center; gap:5px;">
-                    <span style="font-size:0.85rem;">⭐</span>
-                    <span><strong>Primary Business:</strong> Only one business can be primary at a time. The primary business is automatically preselected for all new invoices.</span>
+                <!-- DRAWER LIST CONTAINER (Shows all items with round logo, name, number, email) -->
+                <div class="app-drawer-body" id="inv-drawer-list" style="padding:1.25rem 1.4rem; overflow-y:auto; flex:1 1 auto; min-height:220px; display:flex; flex-direction:column; gap:0.75rem; max-height:58vh;">
+                    <!-- Dynamically populated -->
                 </div>
-            </div>
-
-            <!-- DRAWER LIST CONTAINER (Shows all items with round logo, name, number, email) -->
-            <div class="app-drawer-body" id="inv-drawer-list" style="padding:1.25rem 1.4rem; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:0.75rem;">
-                <!-- Dynamically populated -->
             </div>
         </div>
 
@@ -587,7 +599,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     
                     <!-- Avatar Upload / URL with Live Round Preview & Drag-Drop -->
                     <div id="qa-avatar-dropzone" style="display:flex; align-items:center; gap:1rem; background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1.5px dashed var(--border-color); cursor:pointer; transition:all 0.2s ease;" title="Click or Drag & Drop photo here">
-                        <div id="qa-avatar-preview" style="width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #e11d48, #be123c); display:flex; align-items:center; justify-content:center; color:white; font-size:1.5rem; font-weight:700; flex-shrink:0; overflow:hidden; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.1); pointer-events:none;">
+                        <div id="qa-avatar-preview" style="width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #18181B, #27272A); display:flex; align-items:center; justify-content:center; color:white; font-size:1.5rem; font-weight:700; flex-shrink:0; overflow:hidden; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.1); pointer-events:none;">
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
                         </div>
                         <div style="flex:1;">
@@ -646,7 +658,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
                     <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:0.5rem; border-top:1px solid var(--border-color); padding-top:1rem;">
                         <button type="button" id="btn-cancel-quick-add" class="btn btn-secondary">Cancel</button>
-                        <button type="submit" id="btn-save-quick-add" class="btn btn-primary" style="background:#e11d48; border-color:#e11d48;">Save & Select</button>
+                        <button type="submit" id="btn-save-quick-add" class="btn btn-primary" style="background:#18181B; border-color:#18181B;">Save & Select</button>
                     </div>
                 </form>
             </div>
@@ -657,7 +669,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             <div class="card" style="background:#ffffff; width:100%; max-width:520px; border-radius:16px; border:1px solid var(--border-color); box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); overflow:hidden;">
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.25rem; border-bottom:1px solid var(--border-color); background:var(--surface-50);">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <div style="width:32px; height:32px; border-radius:8px; background:var(--theme-subtle, rgba(225,29,72,0.1)); color:var(--theme-primary, #e11d48); display:flex; align-items:center; justify-content:center;">
+                        <div style="width:32px; height:32px; border-radius:8px; background:var(--theme-subtle, rgba(225,29,72,0.1)); color:var(--theme-primary, #18181B); display:flex; align-items:center; justify-content:center;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
                         </div>
                         <div>
@@ -672,8 +684,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <!-- Camera Video Stream Area with Viewfinder Overlay -->
                     <div style="position:relative; width:100%; height:230px; background:#0f172a; border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
                         <video id="inv-scanner-video" playsinline muted style="width:100%; height:100%; object-fit:cover;"></video>
-                        <div id="inv-scanner-reticle" style="position:absolute; width:180px; height:120px; border:2px dashed var(--theme-primary, #e11d48); border-radius:10px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,0.35);">
-                            <div style="position:absolute; top:50%; left:0; width:100%; height:2px; background:var(--theme-primary, #e11d48); opacity:0.8; transform:translateY(-50%);"></div>
+                        <div id="inv-scanner-reticle" style="position:absolute; width:180px; height:120px; border:2px dashed var(--theme-primary, #18181B); border-radius:10px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,0.35);">
+                            <div style="position:absolute; top:50%; left:0; width:100%; height:2px; background:var(--theme-primary, #18181B); opacity:0.8; transform:translateY(-50%);"></div>
                         </div>
                         <div id="inv-scanner-cam-status" style="position:absolute; bottom:8px; left:8px; right:8px; text-align:center; font-size:0.75rem; color:#ffffff; background:rgba(0,0,0,0.65); padding:4px 8px; border-radius:6px;">
                             Camera stream active &bull; Position barcode in box
@@ -1024,161 +1036,200 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     if (btnBackToList) btnBackToList.addEventListener('click', handleCloseEditor);
     if (btnCancel) btnCancel.addEventListener('click', handleCloseEditor);
 
-    // Business Profile Preview Card Builder (Round Avatar / SVG + details)
+    // Business Profile Preview Card Builder (Dedicated Card with all details)
     const updateBusinessPreview = () => {
-        const busSelect = container.querySelector('#inv-business');
-        const previewEl = container.querySelector('#inv-business-preview-card');
-        if (!previewEl || !busSelect) return;
+        try {
+            const busSelect = container.querySelector('#inv-business');
+            const previewEl = container.querySelector('#inv-business-preview-card');
+            const searchWrap = container.querySelector('#wrap-search-inv-business');
+            if (!previewEl || !busSelect) return;
 
-        const b = allBusinesses.find(x => x.id === busSelect.value);
-        const searchBusInput = container.querySelector('#search-inv-business');
-        if (searchBusInput && b) searchBusInput.value = b.name || '';
+            const b = allBusinesses.find(x => x.id === busSelect.value);
+            const searchBusInput = container.querySelector('#search-inv-business');
+            if (searchBusInput && b) searchBusInput.value = b.name || '';
 
-        if (b) {
-            previewEl.style.display = 'block';
-            const imgUrl = b.imageUrl || b.imageUri;
-            const avatarHtml = imgUrl
-                ? `<img src="${imgUrl}" alt="${escapeHtml(b.name)}" style="width:48px; height:48px; border-radius:10px; object-fit:cover; border:2px solid var(--primary, #2563eb); box-shadow:0 2px 6px rgba(0,0,0,0.08); flex-shrink:0;">`
-                : `<div style="width:48px; height:48px; border-radius:10px; background:rgba(37,99,235,0.1); color:var(--primary, #2563eb); display:flex; align-items:center; justify-content:center; font-size:1.25rem; font-weight:700; border:1px solid rgba(37,99,235,0.25); flex-shrink:0;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 10h.01M6 14h.01M6 18h.01M10 10h.01M10 14h.01M10 18h.01M14 10h.01M14 14h.01M14 18h.01M18 10h.01M18 14h.01M18 18h.01M6 3h12v4H6z"/></svg>
-                   </div>`;
+            if (b) {
+                // Hide search input wrapper, show dedicated contract card
+                if (searchWrap) searchWrap.style.display = 'none';
+                previewEl.style.display = 'block';
 
-            previewEl.innerHTML = `
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
-                    <div style="display:flex; align-items:center; gap:0.9rem; flex:1; min-width:240px;">
-                        ${avatarHtml}
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:0.98rem; color:var(--text-primary); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                                <span>${escapeHtml(b.name)}</span>
-                                <span style="font-size:0.7rem; background:rgba(37,99,235,0.1); color:var(--primary, #2563eb); padding:1px 6px; border-radius:4px; font-weight:700;">Issuer</span>
-                                ${b.isPrimary ? `<span style="font-size:0.7rem; background:rgba(37,99,235,0.12); color:#2563eb; border:1px solid rgba(37,99,235,0.3); padding:1px 7px; border-radius:9999px; font-weight:700;">⭐ Primary Business (Default)</span>` : ''}
-                            </div>
-                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px; display:flex; flex-wrap:wrap; gap:0.65rem;">
-                                ${b.phone ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>${escapeHtml(b.phone)}</span>` : ''}
-                                ${b.email ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>${escapeHtml(b.email)}</span>` : ''}
-                                ${b.address ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(b.address)}</span>` : ''}
+                const imgUrl = b.imageUrl || b.imageUri;
+                const initials = (b.name || 'B').substring(0, 2).toUpperCase();
+                const avatarHtml = imgUrl
+                    ? `<img src="${imgUrl}" alt="${escapeHtml(b.name)}" style="width:52px; height:52px; border-radius:10px; object-fit:cover; border:1.5px solid #d4d4d8; box-shadow:0 2px 6px rgba(0,0,0,0.06); flex-shrink:0;">`
+                    : `<div style="width:52px; height:52px; border-radius:10px; background:#fafafa; color:#18181B; display:flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:800; border:1.5px solid #d4d4d8; flex-shrink:0;">
+                        ${initials}
+                       </div>`;
+
+                previewEl.innerHTML = `
+                    <div style="background:#ffffff; border:1.5px solid #d4d4d8; border-radius:12px; padding:1.1rem 1.25rem; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:1rem; flex:1; min-width:260px;">
+                            ${avatarHtml}
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.35rem;">
+                                    <span style="font-weight:800; font-size:1.05rem; color:#18181B; line-height:1.2;">${escapeHtml(b.name)}</span>
+                                    <span style="font-size:0.72rem; background:#fafafa; border:1.5px solid #d4d4d8; color:#18181B; padding:2px 8px; border-radius:6px; font-weight:700;">Issuer (Your Business)</span>
+                                    ${b.isPrimary ? `<span style="font-size:0.72rem; background:#fafafa; border:1.5px solid #d4d4d8; color:#18181B; padding:2px 8px; border-radius:6px; font-weight:700;">Primary Business</span>` : ''}
+                                </div>
+                                <div style="font-size:0.82rem; color:#52525b; display:flex; flex-wrap:wrap; gap:0.85rem; margin-top:0.25rem;">
+                                    ${b.phone ? `<span style="display:inline-flex; align-items:center; gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>${escapeHtml(b.phone)}</span>` : ''}
+                                    ${b.email ? `<span style="display:inline-flex; align-items:center; gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>${escapeHtml(b.email)}</span>` : ''}
+                                    ${(b.taxId || b.tin || b.vat) ? `<span style="display:inline-flex; align-items:center; gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>Tax/VAT: ${escapeHtml(b.taxId || b.tin || b.vat)}</span>` : ''}
+                                </div>
+                                ${b.address ? `<div style="font-size:0.82rem; color:#52525b; margin-top:0.35rem; display:inline-flex; align-items:center; gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(b.address)}</div>` : ''}
                             </div>
                         </div>
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+                            <button type="button" id="btn-change-inv-business" class="btn btn-sm" style="font-size:0.8rem; font-weight:700; padding:0.4rem 0.85rem; display:inline-flex; align-items:center; gap:5px; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+                                Change Business
+                            </button>
+                            <button type="button" id="btn-clear-inv-business" class="btn btn-sm" style="font-size:0.8rem; padding:0.4rem 0.65rem; background:#ffffff; color:#71717a; border:1.5px solid #d4d4d8; border-radius:8px;" title="Clear Selection">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:0.4rem;">
-                        <button type="button" id="btn-change-inv-business" class="btn btn-sm btn-secondary" style="font-size:0.78rem; font-weight:700; padding:0.35rem 0.75rem; display:inline-flex; align-items:center; gap:4px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
-                            Change Business
-                        </button>
-                        <button type="button" id="btn-clear-inv-business" class="btn btn-sm btn-outline" style="font-size:0.75rem; padding:0.35rem 0.6rem; color:var(--text-muted);" title="Clear selection">✕</button>
-                    </div>
-                </div>
-            `;
+                `;
 
-            previewEl.querySelector('#btn-change-inv-business')?.addEventListener('click', () => {
-                openEntityDrawer('business');
-            });
-            previewEl.querySelector('#btn-clear-inv-business')?.addEventListener('click', () => {
-                busSelect.value = '';
-                if (searchBusInput) searchBusInput.value = '';
-                updateBusinessPreview();
-            });
-        } else {
-            previewEl.style.display = 'none';
-            previewEl.innerHTML = '';
+                previewEl.querySelector('#btn-change-inv-business')?.addEventListener('click', () => {
+                    openEntityDrawer('business');
+                });
+                previewEl.querySelector('#btn-clear-inv-business')?.addEventListener('click', () => {
+                    busSelect.value = '';
+                    if (searchBusInput) searchBusInput.value = '';
+                    updateBusinessPreview();
+                });
+            } else {
+                // No business selected, show search input wrapper
+                if (searchWrap) searchWrap.style.display = 'block';
+                previewEl.style.display = 'none';
+                previewEl.innerHTML = '';
+            }
+        } catch (e) {
+            console.error("updateBusinessPreview error:", e);
+            const searchWrap = container.querySelector('#wrap-search-inv-business');
+            if (searchWrap) searchWrap.style.display = 'block';
         }
         updateInvoiceSubmitState();
     };
 
-    // Recipient Profile Preview Card Builder
+    // Recipient Profile Preview Card Builder (Dedicated Card with all details)
     const updateRecipientPreview = () => {
-        const previewEl = container.querySelector('#inv-recipient-preview-card');
-        if (!previewEl) return;
+        try {
+            const previewEl = container.querySelector('#inv-recipient-preview-card');
+            const wrapCust = container.querySelector('#wrap-recipient-customer');
+            const wrapCli = container.querySelector('#wrap-recipient-client');
+            if (!previewEl) return;
 
-        let profile = null;
-        let profileTypeLabel = 'Recipient';
+            let profile = null;
+            let profileTypeLabel = 'Recipient';
 
-        if (recipientMode === 'customer') {
-            const custSelect = container.querySelector('#inv-customer');
-            profile = allCustomers.find(x => x.id === custSelect?.value);
-            profileTypeLabel = 'Customer Profile';
-        } else if (recipientMode === 'client') {
-            const cliSelect = container.querySelector('#inv-client');
-            profile = allClients.find(x => x.id === cliSelect?.value);
-            profileTypeLabel = 'Client Business';
-        }
+            if (recipientMode === 'customer') {
+                const custSelect = container.querySelector('#inv-customer');
+                profile = allCustomers.find(x => x.id === custSelect?.value);
+                profileTypeLabel = 'Customer Profile';
+            } else if (recipientMode === 'client') {
+                const cliSelect = container.querySelector('#inv-client');
+                profile = allClients.find(x => x.id === cliSelect?.value);
+                profileTypeLabel = 'Client Business';
+            }
 
-        if (profile) {
-            const searchCustInput = container.querySelector('#search-inv-customer');
-            const searchCliInput = container.querySelector('#search-inv-client');
-            if (recipientMode === 'customer' && searchCustInput) searchCustInput.value = profile.name || '';
-            if (recipientMode === 'client' && searchCliInput) searchCliInput.value = profile.name || '';
+            if (profile) {
+                // Hide raw search inputs, show dedicated contract card
+                if (wrapCust) wrapCust.style.display = 'none';
+                if (wrapCli) wrapCli.style.display = 'none';
+                previewEl.style.display = 'block';
 
-            previewEl.style.display = 'block';
-            const imgUrl = profile.imageUrl || profile.imageUri;
-            const avatarHtml = imgUrl
-                ? `<img src="${imgUrl}" alt="${escapeHtml(profile.name)}" style="width:46px; height:46px; border-radius:10px; object-fit:cover; border:2px solid var(--primary, #2563eb); box-shadow:0 2px 6px rgba(0,0,0,0.08); flex-shrink:0;">`
-                : `<div style="width:46px; height:46px; border-radius:10px; background:rgba(37,99,235,0.08); color:var(--primary, #2563eb); display:flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:700; border:1px solid rgba(37,99,235,0.2); flex-shrink:0;">
-                    ${recipientMode === 'client'
-                    ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
-                    : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
-                }
-                   </div>`;
+                const searchCustInput = container.querySelector('#search-inv-customer');
+                const searchCliInput = container.querySelector('#search-inv-client');
+                if (recipientMode === 'customer' && searchCustInput) searchCustInput.value = profile.name || '';
+                if (recipientMode === 'client' && searchCliInput) searchCliInput.value = profile.name || '';
 
-            // Auto-fill hidden/manual fields
-            const nameEl = container.querySelector('#inv-customer-name');
-            const phoneEl = container.querySelector('#inv-customer-phone');
-            const emailEl = container.querySelector('#inv-customer-email');
-            const addrEl = container.querySelector('#inv-customer-address');
+                const imgUrl = profile.imageUrl || profile.imageUri;
+                const initials = (profile.name || 'C').substring(0, 2).toUpperCase();
+                const avatarHtml = imgUrl
+                    ? `<img src="${imgUrl}" alt="${escapeHtml(profile.name)}" style="width:52px; height:52px; border-radius:10px; object-fit:cover; border:1.5px solid #d4d4d8; box-shadow:0 2px 6px rgba(0,0,0,0.06); flex-shrink:0;">`
+                    : `<div style="width:52px; height:52px; border-radius:10px; background:#fafafa; color:#18181B; display:flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:800; border:1.5px solid #d4d4d8; flex-shrink:0;">
+                        ${initials}
+                       </div>`;
 
-            if (nameEl) nameEl.value = profile.name || '';
-            if (phoneEl) phoneEl.value = profile.phone || '';
-            if (emailEl) emailEl.value = profile.email || '';
-            if (addrEl) addrEl.value = profile.address || '';
+                // Auto-fill hidden/manual fields
+                const nameEl = container.querySelector('#inv-customer-name');
+                const phoneEl = container.querySelector('#inv-customer-phone');
+                const emailEl = container.querySelector('#inv-customer-email');
+                const addrEl = container.querySelector('#inv-customer-address');
 
-            previewEl.innerHTML = `
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
-                    <div style="display:flex; align-items:center; gap:0.9rem; flex:1; min-width:240px;">
-                        ${avatarHtml}
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                                <span>${escapeHtml(profile.name)}</span>
-                                <span style="font-size:0.7rem; background:rgba(37,99,235,0.1); color:#2563eb; padding:1px 6px; border-radius:4px; font-weight:700;">${profileTypeLabel}</span>
-                            </div>
-                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px; display:flex; flex-wrap:wrap; gap:0.65rem;">
-                                ${profile.phone ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>${escapeHtml(profile.phone)}</span>` : ''}
-                                ${profile.email ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>${escapeHtml(profile.email)}</span>` : ''}
-                                ${profile.address ? `<span style="display:inline-flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(profile.address)}</span>` : ''}
+                if (nameEl) nameEl.value = profile.name || '';
+                if (phoneEl) phoneEl.value = profile.phone || '';
+                if (emailEl) emailEl.value = profile.email || '';
+                if (addrEl) addrEl.value = profile.address || '';
+
+                previewEl.innerHTML = `
+                    <div style="background:#ffffff; border:1.5px solid #d4d4d8; border-radius:12px; padding:1.1rem 1.25rem; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:1rem; flex:1; min-width:260px;">
+                            ${avatarHtml}
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.35rem;">
+                                    <span style="font-weight:800; font-size:1.05rem; color:#18181B; line-height:1.2;">${escapeHtml(profile.name)}</span>
+                                    <span style="font-size:0.72rem; background:#fafafa; border:1.5px solid #d4d4d8; color:#18181B; padding:2px 8px; border-radius:6px; font-weight:700;">${profileTypeLabel}</span>
+                                </div>
+                                <div style="font-size:0.82rem; color:#52525b; display:flex; flex-wrap:wrap; gap:0.85rem; margin-top:0.25rem;">
+                                    ${profile.phone ? `<span style="display:inline-flex; align-items:center; gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>${escapeHtml(profile.phone)}</span>` : ''}
+                                    ${profile.email ? `<span style="display:inline-flex; align-items:center; gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>${escapeHtml(profile.email)}</span>` : ''}
+                                    ${(profile.taxId || profile.tin || profile.vat || profile.registrationNo) ? `<span style="display:inline-flex; align-items:center; gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>ID/Tax: ${escapeHtml(profile.taxId || profile.tin || profile.vat || profile.registrationNo)}</span>` : ''}
+                                </div>
+                                ${profile.address ? `<div style="font-size:0.82rem; color:#52525b; margin-top:0.35rem; display:inline-flex; align-items:center; gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(profile.address)}</div>` : ''}
                             </div>
                         </div>
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+                            <button type="button" id="btn-change-inv-recipient" class="btn btn-sm" style="font-size:0.8rem; font-weight:700; padding:0.4rem 0.85rem; display:inline-flex; align-items:center; gap:5px; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+                                Change Recipient
+                            </button>
+                            <button type="button" id="btn-clear-inv-recipient" class="btn btn-sm" style="font-size:0.8rem; padding:0.4rem 0.65rem; background:#ffffff; color:#71717a; border:1.5px solid #d4d4d8; border-radius:8px;" title="Clear Selection">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:0.4rem;">
-                        <button type="button" id="btn-change-inv-recipient" class="btn btn-sm btn-secondary" style="font-size:0.78rem; font-weight:700; padding:0.35rem 0.75rem; display:inline-flex; align-items:center; gap:4px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
-                            Change Recipient
-                        </button>
-                        <button type="button" id="btn-clear-inv-recipient" class="btn btn-sm btn-outline" style="font-size:0.75rem; padding:0.35rem 0.6rem; color:var(--text-muted);" title="Clear selection">✕</button>
-                    </div>
-                </div>
-            `;
+                `;
 
-            previewEl.querySelector('#btn-change-inv-recipient')?.addEventListener('click', () => {
-                openEntityDrawer(recipientMode === 'client' ? 'client' : 'customer');
-            });
-            previewEl.querySelector('#btn-clear-inv-recipient')?.addEventListener('click', () => {
+                previewEl.querySelector('#btn-change-inv-recipient')?.addEventListener('click', () => {
+                    openEntityDrawer(recipientMode === 'client' ? 'client' : 'customer');
+                });
+                previewEl.querySelector('#btn-clear-inv-recipient')?.addEventListener('click', () => {
+                    if (recipientMode === 'customer') {
+                        const custSelect = container.querySelector('#inv-customer');
+                        if (custSelect) custSelect.value = '';
+                        if (searchCustInput) searchCustInput.value = '';
+                    } else if (recipientMode === 'client') {
+                        const cliSelect = container.querySelector('#inv-client');
+                        if (cliSelect) cliSelect.value = '';
+                        if (searchCliInput) searchCliInput.value = '';
+                    }
+                    if (nameEl) nameEl.value = '';
+                    if (phoneEl) phoneEl.value = '';
+                    if (emailEl) emailEl.value = '';
+                    if (addrEl) addrEl.value = '';
+                    updateRecipientPreview();
+                });
+            } else {
+                // No profile selected, show search input wrapper for the active mode
                 if (recipientMode === 'customer') {
-                    const custSelect = container.querySelector('#inv-customer');
-                    if (custSelect) custSelect.value = '';
-                    if (searchCustInput) searchCustInput.value = '';
+                    if (wrapCust) wrapCust.style.display = 'block';
+                    if (wrapCli) wrapCli.style.display = 'none';
                 } else if (recipientMode === 'client') {
-                    const cliSelect = container.querySelector('#inv-client');
-                    if (cliSelect) cliSelect.value = '';
-                    if (searchCliInput) searchCliInput.value = '';
+                    if (wrapCli) wrapCli.style.display = 'block';
+                    if (wrapCust) wrapCust.style.display = 'none';
                 }
-                if (nameEl) nameEl.value = '';
-                if (phoneEl) phoneEl.value = '';
-                if (emailEl) emailEl.value = '';
-                if (addrEl) addrEl.value = '';
-                updateRecipientPreview();
-            });
-        } else {
-            previewEl.style.display = 'none';
-            previewEl.innerHTML = '';
+                previewEl.style.display = 'none';
+                previewEl.innerHTML = '';
+            }
+        } catch (e) {
+            console.error("updateRecipientPreview error:", e);
+            const wrapCust = container.querySelector('#wrap-recipient-customer');
+            const wrapCli = container.querySelector('#wrap-recipient-client');
+            if (wrapCust && recipientMode === 'customer') wrapCust.style.display = 'block';
+            if (wrapCli && recipientMode === 'client') wrapCli.style.display = 'block';
         }
         updateInvoiceSubmitState();
     };
@@ -1189,13 +1240,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const pills = container.querySelectorAll('#recipient-type-pills button');
         pills.forEach(b => {
             if (b.getAttribute('data-mode') === mode) {
-                b.className = 'btn btn-sm btn-primary';
-                b.style.background = '#e11d48';
-                b.style.borderColor = '#e11d48';
+                b.style.background = '#18181B';
+                b.style.color = '#ffffff';
+                b.style.borderColor = '#18181B';
             } else {
-                b.className = 'btn btn-sm btn-secondary';
-                b.style.background = '';
-                b.style.borderColor = '';
+                b.style.background = '#ffffff';
+                b.style.color = '#18181B';
+                b.style.borderColor = '#d4d4d8';
             }
         });
 
@@ -1209,7 +1260,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         const browseLabel = container.querySelector('#btn-browse-recipient-label');
         if (browseLabel) {
-            browseLabel.textContent = 'Browse Client';
+            browseLabel.textContent = mode === 'client' ? 'Browse Client' : 'Browse Client';
         }
 
         if (mode === 'walkin') {
@@ -1309,8 +1360,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 if (signBtn) {
                     signBtn.textContent = '-';
                     signBtn.setAttribute('data-sign', '-');
-                    signBtn.style.color = '#e11d48';
-                    signBtn.style.borderColor = '#e11d48';
+                    signBtn.style.color = '#18181B';
+                    signBtn.style.borderColor = '#18181B';
                 }
                 container.querySelector('#inv-add-cut').value = Math.abs(rawCut);
             }
@@ -1346,8 +1397,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (signBtn) {
             signBtn.textContent = '-';
             signBtn.setAttribute('data-sign', '-');
-            signBtn.style.color = '#e11d48';
-            signBtn.style.borderColor = '#e11d48';
+            signBtn.style.color = '#18181B';
+            signBtn.style.borderColor = '#18181B';
         }
         const searchBusInput = container.querySelector('#search-inv-business');
         const searchCustInput = container.querySelector('#search-inv-customer');
@@ -1827,13 +1878,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             </div>
 
             ${dPct > 0 ? `
-            <div style="display:flex; justify-content:space-between; color:#e11d48;">
+            <div style="display:flex; justify-content:space-between; color:#18181B;">
                 <span>Discount (${dPct}%)</span>
                 <strong>-${formatCurrency(discountAmt)}</strong>
             </div>` : ''}
 
             ${addCutRaw > 0 ? `
-            <div style="display:flex; justify-content:space-between; color:${cutSign === '-' ? '#e11d48' : '#059669'}; font-weight:600;">
+            <div style="display:flex; justify-content:space-between; color:${cutSign === '-' ? '#18181B' : '#059669'}; font-weight:600;">
                 <span>${cutSign === '-' ? 'Additional Cut (-)' : 'Additional Surcharge (+)'}</span>
                 <strong>${cutSign === '-' ? '-' : '+'}${formatCurrency(addCutRaw)}</strong>
             </div>` : ''}
@@ -1845,25 +1896,25 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             </div>` : ''}
 
             ${tPct > 0 ? `
-            <div style="display:flex; justify-content:space-between; color:#0284c7;">
+            <div style="display:flex; justify-content:space-between; color:#18181B; font-weight:600;">
                 <span>Tax (${tPct}%)</span>
                 <strong>+${formatCurrency(totals.taxAmount)}</strong>
             </div>` : ''}
 
             ${ship > 0 ? `
-            <div style="display:flex; justify-content:space-between; color:#0d9488;">
+            <div style="display:flex; justify-content:space-between; color:#18181B; font-weight:600;">
                 <span>Shipping Cost</span>
                 <strong>+${formatCurrency(ship)}</strong>
             </div>` : ''}
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.65rem; border-top: 2px solid var(--border-color); padding-top: 0.65rem;">
-                <span style="font-weight:800; font-size:1rem; color:var(--text-primary);">Grand Total</span>
-                <span style="font-weight:900; font-size:1.35rem; color:var(--theme-primary, #e11d48);">${formatCurrency(totals.grandTotal)}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; border-top: 1.5px solid #d4d4d8; padding-top: 0.75rem;">
+                <span style="font-weight:800; font-size:1.05rem; color:#18181B;">Grand Total</span>
+                <span style="font-weight:900; font-size:1.55rem; color:#18181B !important;">${formatCurrency(totals.grandTotal)}</span>
             </div>
 
-            <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.82rem; color:#52525b; margin-top:4px;">
                 <span>Est. Net Profit</span>
-                <strong style="color:${totals.totalProfit >= 0 ? '#10b981' : '#ef4444'};">${userRestrictions.cannotSeeProfit ? '••••' : formatCurrency(totals.totalProfit)}</strong>
+                <strong style="color:#18181B; font-weight:700;">${userRestrictions.cannotSeeProfit ? '••••' : formatCurrency(totals.totalProfit)}</strong>
             </div>
         `;
         updateInvoiceSubmitState();
@@ -2118,7 +2169,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const busSelect = container.querySelector('#inv-business');
         if (!busSelect) return;
         busSelect.innerHTML = '<option value="">Select Business (Issuer)...</option>' +
-            allBusinesses.map(b => `<option value="${b.id}">${b.name}${b.isPrimary ? ' ⭐ (Primary)' : ''}${b.phone ? ` (${b.phone})` : ''}</option>`).join('');
+            allBusinesses.map(b => `<option value="${b.id}">${b.name}${b.isPrimary ? ' (Primary)' : ''}${b.phone ? ` (${b.phone})` : ''}</option>`).join('');
 
         if (selectedId) {
             busSelect.value = selectedId;
@@ -2434,7 +2485,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             qaAvatarDropzone.addEventListener(evtName, (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                qaAvatarDropzone.style.borderColor = '#e11d48';
+                qaAvatarDropzone.style.borderColor = '#18181B';
                 qaAvatarDropzone.style.background = 'rgba(225,29,72,0.06)';
                 qaAvatarDropzone.style.boxShadow = '0 0 0 2px rgba(225,29,72,0.2)';
             });
@@ -2660,8 +2711,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 cutSignBtn.style.borderColor = '#059669';
                 cutSignBtn.setAttribute('title', 'Surcharge mode (+) - adds to total');
             } else {
-                cutSignBtn.style.color = '#e11d48';
-                cutSignBtn.style.borderColor = '#e11d48';
+                cutSignBtn.style.color = '#18181B';
+                cutSignBtn.style.borderColor = '#18181B';
                 cutSignBtn.setAttribute('title', 'Cut mode (-) - discounts from total');
             }
             updateLiveTotals();
@@ -2686,9 +2737,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const showScannerFeedback = (msg, isSuccess) => {
         if (!scannerFeedback) return;
         scannerFeedback.style.display = 'block';
-        scannerFeedback.style.background = isSuccess ? '#ecfdf5' : '#fff1f2';
+        scannerFeedback.style.background = isSuccess ? '#ecfdf5' : '#F4F4F5';
         scannerFeedback.style.color = isSuccess ? '#065f46' : '#9f1239';
-        scannerFeedback.style.border = isSuccess ? '1px solid #a7f3d0' : '1px solid #fecdd3';
+        scannerFeedback.style.border = isSuccess ? '1px solid #a7f3d0' : '1px solid #E4E4E7';
         scannerFeedback.textContent = msg;
         setTimeout(() => {
             if (scannerFeedback) scannerFeedback.style.display = 'none';
@@ -2756,7 +2807,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         renderItemsList();
         updateLiveTotals();
-        showScannerFeedback(`✓ Inserted: ${prodName} (${formatCurrency(prodPrice)})`, true);
+        showScannerFeedback(`Inserted: ${prodName} (${formatCurrency(prodPrice)})`, true);
     };
 
     const startCameraScanner = async () => {
@@ -2880,16 +2931,21 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         const renderDropdown = (query = '') => {
             const entities = getEntities();
             const q = query.trim().toLowerCase();
-            const filtered = q ? entities.filter(item => {
+            if (!q) {
+                dropdown.style.display = 'none';
+                dropdown.innerHTML = '';
+                return;
+            }
+            const filtered = entities.filter(item => {
                 const name = (item.name || '').toLowerCase();
                 const phone = (item.phone || item.mobile || '').toLowerCase();
                 const email = (item.email || '').toLowerCase();
                 return name.includes(q) || phone.includes(q) || email.includes(q);
-            }) : entities;
+            });
 
             if (filtered.length === 0) {
-                dropdown.innerHTML = `<div style="padding:0.75rem; text-align:center; font-size:0.8rem; color:#64748b;">No matches found</div>`;
-                dropdown.style.display = 'block';
+                dropdown.style.display = 'none';
+                dropdown.innerHTML = '';
                 return;
             }
 
@@ -2975,11 +3031,19 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const updateDrawerClientToggleUI = (mode) => {
         if (!drawerTabClients || !drawerTabCustomers) return;
         if (mode === 'client') {
-            drawerTabClients.className = 'btn btn-sm btn-primary';
-            drawerTabCustomers.className = 'btn btn-sm btn-secondary';
+            drawerTabClients.style.background = '#18181B';
+            drawerTabClients.style.color = '#ffffff';
+            drawerTabClients.style.borderColor = '#18181B';
+            drawerTabCustomers.style.background = '#ffffff';
+            drawerTabCustomers.style.color = '#18181B';
+            drawerTabCustomers.style.borderColor = '#d4d4d8';
         } else {
-            drawerTabCustomers.className = 'btn btn-sm btn-primary';
-            drawerTabClients.className = 'btn btn-sm btn-secondary';
+            drawerTabCustomers.style.background = '#18181B';
+            drawerTabCustomers.style.color = '#ffffff';
+            drawerTabCustomers.style.borderColor = '#18181B';
+            drawerTabClients.style.background = '#ffffff';
+            drawerTabClients.style.color = '#18181B';
+            drawerTabClients.style.borderColor = '#d4d4d8';
         }
     };
 
@@ -2987,16 +3051,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         drawerTargetType = targetType;
         isDrawerOpen = true;
 
-        // Ensure drawer overlay and panel are appended directly to body to avoid ancestor overflow clipping
-        if (drawerOverlay && drawerOverlay.parentElement !== document.body) {
-            document.body.appendChild(drawerOverlay);
-        }
-        if (drawerPanel && drawerPanel.parentElement !== document.body) {
-            document.body.appendChild(drawerPanel);
-        }
+        // Clean up any stale duplicate overlays left on body from earlier navigations
+        document.querySelectorAll('body > #inv-entity-drawer-overlay').forEach(el => {
+            if (el !== drawerOverlay) el.remove();
+        });
 
         if (drawerOverlay) {
-            drawerOverlay.style.display = 'block';
+            drawerOverlay.style.display = 'flex';
             drawerOverlay.classList.add('open', 'is-open');
             drawerOverlay.style.opacity = '1';
             drawerOverlay.style.pointerEvents = 'auto';
@@ -3005,7 +3066,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (drawerPanel) {
             drawerPanel.style.display = 'flex';
             drawerPanel.classList.add('open', 'is-open');
-            drawerPanel.style.transform = 'translateX(0)';
+            drawerPanel.style.transform = 'none';
             drawerPanel.style.zIndex = '10006';
         }
 
@@ -3020,11 +3081,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             }
         } else {
             // Find Clients Dialog / Drawer (Supports toggling Clients <-> Customers)
-            if (drawerTitle) drawerTitle.textContent = 'Find Clients';
+            if (drawerTitle) drawerTitle.textContent = 'Find Contracts & Clients';
             if (drawerQuickAddText) drawerQuickAddText.textContent = targetType === 'client' ? 'Add Client' : 'Add Customer';
             if (drawerToggleWrap) drawerToggleWrap.style.display = 'flex';
             if (drawerPrimaryNote) drawerPrimaryNote.style.display = 'none';
-            if (drawerSearchInput) drawerSearchInput.placeholder = 'Search clients or customers by name, phone, email...';
+            if (drawerSearchInput) drawerSearchInput.placeholder = 'Search contracts, clients or customers by name, phone, email...';
             updateDrawerClientToggleUI(targetType === 'client' ? 'client' : 'customer');
             if (drawerIcon) {
                 drawerIcon.innerHTML = targetType === 'client'
@@ -3048,17 +3109,24 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             drawerOverlay.classList.remove('open', 'is-open');
             drawerOverlay.style.opacity = '0';
             drawerOverlay.style.pointerEvents = 'none';
-            setTimeout(() => { if (!isDrawerOpen) drawerOverlay.style.display = 'none'; }, 250);
+            setTimeout(() => { if (!isDrawerOpen) drawerOverlay.style.display = 'none'; }, 200);
         }
         if (drawerPanel) {
             drawerPanel.classList.remove('open', 'is-open');
-            drawerPanel.style.transform = 'translateX(100%)';
-            setTimeout(() => { if (!isDrawerOpen) drawerPanel.style.display = 'none'; }, 280);
+            setTimeout(() => { if (!isDrawerOpen) drawerPanel.style.display = 'none'; }, 200);
         }
     };
 
+    const getDrawerListEl = () => {
+        return (drawerPanel ? drawerPanel.querySelector('#inv-drawer-list') : null) ||
+               (drawerOverlay ? drawerOverlay.querySelector('#inv-drawer-list') : null) ||
+               container.querySelector('#inv-drawer-list') ||
+               document.getElementById('inv-drawer-list');
+    };
+
     const renderEntityDrawerList = (query = '') => {
-        if (!drawerList) return;
+        const listEl = getDrawerListEl();
+        if (!listEl) return;
 
         let rawList = [];
         let currentSelectedId = '';
@@ -3082,28 +3150,29 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const email = (item.email || '').toLowerCase();
             const address = (item.address || '').toLowerCase();
             const id = (item.id || item.uniqueId || '').toLowerCase();
-            return name.includes(q) || phone.includes(q) || email.includes(q) || address.includes(q) || id.includes(q);
+            const tax = (item.taxId || item.tin || item.vat || item.registrationNo || '').toLowerCase();
+            return name.includes(q) || phone.includes(q) || email.includes(q) || address.includes(q) || id.includes(q) || tax.includes(q);
         });
 
         if (drawerCount) {
-            drawerCount.textContent = `Showing ${filtered.length} of ${rawList.length} entries`;
+            drawerCount.textContent = `Showing ${filtered.length} of ${rawList.length} contracts`;
         }
 
         if (filtered.length === 0) {
-            drawerList.innerHTML = `
-                <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
-                    <div style="font-size: 2.2rem; margin-bottom: 0.5rem; opacity: 0.5;">🔍</div>
-                    <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">No ${drawerTargetType} found</div>
-                    <p style="font-size: 0.82rem; margin: 0.35rem 0 1rem; color: var(--text-muted);">
-                        ${q ? `No profiles match "${query}". Try refining your search.` : `No ${drawerTargetType} profiles exist yet.`}
+            listEl.innerHTML = `
+                <div style="text-align: center; padding: 2.5rem 1rem; color: #52525b;">
+                    <div style="margin-bottom: 0.5rem; color: #71717a;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
+                    <div style="font-weight: 800; font-size: 1rem; color: #18181B;">No ${drawerTargetType} contracts found</div>
+                    <p style="font-size: 0.82rem; margin: 0.35rem 0 1.25rem; color: #71717a;">
+                        ${q ? `No profiles match "${escapeHtml(query)}". Try refining your search.` : `No ${drawerTargetType} contracts exist yet.`}
                     </p>
-                    <button type="button" class="btn btn-sm btn-primary" id="btn-drawer-empty-add" style="display: inline-flex; align-items: center; gap: 5px;">
+                    <button type="button" class="btn btn-sm" id="btn-drawer-empty-add" style="display: inline-flex; align-items: center; gap: 5px; background:#18181B; color:#ffffff; font-weight:700; border-radius:8px; padding:0.45rem 1rem; border:1.5px solid #18181B; cursor:pointer;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
                         Add New ${drawerTargetType.charAt(0).toUpperCase() + drawerTargetType.slice(1)}
                     </button>
                 </div>
             `;
-            const emptyAddBtn = drawerList.querySelector('#btn-drawer-empty-add');
+            const emptyAddBtn = listEl.querySelector('#btn-drawer-empty-add');
             if (emptyAddBtn) {
                 emptyAddBtn.addEventListener('click', () => {
                     openQuickAddModal(drawerTargetType);
@@ -3112,52 +3181,61 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             return;
         }
 
-        drawerList.innerHTML = filtered.map(item => {
+        listEl.innerHTML = filtered.map(item => {
             const isSelected = item.id === currentSelectedId;
             const imgUrl = item.imageUrl || item.imageUri;
             const isBiz = (drawerTargetType === 'business');
             const isPrimaryBiz = isBiz && item.isPrimary === true;
+            const initials = (item.name || 'C').substring(0, 2).toUpperCase();
 
-            // Round Logo Thumbnail
+            // Avatar / Logo Thumbnail
             const avatarMarkup = imgUrl
-                ? `<img src="${imgUrl}" alt="${escapeHtml(item.name || '')}" style="width: 48px; height: 48px; border-radius: 50% !important; object-fit: cover; border: 2px solid ${isPrimaryBiz ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">`
-                : `<div style="width: 48px; height: 48px; border-radius: 50% !important; background: ${isBiz ? 'rgba(37, 99, 235, 0.1)' : 'rgba(100, 116, 139, 0.12)'}; color: ${isBiz ? '#2563eb' : '#475569'}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.15rem; flex-shrink: 0; border: 2px solid ${isPrimaryBiz ? 'var(--primary, #2563eb)' : 'var(--border-color)'};">
-                    ${isBiz 
-                        ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 10h.01M6 14h.01M6 18h.01M10 10h.01M10 14h.01M10 18h.01M14 10h.01M14 14h.01M14 18h.01M18 10h.01M18 14h.01M18 18h.01M6 3h12v4H6z"/></svg>`
-                        : (drawerTargetType === 'client'
-                            ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
-                            : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
-                          )
-                    }
+                ? `<img src="${imgUrl}" alt="${escapeHtml(item.name || '')}" style="width: 48px; height: 48px; border-radius: 10px; object-fit: cover; border: 1.5px solid #d4d4d8; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">`
+                : `<div style="width: 48px; height: 48px; border-radius: 10px; background: #fafafa; color: #18181B; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.05rem; flex-shrink: 0; border: 1.5px solid #d4d4d8;">
+                    ${initials}
                   </div>`;
 
+            const typeBadgeText = isBiz ? 'Issuer Business' : (drawerTargetType === 'client' ? 'Client Business' : 'Customer Profile');
+            const taxIdentifier = item.taxId || item.tin || item.vat || item.registrationNo || '';
+
             return `
-                <div class="entity-drawer-card ${isSelected ? 'selected' : ''}" data-entity-id="${item.id}" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.9rem; padding: 0.9rem 1rem; border-radius: 12px; border: 1.5px solid ${isSelected ? 'var(--primary, #2563eb)' : 'var(--border-color)'}; background: ${isSelected ? 'var(--hover-bg, #f0f4fa)' : 'var(--bg-card, #ffffff)'}; cursor: pointer; transition: all 0.18s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                <div class="entity-drawer-card ${isSelected ? 'selected' : ''}" data-entity-id="${item.id}" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.9rem; padding: 0.95rem 1.1rem; border-radius: 12px; border: 1.5px solid ${isSelected ? '#18181B' : '#d4d4d8'}; background: ${isSelected ? '#f4f4f5' : '#ffffff'}; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
                     
                     <div style="display: flex; gap: 0.85rem; align-items: flex-start; flex: 1; min-width: 0;">
                         ${avatarMarkup}
                         <div style="flex: 1; min-width: 0;">
-                            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
-                                <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary); line-height: 1.3;">${escapeHtml(item.name || 'Unnamed')}</span>
-                                ${isPrimaryBiz ? `<span class="badge" style="background: rgba(37, 99, 235, 0.12); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.3); font-size: 0.7rem; padding: 1px 7px; border-radius: 9999px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;">⭐ Primary (Default)</span>` : ''}
-                                ${isSelected ? `<span class="badge" style="background: #15803d; color: #ffffff; font-size: 0.68rem; padding: 1px 6px; border-radius: 9999px; font-weight: 700;">Selected</span>` : ''}
+                            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.3rem;">
+                                <span style="font-weight: 800; font-size: 0.96rem; color: #18181B; line-height: 1.3;">${escapeHtml(item.name || 'Unnamed')}</span>
+                                <span class="badge" style="background: #fafafa; color: #18181B; border: 1px solid #d4d4d8; font-size: 0.7rem; padding: 2px 7px; border-radius: 6px; font-weight: 700;">${typeBadgeText}</span>
+                                ${isPrimaryBiz ? `<span class="badge" style="background: #fafafa; color: #18181B; border: 1.5px solid #d4d4d8; font-size: 0.7rem; padding: 2px 7px; border-radius: 6px; font-weight: 800; display: inline-flex; align-items: center; gap: 3px;">Primary Business</span>` : ''}
+                                ${isSelected ? `<span class="badge" style="background: #18181B; color: #ffffff; font-size: 0.68rem; padding: 2px 6px; border-radius: 6px; font-weight: 700;">Selected</span>` : ''}
                             </div>
                             
-                            <!-- Phone Number -->
-                            <div style="font-size: 0.82rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.22rem;">
-                                <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted); flex-shrink: 0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                                    <span>${escapeHtml(item.phone || item.number || 'No phone number')}</span>
-                                </span>
-                                
-                                <!-- Email Address -->
-                                <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted); flex-shrink: 0;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(item.email || 'No email address')}</span>
-                                </span>
+                            <!-- Contact details row -->
+                            <div style="font-size: 0.82rem; color: #52525b; display: flex; flex-direction: column; gap: 0.22rem;">
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                    ${(item.phone || item.number) ? `
+                                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #71717a; flex-shrink: 0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                            <span>${escapeHtml(item.phone || item.number)}</span>
+                                        </span>
+                                    ` : ''}
+                                    ${item.email ? `
+                                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #71717a; flex-shrink: 0;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(item.email)}</span>
+                                        </span>
+                                    ` : ''}
+                                    ${taxIdentifier ? `
+                                        <span style="display: inline-flex; align-items: center; gap: 5px;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #71717a; flex-shrink: 0;"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                                            <span>Tax/ID: ${escapeHtml(taxIdentifier)}</span>
+                                        </span>
+                                    ` : ''}
+                                </div>
 
                                 ${item.address ? `
-                                    <span style="display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted);">
+                                    <span style="display: inline-flex; align-items: center; gap: 5px; color: #71717a;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                                         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(item.address)}</span>
                                     </span>
@@ -3168,12 +3246,12 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.45rem; flex-shrink: 0;">
                         ${(isBiz && !isPrimaryBiz) ? `
-                            <button type="button" class="btn btn-sm btn-secondary btn-drawer-set-primary" data-bus-id="${item.id}" title="Set as default business for all new invoices (only one primary at a time)" style="font-size: 0.72rem; padding: 0.22rem 0.55rem; border-radius: 6px; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px;">
-                                ★ Set Primary
+                            <button type="button" class="btn btn-sm btn-drawer-set-primary" data-bus-id="${item.id}" title="Set as default business for all new invoices (only one primary at a time)" style="font-size: 0.72rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 700; white-space: nowrap; background: #ffffff; color: #18181B; border: 1.5px solid #d4d4d8; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;">
+                                Set Primary
                             </button>
                         ` : ''}
-                        <button type="button" class="btn btn-sm ${isSelected ? 'btn-secondary' : 'btn-primary'} btn-drawer-select-item" data-item-id="${item.id}" style="font-size: 0.75rem; padding: 0.28rem 0.7rem; font-weight: 700;">
-                            ${isSelected ? 'Selected' : 'Select'}
+                        <button type="button" class="btn btn-sm btn-drawer-select-item" data-item-id="${item.id}" style="font-size: 0.78rem; padding: 0.35rem 0.95rem; font-weight: 700; border-radius: 8px; background: #18181B; color: #ffffff; border: 1.5px solid #18181B; cursor: pointer;">
+                            Use Contract
                         </button>
                     </div>
                 </div>
@@ -3181,7 +3259,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }).join('');
 
         // Attach Card Click and Set Primary Events
-        drawerList.querySelectorAll('.entity-drawer-card').forEach(card => {
+        listEl.querySelectorAll('.entity-drawer-card').forEach(card => {
             const itemId = card.getAttribute('data-entity-id');
             const selectItem = () => {
                 if (drawerTargetType === 'business') {
@@ -3223,7 +3301,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         });
 
         // Set Primary Business button handler (Business ONLY - guarantees strictly one primary)
-        drawerList.querySelectorAll('.btn-drawer-set-primary').forEach(btn => {
+        listEl.querySelectorAll('.btn-drawer-set-primary').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const busId = btn.getAttribute('data-bus-id');
@@ -3311,7 +3389,18 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Drawer close listeners
     if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeEntityDrawer);
-    if (drawerOverlay) drawerOverlay.addEventListener('click', closeEntityDrawer);
+    if (drawerOverlay) {
+        drawerOverlay.addEventListener('click', (e) => {
+            if (e.target === drawerOverlay) {
+                closeEntityDrawer();
+            }
+        });
+    }
+    if (drawerPanel) {
+        drawerPanel.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
 
     // Drawer search input
     if (drawerSearchInput) {

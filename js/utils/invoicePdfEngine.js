@@ -526,8 +526,8 @@ export const generateInvoicePdf = async (invoice, options = {}) => {
         }
     }
 
-    // Dynamic accent color from custom border color or theme
-    const userAccentHex = (options.border && options.border.color) || options.borderColor || options.themeColor || '#e11d48';
+    // Dynamic accent color from custom border color or theme (Monochrome Enterprise Default)
+    const userAccentHex = (options.border && options.border.color) || options.borderColor || options.themeColor || '#18181B';
     const parsedAccentRgb = hexToRgb(userAccentHex);
     if (parsedAccentRgb) {
         COLORS.primaryRed = parsedAccentRgb;

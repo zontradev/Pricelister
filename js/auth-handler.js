@@ -95,42 +95,42 @@ export const getRoleBadgeConfig = (role, customTag = null) => {
                 level: 0,
                 text: label,
                 className: 'badge-role badge-role-admin',
-                style: 'background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; color: #ffffff !important; box-shadow: 0 0 12px rgba(16, 185, 129, 0.45); border: 1px solid rgba(5, 150, 105, 0.8) !important; font-weight: 700;'
+                style: 'background: #FAFAFA !important; color: #18181B !important; border: 1px solid #E4E4E7 !important; font-weight: 700;'
             };
         case 1:
             return {
                 level: 1,
                 text: label,
                 className: 'badge-role badge-role-coadmin',
-                style: 'background: rgba(22, 163, 74, 0.12) !important; color: #16a34a !important; border: 1px solid rgba(22, 163, 74, 0.35) !important; font-weight: 700;'
+                style: 'background: #FAFAFA !important; color: #18181B !important; border: 1px solid #E4E4E7 !important; font-weight: 700;'
             };
         case 2:
             return {
                 level: 2,
                 text: label,
                 className: 'badge-role badge-role-manager',
-                style: 'background: rgba(59, 130, 246, 0.12) !important; color: #1d4ed8 !important; border: 1px solid rgba(59, 130, 246, 0.35) !important; font-weight: 700;'
+                style: 'background: #FAFAFA !important; color: #18181B !important; border: 1px solid #E4E4E7 !important; font-weight: 700;'
             };
         case 3:
             return {
                 level: 3,
                 text: label,
                 className: 'badge-role badge-role-worker',
-                style: 'background: #f1f5f9 !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important; font-weight: 600;'
+                style: 'background: #FAFAFA !important; color: #71717A !important; border: 1px solid #E4E4E7 !important; font-weight: 600;'
             };
         case 4:
             return {
                 level: 4,
                 text: label,
                 className: 'badge-role badge-role-visitor',
-                style: 'background: rgba(245, 158, 11, 0.12) !important; color: #b45309 !important; border: 1px solid rgba(245, 158, 11, 0.35) !important; font-weight: 600;'
+                style: 'background: #FAFAFA !important; color: #A1A1AA !important; border: 1px solid #E4E4E7 !important; font-weight: 600;'
             };
         default:
             return {
                 level: 3,
                 text: label,
                 className: 'badge-role badge-role-worker',
-                style: 'background: #f1f5f9 !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important; font-weight: 600;'
+                style: 'background: #FAFAFA !important; color: #71717A !important; border: 1px solid #E4E4E7 !important; font-weight: 600;'
             };
     }
 };
@@ -466,20 +466,9 @@ export const initLandingHeaderActions = () => {
     // 1. (Login) button: logs in with Google, stays on index.html
     const loginBtn = document.getElementById('header-btn-login');
     if (loginBtn) {
-        loginBtn.onclick = async (e) => {
-            e.preventDefault();
-            try {
-                loginBtn.disabled = true;
-                loginBtn.style.opacity = '0.7';
-                await authService.loginWithGoogle(true);
-                showAlert.success('Signed in successfully.');
-            } catch (err) {
-                console.error("Sign-in error:", err);
-                showAlert.error('Sign-in failed. Please try again.');
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.style.opacity = '1';
-            }
+        loginBtn.onclick = (e) => {
+            // Allow direct navigation to dedicated login page
+            window.location.href = 'login.html';
         };
     }
 
@@ -1071,11 +1060,11 @@ export const initAuthHandler = (pageType) => {
                             demoTag.style.alignItems = 'center';
                             demoTag.style.gap = '0.5rem';
                             demoTag.innerHTML = `
-                                <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; font-weight:700; background:rgba(14, 165, 233, 0.12); color:#0284c7; padding:0.25rem 0.65rem; border-radius:9999px; border:1px solid rgba(14, 165, 233, 0.3);">
+                                <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:#FFFFFF; color:#18181B; padding:0.25rem 0.65rem; border-radius:9999px; border:1px solid #E4E4E7; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                                     Demo Sandbox Mode
                                 </span>
-                                <button type="button" id="btn-reset-demo-data" class="btn btn-sm btn-secondary" style="font-size:0.72rem; padding:0.2rem 0.55rem;" title="Reset demo dataset to initial state">
+                                <button type="button" id="btn-reset-demo-data" class="btn btn-sm btn-secondary" style="font-size:0.72rem; padding:0.2rem 0.55rem; background:#FFFFFF; border:1px solid #E4E4E7; color:#18181B;" title="Reset demo dataset to initial state">
                                     Reset Demo Data
                                 </button>
                             `;
@@ -1232,7 +1221,7 @@ export const initAuthHandler = (pageType) => {
                                     <div style="font-size: 0.66rem; color: var(--text-secondary);">Minimal soft white</div>
                                 </div>
                             </div>
-                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'light' ? 'visible' : 'hidden'};">✓</span>
+                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'light' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                         </button>
 
                         <!-- 2. Dark Mode -->
@@ -1244,7 +1233,7 @@ export const initAuthHandler = (pageType) => {
                                     <div style="font-size: 0.66rem; color: var(--text-secondary);">Executive smooth charcoal</div>
                                 </div>
                             </div>
-                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'dark' ? 'visible' : 'hidden'};">✓</span>
+                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'dark' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                         </button>
 
                         <!-- 3. Deep Dark Mode -->
@@ -1256,7 +1245,7 @@ export const initAuthHandler = (pageType) => {
                                     <div style="font-size: 0.66rem; color: var(--text-secondary);">Pure pitch black AMOLED</div>
                                 </div>
                             </div>
-                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'deep-dark' ? 'visible' : 'hidden'};">✓</span>
+                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'deep-dark' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                         </button>
 
                         <!-- 4. Auto System Mode -->
@@ -1268,25 +1257,27 @@ export const initAuthHandler = (pageType) => {
                                     <div style="font-size: 0.66rem; color: var(--text-secondary);">Sync with device theme</div>
                                 </div>
                             </div>
-                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'system' ? 'visible' : 'hidden'};">✓</span>
+                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'system' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                         </button>
 
                     </div>
                 </div>
 
-                <!-- Critical Board Action Hero (Added per Reference Image) -->
-                <div style="padding: 0.45rem 0.65rem 0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.4rem;">
-                    <button type="button" id="topbar-open-critical-board-btn" style="width: 100%; border: 1px solid var(--border-color); background: var(--surface-50); display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.75rem; border-radius: 9px; cursor: pointer; text-align: left; transition: all 0.18s ease;">
-                        <div style="display: flex; align-items: center; gap: 0.65rem;">
-                            <div style="width: 28px; height: 28px; border-radius: 7px; background: var(--surface-100); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color);">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                <!-- Critical Board Action Hero (New app option opener) -->
+                <div style="padding: 0.5rem 0.65rem 0.65rem; border-bottom: 1px solid var(--border-color); margin-bottom: 0.4rem;">
+                    <button type="button" id="topbar-open-critical-board-btn" style="width: 100%; border: 1px solid var(--border-color); background: var(--surface-50); display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0.75rem; border-radius: 10px; cursor: pointer; text-align: left; transition: all 0.18s ease;">
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--surface-100); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color);">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <strong style="font-size: 0.85rem; color: var(--text-primary); font-weight: 800;">Critical Board</strong>
+                                <span style="font-size: 0.65rem; font-weight: 800; background: var(--text-primary); color: var(--surface-main); padding: 1px 6px; border-radius: 999px;">Customizer</span>
                             </div>
-                            <div>
-                                <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-primary); line-height: 1.2;">Critical Board</div>
-                                <div style="font-size: 0.68rem; color: var(--text-secondary);">Custom Fonts &amp; Layout</div>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                Custom Fonts, UI Dividers &amp; Layout
                             </div>
                         </div>
-                        <span style="font-size: 0.62rem; font-weight: 800; background: var(--text-primary); color: var(--surface-main); padding: 2px 6px; border-radius: 999px;">Custom</span>
                     </button>
                 </div>
 
@@ -1439,7 +1430,7 @@ export const initAuthHandler = (pageType) => {
 
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
-                if (await showAlert.confirm('Are you sure you want to sign out?')) {
+                if (await showAlert.confirm('Are you sure you want to log out?<br>You will need to sign in again to access your account.', 'Log Out')) {
                     await authService.logout();
                     window.location.href = 'index.html';
                 }
@@ -1484,6 +1475,65 @@ export const initAuthHandler = (pageType) => {
     }
 
     // Modal Google Login Button (Production Google OAuth)
+    
+    // Modal Email/Password Login Option
+    const modalEmailForm = document.getElementById('modal-email-login-form');
+    if (modalEmailForm) {
+        modalEmailForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('modal-login-email');
+            const pwdInput = document.getElementById('modal-login-password');
+            const submitBtn = document.getElementById('modal-email-submit-btn');
+            const email = emailInput ? emailInput.value.trim() : '';
+            const password = pwdInput ? pwdInput.value : '';
+
+            if (!email || !password) {
+                showAlert.error('Please enter both email and password.');
+                return;
+            }
+
+            try {
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-sm" style="display:inline-block; margin-right:6px;"></span> Signing in...';
+                }
+                await authService.loginWithEmail(email, password);
+                showAlert.success('Signed in successfully.');
+                if (loginModal) loginModal.style.display = 'none';
+                setTimeout(() => {
+                    window.location.href = 'app.html';
+                }, 200);
+            } catch (err) {
+                console.error("Modal email sign-in error:", err);
+                showAlert.error(err.message || 'Incorrect email or password. Please try again.');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span>Sign In with Email</span> &rarr;';
+                }
+            }
+        });
+    }
+
+    // Modal Password Visibility Toggle
+    const modalPwdToggle = document.getElementById('modal-login-pwd-toggle');
+    if (modalPwdToggle) {
+        modalPwdToggle.addEventListener('click', () => {
+            const pwdInput = document.getElementById('modal-login-password');
+            if (!pwdInput) return;
+            const eyeOpen = modalPwdToggle.querySelector('.eye-open');
+            const eyeClosed = modalPwdToggle.querySelector('.eye-closed');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                if (eyeOpen) eyeOpen.style.display = 'none';
+                if (eyeClosed) eyeClosed.style.display = 'block';
+            } else {
+                pwdInput.type = 'password';
+                if (eyeOpen) eyeOpen.style.display = 'block';
+                if (eyeClosed) eyeClosed.style.display = 'none';
+            }
+        });
+    }
+
     const modalGoogleBtn = document.getElementById('modal-google-login-btn');
     if (modalGoogleBtn) {
         modalGoogleBtn.addEventListener('click', async (e) => {
@@ -1950,9 +2000,9 @@ export const initAuthHandler = (pageType) => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             const confirmed = await showAlert.confirm(
-                'Are you sure you want to sign out?',
-                'Logout Confirmation',
-                { confirmText: 'Logout', cancelText: 'Cancel', isDestructive: true }
+                'Are you sure you want to log out?<br>You will need to sign in again to access your account.',
+                'Log Out',
+                { confirmText: 'Log Out', cancelText: 'Cancel' }
             );
             if (confirmed) {
                 try {

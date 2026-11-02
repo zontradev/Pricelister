@@ -17,6 +17,12 @@ import { renderAnalyticsHub } from './modules/analyticsHub.js';
 import { renderSchemaAnalyzer } from './modules/schemaAnalyzer.js';
 import { renderCustomerPanelSetup } from './modules/customerPanelSetup.js';
 import { renderOrders } from './modules/orders.js';
+import { renderBarcodeGenerator } from './modules/barcodeGenerator.js';
+import { renderFinanceTracker } from './modules/financeTracker.js';
+import { renderProfitCalculator } from './modules/profitCalculator.js';
+import { renderShippingExport } from './modules/shippingExport.js';
+import { renderSupplierMarket } from './modules/supplierMarket.js';
+import { renderAutomationCenter } from './modules/automationCenter.js';
 import { authService } from '../firebase/auth.js';
 import { firestoreService } from '../firebase/firestore.js';
 
@@ -148,14 +154,45 @@ const routes = {
     '/products': { render: (c, w) => renderProducts(c, w), title: 'Products / All Products' },
     '/market-inserter': { render: (c, w) => renderMarketInserter(c, w), title: 'Products / Market Inserter' },
     '/categories': { render: (c, w) => renderCategories(c, w), title: 'Products / Categories' },
+    
+    // TOOLS
+    '/barcode-generator': { render: (c, w) => renderBarcodeGenerator(c, w), title: 'Tools / Barcode Generator' },
+    '/finance-tracker': { render: (c, w, tab) => renderFinanceTracker(c, w, tab || 'overview'), title: 'Tools / Finance Tracker' },
+    '/emi-calculator': { render: (c, w) => renderFinanceTracker(c, w, 'calculator'), title: 'Tools / EMI Calculator' },
+    '/customer-emi': { render: (c, w) => renderFinanceTracker(c, w, 'emi_accounts'), title: 'Tools / Customer EMI' },
+    '/emi-collection': { render: (c, w) => renderFinanceTracker(c, w, 'collection'), title: 'Tools / Payment Collection' },
+    '/emi-overdue': { render: (c, w) => renderFinanceTracker(c, w, 'overdue'), title: 'Tools / Overdue Management' },
+    '/profit-calculator': { render: (c, w) => renderProfitCalculator(c, w), title: 'Tools / Profit Calculator' },
+
+    // SALES
     '/invoices/customer': { render: (c, w) => renderInvoices(c, w, false), title: 'Sales / Customer Invoices' },
     '/invoices/business': { render: (c, w) => renderInvoices(c, w, true), title: 'Sales / Business Invoices' },
     '/customer-invoices': { render: (c, w) => renderInvoices(c, w, false), title: 'Sales / Customer Invoices' },
     '/business-invoices': { render: (c, w) => renderInvoices(c, w, true), title: 'Sales / Business Invoices' },
     '/invoices': { render: (c, w) => renderInvoices(c, w, false), title: 'Sales / Customer Invoices' },
-    '/customers': { render: (c, w) => renderPeople(c, w, 'customers'), title: 'People / Customers' },
-    '/businesses': { render: (c, w) => renderPeople(c, w, 'businesses'), title: 'People / Businesses' },
-    '/clients': { render: (c, w) => renderPeople(c, w, 'clients'), title: 'People / Clients' },
+    '/shipping-export': { render: (c, w) => renderShippingExport(c, w), title: 'Sales / Shipping & Export' },
+
+    // CONTRACTS
+    '/customers': { render: (c, w) => renderPeople(c, w, 'customers'), title: 'Contracts / Customers & Clients' },
+    '/businesses': { render: (c, w) => renderPeople(c, w, 'businesses'), title: 'Contracts / Businesses' },
+    '/clients': { render: (c, w) => renderPeople(c, w, 'clients'), title: 'Contracts / Clients' },
+    '/suppliers': { render: (c, w) => renderSupplierMarket(c, w, 'directory'), title: 'Contracts / Supplyers' },
+
+    // AUTOMATION (Module 05)
+    '/notifications-center': { render: (c, w) => renderAutomationCenter(c, w, 'notifications'), title: 'Automation / Notifications Center' },
+    '/automation-rules': { render: (c, w) => renderAutomationCenter(c, w, 'rules'), title: 'Automation / Automation Rules' },
+    '/scheduled-reports': { render: (c, w) => renderAutomationCenter(c, w, 'reports'), title: 'Automation / Scheduled Reports' },
+    '/task-monitor': { render: (c, w) => renderAutomationCenter(c, w, 'tasks'), title: 'Automation / Task Monitor' },
+    '/notification-settings': { render: (c, w) => renderAutomationCenter(c, w, 'settings'), title: 'Automation / Notification Settings' },
+
+    // SUPPLIER & MARKET (Module 06)
+    '/supplier-directory': { render: (c, w) => renderSupplierMarket(c, w, 'directory'), title: 'Supplier & Market / Supplier Directory' },
+    '/supplier-pricing': { render: (c, w) => renderSupplierMarket(c, w, 'pricing'), title: 'Supplier & Market / Supplier Pricing' },
+    '/market-comparison': { render: (c, w) => renderSupplierMarket(c, w, 'comparison'), title: 'Supplier & Market / Market Comparison' },
+    '/supplier-performance': { render: (c, w) => renderSupplierMarket(c, w, 'performance'), title: 'Supplier & Market / Supplier Performance' },
+    '/price-history': { render: (c, w) => renderSupplierMarket(c, w, 'history'), title: 'Supplier & Market / Price History' },
+
+    // WORKSPACE SETTINGS
     '/workspace': { render: (c, w) => renderWorkers(c, w), title: 'Workspace / Hub & Members' },
     '/workers': { render: (c, w) => renderWorkers(c, w), title: 'Workspace / Hub & Members' },
     '/settings': { render: (c, w) => renderSettings(c, w), title: 'Settings / General' },
@@ -327,7 +364,7 @@ export const initRouter = async (workspaceIdParam = null) => {
                 document.body.classList.remove('app-loading');
             }
 
-            // Update active sidebar nav indicators
+            // Update active sidebar nav indicators & hierarchical tree state
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             let activeNav = document.querySelector(`.nav-item[href="#${path}"]`) || 
                             document.querySelector(`.nav-item[data-route="${path.replace(/^\//, '')}"]`);
@@ -345,8 +382,24 @@ export const initRouter = async (workspaceIdParam = null) => {
                 activeNav = document.querySelector('.nav-item[data-route="analytics"]');
             } else if (!activeNav && path.startsWith('/schema-analyzer')) {
                 activeNav = document.querySelector('.nav-item[data-route="schema-analyzer"]');
+            } else if (!activeNav && (path === '/suppliers' || path.startsWith('/supplier-'))) {
+                activeNav = document.querySelector(`.nav-item[data-route="${path.replace(/^\//, '')}"]`) || document.querySelector('.nav-item[data-route="suppliers"]');
+            } else if (!activeNav && path.startsWith('/automation-')) {
+                activeNav = document.querySelector(`.nav-item[data-route="${path.replace(/^\//, '')}"]`) || document.querySelector('.nav-item[data-route="notifications-center"]');
             }
-            if (activeNav) activeNav.classList.add('active');
+
+            if (activeNav) {
+                activeNav.classList.add('active');
+                // Ensure parent tree group is expanded and active
+                document.querySelectorAll('.nav-tree-group').forEach(grp => grp.classList.remove('tree-group-has-active'));
+                const parentGroup = activeNav.closest('.nav-tree-group');
+                if (parentGroup) {
+                    parentGroup.classList.add('expanded');
+                    parentGroup.classList.add('tree-group-has-active');
+                    const header = parentGroup.querySelector('.nav-tree-group-header');
+                    if (header) header.setAttribute('aria-expanded', 'true');
+                }
+            }
             
             // Close context panel on route change
             const contextPanel = document.getElementById('context-panel');
@@ -399,6 +452,21 @@ export const initRouter = async (workspaceIdParam = null) => {
     // Expose programmatic navigation globally
     window.navigateToRoute = navigateTo;
 
+    // Tree Navigation Group Expand/Collapse Click Handler
+    document.addEventListener('click', (e) => {
+        const header = e.target.closest('.nav-tree-group-header');
+        if (!header) return;
+        const group = header.closest('.nav-tree-group');
+        if (!group) return;
+
+        // In mini sidebar mode, avoid collapsing group headers on click
+        if (document.getElementById('app-shell')?.classList.contains('sidebar-mini')) return;
+
+        group.classList.toggle('expanded');
+        const isExp = group.classList.contains('expanded');
+        header.setAttribute('aria-expanded', isExp ? 'true' : 'false');
+    });
+
     // Sidebar & Internal Navigation Link Click Interceptor for Clean URLs & Edit Safety
     document.addEventListener('click', async (e) => {
         const link = e.target.closest('a[href^="#/"], a[data-route], a[href*="/Workspace/"]');
@@ -428,6 +496,66 @@ export const initRouter = async (workspaceIdParam = null) => {
 
         await navigateTo(targetRoute);
     }, true);
+
+    // Global Keyboard Navigation: Ctrl+ArrowUp and Ctrl+ArrowDown
+    window.addEventListener('keydown', async (e) => {
+        if (!e.ctrlKey && !e.metaKey) return;
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+
+        // Query all visible/registered sidebar navigation items in DOM order
+        const navItems = Array.from(document.querySelectorAll('.sidebar .nav-item'));
+        if (!navItems.length) return;
+
+        e.preventDefault();
+
+        // Determine current active navigation index
+        let currentIndex = navItems.findIndex(el => el.classList.contains('active'));
+        if (currentIndex === -1 && currentActiveRoute) {
+            const cleanCur = currentActiveRoute.replace(/^\//, '');
+            currentIndex = navItems.findIndex(el => {
+                const r = el.getAttribute('data-route') || el.getAttribute('href')?.replace(/^#\/?/, '');
+                return r === cleanCur || (r && cleanCur.startsWith(r));
+            });
+        }
+
+        let targetIndex = 0;
+        if (e.key === 'ArrowDown') {
+            if (currentIndex === -1 || currentIndex >= navItems.length - 1) {
+                targetIndex = 0; // Wrap from last (Settings) back to first (Overview)
+            } else {
+                targetIndex = currentIndex + 1;
+            }
+        } else if (e.key === 'ArrowUp') {
+            if (currentIndex <= 0) {
+                targetIndex = navItems.length - 1; // Wrap from first (Overview) directly to last station (Settings)
+            } else {
+                targetIndex = currentIndex - 1;
+            }
+        }
+
+        const targetLink = navItems[targetIndex];
+        if (targetLink) {
+            // Expand the parent group if collapsed so the user sees the active destination
+            const parentGroup = targetLink.closest('.nav-tree-group');
+            if (parentGroup && !parentGroup.classList.contains('expanded')) {
+                parentGroup.classList.add('expanded');
+                const header = parentGroup.querySelector('.nav-tree-group-header');
+                if (header) header.setAttribute('aria-expanded', 'true');
+            }
+
+            // Scroll the link smoothly into view in the sidebar
+            targetLink.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+            let targetRoute = targetLink.getAttribute('href')?.replace(/^#/, '') || 
+                              targetLink.getAttribute('data-route') || 
+                              '/overview';
+            if (!targetRoute.startsWith('/')) targetRoute = '/' + targetRoute;
+            if (targetRoute === '/customer-invoices') targetRoute = '/invoices/customer';
+            if (targetRoute === '/business-invoices') targetRoute = '/invoices/business';
+
+            await navigateTo(targetRoute);
+        }
+    });
 
     // Browser Refresh / Window Close Edit Safety Guard
     window.addEventListener('beforeunload', (e) => {

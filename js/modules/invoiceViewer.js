@@ -227,7 +227,7 @@ export const showAddCustomFontModal = (onFontAdded) => {
         <div style="background:#ffffff; border-radius:12px; width:100%; max-width:440px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.3); border:1px solid #e2e8f0; overflow:hidden; animation:ivFadeIn 0.2s ease;">
             <div style="background:#0f172a; color:#ffffff; padding:0.9rem 1.25rem; display:flex; justify-content:space-between; align-items:center;">
                 <div style="font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:0.4rem;">
-                    <span>✒️</span> Add Custom Signature Font
+                    <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg></span> Add Custom Signature Font
                 </div>
                 <button type="button" id="iv-close-font-modal" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer; line-height:1;">&times;</button>
             </div>
@@ -243,11 +243,11 @@ export const showAddCustomFontModal = (onFontAdded) => {
                     <label style="font-size:0.75rem; font-weight:700; color:#334155; display:block; margin-bottom:0.25rem;">Style Category</label>
                     <div style="display:flex; gap:0.5rem;">
                         <label style="flex:1; display:flex; align-items:center; gap:0.35rem; font-size:0.75rem; padding:0.4rem 0.6rem; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; background:#f8fafc;">
-                            <input type="radio" name="iv-font-cat" value="cursive" checked style="accent-color:#e11d48;">
+                            <input type="radio" name="iv-font-cat" value="cursive" checked style="accent-color:#18181B;">
                             <span>Cursive Script</span>
                         </label>
                         <label style="flex:1; display:flex; align-items:center; gap:0.35rem; font-size:0.75rem; padding:0.4rem 0.6rem; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; background:#f8fafc;">
-                            <input type="radio" name="iv-font-cat" value="bold" style="accent-color:#e11d48;">
+                            <input type="radio" name="iv-font-cat" value="bold" style="accent-color:#18181B;">
                             <span>Normal BOLD</span>
                         </label>
                     </div>
@@ -268,7 +268,7 @@ export const showAddCustomFontModal = (onFontAdded) => {
 
                 <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.25rem;">
                     <button type="button" id="iv-cancel-font-btn" class="btn btn-secondary btn-sm" style="padding:0.4rem 0.8rem; font-size:0.8rem;">Cancel</button>
-                    <button type="button" id="iv-save-font-btn" class="btn btn-primary btn-sm" style="padding:0.4rem 1rem; font-size:0.8rem; background:#e11d48; border-color:#e11d48; font-weight:700;">Save & Use Font</button>
+                    <button type="button" id="iv-save-font-btn" class="btn btn-primary btn-sm" style="padding:0.4rem 1rem; font-size:0.8rem; background:#18181B; border-color:#18181B; font-weight:700;">Save & Use Font</button>
                 </div>
             </div>
         </div>
@@ -492,7 +492,7 @@ export class SignatureDrawingPad {
             ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
             ctx.fillStyle = '#94a3b8';
             ctx.textAlign = 'center';
-            ctx.fillText('✍️ Draw your signature here with mouse or touch', displayWidth / 2, displayHeight / 2 - 4);
+            ctx.fillText('Draw your signature here with mouse or touch', displayWidth / 2, displayHeight / 2 - 4);
             ctx.font = '9px -apple-system, BlinkMacSystemFont, sans-serif';
             ctx.fillStyle = '#cbd5e1';
             ctx.fillText('Sign on or above the baseline guide', displayWidth / 2, displayHeight / 2 + 12);
@@ -588,7 +588,7 @@ export const getInitialSidebarWidthPref = () => {
 };
 
 export const INVOICE_STYLE_THEMES = [
-    { id: 'RUBY_EXECUTIVE', name: 'Ruby Executive', primary: '#e11d48', dark: '#0f172a', desc: 'High-impact executive corporate' },
+    { id: 'RUBY_EXECUTIVE', name: 'Ruby Executive', primary: '#18181B', dark: '#0f172a', desc: 'High-impact executive corporate' },
     { id: 'MIDNIGHT_NAVY', name: 'Midnight Corporate', primary: '#1e3a8a', dark: '#0f172a', desc: 'Wall St. & enterprise finance' },
     { id: 'EMERALD_CORP', name: 'Emerald Enterprise', primary: '#059669', dark: '#064e3b', desc: 'Modern commerce & tech' },
     { id: 'SWISS_EDITORIAL', name: 'Swiss Editorial', primary: '#18181b', dark: '#09090b', desc: 'Minimalist luxury monochrome' },
@@ -598,7 +598,7 @@ export const INVOICE_STYLE_THEMES = [
 let currentOptions = {
     template: 'MODERN_RED',
     themeId: 'RUBY_EXECUTIVE',
-    themeColor: '#e11d48',
+    themeColor: '#18181B',
     sizePreset: 'BUSINESS_A4', // 'POS_RECEIPT', 'CUSTOMER_A4', 'BUSINESS_A4', 'CORPORATE_ENTERPRISE', 'US_LETTER', 'CUSTOM'
     customWidth: 800,
     customHeight: 1100,
@@ -638,7 +638,7 @@ let currentOptions = {
     },
     border: {
         enabled: false, // Default: OFF as requested
-        color: '#e11d48',
+        color: '#18181B',
         width: 1,
         radius: 8,
         style: 'solid'
@@ -745,7 +745,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                     <div>
                         <div style="display:flex; align-items:center; gap:0.5rem;">
                             <h3 class="iv-modal-title">Corporate Invoice Viewer & Maker</h3>
-                            <span class="badge" style="background:rgba(225,29,72,0.1); color:#e11d48; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:4px; text-transform:uppercase;">Enterprise Studio</span>
+                            <span class="badge" style="background:rgba(225,29,72,0.1); color:#18181B; font-size:0.68rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:4px; text-transform:uppercase;">Enterprise Studio</span>
                         </div>
                         <span class="iv-modal-subtitle" id="iv-header-inv-num">Invoice #${escapeHtml(currentInvoice.busInvNumber || currentInvoice.invoiceNumber || currentInvoice.id || 'INV-001')}</span>
                     </div>
@@ -778,7 +778,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                         Print
                     </button>
 
-                    <button type="button" id="iv-btn-download-pdf" class="btn btn-primary" style="font-weight:700; padding:0.4rem 1rem; font-size:0.82rem; display:flex; align-items:center; gap:0.4rem; background: linear-gradient(135deg, #ff3366 0%, #e11d48 55%, #be123c 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35);" title="Download Vector PDF">
+                    <button type="button" id="iv-btn-download-pdf" class="btn btn-primary" style="font-weight:700; padding:0.4rem 1rem; font-size:0.82rem; display:flex; align-items:center; gap:0.4rem; background: linear-gradient(135deg, #ff3366 0%, #18181B 55%, #27272A 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35);" title="Download Vector PDF">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Export PDF
                     </button>
@@ -795,7 +795,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                     </button>
 
                     <!-- Close Icon (Panel Back Screen) -->
-                    <button type="button" id="iv-modal-close-btn" class="icon-btn" style="font-size:1.35rem; padding:0.25rem 0.5rem; color:var(--text-secondary); cursor:pointer; background:none; border:none; line-height:1;" title="Close Panel (Esc / Back)">✕</button>
+                    <button type="button" id="iv-modal-close-btn" class="icon-btn" style="font-size:1.35rem; padding:0.25rem 0.5rem; color:var(--text-secondary); cursor:pointer; background:none; border:none; line-height:1;" title="Close Panel (Esc / Back)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                 </div>
             </div>
 
@@ -944,7 +944,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                         <label class="iv-section-title">
                             <span>3. Canvas Border</span>
                             <label style="display:flex; align-items:center; gap:0.3rem; font-size:0.72rem; font-weight:700; color:var(--primary); cursor:pointer; text-transform:none;">
-                                <input type="checkbox" id="iv-toggle-border" ${currentOptions.border.enabled ? 'checked' : ''} style="accent-color:#e11d48; cursor:pointer;">
+                                <input type="checkbox" id="iv-toggle-border" ${currentOptions.border.enabled ? 'checked' : ''} style="accent-color:#18181B; cursor:pointer;">
                                 <span>Enable Border</span>
                             </label>
                         </label>
@@ -959,7 +959,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             </div>
 
                             <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
-                                ${['#e11d48', '#0f172a', '#1e3a8a', '#059669', '#d97706', '#64748b', '#cbd5e1'].map(c => `
+                                ${['#18181B', '#0f172a', '#1e3a8a', '#059669', '#d97706', '#64748b', '#cbd5e1'].map(c => `
                                     <button type="button" class="iv-color-swatch" data-color="${c}" style="width:22px; height:22px; border-radius:50%; background:${c}; border:2px solid ${currentOptions.border.color === c ? '#0f172a' : '#ffffff'}; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.15);" title="${c}"></button>
                                 `).join('')}
                             </div>
@@ -971,7 +971,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                                         <span>Width:</span>
                                         <span id="iv-border-width-val">${currentOptions.border.width}px</span>
                                     </div>
-                                    <input type="range" id="iv-border-width-slider" min="0" max="8" value="${currentOptions.border.width}" style="width:100%; accent-color:#e11d48;">
+                                    <input type="range" id="iv-border-width-slider" min="0" max="8" value="${currentOptions.border.width}" style="width:100%; accent-color:#18181B;">
                                 </div>
 
                                 <div>
@@ -979,7 +979,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                                         <span>Radius:</span>
                                         <span id="iv-border-radius-val">${currentOptions.border.radius}px</span>
                                     </div>
-                                    <input type="range" id="iv-border-radius-slider" min="0" max="24" value="${currentOptions.border.radius}" style="width:100%; accent-color:#e11d48;">
+                                    <input type="range" id="iv-border-radius-slider" min="0" max="24" value="${currentOptions.border.radius}" style="width:100%; accent-color:#18181B;">
                                 </div>
                             </div>
 
@@ -1008,7 +1008,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.65rem;">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.75rem; font-weight:700; cursor:pointer;">
-                                        <input type="checkbox" id="iv-toggle-signature" ${currentOptions.elements.signature.enabled ? 'checked' : ''} style="accent-color:#e11d48;">
+                                        <input type="checkbox" id="iv-toggle-signature" ${currentOptions.elements.signature.enabled ? 'checked' : ''} style="accent-color:#18181B;">
                                         <span>Official Digital Signature</span>
                                     </label>
                                     <span style="font-size:0.68rem; color:#64748b;">Signatory block</span>
@@ -1040,9 +1040,9 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
 
                                     <!-- 3 Mode Switcher Tabs -->
                                     <div style="display:flex; background:#e2e8f0; padding:2px; border-radius:6px; gap:2px; margin-top:0.15rem;">
-                                        <button type="button" class="btn btn-sm iv-sig-mode-tab ${currentOptions.elements.signature.type === 'font' || (!currentOptions.elements.signature.dataUrl && currentOptions.elements.signature.type !== 'draw' && currentOptions.elements.signature.type !== 'upload') ? 'active' : ''}" data-mode="font" style="flex:1; font-size:0.68rem; padding:0.25rem 0.2rem; border:none; border-radius:4px; font-weight:600; cursor:pointer;">✒️ Font Style</button>
-                                        <button type="button" class="btn btn-sm iv-sig-mode-tab ${currentOptions.elements.signature.type === 'draw' ? 'active' : ''}" data-mode="draw" style="flex:1; font-size:0.68rem; padding:0.25rem 0.2rem; border:none; border-radius:4px; font-weight:600; cursor:pointer;">✍️ Draw Pad</button>
-                                        <button type="button" class="btn btn-sm iv-sig-mode-tab ${currentOptions.elements.signature.type === 'upload' ? 'active' : ''}" data-mode="upload" style="flex:1; font-size:0.68rem; padding:0.25rem 0.2rem; border:none; border-radius:4px; font-weight:600; cursor:pointer;">📁 Drive File</button>
+                                        <button type="button" class="btn btn-sm iv-sig-mode-tab ${currentOptions.elements.signature.type === 'font' || (!currentOptions.elements.signature.dataUrl && currentOptions.elements.signature.type !== 'draw' && currentOptions.elements.signature.type !== 'upload') ? 'active' : ''}" data-mode="font" style="flex:1; font-size:0.68rem; padding:0.25rem 0.2rem; border:none; border-radius:4px; font-weight:600; cursor:pointer;">Font Style</button>
+                                        <button type="button" class="btn btn-sm iv-sig-mode-tab ${currentOptions.elements.signature.type === 'draw' ? 'active' : ''}" data-mode="draw" style="flex:1; font-size:0.68rem; padding:0.25rem 0.2rem; border:none; border-radius:4px; font-weight:600; cursor:pointer;">Draw Pad</button>
+                                        <button type="button" class="btn btn-sm iv-sig-mode-tab ${currentOptions.elements.signature.type === 'upload' ? 'active' : ''}" data-mode="upload" style="flex:1; font-size:0.68rem; padding:0.25rem 0.2rem; border:none; border-radius:4px; font-weight:600; cursor:pointer;">Drive File</button>
                                     </div>
 
                                     <!-- Panel 1: Font Style -->
@@ -1051,8 +1051,8 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                                             <select id="iv-sig-font-select" class="form-select" style="font-size:0.74rem; padding:0.3rem 0.5rem; flex:1;">
                                                 <!-- Populated dynamically -->
                                             </select>
-                                            <button type="button" id="iv-btn-delete-font" class="btn btn-secondary btn-sm" style="display:none; padding:0.3rem 0.45rem; font-size:0.7rem; color:#e11d48;" title="Delete custom font">🗑️</button>
-                                            <button type="button" id="iv-btn-add-custom-font" class="btn btn-primary btn-sm" style="padding:0.3rem 0.55rem; font-size:0.7rem; white-space:nowrap; background:#e11d48; border-color:#e11d48;">Add Font</button>
+                                            <button type="button" id="iv-btn-delete-font" class="btn btn-secondary btn-sm" style="display:none; padding:0.3rem 0.45rem; font-size:0.7rem; color:#18181B;" title="Delete custom font"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                                            <button type="button" id="iv-btn-add-custom-font" class="btn btn-primary btn-sm" style="padding:0.3rem 0.55rem; font-size:0.7rem; white-space:nowrap; background:#18181B; border-color:#18181B;">Add Font</button>
                                         </div>
                                         
                                         <!-- Live Font Signature Preview Card -->
@@ -1072,8 +1072,8 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                                                 <button type="button" class="iv-draw-ink-btn" data-color="#991b1b" style="width:18px; height:18px; border-radius:50%; background:#991b1b; border:1px solid #cbd5e1; cursor:pointer;" title="Crimson Ink"></button>
                                             </div>
                                             <div style="display:flex; gap:0.3rem;">
-                                                <button type="button" id="iv-btn-draw-undo" class="btn btn-secondary btn-sm" style="font-size:0.68rem; padding:0.2rem 0.45rem;" title="Undo stroke">↶ Undo</button>
-                                                <button type="button" id="iv-btn-draw-clear" class="btn btn-secondary btn-sm" style="font-size:0.68rem; padding:0.2rem 0.45rem;" title="Clear canvas">✕ Clear</button>
+                                                <button type="button" id="iv-btn-draw-undo" class="btn btn-secondary btn-sm" style="font-size:0.68rem; padding:0.2rem 0.45rem;" title="Undo stroke">Undo</button>
+                                                <button type="button" id="iv-btn-draw-clear" class="btn btn-secondary btn-sm" style="font-size:0.68rem; padding:0.2rem 0.45rem;" title="Clear canvas">Clear</button>
                                             </div>
                                         </div>
 
@@ -1083,7 +1083,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                                         </div>
 
                                         <button type="button" id="iv-btn-apply-draw" class="btn btn-primary btn-sm" style="width:100%; font-size:0.72rem; padding:0.35rem; background:#0f172a; border-color:#0f172a; font-weight:700;">
-                                            ✓ Apply Hand-Drawn Signature
+                                            Apply Hand-Drawn Signature
                                         </button>
                                     </div>
 
@@ -1106,7 +1106,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.65rem;">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.75rem; font-weight:700; cursor:pointer;">
-                                        <input type="checkbox" id="iv-toggle-stamp" ${currentOptions.elements.stamp.enabled ? 'checked' : ''} style="accent-color:#e11d48;">
+                                        <input type="checkbox" id="iv-toggle-stamp" ${currentOptions.elements.stamp.enabled ? 'checked' : ''} style="accent-color:#18181B;">
                                         <span>Corporate Stamp / Verification Seal</span>
                                     </label>
                                 </div>
@@ -1120,7 +1120,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                                     <div style="display:flex; align-items:center; justify-content:space-between;">
                                         <span style="font-size:0.68rem; font-weight:600; color:#64748b;">Stamp Color:</span>
                                         <div style="display:flex; gap:0.3rem;">
-                                            ${['#059669', '#e11d48', '#0f172a', '#d97706'].map(col => `
+                                            ${['#059669', '#18181B', '#0f172a', '#d97706'].map(col => `
                                                 <button type="button" class="iv-stamp-color-btn" data-color="${col}" style="width:18px; height:18px; border-radius:50%; background:${col}; border:1.5px solid ${currentOptions.elements.stamp.color === col ? '#000000' : '#ffffff'}; cursor:pointer;"></button>
                                             `).join('')}
                                         </div>
@@ -1128,9 +1128,9 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
 
                                     <!-- Stamp Quick Presets -->
                                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.25rem; margin-top:0.15rem;">
-                                        <button type="button" class="btn btn-sm iv-stamp-preset-btn" data-text="APPROVED & VERIFIED" data-col="#059669" style="font-size:0.65rem; padding:0.25rem;">★ Approved</button>
-                                        <button type="button" class="btn btn-sm iv-stamp-preset-btn" data-text="PAID IN FULL" data-col="#e11d48" style="font-size:0.65rem; padding:0.25rem;">★ Paid in Full</button>
-                                        <button type="button" class="btn btn-sm iv-stamp-preset-btn" data-text="OFFICIAL CORPORATE SEAL" data-col="#0f172a" style="font-size:0.65rem; padding:0.25rem;">★ Official Seal</button>
+                                        <button type="button" class="btn btn-sm iv-stamp-preset-btn" data-text="APPROVED & VERIFIED" data-col="#059669" style="font-size:0.65rem; padding:0.25rem;">Approved</button>
+                                        <button type="button" class="btn btn-sm iv-stamp-preset-btn" data-text="PAID IN FULL" data-col="#18181B" style="font-size:0.65rem; padding:0.25rem;">Paid in Full</button>
+                                        <button type="button" class="btn btn-sm iv-stamp-preset-btn" data-text="OFFICIAL CORPORATE SEAL" data-col="#0f172a" style="font-size:0.65rem; padding:0.25rem;">Official Seal</button>
                                     </div>
                                 </div>
                             </div>
@@ -1153,7 +1153,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <div id="iv-floating-pos-box" style="display:none; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:0.65rem;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
                                     <span style="font-size:0.72rem; font-weight:800; color:#0f172a;" id="iv-selected-el-label">Selected Element</span>
-                                    <button type="button" id="iv-btn-del-selected-el" class="btn btn-sm btn-ghost" style="color:#e11d48; padding:0.15rem 0.35rem; font-size:0.7rem;">Delete</button>
+                                    <button type="button" id="iv-btn-del-selected-el" class="btn btn-sm btn-ghost" style="color:#18181B; padding:0.15rem 0.35rem; font-size:0.7rem;">Delete</button>
                                 </div>
 
                                 <!-- Position Coordinates (X, Y) -->
@@ -1196,7 +1196,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                                             <span style="font-weight:600;">Photo Width (px):</span>
                                             <span id="iv-el-photo-width-val">140px</span>
                                         </div>
-                                        <input type="range" id="iv-el-photo-width-slider" min="40" max="400" value="140" style="width:100%; accent-color:#e11d48;">
+                                        <input type="range" id="iv-el-photo-width-slider" min="40" max="400" value="140" style="width:100%; accent-color:#18181B;">
                                     </div>
                                 </div>
 
@@ -1216,7 +1216,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                         <!-- From / Supplier Details Toggle (Default: ON) -->
                         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.45rem 0.65rem; margin-bottom:0.65rem; display:flex; align-items:center; justify-content:space-between;">
                             <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.75rem; font-weight:700; color:#1e293b; cursor:pointer; margin:0;">
-                                <input type="checkbox" id="iv-toggle-show-from" ${currentOptions.showBilledFrom !== false ? 'checked' : ''} style="accent-color:#e11d48; width:15px; height:15px; cursor:pointer;">
+                                <input type="checkbox" id="iv-toggle-show-from" ${currentOptions.showBilledFrom !== false ? 'checked' : ''} style="accent-color:#18181B; width:15px; height:15px; cursor:pointer;">
                                 <span>Include "BILLED FROM" (Supplier)</span>
                             </label>
                             <span id="iv-show-from-status" style="font-size:0.68rem; color:${currentOptions.showBilledFrom !== false ? '#059669' : '#64748b'}; font-weight:700;">${currentOptions.showBilledFrom !== false ? 'Shown' : 'Hidden'}</span>
@@ -1300,7 +1300,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                 7. Invoice Origin
                             </span>
-                            <span class="badge" style="font-size:0.65rem; background:rgba(225,29,72,0.1); color:var(--theme-primary, #e11d48); font-weight:700;">Origin Trace</span>
+                            <span class="badge" style="font-size:0.65rem; background:rgba(225,29,72,0.1); color:var(--theme-primary, #18181B); font-weight:700;">Origin Trace</span>
                         </label>
                         <div class="origin-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; font-size:0.75rem;">
                             <div class="origin-field-box" style="background:var(--surface-100); padding:0.4rem 0.55rem; border-radius:6px; border:1px solid var(--border-color);">
@@ -1329,7 +1329,7 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
 
                     <!-- Bottom Action Buttons Bar -->
                     <div style="margin-top:auto; padding-top:1rem; display:flex; flex-direction:column; gap:0.5rem;">
-                        <button type="button" id="iv-btn-download-bottom" class="btn btn-primary" style="width:100%; padding:0.65rem; font-weight:700; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:0.4rem; background: var(--theme-gradient, linear-gradient(135deg, #ff3366 0%, #e11d48 55%, #be123c 100%)); box-shadow:0 4px 14px var(--theme-glow, rgba(225,29,72,0.35)); color:#ffffff;">
+                        <button type="button" id="iv-btn-download-bottom" class="btn btn-primary" style="width:100%; padding:0.65rem; font-weight:700; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:0.4rem; background: var(--theme-gradient, linear-gradient(135deg, #ff3366 0%, #18181B 55%, #27272A 100%)); box-shadow:0 4px 14px var(--theme-glow, rgba(225,29,72,0.35)); color:#ffffff;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                             Export & Download PDF
                         </button>
@@ -1390,19 +1390,19 @@ export const openInvoiceViewerModal = async (invoice, onEditCallback = null) => 
                             <!-- Canvas Mode Switcher: Live Vector PDF Engine vs Visual Canvas Studio -->
                             <div class="iv-engine-mode-dock" style="display:flex; align-items:center; background:#f1f5f9; padding:2px; border-radius:6px; border:1px solid #e2e8f0; font-size:0.72rem; font-weight:700;">
                                 <button type="button" id="iv-btn-mode-vector" class="iv-engine-mode-btn" style="padding:3px 8px; border-radius:4px; border:none; cursor:pointer; font-size:0.72rem; font-weight:700; transition:all 0.15s ease; ${currentOptions.canvasEngineMode !== 'dom' ? 'background:#ffffff; color:#0f172a; box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent; color:#64748b;'}" title="Canvas is directly driven 1:1 by Export Engine vector PDF">
-                                    ⚡ Live Vector PDF
+                                    Live Vector PDF
                                 </button>
                                 <button type="button" id="iv-btn-mode-canvas" class="iv-engine-mode-btn" style="padding:3px 8px; border-radius:4px; border:none; cursor:pointer; font-size:0.72rem; font-weight:700; transition:all 0.15s ease; ${currentOptions.canvasEngineMode === 'dom' ? 'background:#ffffff; color:#0f172a; box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent; color:#64748b;'}" title="Interactive Visual Canvas Studio HTML DOM preview">
-                                    🎨 Visual Studio
+                                    Visual Studio
                                 </button>
                             </div>
 
                             <span style="font-size:0.72rem; color:#94a3b8; font-weight:500;" title="Pan Canvas: Hold Right Mouse Button & Drag. Zoom: Alt + Scroll Wheel">
-                                🖱️ Hold Right-Click to Pan
+                                Hold Right-Click to Pan
                             </span>
 
                             <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.75rem; font-weight:700; cursor:pointer; color:var(--text-primary); user-select:none;">
-                                <input type="checkbox" id="iv-toggle-data-changes" ${currentOptions.enableDataChanges ? 'checked' : ''} style="accent-color:#e11d48; cursor:pointer;">
+                                <input type="checkbox" id="iv-toggle-data-changes" ${currentOptions.enableDataChanges ? 'checked' : ''} style="accent-color:#18181B; cursor:pointer;">
                                 <span>Enable Data Changes</span>
                             </label>
                         </div>
@@ -1501,7 +1501,7 @@ const applyBorderStyles = () => {
             paper.style.border = 'none';
             paper.style.borderRadius = '0px';
         } else {
-            paper.style.border = `${b.width || 1}px ${b.style || 'solid'} ${b.color || '#e11d48'}`;
+            paper.style.border = `${b.width || 1}px ${b.style || 'solid'} ${b.color || '#18181B'}`;
             paper.style.borderRadius = `${b.radius || 0}px`;
         }
 
@@ -1579,7 +1579,7 @@ const updateVisualPreview = () => {
     const invStatus = (inv.status || 'PAID').toUpperCase();
     const isPaid = invStatus === 'PAID';
     const statusBadgeClass = isPaid ? 'iv-badge-paid' : 'iv-badge-unpaid';
-    const accentColor = currentOptions.themeColor || (currentOptions.border.enabled ? (currentOptions.border.color || '#e11d48') : '#e11d48');
+    const accentColor = currentOptions.themeColor || (currentOptions.border.enabled ? (currentOptions.border.color || '#18181B') : '#18181B');
 
     // Financial calculations
     const subtotal = Number(inv.subtotal || 0);
@@ -1945,7 +1945,7 @@ const updateVisualPreview = () => {
                     </div>
 
                     <div style="margin-top:2rem; border-top:1px dashed #cbd5e1; padding-top:0.75rem; text-align:center;">
-                        <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">✃ Please detach and return with payment remittance ✃</span>
+                        <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">— Please detach and return with payment remittance —</span>
                     </div>
                 ` : ''}
             `;
@@ -2076,7 +2076,7 @@ const updateVisualPreview = () => {
                     </div>
 
                     <div style="margin-top:2rem; border-top:1px dashed #cbd5e1; padding-top:0.75rem; text-align:center;">
-                        <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">✃ Please detach and return with payment remittance ✃</span>
+                        <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">— Please detach and return with payment remittance —</span>
                     </div>
                 ` : ''}
             `;
@@ -2290,7 +2290,7 @@ const updateVisualPreview = () => {
                     </div>
 
                     <div style="margin-top:2rem; border-top:1px dashed #cbd5e1; padding-top:0.75rem; text-align:center;">
-                        <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">✃ Please detach and return with payment remittance ✃</span>
+                        <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">— Please detach and return with payment remittance —</span>
                     </div>
                 ` : ''}
             `;
@@ -2388,7 +2388,7 @@ const updateVisualPreview = () => {
                 </div>
 
                 <div style="margin-top:2rem; border-top:1px dashed #cbd5e1; padding-top:0.75rem; text-align:center;">
-                    <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">✃ Please detach and return with payment remittance ✃</span>
+                    <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">— Please detach and return with payment remittance —</span>
                 </div>
             `;
         }
@@ -2434,7 +2434,7 @@ const updateVisualPreview = () => {
                     <div>
                         ${stamp.enabled ? `
                             <div class="iv-stamp-badge" style="border:3px double ${stamp.color || '#059669'}; color:${stamp.color || '#059669'}; background:rgba(5,150,105,0.06);">
-                                <span style="font-size:0.82rem;">★ ${escapeHtml(stamp.customText || 'APPROVED & VERIFIED')} ★</span>
+                                <span style="font-size:0.82rem;">${escapeHtml(stamp.customText || 'APPROVED & VERIFIED')} ★</span>
                                 <span style="font-size:0.65rem; font-weight:600; opacity:0.85;">${escapeHtml(bTitle)}</span>
                             </div>
                         ` : ''}
@@ -2772,13 +2772,13 @@ const updatePerformanceView = () => {
     const marginPct = totalRevenue > 0 ? ((finalProfit / totalRevenue) * 100) : 0;
 
     // Financial Health Grade & Safety Cushion
-    let healthGrade = '★ Grade A+ (High Yield)';
+    let healthGrade = 'Grade A+ (High Yield)';
     let gradeBadgeStyle = 'background:rgba(16,185,129,0.12); color:#059669; border:1px solid rgba(16,185,129,0.3);';
     if (marginPct < 15) {
-        healthGrade = '⚠ Grade C (Low Margin Risk)';
-        gradeBadgeStyle = 'background:rgba(225,29,72,0.12); color:#e11d48; border:1px solid rgba(225,29,72,0.3);';
+        healthGrade = 'Grade C (Low Margin Risk)';
+        gradeBadgeStyle = 'background:rgba(225,29,72,0.12); color:#18181B; border:1px solid rgba(225,29,72,0.3);';
     } else if (marginPct < 30) {
-        healthGrade = '★ Grade B (Sustainable)';
+        healthGrade = 'Grade B (Sustainable)';
         gradeBadgeStyle = 'background:rgba(245,158,11,0.12); color:#d97706; border:1px solid rgba(245,158,11,0.3);';
     }
 
@@ -2813,9 +2813,9 @@ const updatePerformanceView = () => {
             </div>
 
             <div style="background:rgba(225,29,72,0.04); border:1px solid rgba(225,29,72,0.2); border-radius:10px; padding:0.85rem;">
-                <div style="font-size:0.68rem; font-weight:700; color:#e11d48; text-transform:uppercase;">Net Gross Profit</div>
-                <div style="font-size:1.35rem; font-weight:900; color:#e11d48; margin-top:0.2rem;">${userRestrictions.cannotSeeProfit ? '••••' : '+' + formatCurrency(finalProfit, currentOptions.currencySymbol)}</div>
-                <div style="font-size:0.72rem; color:#e11d48; font-weight:700;">${userRestrictions.cannotSeeProfit ? '•••• yield' : Math.round(marginPct) + '% net yield'}</div>
+                <div style="font-size:0.68rem; font-weight:700; color:#18181B; text-transform:uppercase;">Net Gross Profit</div>
+                <div style="font-size:1.35rem; font-weight:900; color:#18181B; margin-top:0.2rem;">${userRestrictions.cannotSeeProfit ? '••••' : '+' + formatCurrency(finalProfit, currentOptions.currencySymbol)}</div>
+                <div style="font-size:0.72rem; color:#18181B; font-weight:700;">${userRestrictions.cannotSeeProfit ? '•••• yield' : Math.round(marginPct) + '% net yield'}</div>
             </div>
 
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">
@@ -2950,7 +2950,7 @@ const updateMakerEditorView = () => {
                                     ${formatCurrency(qty * price, currentOptions.currencySymbol)}
                                 </td>
                                 <td style="padding:0.5rem 0.8rem; text-align:center;">
-                                    <button type="button" class="btn btn-sm btn-ghost iv-maker-del-item" data-idx="${idx}" style="color:#e11d48; padding:0.2rem;" title="Delete Item">✕</button>
+                                    <button type="button" class="btn btn-sm btn-ghost iv-maker-del-item" data-idx="${idx}" style="color:#18181B; padding:0.2rem;" title="Delete Item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                                 </td>
                             </tr>
                         `;
@@ -3162,7 +3162,7 @@ const showCustomPromptModal = ({ title, placeholder, initialValue = '', onConfir
         <div class="iv-inline-prompt-card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h4 style="margin:0; font-size:1rem; font-weight:800; color:#0f172a;">${escapeHtml(title)}</h4>
-                <button type="button" class="btn btn-sm btn-ghost" id="iv-prompt-close-btn" style="padding:0.2rem 0.4rem; font-size:1rem;">✕</button>
+                <button type="button" class="btn btn-sm btn-ghost" id="iv-prompt-close-btn" style="padding:0.2rem 0.4rem; font-size:1rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </div>
             <div>
                 <textarea id="iv-prompt-input" rows="3" class="form-control" style="font-size:0.85rem; width:100%; resize:vertical;" placeholder="${escapeHtml(placeholder)}">${escapeHtml(initialValue)}</textarea>
@@ -4188,7 +4188,7 @@ const setupViewerEvents = (onEditCallback) => {
             await downloadInvoicePdf(currentInvoice, {
                 ...currentOptions,
                 showBilledFrom: currentOptions.showBilledFrom !== false,
-                borderColor: currentOptions.border.enabled ? currentOptions.border.color : (currentOptions.themeColor || '#e11d48')
+                borderColor: currentOptions.border.enabled ? currentOptions.border.color : (currentOptions.themeColor || '#18181B')
             });
             showAlert.success("Invoice PDF downloaded successfully!");
         } catch (err) {
@@ -4207,7 +4207,7 @@ const setupViewerEvents = (onEditCallback) => {
                 await printInvoicePdf(currentInvoice, {
                     ...currentOptions,
                     showBilledFrom: currentOptions.showBilledFrom !== false,
-                    borderColor: currentOptions.border.enabled ? currentOptions.border.color : (currentOptions.themeColor || '#e11d48')
+                    borderColor: currentOptions.border.enabled ? currentOptions.border.color : (currentOptions.themeColor || '#18181B')
                 });
             } catch (err) {
                 console.error("Print failed:", err);
@@ -4360,7 +4360,7 @@ const updateLivePdfIframe = async () => {
             ...currentOptions,
             exportEngine: 'vector',
             showBilledFrom: currentOptions.showBilledFrom !== false,
-            borderColor: currentOptions.border.enabled ? currentOptions.border.color : (currentOptions.themeColor || '#e11d48')
+            borderColor: currentOptions.border.enabled ? currentOptions.border.color : (currentOptions.themeColor || '#18181B')
         });
 
         // Guard against stale asynchronous render results

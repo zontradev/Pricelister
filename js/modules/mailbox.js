@@ -59,10 +59,10 @@ export const renderMailbox = async (container, workspaceId) => {
                 </p>
             </div>
 
-            <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); margin-bottom: 1rem; border-left: 4px solid #3b82f6;">
+            <div class="card" style="padding: 1.5rem; border-radius: var(--radius-card); margin-bottom: 1rem; border-left: 4px solid #18181B;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #2563eb; font-weight: 700; font-size: 0.75rem;">Feature Update</span>
+                        <span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #18181B; font-weight: 700; font-size: 0.75rem;">Feature Update</span>
                         <h4 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Market Inserter & Custom Exporter Enabled</h4>
                     </div>
                     <span style="font-size: 0.75rem; color: var(--text-muted);">Recent</span>

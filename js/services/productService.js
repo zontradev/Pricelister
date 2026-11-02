@@ -3,6 +3,8 @@ import { generateUniqueId } from '../utils/idGenerator.js';
 import { Product } from '../../DataModel.js';
 import { validateProduct } from '../schemas/productSchema.js';
 import { storageService } from '../../supabase/storage.js';
+import { getAutomationService } from './automationService.js';
+import { getSupplierService } from './supplierService.js';
 
 export const getProductService = (workspaceId) => {
     const repo = createRepository('Products', workspaceId);
@@ -47,6 +49,21 @@ export const getProductService = (workspaceId) => {
             // Convert class instance to plain object for Firebase
             const id = await repo.add(JSON.parse(JSON.stringify(newProduct)));
             await firestoreService.updateMetricsCounter(workspaceId, 'product', true, creatorId, 1);
+
+            // Trigger Automation Event Hooks
+            try {
+                const autoService = getAutomationService(workspaceId);
+                await autoService.evaluateProductStock({ ...newProduct, id });
+                await autoService.recordProductUpdateNotification({
+                    action: 'created',
+                    productId: id,
+                    productName: newProduct.name,
+                    changedByEmail: creatorId
+                });
+            } catch (err) {
+                console.warn("[Automation] addProduct hook warning:", err);
+            }
+
             return id;
         },
 
@@ -99,6 +116,22 @@ export const getProductService = (workspaceId) => {
 
                 const id = await repo.add(JSON.parse(JSON.stringify(newProduct)));
                 results.push({ id, uniqueId: newProduct.uniqueId, name: newProduct.name });
+
+                // Trigger low-stock and creation event hooks
+                try {
+                    const autoService = getAutomationService(workspaceId);
+                    await autoService.evaluateLowStockAlert({ ...newProduct, id });
+                    await autoService.recordProductUpdateNotification({
+                        productId: id,
+                        productName: newProduct.name,
+                        action: 'created',
+                        changedFields: ['name', 'price', 'quantity'],
+                        changedBy: creatorId,
+                        changedByEmail: creatorId
+                    });
+                } catch (autoErr) {
+                    console.warn("Automation trigger failed in addProduct:", autoErr);
+                }
             }
 
             if (results.length > 0) {
@@ -124,8 +157,9 @@ export const getProductService = (workspaceId) => {
             validateProduct(productData, true);
 
             // Clean up old image from Supabase if it was changed
+            let oldProduct = null;
             try {
-                const oldProduct = await repo.getById(id);
+                oldProduct = await repo.getById(id);
                 if (oldProduct && oldProduct.imageUri && productData.imageUri && oldProduct.imageUri !== productData.imageUri) {
                     await storageService.deleteImage(oldProduct.imageUri);
                 }
@@ -146,6 +180,88 @@ export const getProductService = (workspaceId) => {
             delete updatePayload.timestamp;
 
             await repo.update(id, updatePayload);
+
+            // Trigger Automation & Supplier Market Event Hooks
+            try {
+                const autoService = getAutomationService(workspaceId);
+                const supService = getSupplierService(workspaceId);
+                const mergedProduct = { ...(oldProduct || {}), ...updatePayload, id };
+                const changedFields = [];
+
+                if (oldProduct) {
+                    // 1. Detect Cost Price Change
+                    if (updatePayload.costPrice !== undefined && Number(oldProduct.costPrice || 0) !== Number(updatePayload.costPrice || 0)) {
+                        changedFields.push('costPrice');
+                        await autoService.recordPriceChangeNotification({
+                            productId: id,
+                            productName: mergedProduct.name,
+                            sku: mergedProduct.upcCode || mergedProduct.uniqueId,
+                            field: 'costPrice',
+                            oldValue: oldProduct.costPrice,
+                            newValue: updatePayload.costPrice,
+                            changedBy: currentUid,
+                            changedByEmail: currentUid
+                        });
+                        await supService.recordPriceHistory({
+                            productId: id,
+                            productName: mergedProduct.name,
+                            sku: mergedProduct.upcCode || mergedProduct.uniqueId,
+                            priceType: 'purchase_cost',
+                            oldPrice: oldProduct.costPrice,
+                            newPrice: updatePayload.costPrice,
+                            changeSource: 'Direct Catalog Update',
+                            responsibleUserId: currentUid || 'admin'
+                        });
+                    }
+
+                    // 2. Detect Sale Price Change
+                    if (updatePayload.salePrice !== undefined && Number(oldProduct.salePrice || 0) !== Number(updatePayload.salePrice || 0)) {
+                        changedFields.push('salePrice');
+                        await autoService.recordPriceChangeNotification({
+                            productId: id,
+                            productName: mergedProduct.name,
+                            sku: mergedProduct.upcCode || mergedProduct.uniqueId,
+                            field: 'salePrice',
+                            oldValue: oldProduct.salePrice,
+                            newValue: updatePayload.salePrice,
+                            changedBy: currentUid,
+                            changedByEmail: currentUid
+                        });
+                        await supService.recordPriceHistory({
+                            productId: id,
+                            productName: mergedProduct.name,
+                            sku: mergedProduct.upcCode || mergedProduct.uniqueId,
+                            priceType: 'retail_sale',
+                            oldPrice: oldProduct.salePrice,
+                            newPrice: updatePayload.salePrice,
+                            changeSource: 'Direct Catalog Update',
+                            responsibleUserId: currentUid || 'admin'
+                        });
+                    }
+
+                    // 3. Detect Stock Quantity Change & Evaluate Low-Stock
+                    if (updatePayload.quantity !== undefined && Number(oldProduct.quantity) !== Number(updatePayload.quantity)) {
+                        changedFields.push('quantity');
+                    }
+                }
+
+                // Evaluate Low Stock
+                await autoService.evaluateProductStock(mergedProduct);
+
+                // Record Product Update
+                if (changedFields.length > 0 || (oldProduct && oldProduct.name !== updatePayload.name)) {
+                    if (oldProduct && oldProduct.name !== updatePayload.name) changedFields.push('name');
+                    await autoService.recordProductUpdateNotification({
+                        action: 'updated',
+                        productId: id,
+                        productName: mergedProduct.name,
+                        changedFields,
+                        changedByEmail: currentUid
+                    });
+                }
+            } catch (hookErr) {
+                console.warn("[Automation] updateProduct hook warning:", hookErr);
+            }
         },
 
         duplicateProduct: async (originalProductData, creatorId, workerPermission = null) => {

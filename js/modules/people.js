@@ -7,6 +7,7 @@ import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { storageService } from '../../supabase/storage.js';
 import { draftManager } from '../services/draftManager.js';
 import { getUserRestrictions } from '../auth-handler.js';
+import { getFinanceService } from '../services/financeService.js';
 
 export const renderPeople = async (container, workspaceId, defaultTab = 'customers') => {
     const peopleService = getPeopleService(workspaceId);
@@ -32,10 +33,10 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         phone: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`,
         email: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`,
         location: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
-        orders: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>`,
-        spent: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>`,
-        calendar: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
-        due: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+        orders: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>`,
+        spent: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>`,
+        calendar: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
+        due: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
         edit: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
         plus: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
         camera: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`,
@@ -218,7 +219,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     <div>
                         <div style="display:flex; align-items:center; gap:0.6rem;">
                             <h2 style="margin:0; font-size:1.75rem; font-weight:800; color:var(--text-primary);">${typeTitle}</h2>
-                            <span class="badge" id="people-count-badge" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; font-weight:700; font-size:0.8rem; padding:0.25rem 0.65rem; border-radius:999px;">
+                            <span class="badge" id="people-count-badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-weight:700; font-size:0.8rem; padding:0.25rem 0.65rem; border-radius:999px;">
                                 ${count} ${countLabel}
                             </span>
                         </div>
@@ -229,7 +230,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     
                     <div style="display:flex; gap:0.6rem; align-items:center;">
                         ${userRestrictions.disableAdd ? '' : `
-                        <button id="btn-add-person" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; font-weight:700; background:linear-gradient(135deg, #e11d48 0%, #be123c 100%); box-shadow:0 4px 12px rgba(225,29,72,0.3); padding:0.55rem 1.25rem;">
+                        <button id="btn-add-person" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; font-weight:700; background:#18181B; border:1px solid #18181B; color:#ffffff; padding:0.55rem 1.25rem;">
                             ${ICONS.plus}
                             Add ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}
                         </button>
@@ -252,7 +253,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 ` : ''}
 
                 <!-- ADD / EDIT PERSON MODAL FORM -->
-                <div id="person-form-container" class="card" style="display:none; margin-bottom: 2rem; padding: 1.5rem; border:1px solid #fecdd3; background:#ffffff; box-shadow:0 10px 25px rgba(225,29,72,0.08);">
+                <div id="person-form-container" class="card" style="display:none; margin-bottom: 2rem; padding: 1.5rem; border:1px solid #E4E4E7; background:#ffffff; box-shadow:0 10px 25px rgba(0,0,0,0.05);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
                         <h3 id="person-form-title" style="margin:0; font-size:1.2rem; font-weight:700; color:var(--text-primary);">New Entry</h3>
                         <button type="button" id="person-cancel-x" style="background:none; border:none; cursor:pointer; color:var(--text-muted); display:flex; align-items:center;">${ICONS.close}</button>
@@ -263,9 +264,9 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         
                         <!-- AVATAR / PHOTO UPLOAD SECTION -->
                         <div id="person-avatar-dropzone" style="display:flex; align-items:center; gap:1.25rem; background:var(--surface-50); padding:1rem; border-radius:12px; border:1.5px dashed var(--border-color); flex-wrap:wrap; transition:all 0.2s ease; cursor:pointer;" title="Click or Drag & Drop image here">
-                            <div style="position:relative; width:68px; height:68px; border-radius:50%; overflow:hidden; background:#ffffff; border:2px solid #fecdd3; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+                            <div style="position:relative; width:68px; height:68px; border-radius:50%; overflow:hidden; background:#ffffff; border:2px solid #E4E4E7; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
                                 <img id="person-avatar-preview" src="" alt="Avatar" style="width:100%; height:100%; object-fit:cover; display:none;">
-                                <div id="person-avatar-placeholder" style="color:#e11d48; display:flex; align-items:center; justify-content:center;">
+                                <div id="person-avatar-placeholder" style="color:#18181B; display:flex; align-items:center; justify-content:center;">
                                     ${currentTab === 'clients' ? ICONS.client : (isBusinessMode ? ICONS.business : ICONS.person)}
                                 </div>
                             </div>
@@ -329,7 +330,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         <!-- ACTIONS -->
                         <div style="display:flex; gap:0.75rem; margin-top:0.5rem; justify-content:flex-end;">
                             <button type="button" class="btn btn-secondary" id="person-cancel-btn" style="padding:0.55rem 1.25rem;">Cancel</button>
-                            <button type="submit" class="btn btn-primary" id="person-submit-btn" style="background:#e11d48; border-color:#e11d48; font-weight:700; padding:0.55rem 1.5rem;">Save Profile</button>
+                            <button type="submit" class="btn btn-primary" id="person-submit-btn" style="background:#18181B; border-color:#18181B; font-weight:700; padding:0.55rem 1.5rem;">Save Profile</button>
                         </div>
                     </form>
                 </div>
@@ -381,11 +382,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     transition: all 0.2s ease;
                 }
                 .people-tab-btn:hover {
-                    color: #e11d48;
+                    color: #18181B;
                 }
                 .active-people-tab {
-                    color: #e11d48;
-                    border-bottom-color: #e11d48;
+                    color: #18181B;
+                    border-bottom-color: #18181B;
                     font-weight: 700;
                 }
                 .people-table-row {
@@ -394,7 +395,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     cursor: pointer;
                 }
                 .people-table-row:hover {
-                    background: #fff8f8;
+                    background: #F4F4F5;
                 }
             </style>
         `;
@@ -439,7 +440,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
                     <div style="display:flex; gap:0.5rem; align-items:center;">
                         ${(isBusinessMode || currentTab === 'businesses') ? (p.isPrimary ? `
-                            <span class="badge" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.8rem; font-weight:700; padding:0.35rem 0.75rem; border-radius:999px; display:inline-flex; align-items:center; gap:5px;">
+                            <span class="badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-size:0.8rem; font-weight:700; padding:0.35rem 0.75rem; border-radius:999px; display:inline-flex; align-items:center; gap:5px;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Primary Business (Default)
                             </span>
                         ` : `
@@ -450,7 +451,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         <button type="button" id="btn-edit-detail-profile" class="btn btn-secondary" style="font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:0.35rem;">
                             ${ICONS.edit} Edit Profile
                         </button>
-                        <button type="button" id="btn-detail-create-invoice" class="btn btn-primary" style="background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:0.35rem; box-shadow:0 3px 10px rgba(37,99,235,0.25);">
+                        <button type="button" id="btn-detail-create-invoice" class="btn btn-primary" style="background:#18181B; font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:0.35rem; box-shadow:0 3px 10px rgba(0,0,0,0.15); border:1px solid #18181B; color:#ffffff;">
                             ${ICONS.plus} Create Invoice
                         </button>
                     </div>
@@ -460,17 +461,17 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 <div class="hero-kpi-grid" style="display:grid; grid-template-columns: minmax(320px, 1.4fr) repeat(auto-fit, minmax(170px, 1fr)); gap:1rem; margin-bottom:1.5rem; align-items:stretch;">
                     
                     <!-- HERO PROFILE CARD -->
-                    <div class="card" style="padding:1.5rem; background:#ffffff; border:1px solid #fecdd3; border-radius:16px; box-shadow:0 8px 24px rgba(225,29,72,0.06); display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
-                        <div style="position:absolute; width:160px; height:160px; background:radial-gradient(circle, rgba(225,29,72,0.08) 0%, transparent 70%); top:-40px; right:-40px; border-radius:50%;"></div>
+                    <div class="card" style="padding:1.5rem; background:#ffffff; border:1px solid #E4E4E7; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
+                        <div style="position:absolute; width:160px; height:160px; background:radial-gradient(circle, rgba(0,0,0,0.02) 0%, transparent 70%); top:-40px; right:-40px; border-radius:50%;"></div>
                         
                         <div>
                             <div style="display:flex; gap:1.25rem; align-items:center; margin-bottom:1rem;">
                                 <!-- AVATAR WITH INSTANT UPLOAD HOVER -->
-                                <div class="detail-hero-avatar-wrap" id="btn-quick-avatar-upload" title="Click to change profile picture" style="position:relative; width:80px; height:80px; border-radius:50%; overflow:hidden; background:linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border:3px solid #e11d48; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; box-shadow:0 4px 14px rgba(225,29,72,0.2);">
+                                <div class="detail-hero-avatar-wrap" id="btn-quick-avatar-upload" title="Click to change profile picture" style="position:relative; width:80px; height:80px; border-radius:50%; overflow:hidden; background:linear-gradient(135deg, #F4F4F5 0%, #F4F4F5 100%); border:3px solid #18181B; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.08);">
                                     ${p.imageUrl || p.imageUri ? `
                                         <img src="${escapeHtml(p.imageUrl || p.imageUri)}" alt="${escapeHtml(p.name)}" style="width:100%; height:100%; object-fit:cover;">
                                     ` : `
-                                        <span style="font-size:1.75rem; font-weight:800; color:#e11d48;">
+                                        <span style="font-size:1.75rem; font-weight:800; color:#18181B;">
                                             ${(p.name || 'U').charAt(0).toUpperCase()}
                                         </span>
                                     `}
@@ -482,7 +483,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                         <h1 style="margin:0; font-size:1.5rem; font-weight:800; color:var(--text-primary); line-height:1.2;">
                                             ${escapeHtml(p.name)}
                                         </h1>
-                                        <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-size:0.75rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:999px;">
+                                        <span class="badge" style="background:#FAFAFA; color:#18181B; border:1px solid #E4E4E7; font-size:0.75rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:999px;">
                                             ${p.status || 'Active'}
                                         </span>
                                     </div>
@@ -496,17 +497,17 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             <div style="display:flex; flex-wrap:wrap; gap:1rem; font-size:0.83rem; color:var(--text-secondary); margin-bottom:1rem; padding-top:0.5rem; border-top:1px solid #f1f5f9;">
                                 ${p.phone ? `
                                     <a href="tel:${p.phone}" style="display:flex; align-items:center; gap:0.35rem; color:inherit; text-decoration:none; font-weight:500;">
-                                        <span style="color:#e11d48;">${ICONS.phone}</span> ${escapeHtml(p.phone)}
+                                        <span style="color:#18181B;">${ICONS.phone}</span> ${escapeHtml(p.phone)}
                                     </a>
                                 ` : ''}
                                 ${p.email ? `
                                     <a href="mailto:${p.email}" style="display:flex; align-items:center; gap:0.35rem; color:inherit; text-decoration:none; font-weight:500;">
-                                        <span style="color:#e11d48;">${ICONS.email}</span> ${escapeHtml(p.email)}
+                                        <span style="color:#18181B;">${ICONS.email}</span> ${escapeHtml(p.email)}
                                     </a>
                                 ` : ''}
                                 ${p.address ? `
                                     <span style="display:flex; align-items:center; gap:0.35rem; font-weight:500;">
-                                        <span style="color:#e11d48;">${ICONS.location}</span> ${escapeHtml(p.address)}
+                                        <span style="color:#18181B;">${ICONS.location}</span> ${escapeHtml(p.address)}
                                     </span>
                                 ` : ''}
                             </div>
@@ -526,7 +527,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     <div class="card kpi-stat-card" style="padding:1.25rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <span style="font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Total Orders</span>
-                            <div style="width:36px; height:36px; border-radius:10px; background:#eff6ff; display:flex; align-items:center; justify-content:center;">
+                            <div style="width:36px; height:36px; border-radius:10px; background:#FAFAFA; display:flex; align-items:center; justify-content:center;">
                                 ${ICONS.orders}
                             </div>
                         </div>
@@ -534,7 +535,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             <div style="font-size:1.85rem; font-weight:800; color:var(--text-primary); margin:0.25rem 0;">
                                 ${stats.count}
                             </div>
-                            <div style="font-size:0.75rem; color:#10b981; font-weight:700;">
+                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">
                                 Verified transaction history
                             </div>
                         </div>
@@ -543,7 +544,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     <div class="card kpi-stat-card" style="padding:1.25rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <span style="font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Total Spent</span>
-                            <div style="width:36px; height:36px; border-radius:10px; background:#ecfdf5; display:flex; align-items:center; justify-content:center;">
+                            <div style="width:36px; height:36px; border-radius:10px; background:#FAFAFA; border:1px solid #E4E4E7; display:flex; align-items:center; justify-content:center;">
                                 ${ICONS.spent}
                             </div>
                         </div>
@@ -551,7 +552,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             <div style="font-size:1.85rem; font-weight:800; color:var(--text-primary); margin:0.25rem 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                 ${currSym} ${stats.totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
-                            <div style="font-size:0.75rem; color:#10b981; font-weight:700;">
+                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">
                                 Active volume
                             </div>
                         </div>
@@ -574,15 +575,15 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         </div>
                     </div>
 
-                    <div class="card kpi-stat-card" style="padding:1.25rem; background:#ffffff; border-radius:16px; border:1px solid ${stats.due > 0 ? '#fecdd3' : 'var(--border-color)'}; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div class="card kpi-stat-card" style="padding:1.25rem; background:#ffffff; border-radius:16px; border:1px solid ${stats.due > 0 ? '#E4E4E7' : 'var(--border-color)'}; display:flex; flex-direction:column; justify-content:space-between;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <span style="font-size:0.82rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Outstanding Due</span>
-                            <div style="width:36px; height:36px; border-radius:10px; background:#fff1f2; display:flex; align-items:center; justify-content:center;">
+                            <div style="width:36px; height:36px; border-radius:10px; background:#F4F4F5; display:flex; align-items:center; justify-content:center;">
                                 ${ICONS.due}
                             </div>
                         </div>
                         <div>
-                            <div style="font-size:1.85rem; font-weight:800; color:${stats.due > 0 ? '#e11d48' : 'var(--text-primary)'}; margin:0.25rem 0;">
+                            <div style="font-size:1.85rem; font-weight:800; color:${stats.due > 0 ? '#18181B' : 'var(--text-primary)'}; margin:0.25rem 0;">
                                 ${currSym} ${stats.due.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                             <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">
@@ -626,7 +627,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 </div>
                                 <div>
                                     <span style="color:var(--text-muted); font-size:0.75rem; font-weight:600; text-transform:uppercase; display:block;">Account ID</span>
-                                    <code style="font-size:0.78rem; color:#be123c; background:#fff1f2; padding:0.15rem 0.45rem; border-radius:4px;">${p.uniqueId || p.id}</code>
+                                    <code style="font-size:0.78rem; color:#27272A; background:#F4F4F5; padding:0.15rem 0.45rem; border-radius:4px;">${p.uniqueId || p.id}</code>
                                 </div>
                             </div>
                         </div>
@@ -638,7 +639,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                     ${typeLabel} Origin
                                 </span>
-                                <span class="badge" style="font-size:0.65rem; background:rgba(225,29,72,0.1); color:var(--theme-primary, #e11d48); font-weight:700;">Trace</span>
+                                <span class="badge" style="font-size:0.65rem; background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-weight:700;">Trace</span>
                             </h3>
 
                             <div class="origin-grid" style="display:grid; grid-template-columns:1fr; gap:0.6rem; font-size:0.8rem;">
@@ -672,7 +673,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             </h3>
 
                             <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                                <button type="button" id="btn-quick-new-invoice" class="btn btn-primary btn-block" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-weight:700; background:var(--theme-gradient, linear-gradient(135deg, #e11d48 0%, #be123c 100%)); box-shadow:0 4px 12px var(--theme-glow, rgba(225,29,72,0.25)); padding:0.65rem;">
+                                <button type="button" id="btn-quick-new-invoice" class="btn btn-primary btn-block" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; font-weight:700; background:#18181B; border:1px solid #18181B; color:#ffffff; padding:0.65rem;">
                                     ${ICONS.plus} Create Invoice
                                 </button>
                                 
@@ -697,6 +698,9 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 <div style="display:flex; gap:0.75rem;">
                                     <button type="button" class="detail-subtab-btn ${activeDetailTab === 'invoices' ? 'active-subtab' : ''}" data-subtab="invoices">
                                         Orders & Invoices (${stats.invoices.length})
+                                    </button>
+                                    <button type="button" class="detail-subtab-btn ${activeDetailTab === 'emi' ? 'active-subtab' : ''}" data-subtab="emi">
+                                        EMI Accounts
                                     </button>
                                     <button type="button" class="detail-subtab-btn ${activeDetailTab === 'notes' ? 'active-subtab' : ''}" data-subtab="notes">
                                         Notes & Remarks
@@ -727,7 +731,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                                     <td colspan="6" style="padding:2.5rem 1rem; text-align:center; color:var(--text-muted);">
                                                         <strong>No Invoices Found</strong>
                                                         <p style="margin:0.25rem 0 1rem 0; font-size:0.85rem;">No invoices have been billed to this profile yet.</p>
-                                                        <button type="button" id="btn-tab-empty-invoice" class="btn btn-primary btn-sm" style="background:#e11d48; font-weight:700;">Create First Invoice</button>
+                                                        <button type="button" id="btn-tab-empty-invoice" class="btn btn-primary btn-sm" style="background:#18181B; font-weight:700;">Create First Invoice</button>
                                                     </td>
                                                 </tr>
                                             ` : stats.invoices.map(inv => {
@@ -754,7 +758,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                                             ${currSym} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </td>
                                                         <td style="padding:0.85rem 0.75rem;">
-                                                            <span class="badge" style="background:${isPaid ? '#ecfdf5' : '#fff1f2'}; color:${isPaid ? '#059669' : '#e11d48'}; border:1px solid ${isPaid ? '#a7f3d0' : '#fecdd3'}; font-size:0.75rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:999px;">
+                                                            <span class="badge" style="background:#FAFAFA; color:#18181B; border:1px solid #E4E4E7; font-size:0.75rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:999px;">
                                                                 ${escapeHtml(st)}
                                                             </span>
                                                         </td>
@@ -769,13 +773,19 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                         </tbody>
                                     </table>
                                 </div>
+                            ` : activeDetailTab === 'emi' ? `
+                                <div style="padding:0.5rem 0;">
+                                    <div id="customer-emi-container">
+                                        <div style="padding:1.5rem; text-align:center; color:#71717A;">Loading customer EMI accounts...</div>
+                                    </div>
+                                </div>
                             ` : `
                                 <div style="padding:0.5rem 0;">
                                     <div style="margin-bottom:1rem;">
                                         <label style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:block; margin-bottom:0.4rem;">Customer Remarks & Notes</label>
                                         <textarea id="detail-notes-input" rows="4" class="form-control" style="width:100%; font-family:inherit; line-height:1.5;" placeholder="Type notes regarding customer preferences, payment instructions, delivery address details...">${escapeHtml(p.notes || '')}</textarea>
                                     </div>
-                                    <button type="button" id="btn-save-detail-notes" class="btn btn-primary" style="background:#e11d48; border-color:#e11d48; font-weight:700; padding:0.5rem 1.25rem;">
+                                    <button type="button" id="btn-save-detail-notes" class="btn btn-primary" style="background:#18181B; border-color:#18181B; font-weight:700; padding:0.5rem 1.25rem;">
                                         Save Notes
                                     </button>
                                 </div>
@@ -814,8 +824,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                     <svg viewBox="0 0 500 160" style="width:100%; height:100%; overflow:visible;">
                                         <defs>
                                             <linearGradient id="detailGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stop-color="#e11d48" stop-opacity="0.35"/>
-                                                <stop offset="100%" stop-color="#e11d48" stop-opacity="0.0"/>
+                                                <stop offset="0%" stop-color="#18181B" stop-opacity="0.35"/>
+                                                <stop offset="100%" stop-color="#18181B" stop-opacity="0.0"/>
                                             </linearGradient>
                                         </defs>
 
@@ -844,9 +854,9 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
                                             return `
                                                 <path d="${areaD}" fill="url(#detailGrad)"/>
-                                                <path d="${pathD}" fill="none" stroke="#e11d48" stroke-width="3" stroke-linecap="round"/>
+                                                <path d="${pathD}" fill="none" stroke="#18181B" stroke-width="3" stroke-linecap="round"/>
                                                 ${pts.map(p => `
-                                                    <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="#ffffff" stroke="#e11d48" stroke-width="2.5">
+                                                    <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="#ffffff" stroke="#18181B" stroke-width="2.5">
                                                         <title>${p.label}: ${currSym} ${p.amount.toFixed(2)}</title>
                                                     </circle>
                                                 `).join('')}
@@ -881,7 +891,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                                 </div>
                                                 <div style="text-align:right;">
                                                     <strong style="font-size:0.88rem; color:var(--text-primary); display:block;">${currSym} ${amt.toFixed(2)}</strong>
-                                                    <span style="font-size:0.7rem; font-weight:700; color:${isPaid ? '#059669' : '#e11d48'};">${inv.status || 'Paid'}</span>
+                                                    <span style="font-size:0.7rem; font-weight:700; color:var(--text-secondary);">${inv.status || 'Paid'}</span>
                                                 </div>
                                             </div>
                                         `;
@@ -916,11 +926,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 }
                 .detail-subtab-btn:hover {
                     background: var(--surface-50);
-                    color: #e11d48;
+                    color: #18181B;
                 }
                 .active-subtab {
-                    background: #fff1f2;
-                    color: #e11d48;
+                    background: #F4F4F5;
+                    color: #18181B;
                     font-weight: 700;
                 }
                 .detail-inv-row:hover {
@@ -1052,9 +1062,9 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 avatarDropzone.addEventListener(evtName, (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    avatarDropzone.style.borderColor = '#e11d48';
-                    avatarDropzone.style.background = 'rgba(225,29,72,0.06)';
-                    avatarDropzone.style.boxShadow = '0 0 0 2px rgba(225,29,72,0.2)';
+                    avatarDropzone.style.borderColor = '#18181B';
+                    avatarDropzone.style.background = '#F4F4F5';
+                    avatarDropzone.style.boxShadow = '0 0 0 2px #E4E4E7';
                 });
             });
 
@@ -1489,6 +1499,65 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         }
 
+        if (activeDetailTab === 'emi' && activePersonDetail) {
+            const emiContainer = container.querySelector('#customer-emi-container');
+            if (emiContainer) {
+                const finSvc = getFinanceService(workspaceId);
+                finSvc.getAllEmiAccounts({ customerId: activePersonDetail.id }).then(emiList => {
+                    const matched = (emiList || []).filter(e => 
+                        e.customerId === activePersonDetail.id ||
+                        (e.customerName && activePersonDetail.name && e.customerName.toLowerCase() === activePersonDetail.name.toLowerCase())
+                    );
+                    if (matched.length === 0) {
+                        emiContainer.innerHTML = `
+                            <div style="padding:2rem; text-align:center; color:#71717A; background:#FAFAFA; border:1px dashed #E4E4E7; border-radius:10px;">
+                                No active or historical EMI accounts found for ${escapeHtml(activePersonDetail.name)}.
+                            </div>
+                        `;
+                    } else {
+                        emiContainer.innerHTML = `
+                            <div style="overflow-x:auto;">
+                                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.82rem;">
+                                    <thead>
+                                        <tr style="border-bottom:1px solid #E4E4E7; background:#FAFAFA; color:#71717A; font-size:0.7rem; text-transform:uppercase;">
+                                            <th style="padding:0.6rem 0.8rem;">Account #</th>
+                                            <th style="padding:0.6rem 0.8rem;">Financed Amount</th>
+                                            <th style="padding:0.6rem 0.8rem;">Total Paid</th>
+                                            <th style="padding:0.6rem 0.8rem;">Remaining Due</th>
+                                            <th style="padding:0.6rem 0.8rem;">Next Due Date</th>
+                                            <th style="padding:0.6rem 0.8rem;">Status</th>
+                                            <th style="padding:0.6rem 0.8rem; text-align:right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${matched.map(e => `
+                                            <tr class="people-table-row">
+                                                <td style="padding:0.6rem 0.8rem; font-family:monospace; font-weight:700;">${e.accountNumber}</td>
+                                                <td style="padding:0.6rem 0.8rem;">${currSym} ${Number(e.totalPayable).toFixed(2)}</td>
+                                                <td style="padding:0.6rem 0.8rem; font-weight:700; color:#18181B;">${currSym} ${Number(e.totalPaid).toFixed(2)}</td>
+                                                <td style="padding:0.6rem 0.8rem; font-weight:700;">${currSym} ${Number(e.remainingBalance).toFixed(2)}</td>
+                                                <td style="padding:0.6rem 0.8rem; color:#71717A;">${e.firstDueDate || '—'}</td>
+                                                <td style="padding:0.6rem 0.8rem;">
+                                                    <span class="badge" style="background:#FAFAFA; border:1px solid #E4E4E7; font-size:0.68rem; text-transform:uppercase;">${e.status}</span>
+                                                </td>
+                                                <td style="padding:0.6rem 0.8rem; text-align:right;">
+                                                    <a href="#/finance-tracker" class="btn btn-secondary btn-sm" style="font-size:0.75rem; font-weight:700; text-decoration:none; display:inline-block;">
+                                                        Manage in Finance &rarr;
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                }).catch(() => {
+                    emiContainer.innerHTML = `<div style="padding:1rem; text-align:center; color:#71717A;">Could not load EMI records.</div>`;
+                });
+            }
+        }
+
         const handleDirectAvatarUpload = async (file) => {
             if (!file || !activePersonDetail) return;
             try {
@@ -1533,7 +1602,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     e.preventDefault();
                     e.stopPropagation();
                     btnAvatar1.style.borderColor = '#ffffff';
-                    btnAvatar1.style.boxShadow = '0 0 0 4px #e11d48, 0 8px 24px rgba(225,29,72,0.4)';
+                    btnAvatar1.style.boxShadow = '0 0 0 4px #18181B, 0 8px 24px rgba(0,0,0,0.15)';
                     btnAvatar1.style.transform = 'scale(1.08)';
                 });
             });
@@ -1542,8 +1611,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 btnAvatar1.addEventListener(evtName, (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    btnAvatar1.style.borderColor = '#e11d48';
-                    btnAvatar1.style.boxShadow = '0 4px 14px rgba(225,29,72,0.2)';
+                    btnAvatar1.style.borderColor = '#18181B';
+                    btnAvatar1.style.boxShadow = '0 4px 14px rgba(0,0,0,0.08)';
                     btnAvatar1.style.transform = 'none';
                 });
             });
@@ -1606,7 +1675,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 <tr class="people-table-row" data-id="${person.id}">
                     <td style="padding:0.9rem 1.25rem;">
                         <div style="display:flex; align-items:center; gap:0.75rem;">
-                            <div style="width:38px; height:38px; border-radius:50%; background:#fff1f2; border:1.5px solid #fecdd3; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#e11d48;">
+                            <div style="width:38px; height:38px; border-radius:50%; background:#F4F4F5; border:1.5px solid #E4E4E7; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#18181B;">
                                 ${img ? `
                                     <img src="${escapeHtml(img)}" alt="${escapeHtml(person.name)}" style="width:100%; height:100%; object-fit:cover;">
                                 ` : avatarFallback}
@@ -1615,7 +1684,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
                                     <strong style="color:var(--text-primary); font-size:0.92rem;">${escapeHtml(person.name)}</strong>
                                     ${(isBusinessMode || currentTab === 'businesses') && person.isPrimary ? `
-                                        <span class="badge badge-primary-business" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.68rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:999px; display:inline-flex; align-items:center; gap:3px;">
+                                        <span class="badge badge-primary-business" style="background:#FAFAFA; color:#18181B; border:1px solid #E4E4E7; font-size:0.68rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:999px; display:inline-flex; align-items:center; gap:3px;">
                                             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Primary
                                         </span>
                                     ` : ''}
@@ -1625,8 +1694,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         </div>
                     </td>
                     <td style="padding:0.9rem 1rem; font-size:0.85rem;">
-                        ${person.phone ? `<div style="display:flex; align-items:center; gap:4px;"><span style="color:#2563eb;">${ICONS.phone}</span> ${escapeHtml(person.phone)}</div>` : ''}
-                        ${person.email ? `<div style="color:var(--text-muted); display:flex; align-items:center; gap:4px;"><span style="color:#2563eb;">${ICONS.email}</span> ${escapeHtml(person.email)}</div>` : ''}
+                        ${person.phone ? `<div style="display:flex; align-items:center; gap:4px;"><span style="color:#71717A;">${ICONS.phone}</span> ${escapeHtml(person.phone)}</div>` : ''}
+                        ${person.email ? `<div style="color:var(--text-muted); display:flex; align-items:center; gap:4px;"><span style="color:#71717A;">${ICONS.email}</span> ${escapeHtml(person.email)}</div>` : ''}
                         ${!person.phone && !person.email ? '<span style="color:var(--text-muted);">—</span>' : ''}
                     </td>
                     <td style="padding:0.9rem 1rem; font-size:0.85rem; color:var(--text-secondary); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
@@ -1636,7 +1705,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         ${currSym} ${stats.totalSpent.toFixed(2)}
                     </td>
                     <td style="padding:0.9rem 1rem;">
-                        <span class="badge" style="background:${count > 0 ? '#eff6ff' : 'var(--surface-100)'}; color:${count > 0 ? '#2563eb' : 'var(--text-muted)'}; font-weight:700; font-size:0.78rem; padding:0.25rem 0.6rem; border-radius:999px; border:1px solid ${count > 0 ? '#bfdbfe' : 'var(--border-color)'};">
+                        <span class="badge" style="background:#FAFAFA; color:#18181B; font-weight:700; font-size:0.78rem; padding:0.25rem 0.65rem; border-radius:999px; border:1px solid #E4E4E7; display:inline-flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
                             ${count} ${count === 1 ? 'Invoice' : 'Invoices'}
                         </span>
                     </td>
@@ -1648,7 +1717,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                     Make Primary
                                 </button>
                             ` : ''}
-                            <button type="button" class="btn btn-sm btn-primary add-invoice-for-person" data-id="${person.id}" style="background:linear-gradient(135deg, #2563eb, #1d4ed8); border:none; font-weight:700; font-size:0.78rem; padding:0.25rem 0.65rem; display:inline-flex; align-items:center; gap:3px;" title="Create new invoice for ${escapeHtml(person.name)}">
+                            <button type="button" class="btn btn-sm btn-primary add-invoice-for-person" data-id="${person.id}" style="background:#18181B; border:1px solid #18181B; color:#ffffff; font-weight:700; font-size:0.78rem; padding:0.25rem 0.65rem; display:inline-flex; align-items:center; gap:3px;" title="Create new invoice for ${escapeHtml(person.name)}">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 Invoice
                             </button>
@@ -1658,7 +1727,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             <button type="button" class="btn btn-sm btn-secondary edit-person" data-id="${person.id}" style="font-size:0.78rem; padding:0.25rem 0.65rem;">
                                 Edit
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline del-person" data-id="${person.id}" style="font-size:0.78rem; padding:0.25rem 0.65rem; color:#ef4444; border-color:#fecdd3;">
+                            <button type="button" class="btn btn-sm btn-outline del-person" data-id="${person.id}" style="font-size:0.78rem; padding:0.25rem 0.65rem; color:#71717A; border-color:#E4E4E7;">
                                 Delete
                             </button>
                         </div>
