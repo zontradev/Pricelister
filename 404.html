@@ -6,6 +6,20 @@
     <script>
         (function() {
             var path = window.location.pathname || '';
+            var search = window.location.search || '';
+            var hash = window.location.hash || '';
+
+            // Calculate base prefix (if hosted on user.github.io/repo/ or root)
+            var segments = path.replace(/^\/+/, '').split('/');
+            // If repository subfolder exists, retain it
+            var repoPrefix = (window.location.hostname.endsWith('github.io') && segments.length > 1 && !['workspace', 'home', 'explore', 'pricing', 'find', 'privacy', 'terms', 'login', 'demo'].includes(segments[0])) 
+                ? '/' + segments[0] + '/' 
+                : './';
+
+            if (path.toLowerCase().includes('login')) {
+                window.location.replace(repoPrefix + 'login.html' + hash + search);
+                return;
+            }
             if (path.toLowerCase().includes('demo')) {
                 try {
                     localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
@@ -18,26 +32,26 @@
                     }));
                     sessionStorage.setItem('pricelister_last_route', '/overview');
                 } catch(e) {}
-                window.location.replace('app.html');
+                window.location.replace(repoPrefix + 'app.html');
                 return;
             }
             if (path.toLowerCase().includes('/workspace') || path.toLowerCase().includes('invoices') || path.toLowerCase().includes('products')) {
-                var subroute = path.replace(/^\/workspace\/?/i, '');
+                var subroute = path.replace(/.*?\/workspace\/?/i, '');
                 if (subroute) {
                     try { sessionStorage.setItem('pricelister_last_route', '/' + subroute.replace(/^\//, '')); } catch(e) {}
                 }
-                window.location.replace('app.html');
+                window.location.replace(repoPrefix + 'app.html');
                 return;
             }
             var landingViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms'];
             for (var i = 0; i < landingViews.length; i++) {
                 if (path.toLowerCase().includes(landingViews[i])) {
                     try { sessionStorage.setItem('pricelister_last_landing_view', landingViews[i]); } catch(e) {}
-                    window.location.replace('index.html');
+                    window.location.replace(repoPrefix + 'index.html');
                     return;
                 }
             }
-            window.location.replace('index.html');
+            window.location.replace(repoPrefix + 'index.html');
         })();
     </script>
 </head>
