@@ -5035,8 +5035,8 @@
             <!-- CONNECTION GATEWAY (ALONE PANEL: WORKSPACE FOUND OR CREATE WORKSPACE) -->
             <section id="view-connection" class="view alone-connection-view">
                 <!-- WORKSPACE LAUNCHER (WORKSPACE FOUND GATEWAY) -->
-    <div id="workspace-launcher-container" style="display:none; padding: 3rem 1.25rem; min-height: 85vh; background: radial-gradient(circle at 50% 15%, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.01) 50%, transparent 80%);">
-        <div class="workspace-found-card" style="max-width: 480px; margin: 2rem auto; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06); border: 1.5px solid #f1f5f9; overflow: hidden; position: relative; animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1); padding: 2rem 1.85rem;">
+    <div id="workspace-launcher-container" style="display:none; padding: 2rem 1.25rem; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 20%, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.01) 50%, #f4f4f5 100%);">
+        <div class="workspace-found-card" style="width: 100%; max-width: 480px; margin: auto; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06); border: 1.5px solid #f1f5f9; overflow: hidden; position: relative; animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1); padding: 2rem 1.85rem;">
 
             <!-- Header Titles -->
             <div style="text-align: center; margin-bottom: 1.75rem;">
@@ -5797,7 +5797,11 @@
                     a.classList.toggle('active', a.dataset.view === name);
                 });
 
-                // Standalone connection view barrier: NEVER show footer on alone connection view
+                // Standalone connection view barrier: NEVER show header or footer on alone connection view
+                const headerWrapper = document.querySelector('.landing-header-wrapper');
+                if (headerWrapper) {
+                    headerWrapper.style.display = (name === 'connection') ? 'none' : '';
+                }
                 const footer = document.querySelector('.landing-footer-elevated');
                 if (footer) {
                     footer.style.display = (name === 'connection') ? 'none' : 'block';
