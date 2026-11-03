@@ -472,7 +472,7 @@ export const initLandingHeaderActions = () => {
         };
     }
 
-    // 2. (Enter Workspace ->) logged-out button
+    // 2. (Enter Workspace ->) button
     const enterWsBtn = document.getElementById('header-btn-enter-ws');
     if (enterWsBtn) {
         enterWsBtn.onclick = async (e) => {
@@ -483,31 +483,32 @@ export const initLandingHeaderActions = () => {
                 if (ws) {
                     window.location.href = 'app.html';
                 } else {
-                    const setupContainer = document.getElementById('workspace-setup-container');
-                    if (setupContainer) {
-                        setupContainer.style.display = 'block';
-                        setupContainer.scrollIntoView({ behavior: 'smooth' });
+                    if (typeof window.showLandingView === 'function') {
+                        window.showLandingView('connection', true);
+                    } else {
+                        window.location.href = 'index.html?view=connection';
                     }
                 }
             } else {
-                if (typeof window.openLoginModal === 'function') {
-                    window.openLoginModal();
-                } else {
-                    await authService.loginWithGoogle(true);
-                }
+                window.location.href = 'login.html';
             }
         };
     }
 
-    // 3. (Create Workspace ->) button for unconnected user: opens workspace setup panel
+    // 3. (Create Workspace ->) button: opens workspace setup alone panel
     const createWsBtn = document.getElementById('header-btn-create-ws');
     if (createWsBtn) {
         createWsBtn.onclick = (e) => {
             e.preventDefault();
-            const setupContainer = document.getElementById('workspace-setup-container');
-            if (setupContainer) {
-                setupContainer.style.display = 'block';
-                setupContainer.scrollIntoView({ behavior: 'smooth' });
+            const currentUser = authService.getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+            if (typeof window.showLandingView === 'function') {
+                window.showLandingView('connection', true);
+            } else {
+                window.location.href = 'index.html?view=connection';
             }
         };
     }
@@ -556,8 +557,12 @@ export const initAuthHandler = (pageType) => {
             document.body.classList.remove('app-loading');
             if (loader) loader.style.display = 'none';
             if (authContainer) authContainer.style.display = 'block';
-            if (launcherContainer) launcherContainer.style.display = 'none';
-            if (setupContainer) setupContainer.style.display = 'none';
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const isConnectionRoute = urlParams.get('view') === 'connection' || 
+                                     window.location.pathname.endsWith('/connection') || 
+                                     window.location.hash === '#connection' ||
+                                     (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_last_landing_view') === 'connection');
 
             if (user) {
                 // If logged in on public page, check if workspace exists
@@ -745,7 +750,20 @@ export const initAuthHandler = (pageType) => {
                                 }
                             }
 
-                            // Switch Account Button on Launcher Card
+                            // Option 2: Back Home Button on Launcher Card
+                            const launcherBackHomeBtn = document.getElementById('launcher-back-home-btn');
+                            if (launcherBackHomeBtn) {
+                                launcherBackHomeBtn.onclick = (e) => {
+                                    e.preventDefault();
+                                    if (typeof window.showLandingView === 'function') {
+                                        window.showLandingView('home', true);
+                                    } else {
+                                        window.location.href = 'index.html?view=home';
+                                    }
+                                };
+                            }
+
+                            // Option 3: Switch Account Button on Launcher Card
                             const launcherChangeAccBtn = document.getElementById('launcher-change-account-btn');
                             if (launcherChangeAccBtn) {
                                 launcherChangeAccBtn.onclick = (e) => {
@@ -754,7 +772,7 @@ export const initAuthHandler = (pageType) => {
                                 };
                             }
 
-                            // Logout Button on Launcher Card
+                            // Option 4: Logout Button on Launcher Card
                             const launcherLogoutBtn = document.getElementById('launcher-logout-btn');
                             if (launcherLogoutBtn) {
                                 launcherLogoutBtn.onclick = async () => {
@@ -767,6 +785,17 @@ export const initAuthHandler = (pageType) => {
                                         await authService.logout();
                                     }
                                 };
+                            }
+
+                            // Ensure launcher container is active inside view-connection
+                            launcherContainer.style.display = 'block';
+                            if (setupContainer) setupContainer.style.display = 'none';
+
+                            // When entering index.html, if a workspace is found, automatically show "Workspace Found" connection screen
+                            // unless the user explicitly requested a different view in the query param (e.g. ?view=pricing or ?view=explore)
+                            const explicitNonConnectionView = urlParams.has('view') && urlParams.get('view') !== 'connection';
+                            if (!explicitNonConnectionView && typeof window.showLandingView === 'function') {
+                                window.showLandingView('connection', false);
                             }
                         }
                     } else {
@@ -885,13 +914,27 @@ export const initAuthHandler = (pageType) => {
                             if (emptyState) emptyState.style.display = 'block';
                         }
                         
-                        if (setupContainer && setupContainer.getAttribute('data-explicit-show') === 'true') {
+                        if (setupContainer) {
                             setupContainer.style.display = 'block';
-                        } else if (setupContainer) {
-                            setupContainer.style.display = 'none';
+                        }
+                        if (launcherContainer) {
+                            launcherContainer.style.display = 'none';
                         }
 
-                        // Setup Account Actions
+                        // Setup Account Actions: Back Home
+                        const setupBackHomeBtn = document.getElementById('setup-back-home-btn');
+                        if (setupBackHomeBtn) {
+                            setupBackHomeBtn.onclick = (e) => {
+                                e.preventDefault();
+                                if (typeof window.showLandingView === 'function') {
+                                    window.showLandingView('home', true);
+                                } else {
+                                    window.location.href = 'index.html?view=home';
+                                }
+                            };
+                        }
+
+                        // Setup Account Actions: Change Account
                         const setupChangeAccBtn = document.getElementById('setup-change-account-btn');
                         if (setupChangeAccBtn) {
                             setupChangeAccBtn.onclick = (e) => {
@@ -913,6 +956,10 @@ export const initAuthHandler = (pageType) => {
                                 }
                             };
                         }
+
+                        if (isConnectionRoute && typeof window.showLandingView === 'function') {
+                            window.showLandingView('connection', false);
+                        }
                     }
                 } catch (error) {
                     console.error("Auth check error:", error);
@@ -922,6 +969,11 @@ export const initAuthHandler = (pageType) => {
                     if (authContainer) authContainer.style.display = 'block';
                 }
             } else {
+                // If attempting to visit connection view while unauthenticated -> login barrier
+                if (isConnectionRoute) {
+                    window.location.href = 'login.html';
+                    return;
+                }
                 // Not logged in -> show landing page content & logged-out header actions
                 document.body.classList.remove('app-loading');
                 if (loader) loader.style.display = 'none';
@@ -931,29 +983,39 @@ export const initAuthHandler = (pageType) => {
                 await updateLandingHeaderAuthState(null);
             }
         } else if (pageType === 'app') {
-            const isLocalHost = typeof window !== 'undefined' && (
-                window.location.hostname === 'localhost' || 
-                window.location.hostname === '127.0.0.1' || 
-                window.location.protocol === 'file:'
-            );
-            const isDemoRequest = localStorage.getItem('pricelister_active_ws') === 'ws_dev_mock' || 
-                                  localStorage.getItem('pricelister_active_ws') === 'demo' || 
-                                  Boolean(localStorage.getItem('mock_dev_session')) ||
-                                  (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo')) ||
-                                  (isLocalHost && (!localStorage.getItem('pricelister_active_ws') || localStorage.getItem('pricelister_active_ws') === 'ws_dev_mock'));
+            const isExplicitDemo = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_explicit_demo') === 'true') ||
+                                   (typeof localStorage !== 'undefined' && localStorage.getItem('pricelister_demo_mode') === 'true') ||
+                                   (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo=true'));
 
             let activeUser = user;
-            if (!activeUser && (isDemoRequest || isLocalHost)) {
-                console.log("[PriceLister] Activating Demo Admin session for testing & development.");
+            // Only activate mock demo if user explicitly requested Demo Sandbox
+            if (!activeUser && isExplicitDemo) {
+                console.log("[PriceLister] Activating explicit Demo Admin session.");
                 activeUser = {
                     uid: 'dev-mock-uid',
                     email: 'developer@local.test',
                     displayName: 'Demo Admin (Testing)',
                     photoURL: null,
-                    role: 'CREATOR_ADMIN'
+                    role: 'CREATOR_ADMIN',
+                    isDemo: true
                 };
                 localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
-                localStorage.setItem('mock_dev_session', JSON.stringify(activeUser));
+            }
+
+            if (!activeUser) {
+                // Real user is not logged in -> redirect to login.html
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Real user is authenticated -> clean out any lingering demo keys
+            if (activeUser.uid !== 'dev-mock-uid') {
+                localStorage.removeItem('mock_dev_session');
+                localStorage.removeItem('pricelister_demo_mode');
+                sessionStorage.removeItem('pricelister_explicit_demo');
+                if (localStorage.getItem('pricelister_active_ws') === 'ws_dev_mock') {
+                    localStorage.removeItem('pricelister_active_ws');
+                }
             }
 
             if (activeUser) {
@@ -963,27 +1025,28 @@ export const initAuthHandler = (pageType) => {
                         localStorage.removeItem('pricelister_active_ws');
                         workspace = await firestoreService.checkWorkspaceExists(activeUser.uid, activeUser.email);
                     }
-                    if (!workspace && isDemoRequest) {
+                    if (!workspace && activeUser.isDemo) {
                         workspace = await firestoreService.checkWorkspaceExists('dev-mock-uid', 'developer@local.test');
                     }
                     if (!workspace) {
-                        // Cannot be in app without workspace -> redirect to index for setup
+                        // Verification Barrier: Cannot be in app without verified workspace as admin/worker -> redirect to connection alone panel
+                        console.warn("[PriceLister Barrier] No verified workspace found. Redirecting to connection gateway.");
                         document.body.classList.remove('app-loading');
                         if (loader) loader.style.display = 'none';
                         if (typeof window.__dismissWorkspaceLoader === 'function') window.__dismissWorkspaceLoader('no_workspace');
-                        window.location.href = 'index.html';
+                        window.location.href = 'index.html?view=connection';
                         return;
                     }
 
                     // Maximum Protection Security Guard: Temporary Access Blocked
                     if (workspace.isAccessBlocked) {
-                        console.warn("[PriceLister Security] User access is temporarily blocked. Ejecting to launcher.");
+                        console.warn("[PriceLister Security] User access is temporarily blocked. Ejecting to connection launcher.");
                         document.body.classList.remove('app-loading');
                         if (loader) loader.style.display = 'none';
                         if (typeof window.__dismissWorkspaceLoader === 'function') window.__dismissWorkspaceLoader('access_blocked');
                         showAlert.error(`Access Blocked: Your access is suspended until ${workspace.revokeEndFormatted || 'the duration expires'}. Please contact ${workspace.adminEmail || 'the workspace admin'}.`);
                         setTimeout(() => {
-                            window.location.href = 'index.html';
+                            window.location.href = 'index.html?view=connection';
                         }, 450);
                         return;
                     }
@@ -1479,10 +1542,22 @@ export const initAuthHandler = (pageType) => {
     // Modal Email/Password Login Option
     const modalEmailForm = document.getElementById('modal-email-login-form');
     if (modalEmailForm) {
+        // Pre-fill remembered email
+        try {
+            const rememberedEmail = localStorage.getItem('pricelister_remembered_email');
+            const emailInput = document.getElementById('modal-login-email');
+            const rememberChk = document.getElementById('modal-login-remember-me');
+            if (rememberedEmail && emailInput) {
+                emailInput.value = rememberedEmail;
+                if (rememberChk) rememberChk.checked = true;
+            }
+        } catch (e) {}
+
         modalEmailForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const emailInput = document.getElementById('modal-login-email');
             const pwdInput = document.getElementById('modal-login-password');
+            const rememberChk = document.getElementById('modal-login-remember-me');
             const submitBtn = document.getElementById('modal-email-submit-btn');
             const email = emailInput ? emailInput.value.trim() : '';
             const password = pwdInput ? pwdInput.value : '';
@@ -1491,6 +1566,15 @@ export const initAuthHandler = (pageType) => {
                 showAlert.error('Please enter both email and password.');
                 return;
             }
+
+            // Save or clear remembered email
+            try {
+                if (rememberChk && rememberChk.checked) {
+                    localStorage.setItem('pricelister_remembered_email', email);
+                } else {
+                    localStorage.removeItem('pricelister_remembered_email');
+                }
+            } catch (e) {}
 
             try {
                 if (submitBtn) {

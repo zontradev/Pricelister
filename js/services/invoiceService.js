@@ -66,8 +66,18 @@ export const getInvoiceService = (workspaceId) => {
                 timestamp: invoiceData.timestamp || Date.now()
             });
 
-            // Ensure items are properly instantiated InvoiceItem models
-            newInvoice.items = (newInvoice.items || []).map(item => new InvoiceItem(item));
+            // Ensure items are properly instantiated InvoiceItem models with integer position productId
+            newInvoice.items = (newInvoice.items || []).map((item, index) => {
+                const rawProdId = item.productRefId || (typeof item.productId === 'string' && isNaN(Number(item.productId)) ? item.productId : null);
+                const intId = (item.productId !== null && item.productId !== undefined && !isNaN(Number(item.productId)))
+                    ? Math.trunc(Number(item.productId))
+                    : (index + 1);
+                return new InvoiceItem({
+                    ...item,
+                    productId: intId,
+                    productRefId: rawProdId || item.productRefId || null
+                });
+            });
 
             // Validate using schema
             validateInvoice(newInvoice);
@@ -107,8 +117,9 @@ export const getInvoiceService = (workspaceId) => {
             if (shouldDeduct) {
                 const prodService = getProductService(workspaceId);
                 for (const item of newInvoice.items) {
-                    if (item.productId) {
-                        await prodService.deductProductQuantity(item.productId, item.quantity);
+                    const targetProdId = item.productRefId || item.productId;
+                    if (targetProdId) {
+                        await prodService.deductProductQuantity(targetProdId, item.quantity);
                     }
                 }
             }
@@ -148,16 +159,24 @@ export const getInvoiceService = (workspaceId) => {
                 throw new Error("Invoice not found to update.");
             }
 
-            // Ensure invoice items are structured properly
-            const processedItems = (items || []).map(item => new InvoiceItem({
-                productId: item.productId,
-                productName: item.productName,
-                quantity: Number(item.quantity) || 1,
-                unitPrice: Number(item.unitPrice) || 0,
-                unitCost: Number(item.unitCost) || 0,
-                totalPrice: (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0),
-                itemProfit: ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)) - ((Number(item.quantity) || 1) * (Number(item.unitCost) || 0))
-            }));
+            // Ensure invoice items are structured properly with integer position productId
+            const processedItems = (items || []).map((item, index) => {
+                const rawProdId = item.productRefId || (typeof item.productId === 'string' && isNaN(Number(item.productId)) ? item.productId : null);
+                const intId = (item.productId !== null && item.productId !== undefined && !isNaN(Number(item.productId)))
+                    ? Math.trunc(Number(item.productId))
+                    : (index + 1);
+                return new InvoiceItem({
+                    ...item,
+                    productId: intId,
+                    productRefId: rawProdId || item.productRefId || null,
+                    productName: item.productName,
+                    quantity: Number(item.quantity) || 1,
+                    unitPrice: Number(item.unitPrice) || 0,
+                    unitCost: Number(item.unitCost) || 0,
+                    totalPrice: (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0),
+                    itemProfit: ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)) - ((Number(item.quantity) || 1) * (Number(item.unitCost) || 0))
+                });
+            });
 
             const finalInvNumber = (invoiceData.invoiceNumber || invoiceData.busInvNumber || existing.invoiceNumber || existing.busInvNumber || '').trim();
 
@@ -203,12 +222,14 @@ export const getInvoiceService = (workspaceId) => {
                 const prodService = getProductService(workspaceId);
                 const oldItemsMap = {};
                 (existing.items || []).forEach(it => {
-                    if (it.productId) oldItemsMap[it.productId] = (oldItemsMap[it.productId] || 0) + (Number(it.quantity) || 0);
+                    const ref = it.productRefId || it.productId;
+                    if (ref) oldItemsMap[ref] = (oldItemsMap[ref] || 0) + (Number(it.quantity) || 0);
                 });
 
                 const newItemsMap = {};
                 (updatedInvoice.items || []).forEach(it => {
-                    if (it.productId) newItemsMap[it.productId] = (newItemsMap[it.productId] || 0) + (Number(it.quantity) || 0);
+                    const ref = it.productRefId || it.productId;
+                    if (ref) newItemsMap[ref] = (newItemsMap[ref] || 0) + (Number(it.quantity) || 0);
                 });
 
                 const allProdIds = new Set([...Object.keys(oldItemsMap), ...Object.keys(newItemsMap)]);

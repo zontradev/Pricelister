@@ -428,6 +428,10 @@ export const getInitialDemoData = () => {
     const clientProfiles = [...clientsWithFlag, ...customersWithFlag];
 
     // Enrich customer invoices with calculated fields and isBusinessInvoice: false
+    const businessMap = new Map(businesses.map(b => [b.id, b]));
+    const customerMap = new Map(customers.map(c => [c.name.toLowerCase(), c]));
+    const clientMap = new Map(clients.map(c => [c.name.toLowerCase(), c]));
+
     const formattedCustomerInvoices = customerInvoices.map(inv => {
         let totalProfit = 0;
         const enrichedItems = (inv.items || []).map(item => {
@@ -449,8 +453,17 @@ export const getInitialDemoData = () => {
             };
         });
 
+        const bObj = businessMap.get(inv.businessId) || businesses[0];
+        const cObj = customerMap.get((inv.customerName || '').toLowerCase());
+
         return {
             ...inv,
+            businessImageUrl: bObj?.imageUrl || '',
+            businessName: bObj?.name || 'Apex Global Technologies Ltd.',
+            businessPhone: bObj?.phone || '+1 (555) 234-5678',
+            businessEmail: bObj?.email || 'billing@apexglobal.tech',
+            businessAddress: bObj?.address || '100 Silicon Way, Suite 400, San Jose, CA',
+            customerImageUrl: cObj?.imageUrl || '',
             isBusinessInvoice: false,
             totalPrice: inv.total,
             grandTotal: inv.total,
@@ -482,8 +495,18 @@ export const getInitialDemoData = () => {
             };
         });
 
+        const bObj = businessMap.get(inv.businessId) || businesses[0];
+        const cliObj = clientMap.get((inv.clientName || inv.customerName || '').toLowerCase());
+
         return {
             ...inv,
+            businessImageUrl: bObj?.imageUrl || '',
+            businessName: bObj?.name || 'Apex Global Technologies Ltd.',
+            businessPhone: bObj?.phone || '+1 (555) 234-5678',
+            businessEmail: bObj?.email || 'billing@apexglobal.tech',
+            businessAddress: bObj?.address || '100 Silicon Way, Suite 400, San Jose, CA',
+            clientImageUrl: cliObj?.imageUrl || '',
+            customerImageUrl: cliObj?.imageUrl || '',
             isBusinessInvoice: true,
             totalPrice: inv.total,
             grandTotal: inv.total,
@@ -494,9 +517,94 @@ export const getInitialDemoData = () => {
     });
 
     const members = [
-        { email: 'developer@local.test', role: 'CREATOR_ADMIN', displayName: 'Demo Admin (Testing)', lastActive: now },
-        { email: 'sarah.coadmin@pricelister.app', role: 'CO_ADMIN', displayName: 'Sarah Jenkins', lastActive: now - DAY },
-        { email: 'john.worker@pricelister.app', role: 'WORKER', displayName: 'John Doe', lastActive: now - 3 * DAY }
+        {
+            email: 'developer@local.test',
+            name: 'Demo Admin (Testing)',
+            displayName: 'Demo Admin (Testing)',
+            role: 'CREATOR_ADMIN',
+            workspaceRole: 0,
+            roleTag: 'Founder',
+            status: 'JOINED',
+            isCreator: true,
+            canViewProfit: true,
+            isRestricted: false,
+            joinedAt: now - 30 * DAY,
+            lastActive: now,
+            productAdded: 14,
+            invoiceAdded: 22,
+            totalDeleted: 0
+        },
+        {
+            email: 'sarah.coadmin@pricelister.app',
+            name: 'Sarah Jenkins',
+            displayName: 'Sarah Jenkins',
+            role: 'CO_ADMIN',
+            workspaceRole: 1,
+            roleTag: 'Co-Founder',
+            status: 'JOINED',
+            isCreator: false,
+            canViewProfit: true,
+            isRestricted: false,
+            joinedAt: now - 15 * DAY,
+            lastActive: now - DAY,
+            productAdded: 8,
+            invoiceAdded: 9,
+            totalDeleted: 1
+        },
+        {
+            email: 'marcus.manager@pricelister.app',
+            name: 'Marcus Vance',
+            displayName: 'Marcus Vance',
+            role: 'MANAGER',
+            workspaceRole: 2,
+            roleTag: 'Store Manager',
+            status: 'JOINED',
+            isCreator: false,
+            canViewProfit: false,
+            isRestricted: false,
+            joinedAt: now - 10 * DAY,
+            lastActive: now - 2 * DAY,
+            productAdded: 5,
+            invoiceAdded: 14,
+            totalDeleted: 0
+        },
+        {
+            email: 'john.worker@pricelister.app',
+            name: 'John Doe',
+            displayName: 'John Doe',
+            role: 'WORKER',
+            workspaceRole: 3,
+            roleTag: 'Staff Operator',
+            status: 'JOINED',
+            isCreator: false,
+            canViewProfit: false,
+            isRestricted: false,
+            joinedAt: now - 5 * DAY,
+            lastActive: now - 3 * DAY,
+            productAdded: 4,
+            invoiceAdded: 7,
+            totalDeleted: 0
+        },
+        {
+            email: 'olivia.visitor@pricelister.app',
+            name: 'Olivia Guest',
+            displayName: 'Olivia Guest',
+            role: 'VISITOR',
+            workspaceRole: 4,
+            roleTag: 'Visitor',
+            status: 'JOINED',
+            isCreator: false,
+            canViewProfit: false,
+            isRestricted: true,
+            disableAdd: true,
+            disableUpdate: true,
+            disableDelete: true,
+            joinedAt: now - 2 * DAY,
+            lastActive: now - 4 * DAY,
+            productAdded: 0,
+            invoiceAdded: 0,
+            totalDeleted: 0
+        }
     ];
 
     const settings = {

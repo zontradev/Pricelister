@@ -1572,11 +1572,14 @@ const renderTemplatesTab = async (target) => {
                         </div>
                     </div>
 
-                    <div style="display:flex; justify-content:flex-end; gap:0.4rem; margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid #E4E4E7;">
+                    <div style="display:flex; justify-content:flex-end; gap:0.4rem; margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid #E4E4E7; flex-wrap:wrap;">
                         <button class="btn btn-sm btn-secondary btn-apply-tmpl" data-id="${t.id}" style="font-size:0.75rem; font-weight:600; padding:0.3rem 0.65rem; background:#FFFFFF; border:1px solid #E4E4E7; border-radius:6px; cursor:pointer;">Load in Builder</button>
                         <button class="btn btn-sm btn-secondary btn-dup-tmpl" data-id="${t.id}" style="font-size:0.75rem; font-weight:600; padding:0.3rem 0.65rem; background:#FFFFFF; border:1px solid #E4E4E7; border-radius:6px; cursor:pointer;">Duplicate</button>
                         ${!t.isDefault ? `
                             <button class="btn btn-sm btn-secondary btn-default-tmpl" data-id="${t.id}" style="font-size:0.75rem; font-weight:600; padding:0.3rem 0.65rem; background:#FFFFFF; border:1px solid #E4E4E7; border-radius:6px; cursor:pointer;">Set Default</button>
+                        ` : ''}
+                        ${!t.isSystemLocked && t.id !== 'tmpl-standard-product-code' ? `
+                            <button class="btn btn-sm btn-secondary btn-del-tmpl" data-id="${t.id}" data-name="${escapeHtml(t.name)}" style="font-size:0.75rem; font-weight:600; padding:0.3rem 0.65rem; background:#FFFFFF; border:1px solid #E4E4E7; color:#dc2626; border-radius:6px; cursor:pointer;" title="Delete Template">Delete</button>
                         ` : ''}
                     </div>
                 </div>
@@ -1617,6 +1620,22 @@ const renderTemplatesTab = async (target) => {
             await svc.setDefaultTemplate(btn.dataset.id);
             showAlert.success("Workspace default template updated.");
             renderTemplatesTab(target);
+        });
+    });
+
+    target.querySelectorAll('.btn-del-tmpl').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const name = btn.dataset.name || 'Template';
+            const confirmed = await showAlert.confirm(`Are you sure you want to delete template "${name}"?`, "Delete Template");
+            if (confirmed) {
+                try {
+                    await svc.deleteTemplate(btn.dataset.id);
+                    showAlert.success(`Template "${name}" deleted successfully.`);
+                    renderTemplatesTab(target);
+                } catch (err) {
+                    showAlert.error(err.message || "Failed to delete template.");
+                }
+            }
         });
     });
 

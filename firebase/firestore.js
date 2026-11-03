@@ -79,12 +79,12 @@ const getCollectionName = (baseName) => {
 
 export const firestoreService = {
     checkWorkspaceExists: async (uid, email = null) => {
-        const activeWsKey = localStorage.getItem('pricelister_active_ws');
-        const isDemoUrl = typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo');
-        const hasMockSession = uid === 'dev-mock-uid' || Boolean(localStorage.getItem('mock_dev_session')) || isDemoUrl;
+        const isExplicitDemo = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_explicit_demo') === 'true') ||
+                               (typeof localStorage !== 'undefined' && localStorage.getItem('pricelister_demo_mode') === 'true') ||
+                               (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo=true'));
 
-        // Purely local mock session or demo request bypass
-        if (hasMockSession || activeWsKey === 'ws_dev_mock' || activeWsKey === 'demo') {
+        // Purely local mock session or explicit demo request bypass (Only for dev-mock-uid or explicit demo)
+        if (uid === 'dev-mock-uid' && isExplicitDemo) {
             let mockSaved = {};
             try {
                 const raw = localStorage.getItem('pricelister_mock_settings');
@@ -107,6 +107,8 @@ export const firestoreService = {
                 ...mockSaved
             };
         }
+
+        const activeWsKey = localStorage.getItem('pricelister_active_ws');
 
         try {
             // Helper to build workspace payload with rock-solid permission protections
@@ -1169,7 +1171,8 @@ export const createRepository = (collectionName, workspaceId) => {
         },
         
         add: async (data) => {
-            const docRef = doc(collRef); // generate ref with new ID
+            // If data has an explicit id, use that document id to ensure consistency
+            const docRef = data.id ? doc(collRef, String(data.id)) : doc(collRef);
             
             // Explicitly attach the id to the payload if not present, matching Android's structure
             if (data.id === null || data.id === undefined) {
@@ -1181,11 +1184,24 @@ export const createRepository = (collectionName, workspaceId) => {
         },
         
         update: async (id, data) => {
-            const docRef = doc(db, baseCollectionPath, id);
-            await updateDoc(docRef, {
-                ...data,
-                updatedTimestamp: serverTimestamp()
-            });
+            const docRef = doc(db, baseCollectionPath, String(id));
+            try {
+                await updateDoc(docRef, {
+                    ...data,
+                    updatedTimestamp: serverTimestamp()
+                });
+            } catch (err) {
+                // If the document does not exist yet (e.g. "No document to update"), use setDoc with merge: true
+                if (err && (err.code === 'not-found' || (err.message && err.message.includes('No document to update')))) {
+                    await setDoc(docRef, {
+                        ...data,
+                        id: String(id),
+                        updatedTimestamp: serverTimestamp()
+                    }, { merge: true });
+                } else {
+                    throw err;
+                }
+            }
         },
         
         delete: async (id) => {

@@ -2,7 +2,6 @@
 <html lang="en">
 
 <head>
-    <base href="/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>PriceLister — Next-Gen Business Workspace & Smart Price Lister</title>
@@ -12,9 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=Alex+Brush&family=Allura&family=Cinzel:wght@700;800&family=Dancing+Script:wght@700&family=Great+Vibes&family=Merriweather:wght@700&family=Outfit:wght@700;800&family=Sacramento&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/modern-ui.css">
-    <link rel="stylesheet" href="/css/landing.css">
-    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="./css/modern-ui.css">
+    <link rel="stylesheet" href="./css/landing.css">
+    <link rel="stylesheet" href="./css/responsive.css">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -80,7 +79,7 @@
                 });
 
                 if ('serviceWorker' in navigator && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
-                    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(e) {
+                    navigator.serviceWorker.register('./sw.js').catch(function(e) {
                         console.debug("Service worker skipped on index:", e);
                     });
                 }
@@ -90,12 +89,16 @@
                 var savedLandingView = '';
                 try { savedLandingView = sessionStorage.getItem('pricelister_last_landing_view') || ''; } catch(e) {}
 
-                var validViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms'];
-                var pathView = path.replace(/\/index\.html$/i, '').replace(/^\/+/, '').toLowerCase();
+                var validViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms', 'connection'];
+                var urlParams = new URLSearchParams(window.location.search);
+                var queryView = (urlParams.get('view') || '').toLowerCase();
+                var pathView = path.replace(/\/index\.html$/i, '').replace(/^\/+/, '').split('/').pop().toLowerCase();
                 var hashView = hash.replace(/^#\/?/, '').replace(/\/$/, '').toLowerCase();
 
                 var view = 'home';
-                if (validViews.includes(pathView)) {
+                if (queryView && validViews.includes(queryView)) {
+                    view = queryView;
+                } else if (validViews.includes(pathView)) {
                     view = pathView;
                 } else if (validViews.includes(hashView)) {
                     view = hashView;
@@ -103,8 +106,16 @@
                     view = savedLandingView.toLowerCase();
                 }
 
-                var cleanPath = '/' + view;
-                window.history.replaceState({ view: view }, '', cleanPath);
+                // If hosted on GitHub Pages or custom domain, update history cleanly
+                var isGitHubPages = window.location.hostname.endsWith('github.io');
+                var basePath = window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/(home|explore|pricing|find|privacy|terms)\/?$/i, '').replace(/\/$/, '');
+                if (isGitHubPages) {
+                    var targetUrl = (basePath || '') + '/' + view;
+                    window.history.replaceState({ view: view }, '', targetUrl);
+                } else {
+                    var cleanPath = '/' + view;
+                    window.history.replaceState({ view: view }, '', cleanPath);
+                }
             } catch(e) {}
         })();
     </script>
@@ -2196,7 +2207,44 @@
         <div id="loader-error"
             style="color:#ff4d4f;max-width:400px;margin-top:1rem;font-size:0.9rem;word-break:break-all;display:none;">
         </div>
+        <button id="index-loader-bypass-btn" type="button" style="display:none; margin-top:1.25rem; padding:0.6rem 1.4rem; font-size:0.85rem; font-weight:700; border-radius:999px; background:#18181b; color:#ffffff; border:1.5px solid #334155; cursor:pointer;">
+            Continue to PriceLister &rarr;
+        </button>
     </div>
+
+    <!-- Synchronous Emergency Watchdog for Landing Page -->
+    <script>
+        (function() {
+            window.__dismissLandingLoader = function(reason) {
+                var loader = document.getElementById('app-loader');
+                var authContainer = document.getElementById('auth-container');
+                document.body.classList.remove('app-loading');
+                if (loader) loader.style.display = 'none';
+                if (authContainer) authContainer.style.display = 'block';
+                console.log("[PriceLister] Landing loader dismissed: " + (reason || 'unknown'));
+            };
+
+            // If still loading after 1.2s, reveal continue button
+            setTimeout(function() {
+                var btn = document.getElementById('index-loader-bypass-btn');
+                var loader = document.getElementById('app-loader');
+                if (btn && loader && loader.style.display !== 'none') {
+                    btn.style.display = 'inline-block';
+                    btn.onclick = function() {
+                        window.__dismissLandingLoader('manual_bypass');
+                    };
+                }
+            }, 1000);
+
+            // Auto-dismiss failsafe: Maximum 1.6s wait so user is NEVER locked out
+            setTimeout(function() {
+                var loader = document.getElementById('app-loader');
+                if (loader && loader.style.display !== 'none') {
+                    window.__dismissLandingLoader('emergency_timeout');
+                }
+            }, 1600);
+        })();
+    </script>
 
     <script>
         window.addEventListener('error', function (e) {
@@ -4983,166 +5031,10 @@
                 </div>
             </section>
 
-        </main>
-
-        <!-- EXPANSIVE ELEVATED FOOTER -->
-        <footer class="landing-footer-elevated">
-            <div class="footer-grid-expansive">
-                <!-- Brand Col -->
-                <div class="footer-brand-col">
-                    <h3>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.5">
-                            <path
-                                d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z">
-                            </path>
-                            <path
-                                d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z">
-                            </path>
-                        </svg>
-                        PriceLister
-                    </h3>
-                    <p>The modern operating system for products, live price lists, bespoke PDF invoices, and customer
-                        web storefronts.</p>
-                </div>
-
-                <!-- Platform Col -->
-                <div>
-                    <div class="footer-col-title">Core Platform</div>
-                    <div class="footer-links-list">
-                        <a href="/home" data-view="home" class="nav-link">Product Catalog Master</a>
-                        <a href="/explore" data-view="explore" class="nav-link">Smart Price Lister</a>
-                        <a href="/explore" data-view="explore" class="nav-link">Invoice Designer & POS</a>
-                        <a href="/explore" data-view="explore" class="nav-link">Customer Web Portal</a>
-                        <a href="/explore" data-view="explore" class="nav-link">Real-Time Stock Engine</a>
-                    </div>
-                </div>
-
-                <!-- Solutions & Workspaces Col -->
-                <div>
-                    <div class="footer-col-title">Solutions & Workspaces</div>
-                    <div class="footer-links-list">
-                        <a href="/pricing" data-view="pricing" class="nav-link">Small Business Tier</a>
-                        <a href="/pricing" data-view="pricing" class="nav-link">Large Business & Wholesalers</a>
-                        <a href="/pricing" data-view="pricing" class="nav-link">Marketplace Enterprise</a>
-                        <a href="/find" data-view="find" class="nav-link">Find Workspace Lookup</a>
-                        <a href="app.html">Launch Application</a>
-                    </div>
-                </div>
-
-                <!-- Trust & Legal Col -->
-                <div>
-                    <div class="footer-col-title">Trust & Compliance</div>
-                    <div class="footer-links-list">
-                        <a href="/privacy" data-view="privacy" class="nav-link">Privacy Policy</a>
-                        <a href="/terms" data-view="terms" class="nav-link">Terms of Service</a>
-                        <a href="/home" data-view="home" class="nav-link">100% Tenant Isolation</a>
-                        <a href="/home" data-view="home" class="nav-link">Role-Based Security</a>
-                        <a href="/home" data-view="home" class="nav-link">Google OAuth 2.0 Security</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="footer-bottom-bar">
-                <div>&copy; <span id="current-year"></span> PriceLister. All rights reserved.</div>
-                <div style="display:flex; align-items:center; gap:1.25rem;">
-                    <span>Enterprise Multi-Tenant Security</span>
-                    <span>•</span>
-                    <span>Cloud Server</span>
-                </div>
-            </div>
-        </footer>
-    </div>
-
-    <!-- ===== LOGIN MODAL ===== -->
-    <!-- ===== LOGIN MODAL ===== -->
-    <div id="login-modal-container" style="display: none;" role="dialog" aria-modal="true"
-        aria-labelledby="login-dialog-title" aria-describedby="login-dialog-desc">
-        <div class="login-dialog" role="document">
-            <button type="button" class="login-close-btn" id="close-login-modal"
-                aria-label="Close login dialog">&times;</button>
-            <div class="text-center">
-                <div class="login-logo" style="margin-bottom: 0.65rem;">
-                    <img src="Workspace/pricelister_org.png" alt="PriceLister"
-                        style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-                </div>
-                <h2 id="login-dialog-title" class="login-title" style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin-bottom: 0.2rem;">Welcome Back</h2>
-                <p id="login-dialog-desc" class="login-subtitle" style="font-size: 0.84rem; color: #64748b; margin-bottom: 1.15rem;">Sign in to your PriceLister workspace</p>
-            </div>
-
-            <!-- EMAIL & PASSWORD LOGIN FORM -->
-            <form id="modal-email-login-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <div style="text-align: left;">
-                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #334155; margin-bottom: 0.3rem;">Email Address</label>
-                    <div style="position: relative; display: flex; align-items: center;">
-                        <span style="position: absolute; left: 12px; color: #94a3b8; display: flex; align-items: center; pointer-events: none;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                        </span>
-                        <input type="email" id="modal-login-email" placeholder="name@company.com" required style="width: 100%; height: 42px; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 0.85rem 0 2.45rem; font-size: 0.88rem; color: #0f172a; outline: none; transition: border-color 0.15s ease;">
-                    </div>
-                </div>
-
-                <div style="text-align: left;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-                        <label style="font-size: 0.76rem; font-weight: 700; color: #334155;">Password</label>
-                        <a href="login.html#forgot" style="font-size: 0.75rem; color: #e11d48; text-decoration: none; font-weight: 700;">Forgot password?</a>
-                    </div>
-                    <div style="position: relative; display: flex; align-items: center;">
-                        <span style="position: absolute; left: 12px; color: #94a3b8; display: flex; align-items: center; pointer-events: none;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        </span>
-                        <input type="password" id="modal-login-password" placeholder="••••••••" required style="width: 100%; height: 42px; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 2.5rem 0 2.45rem; font-size: 0.88rem; color: #0f172a; outline: none; transition: border-color 0.15s ease;">
-                        <button type="button" id="modal-login-pwd-toggle" style="position: absolute; right: 8px; background: none; border: none; color: #64748b; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Hide/Unhide Password">
-                            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            <svg class="eye-closed" style="display: none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Submit Sign In -->
-                <button type="submit" id="modal-email-submit-btn" class="btn" style="width: 100%; height: 42px; background: #0f172a; color: #ffffff; font-weight: 700; border-radius: 10px; border: none; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(15,23,42,0.18); transition: all 0.15s ease; margin-top: 0.25rem;">
-                    <span>Sign In with Email</span> &rarr;
-                </button>
-            </form>
-
-            <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 0.85rem;">
-                <!-- OR DIVIDER -->
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin: 0.15rem 0;">
-                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
-                    <span style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em;">or</span>
-                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
-                </div>
-
-                <!-- PRODUCTION GOOGLE SIGN IN -->
-                <button type="button" id="modal-google-login-btn" class="btn-google"
-                    style="width: 100%; justify-content: center; height: 40px; border-radius: 10px;">
-                    <svg class="google-icon" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-                    </svg>
-                    <span class="btn-text" style="font-size: 0.85rem; font-weight: 700;">Continue with Google</span>
-                    <span class="spinner-sm" aria-hidden="true"></span>
-                </button>
-
-                <!-- TEST ENTER / DEMO DATA BUTTON -->
-                <button type="button" id="modal-test-login-btn" class="btn"
-                    style="width: 100%; padding: 0.6rem 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border: 1px solid #334155; border-radius: 10px; cursor: pointer; font-size: 0.84rem;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2">
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                    </svg>
-                    <span>Test Enter &bull; Demo UI Sandbox</span>
-                </button>
-
-                <!-- FOOTER LINK -->
-                <div style="text-align: center; margin-top: 0.35rem; font-size: 0.8rem; color: #64748b;">
-                    Don't have an account? <a href="login.html" style="color: #e11d48; font-weight: 700; text-decoration: none;">Sign Up / Open Dedicated Login</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- WORKSPACE LAUNCHER (WORKSPACE FOUND GATEWAY) -->
+        
+            <!-- CONNECTION GATEWAY (ALONE PANEL: WORKSPACE FOUND OR CREATE WORKSPACE) -->
+            <section id="view-connection" class="view alone-connection-view">
+                <!-- WORKSPACE LAUNCHER (WORKSPACE FOUND GATEWAY) -->
     <div id="workspace-launcher-container" style="display:none; padding: 3rem 1.25rem; min-height: 85vh; background: radial-gradient(circle at 50% 15%, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.01) 50%, transparent 80%);">
         <div class="workspace-found-card" style="max-width: 480px; margin: 2rem auto; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06); border: 1.5px solid #f1f5f9; overflow: hidden; position: relative; animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1); padding: 2rem 1.85rem;">
 
@@ -5162,7 +5054,7 @@
                 <!-- Workspace Logo & Name Row -->
                 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.15rem;">
                     <div id="launcher-logo-container" style="width: 54px; height: 54px; border-radius: 14px; background: #ffffff; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
-                        <img id="launcher-workspace-logo" src="/pricelister_org.png" alt="Workspace Logo" style="width: 100%; height: 100%; object-fit: contain; padding: 3px;">
+                        <img id="launcher-workspace-logo" src="pricelister_org.png" alt="Workspace Logo" style="width: 100%; height: 100%; object-fit: contain; padding: 3px;">
                         <div id="launcher-workspace-logo-fallback" style="display:none; width: 100%; height: 100%; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff; font-size: 1.45rem; font-weight: 800; align-items: center; justify-content: center;">W</div>
                     </div>
                     <div style="overflow: hidden; flex: 1;">
@@ -5216,25 +5108,31 @@
             </div>
 
             <!-- Primary Enter Workspace CTA Button (Smooth Transparent Outlined Button with Black Text) -->
-            <button type="button" id="launcher-enter-btn" class="btn btn-block" style="width: 100%; font-size: 0.96rem; padding: 0.85rem 1.25rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.6rem; background: rgba(24, 24, 27, 0.03); color: #18181b; border: 1.5px solid #d4d4d8; box-shadow: 0 1px 3px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.85rem;">
+            <!-- Primary Option 1: Enter Workspace -->
+            <button type="button" id="launcher-enter-btn" class="btn btn-block" style="width: 100%; font-size: 0.98rem; padding: 0.85rem 1.25rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.6rem; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; box-shadow: 0 4px 14px rgba(0,0,0,0.14); cursor: pointer; transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.85rem;">
                 <span>Enter Workspace</span>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
             </button>
 
-            <!-- Bottom Row: [Switch Account] [Logout] side-by-side -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
-                <button type="button" id="launcher-change-account-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.65rem 0.85rem; font-size: 0.84rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #ffffff; color: #334155; cursor: pointer; transition: all 0.15s ease;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3">
+            <!-- Secondary Options: [Back Home] [Change Account] [Logout] -->
+            <div style="display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <button type="button" id="launcher-back-home-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.65rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #e4e4e7; background: #ffffff; color: #18181b; cursor: pointer; transition: all 0.15s ease;" title="Back to Landing Home">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <span>Back Home</span>
+                </button>
+
+                <button type="button" id="launcher-change-account-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.65rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #e4e4e7; background: #ffffff; color: #18181b; cursor: pointer; transition: all 0.15s ease;" title="Change Account">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2">
                         <polyline points="17 1 21 5 17 9"></polyline>
                         <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
                         <polyline points="7 23 3 19 7 15"></polyline>
                         <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
                     </svg>
-                    <span>Switch Account</span>
+                    <span>Change Account</span>
                 </button>
 
-                <button type="button" id="launcher-logout-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.65rem 0.85rem; font-size: 0.84rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #fee2e2; background: #fff5f5; color: #dc2626; cursor: pointer; transition: all 0.15s ease;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <button type="button" id="launcher-logout-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.65rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #fee2e2; background: #fff5f5; color: #dc2626; cursor: pointer; transition: all 0.15s ease;" title="Sign out">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                     <span>Logout</span>
                 </button>
             </div>
@@ -5291,7 +5189,13 @@
                             <div style="font-size:0.7rem;color:var(--text-muted);">Creator Admin</div>
                         </div>
                     </div>
-                    <div style="display:flex; gap:4px; align-items:center;">
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <button id="setup-back-home-btn" class="btn btn-xs btn-outline"
+                            style="white-space:nowrap;font-size:0.74rem;padding:0.25rem 0.6rem;display:inline-flex;align-items:center;gap:3px;border:1.5px solid #d4d4d8;background:#ffffff;color:#18181b;border-radius:8px;font-weight:700;cursor:pointer;"
+                            title="Back to Landing Home">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            <span>Back Home</span>
+                        </button>
                         <button id="setup-change-account-btn" class="btn btn-xs btn-outline"
                             style="white-space:nowrap;font-size:0.72rem;padding:0.25rem 0.55rem;display:inline-flex;align-items:center;gap:3px;"
                             title="Switch Google Account">
@@ -5676,7 +5580,174 @@
             </form>
         </div>
     </div>
+            </section>
 
+        </main>
+
+        <!-- EXPANSIVE ELEVATED FOOTER -->
+        <footer class="landing-footer-elevated">
+            <div class="footer-grid-expansive">
+                <!-- Brand Col -->
+                <div class="footer-brand-col">
+                    <h3>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.5">
+                            <path
+                                d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z">
+                            </path>
+                            <path
+                                d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z">
+                            </path>
+                        </svg>
+                        PriceLister
+                    </h3>
+                    <p>The modern operating system for products, live price lists, bespoke PDF invoices, and customer
+                        web storefronts.</p>
+                </div>
+
+                <!-- Platform Col -->
+                <div>
+                    <div class="footer-col-title">Core Platform</div>
+                    <div class="footer-links-list">
+                        <a href="/home" data-view="home" class="nav-link">Product Catalog Master</a>
+                        <a href="/explore" data-view="explore" class="nav-link">Smart Price Lister</a>
+                        <a href="/explore" data-view="explore" class="nav-link">Invoice Designer & POS</a>
+                        <a href="/explore" data-view="explore" class="nav-link">Customer Web Portal</a>
+                        <a href="/explore" data-view="explore" class="nav-link">Real-Time Stock Engine</a>
+                    </div>
+                </div>
+
+                <!-- Solutions & Workspaces Col -->
+                <div>
+                    <div class="footer-col-title">Solutions & Workspaces</div>
+                    <div class="footer-links-list">
+                        <a href="/pricing" data-view="pricing" class="nav-link">Small Business Tier</a>
+                        <a href="/pricing" data-view="pricing" class="nav-link">Large Business & Wholesalers</a>
+                        <a href="/pricing" data-view="pricing" class="nav-link">Marketplace Enterprise</a>
+                        <a href="/find" data-view="find" class="nav-link">Find Workspace Lookup</a>
+                        <a href="app.html">Launch Application</a>
+                    </div>
+                </div>
+
+                <!-- Trust & Legal Col -->
+                <div>
+                    <div class="footer-col-title">Trust & Compliance</div>
+                    <div class="footer-links-list">
+                        <a href="/privacy" data-view="privacy" class="nav-link">Privacy Policy</a>
+                        <a href="/terms" data-view="terms" class="nav-link">Terms of Service</a>
+                        <a href="/home" data-view="home" class="nav-link">100% Tenant Isolation</a>
+                        <a href="/home" data-view="home" class="nav-link">Role-Based Security</a>
+                        <a href="/home" data-view="home" class="nav-link">Google OAuth 2.0 Security</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-bottom-bar">
+                <div>&copy; <span id="current-year"></span> PriceLister. All rights reserved.</div>
+                <div style="display:flex; align-items:center; gap:1.25rem;">
+                    <span>Enterprise Multi-Tenant Security</span>
+                    <span>•</span>
+                    <span>Cloud Server</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ===== LOGIN MODAL ===== -->
+    <!-- ===== LOGIN MODAL ===== -->
+    <div id="login-modal-container" style="display: none;" role="dialog" aria-modal="true"
+        aria-labelledby="login-dialog-title" aria-describedby="login-dialog-desc">
+        <div class="login-dialog" role="document">
+            <button type="button" class="login-close-btn" id="close-login-modal"
+                aria-label="Close login dialog">&times;</button>
+            <div class="text-center">
+                <div class="login-logo" style="margin-bottom: 0.65rem;">
+                    <img src="Workspace/pricelister_org.png" alt="PriceLister"
+                        style="width: 48px; height: 48px; object-fit: contain; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                </div>
+                <h2 id="login-dialog-title" class="login-title" style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin-bottom: 0.2rem;">Welcome Back</h2>
+                <p id="login-dialog-desc" class="login-subtitle" style="font-size: 0.84rem; color: #64748b; margin-bottom: 1.15rem;">Sign in to your PriceLister workspace</p>
+            </div>
+
+            <!-- EMAIL & PASSWORD LOGIN FORM -->
+            <form id="modal-email-login-form" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="text-align: left;">
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #334155; margin-bottom: 0.3rem;">Email Address</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <span style="position: absolute; left: 12px; color: #94a3b8; display: flex; align-items: center; pointer-events: none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                        </span>
+                        <input type="email" id="modal-login-email" placeholder="name@company.com" required style="width: 100%; height: 42px; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 0.85rem 0 2.45rem; font-size: 0.88rem; color: #0f172a; outline: none; transition: border-color 0.15s ease;">
+                    </div>
+                </div>
+
+                <div style="text-align: left;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                        <label style="font-size: 0.76rem; font-weight: 700; color: #334155;">Password</label>
+                        <a href="login.html#forgot" style="font-size: 0.75rem; color: #e11d48; text-decoration: none; font-weight: 700;">Forgot password?</a>
+                    </div>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <span style="position: absolute; left: 12px; color: #94a3b8; display: flex; align-items: center; pointer-events: none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </span>
+                        <input type="password" id="modal-login-password" placeholder="••••••••" required style="width: 100%; height: 42px; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 2.5rem 0 2.45rem; font-size: 0.88rem; color: #0f172a; outline: none; transition: border-color 0.15s ease;">
+                        <button type="button" id="modal-login-pwd-toggle" style="position: absolute; right: 8px; background: none; border: none; color: #64748b; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Hide/Unhide Password">
+                            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <svg class="eye-closed" style="display: none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember Me Checkbox -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin: -0.15rem 0 0.15rem 0;">
+                    <label style="display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; font-weight: 600; color: #475569; cursor: pointer;">
+                        <input type="checkbox" id="modal-login-remember-me" checked style="width: 15px; height: 15px; accent-color: #0f172a; cursor: pointer; border-radius: 4px;">
+                        <span>Remember Email</span>
+                    </label>
+                </div>
+
+                <!-- Submit Sign In -->
+                <button type="submit" id="modal-email-submit-btn" class="btn" style="width: 100%; height: 42px; background: #0f172a; color: #ffffff; font-weight: 700; border-radius: 10px; border: none; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(15,23,42,0.18); transition: all 0.15s ease; margin-top: 0.25rem;">
+                    <span>Sign In with Email</span> &rarr;
+                </button>
+            </form>
+
+            <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 0.85rem;">
+                <!-- OR DIVIDER -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin: 0.15rem 0;">
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                    <span style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em;">or</span>
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                </div>
+
+                <!-- PRODUCTION GOOGLE SIGN IN -->
+                <button type="button" id="modal-google-login-btn" class="btn-google"
+                    style="width: 100%; justify-content: center; height: 40px; border-radius: 10px;">
+                    <svg class="google-icon" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                    </svg>
+                    <span class="btn-text" style="font-size: 0.85rem; font-weight: 700;">Continue with Google</span>
+                    <span class="spinner-sm" aria-hidden="true"></span>
+                </button>
+
+                <!-- TEST ENTER / DEMO DATA BUTTON -->
+                <button type="button" id="modal-test-login-btn" class="btn"
+                    style="width: 100%; padding: 0.6rem 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border: 1px solid #334155; border-radius: 10px; cursor: pointer; font-size: 0.84rem;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span>Test Enter &bull; Demo UI Sandbox</span>
+                </button>
+
+                <!-- FOOTER LINK -->
+                <div style="text-align: center; margin-top: 0.35rem; font-size: 0.8rem; color: #64748b;">
+                    Don't have an account? <a href="login.html" style="color: #e11d48; font-weight: 700; text-decoration: none;">Sign Up / Open Dedicated Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ===================== SCRIPTS ===================== -->
     <script type="module">
@@ -5696,11 +5767,21 @@
                 pricing: document.getElementById('view-pricing'),
                 find: document.getElementById('view-find'),
                 privacy: document.getElementById('view-privacy'),
-                terms: document.getElementById('view-terms')
+                terms: document.getElementById('view-terms'),
+                connection: document.getElementById('view-connection')
             };
 
             function getCleanLandingUrl(viewName) {
                 const clean = (viewName || 'home').toLowerCase();
+                const isGitHubPages = window.location.hostname.endsWith('github.io');
+                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                if (isLocal) {
+                    return (clean === 'home') ? 'index.html' : 'index.html?view=' + clean;
+                }
+                if (isGitHubPages) {
+                    const basePath = window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/(home|explore|pricing|find|pricing|find|privacy|terms|connection)\/?$/i, '').replace(/\/$/, '');
+                    return (basePath || '') + '/' + clean;
+                }
                 return '/' + clean;
             }
 
@@ -5715,6 +5796,12 @@
                 document.querySelectorAll('.nav-link').forEach(a => {
                     a.classList.toggle('active', a.dataset.view === name);
                 });
+
+                // Standalone connection view barrier: NEVER show footer on alone connection view
+                const footer = document.querySelector('.landing-footer-elevated');
+                if (footer) {
+                    footer.style.display = (name === 'connection') ? 'none' : 'block';
+                }
 
                 // Scroll to top of main content
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -5732,6 +5819,7 @@
                     try { history.replaceState({ view: name }, '', '#' + name); } catch (err) {}
                 }
             }
+            window.showLandingView = showView;
 
             // Universal Click handlers for nav links and landing routes
             document.addEventListener('click', (e) => {
@@ -5751,6 +5839,10 @@
 
             // Extract initial landing view cleanly from URL path, fallback hash, or session
             function extractInitialView() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const queryView = (urlParams.get('view') || '').toLowerCase();
+                if (queryView && views[queryView]) return queryView;
+
                 const path = (window.location.pathname || '')
                     .replace(/\/index\.html$/i, '')
                     .replace(/^\/+/, '')

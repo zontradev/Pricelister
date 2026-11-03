@@ -12,7 +12,8 @@
             // Calculate base prefix (if hosted on user.github.io/repo/ or root)
             var segments = path.replace(/^\/+/, '').split('/');
             // If repository subfolder exists, retain it
-            var repoPrefix = (window.location.hostname.endsWith('github.io') && segments.length > 1 && !['workspace', 'home', 'explore', 'pricing', 'find', 'privacy', 'terms', 'login', 'demo'].includes(segments[0])) 
+            var firstSeg = (segments[0] || '').toLowerCase();
+            var repoPrefix = (window.location.hostname.endsWith('github.io') && segments.length > 1 && !['workspace', 'home', 'explore', 'pricing', 'find', 'privacy', 'terms', 'connection', 'login', 'demo'].includes(firstSeg)) 
                 ? '/' + segments[0] + '/' 
                 : './';
 
@@ -43,7 +44,7 @@
                 window.location.replace(repoPrefix + 'app.html');
                 return;
             }
-            var landingViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms'];
+            var landingViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms', 'connection'];
             for (var i = 0; i < landingViews.length; i++) {
                 if (path.toLowerCase().includes(landingViews[i])) {
                     try { sessionStorage.setItem('pricelister_last_landing_view', landingViews[i]); } catch(e) {}

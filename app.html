@@ -197,56 +197,44 @@
         })();
     </script>
 </head>
-<body class="app-loading">
+<body class="app-body">
     <div id="alert-container"></div>
     
-    <!-- Full Screen Loader for Auth Check -->
-    <div id="app-loader" class="full-loader">
-        <div class="spinner"></div>
-        <p id="loader-text">Loading Workspace...</p>
-        <div id="loader-error" style="color: #ff4d4f; max-width: 400px; margin-top: 1rem; font-size: 0.9rem; word-break: break-all; display: none;"></div>
-        <button id="loader-bypass-btn" type="button" style="display:none; margin-top:1.25rem; padding:0.6rem 1.4rem; font-size:0.85rem; font-weight:700; border-radius:999px; background:#18181b; color:#ffffff; border:1px solid #334155; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.18);">
-            Continue to Workspace (Demo Sandbox) &rarr;
-        </button>
+    <!-- YouTube-Style Smart Top Loading Progress Bar -->
+    <div id="youtube-top-loader" style="position:fixed; top:0; left:0; width:100%; height:3px; z-index:99999; pointer-events:none; overflow:hidden;">
+        <div id="youtube-top-progress" style="width:35%; height:100%; background:linear-gradient(90deg, #18181b 0%, #3f3f46 50%, #18181b 100%); box-shadow:0 0 10px rgba(24,24,27,0.35); transition:width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;"></div>
     </div>
 
-    <!-- Synchronous Emergency Watchdog (runs immediately while HTML parses) -->
+    <!-- Synchronous Smart Watchdog for Shell & Pre-loaded UI -->
     <script>
         (function() {
             window.__dismissWorkspaceLoader = function(reason) {
+                var bar = document.getElementById('youtube-top-progress');
+                var topLoader = document.getElementById('youtube-top-loader');
                 var loader = document.getElementById('app-loader');
-                var shell = document.getElementById('app-shell');
-                document.body.classList.remove('app-loading');
                 if (loader) loader.style.display = 'none';
-                if (shell) shell.style.display = 'flex';
-                console.log("[PriceLister] Loader dismissed: " + (reason || 'unknown'));
+                if (bar) {
+                    bar.style.width = '100%';
+                    setTimeout(function() {
+                        bar.style.opacity = '0';
+                        setTimeout(function() {
+                            if (topLoader) topLoader.style.display = 'none';
+                        }, 300);
+                    }, 180);
+                }
+                console.log("[PriceLister Smart Loading] Active UI mounted: " + (reason || 'ready'));
             };
 
-            // Show manual bypass button after 1 second if still loading
+            // Progress tick while loading
             setTimeout(function() {
-                var btn = document.getElementById('loader-bypass-btn');
-                var loader = document.getElementById('app-loader');
-                if (btn && loader && loader.style.display !== 'none') {
-                    btn.style.display = 'inline-block';
-                    btn.onclick = function() {
-                        localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
-                        window.__dismissWorkspaceLoader('manual_bypass');
-                    };
-                }
-            }, 1000);
-
-            // Auto-dismiss failsafe: Maximum 1.8 seconds wait in demo/local sessions
-            setTimeout(function() {
-                var loader = document.getElementById('app-loader');
-                if (loader && loader.style.display !== 'none') {
-                    window.__dismissWorkspaceLoader('emergency_timeout');
-                }
-            }, 1800);
+                var bar = document.getElementById('youtube-top-progress');
+                if (bar && bar.style.opacity !== '0') bar.style.width = '75%';
+            }, 300);
         })();
     </script>
 
-    <!-- Main Application Shell (hidden until auth verified) -->
-    <div id="app-shell" style="display: none;">
+    <!-- Main Application Shell (mounted instantly with zero layout shift) -->
+    <div id="app-shell" style="display: flex;">
         <!-- Persistent Left Navigation -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -596,9 +584,60 @@
                 </div>
             </header>
             
-            <!-- Central Workspace: This is where modules load -->
+            <!-- Central Workspace: Pre-loaded Smart Skeleton Structure (YouTube-style Content Loading) -->
             <div id="workspace-container" class="workspace-area">
-                <!-- Modules injected here via JS -->
+                <div id="workspace-smart-skeleton" style="padding: 1.5rem; max-width: 1400px; margin: 0 auto; width: 100%;">
+                    <!-- Header Skeleton -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+                        <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                            <div class="skeleton-shimmer" style="width:120px; height:12px; border-radius:4px;"></div>
+                            <div class="skeleton-shimmer" style="width:260px; height:28px; border-radius:8px;"></div>
+                        </div>
+                        <div style="display:flex; gap:0.6rem;">
+                            <div class="skeleton-shimmer" style="width:110px; height:36px; border-radius:8px;"></div>
+                            <div class="skeleton-shimmer" style="width:130px; height:36px; border-radius:8px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Metric KPI Cards Skeleton Row -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem; margin-bottom:1.75rem;">
+                        <div class="card" style="padding:1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; background:#ffffff;">
+                            <div class="skeleton-shimmer" style="width:90px; height:12px; margin-bottom:0.75rem; border-radius:4px;"></div>
+                            <div class="skeleton-shimmer" style="width:140px; height:30px; margin-bottom:0.5rem; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:110px; height:10px; border-radius:4px;"></div>
+                        </div>
+                        <div class="card" style="padding:1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; background:#ffffff;">
+                            <div class="skeleton-shimmer" style="width:85px; height:12px; margin-bottom:0.75rem; border-radius:4px;"></div>
+                            <div class="skeleton-shimmer" style="width:125px; height:30px; margin-bottom:0.5rem; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:95px; height:10px; border-radius:4px;"></div>
+                        </div>
+                        <div class="card" style="padding:1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; background:#ffffff;">
+                            <div class="skeleton-shimmer" style="width:100px; height:12px; margin-bottom:0.75rem; border-radius:4px;"></div>
+                            <div class="skeleton-shimmer" style="width:135px; height:30px; margin-bottom:0.5rem; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:80px; height:10px; border-radius:4px;"></div>
+                        </div>
+                        <div class="card" style="padding:1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; background:#ffffff;">
+                            <div class="skeleton-shimmer" style="width:75px; height:12px; margin-bottom:0.75rem; border-radius:4px;"></div>
+                            <div class="skeleton-shimmer" style="width:115px; height:30px; margin-bottom:0.5rem; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:90px; height:10px; border-radius:4px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Main Data Table / Feed Skeleton -->
+                    <div class="card" style="padding:1.5rem; border:1.5px solid #e4e4e7; border-radius:12px; background:#ffffff;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+                            <div class="skeleton-shimmer" style="width:160px; height:20px; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:200px; height:34px; border-radius:8px;"></div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.85rem;">
+                            <div class="skeleton-shimmer" style="width:100%; height:44px; border-radius:8px;"></div>
+                            <div class="skeleton-shimmer" style="width:100%; height:44px; border-radius:8px;"></div>
+                            <div class="skeleton-shimmer" style="width:100%; height:44px; border-radius:8px;"></div>
+                            <div class="skeleton-shimmer" style="width:100%; height:44px; border-radius:8px;"></div>
+                            <div class="skeleton-shimmer" style="width:100%; height:44px; border-radius:8px;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>

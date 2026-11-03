@@ -437,7 +437,17 @@ export class Invoice {
         this.discountPercent = Number(data.discountPercent) || 0.0;
         this.invoiceNumber = data.invoiceNumber || data.busInvNumber || "";
         this.isBusinessInvoice = data.isBusinessInvoice !== undefined ? Boolean(data.isBusinessInvoice) : false;
-        this.items = (data.items || []).map(item => new InvoiceItem(item));
+        this.items = (data.items || []).map((item, index) => {
+            const rawProdId = item.productRefId || (typeof item.productId === 'string' && isNaN(Number(item.productId)) ? item.productId : null);
+            const intId = (item.productId !== null && item.productId !== undefined && !isNaN(Number(item.productId)))
+                ? Math.trunc(Number(item.productId))
+                : (index + 1);
+            return new InvoiceItem({
+                ...item,
+                productId: intId,
+                productRefId: rawProdId || item.productRefId || null
+            });
+        });
         this.note = data.note !== undefined ? String(data.note) : "";
         this.shippingCost = Number(data.shippingCost) || 0.0;
         this.status = data.status || "Paid"; // "Paid", "Unpaid", "Draft"
@@ -455,7 +465,7 @@ export class InvoiceItem {
         let pId = data.productId;
         if (pId !== null && pId !== undefined && pId !== '' && !isNaN(Number(pId)) && typeof pId !== 'boolean') {
             const num = Number(pId);
-            pId = Number.isInteger(num) ? num : num;
+            pId = Math.trunc(num);
         } else if (pId === undefined) {
             pId = null;
         }
@@ -464,6 +474,7 @@ export class InvoiceItem {
             ? Number(data.itemProfit) 
             : 0.0;
         this.productId = pId;
+        this.productRefId = data.productRefId || (typeof data.productId === 'string' && isNaN(Number(data.productId)) ? data.productId : null);
         this.productName = data.productName || "";
         this.quantity = Number(data.quantity) || 1;
         this.totalPrice = Number(data.totalPrice) !== undefined && !isNaN(Number(data.totalPrice)) 

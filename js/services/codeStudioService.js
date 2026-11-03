@@ -77,15 +77,68 @@ function getRandomCharFromSet(charset, excludeConfusing = false) {
 }
 
 // =============================================================================
+// =============================================================================
 // DEFAULT ENTERPRISE CODE TEMPLATES SEED
+// Clean minimal set:
+// 1. Standard Product Code (Default normal - Random 13 Digits, cannot delete or customize)
+// 2. Date Coder (Current Date e.g. 11/03/2026)
+// 3. Timestamp Coder (Epoch Unix Milliseconds)
+// 4. Supermarket Standard (GROC-RET-000001, modifiable / deletable)
+// 5. Pricelister Origin (PL-PRODUCT-00001, modifiable / deletable)
 // =============================================================================
 export const DEFAULT_CODE_TEMPLATES = [
     {
-        id: 'tmpl-supermarket-standard',
-        name: 'Supermarket Standard',
-        description: 'Department prefix, category code, and 6-digit zero-padded sequence (e.g. GROC-BEV-000412)',
+        id: 'tmpl-standard-product-code',
+        name: 'Standard Product Code',
+        description: 'Default 13-digit random standard numeric product code (e.g. 8908796598438)',
         categoryFilter: 'all',
         isDefault: true,
+        isSystemLocked: true, // Permanent default - cannot delete, cannot customize
+        globalSeparator: '',
+        prefix: '',
+        suffix: '',
+        fixedLength: 13,
+        blocks: [
+            { id: 'b1', type: 'random_numbers', name: '13-Digit Standard EAN/UPC', length: 13, separator: '' }
+        ]
+    },
+    {
+        id: 'tmpl-date-coder',
+        name: 'Date Coder',
+        description: 'Formatted date coder using current date (e.g. 11/03/2026 or YYMMDD)',
+        categoryFilter: 'all',
+        isDefault: false,
+        isSystemLocked: false,
+        globalSeparator: '/',
+        prefix: '',
+        suffix: '',
+        fixedLength: 0,
+        blocks: [
+            { id: 'b1', type: 'date_based', name: 'Full Date String', format: 'MM/DD/YYYY', separator: '' }
+        ]
+    },
+    {
+        id: 'tmpl-timestamp-coder',
+        name: 'Timestamp Coder',
+        description: 'High-precision epoch unix timestamp identifier (e.g. 1703458345340)',
+        categoryFilter: 'all',
+        isDefault: false,
+        isSystemLocked: false,
+        globalSeparator: '',
+        prefix: '',
+        suffix: '',
+        fixedLength: 0,
+        blocks: [
+            { id: 'b1', type: 'timestamp', name: 'Timestamp Milliseconds', format: 'YYYYMMDDHHmmss', separator: '' }
+        ]
+    },
+    {
+        id: 'tmpl-supermarket-standard',
+        name: 'Supermarket Standard',
+        description: 'Supermarket department, category tag, and 6-digit sequence (e.g. GROC-RET-000001)',
+        categoryFilter: 'all',
+        isDefault: false,
+        isSystemLocked: false,
         globalSeparator: '-',
         prefix: '',
         suffix: '',
@@ -97,83 +150,20 @@ export const DEFAULT_CODE_TEMPLATES = [
         ]
     },
     {
-        id: 'tmpl-retail-product',
-        name: 'Retail Product Code',
-        description: 'Brand tag, manufacture year, 4 random digits, and modulo-10 check digit (e.g. PL-26-8941-7)',
+        id: 'tmpl-pricelister-origin',
+        name: 'Pricelister Origin',
+        description: 'Pricelister origin brand prefix and sequential unit code (e.g. PL-PRODUCT-00001)',
         categoryFilter: 'all',
         isDefault: false,
+        isSystemLocked: false,
         globalSeparator: '-',
         prefix: '',
         suffix: '',
         fixedLength: 0,
         blocks: [
-            { id: 'b1', type: 'fixed_text', name: 'Brand Identifier', value: 'PL', length: 2, separator: '-' },
-            { id: 'b2', type: 'date_based', name: '2-Digit Year', format: 'YY', separator: '-' },
-            { id: 'b3', type: 'random_numbers', name: 'Random Numeric 4', length: 4, separator: '-' },
-            { id: 'b4', type: 'check_digit', name: 'Modulo 10 Check Digit', algorithm: 'modulo10', separator: '' }
-        ]
-    },
-    {
-        id: 'tmpl-food-grocery',
-        name: 'Food & Grocery Batch',
-        description: 'Fresh groceries with Year-Month packaging identifier and serial sequence (e.g. F&G-2611-00812)',
-        categoryFilter: 'Food & Groceries',
-        isDefault: false,
-        globalSeparator: '-',
-        prefix: 'F&G-',
-        suffix: '',
-        fixedLength: 0,
-        blocks: [
-            { id: 'b1', type: 'date_based', name: 'Date Year-Month', format: 'YYMM', separator: '-' },
-            { id: 'b2', type: 'sequential_number', name: 'Batch Unit Sequence', startingNumber: 100, step: 1, length: 5, padChar: '0', separator: '' }
-        ]
-    },
-    {
-        id: 'tmpl-warehouse-inventory',
-        name: 'Warehouse Inventory Bin Tag',
-        description: 'Warehouse zone, aisle, bin location, and asset unit ID (e.g. WH-A-12-04-00129)',
-        categoryFilter: 'Warehouse',
-        isDefault: false,
-        globalSeparator: '-',
-        prefix: 'WH-',
-        suffix: '',
-        fixedLength: 0,
-        blocks: [
-            { id: 'b1', type: 'fixed_text', name: 'Zone', value: 'A', length: 1, separator: '-' },
-            { id: 'b2', type: 'fixed_text', name: 'Aisle', value: '12', length: 2, separator: '-' },
-            { id: 'b3', type: 'fixed_text', name: 'Bin', value: '04', length: 2, separator: '-' },
-            { id: 'b4', type: 'sequential_number', name: 'Asset Index', startingNumber: 1, step: 1, length: 5, padChar: '0', separator: '' }
-        ]
-    },
-    {
-        id: 'tmpl-electronics-serial',
-        name: 'Electronics Serial Number',
-        description: 'Hardware brand code, high-density alphanumeric serial with excluded confusing characters (e.g. ELEC-9X4K-7M2R)',
-        categoryFilter: 'Electronics',
-        isDefault: false,
-        globalSeparator: '-',
-        prefix: 'ELEC-',
-        suffix: '',
-        fixedLength: 0,
-        blocks: [
-            { id: 'b1', type: 'random_alphanumeric', name: 'Security Block A', length: 4, excludeConfusing: true, separator: '-' },
-            { id: 'b2', type: 'random_alphanumeric', name: 'Security Block B', length: 4, excludeConfusing: true, separator: '' }
-        ]
-    },
-    {
-        id: 'tmpl-custom-corporate',
-        name: 'Custom Business Identifier',
-        description: 'Corporate division code, timestamp, and sequential counter (e.g. CORP/261102/0004)',
-        categoryFilter: 'all',
-        isDefault: false,
-        globalSeparator: '/',
-        prefix: '',
-        suffix: '',
-        fixedLength: 0,
-        blocks: [
-            { id: 'b1', type: 'fixed_text', name: 'Corporate Division', value: 'CORP', length: 4, separator: '/' },
-            { id: 'b2', type: 'date_based', name: 'Date String', format: 'YYMMDD', separator: '/' },
-            { id: 'b3', type: 'sequential_number', name: 'Sequence', startingNumber: 1, step: 1, length: 4, padChar: '0', separator: '' }
+            { id: 'b1', type: 'fixed_text', name: 'Brand Code', value: 'PL', length: 2, separator: '-' },
+            { id: 'b2', type: 'fixed_text', name: 'Product Label', value: 'PRODUCT', length: 7, separator: '-' },
+            { id: 'b3', type: 'sequential_number', name: 'Serial Sequence', startingNumber: 1, step: 1, length: 5, padChar: '0', separator: '' }
         ]
     }
 ];
@@ -341,33 +331,57 @@ export const getCodeStudioService = (workspaceId) => {
             const globalSep = separatorConfig.globalSeparator !== undefined ? separatorConfig.globalSeparator : '-';
             const fixedLen = parseInt(separatorConfig.fixedLength, 10) || 0;
 
-            let result = prefix;
-            let accumulatedForCheckDigit = prefix;
+            const evaluatedSegments = [];
 
             for (let i = 0; i < blocks.length; i++) {
                 const b = blocks[i];
                 if (b.visible === false) continue;
 
                 // Evaluate block value (pass accumulated string for dynamic check digits)
+                const accumulatedSoFar = prefix + evaluatedSegments.join('');
                 const blockVal = getCodeStudioService(wsId).generateBlockValue(b, {
                     ...context,
-                    accumulatedString: accumulatedForCheckDigit
+                    accumulatedString: accumulatedSoFar
                 });
 
-                result += blockVal;
-                accumulatedForCheckDigit += blockVal;
+                evaluatedSegments.push({
+                    val: blockVal,
+                    customSep: (b.separator !== undefined && b.separator !== null) ? b.separator : null
+                });
+            }
 
-                // Determine block separator (unless this is the last visible block)
-                const isLast = (i === blocks.length - 1);
-                if (!isLast) {
-                    const sep = (b.separator !== undefined && b.separator !== null) ? b.separator : globalSep;
+            // Build core body with separators
+            let body = '';
+            for (let i = 0; i < evaluatedSegments.length; i++) {
+                body += evaluatedSegments[i].val;
+                if (i < evaluatedSegments.length - 1) {
+                    const sep = evaluatedSegments[i].customSep !== null ? evaluatedSegments[i].customSep : globalSep;
                     if (sep && sep !== 'none') {
-                        result += sep;
+                        body += sep;
                     }
                 }
             }
 
-            result += suffix;
+            // Connect prefix and suffix respecting global separator when present
+            let result = '';
+            if (prefix) {
+                result += prefix;
+                if (body) {
+                    // If global separator is set, and prefix does not end with it and body doesn't start with it, link with separator
+                    if (globalSep && globalSep !== 'none' && !prefix.endsWith(globalSep) && !body.startsWith(globalSep)) {
+                        result += globalSep;
+                    }
+                }
+            }
+
+            result += body;
+
+            if (suffix) {
+                if (result && globalSep && globalSep !== 'none' && !result.endsWith(globalSep) && !suffix.startsWith(globalSep)) {
+                    result += globalSep;
+                }
+                result += suffix;
+            }
 
             // Enforce fixed character length if set
             if (fixedLen > 0) {
@@ -389,10 +403,11 @@ export const getCodeStudioService = (workspaceId) => {
             const existing = allSeqs.find(s => s.sequenceKey === sequenceKey || s.id === sequenceKey);
 
             let nextSeqNum = startingNumber;
-            if (existing) {
+            if (existing && existing.id) {
                 nextSeqNum = Number(existing.currentValue || 0) + step;
                 await sequencesRepo.update(existing.id, {
                     currentValue: nextSeqNum,
+                    sequenceKey,
                     lastAllocatedAt: Date.now(),
                     step,
                     updatedAt: Date.now()
@@ -581,6 +596,9 @@ export const getCodeStudioService = (workspaceId) => {
             if (templateData.id) {
                 const existing = await templatesRepo.getById(templateData.id) || await codeTemplatesRepo.getById(templateData.id);
                 if (existing) {
+                    if (existing.isSystemLocked || existing.id === 'tmpl-standard-product-code') {
+                        throw new Error("Default Standard Product Code template is permanently locked and cannot be customized.");
+                    }
                     const updatePayload = {
                         ...templateData,
                         updatedAt: Date.now()
@@ -597,6 +615,7 @@ export const getCodeStudioService = (workspaceId) => {
                 id: newId,
                 workspaceId: wsId,
                 isDefault: !!templateData.isDefault,
+                isSystemLocked: false,
                 isArchived: false,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
@@ -615,6 +634,7 @@ export const getCodeStudioService = (workspaceId) => {
                 id: `tmpl-${generateUniqueId()}`,
                 name: `${source.name} (Copy)`,
                 isDefault: false,
+                isSystemLocked: false,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             };
@@ -624,6 +644,10 @@ export const getCodeStudioService = (workspaceId) => {
         },
 
         archiveTemplate: async (id) => {
+            const existing = await getCodeStudioService(wsId).getTemplateById(id);
+            if (existing && (existing.isSystemLocked || existing.id === 'tmpl-standard-product-code')) {
+                throw new Error("Default Standard Product Code template cannot be archived or deleted.");
+            }
             await templatesRepo.update(id, { isArchived: true, isDefault: false, updatedAt: Date.now() });
             await codeTemplatesRepo.update(id, { isArchived: true, isDefault: false, updatedAt: Date.now() }).catch(() => {});
         },
@@ -634,6 +658,10 @@ export const getCodeStudioService = (workspaceId) => {
         },
 
         deleteTemplate: async (id) => {
+            const existing = await getCodeStudioService(wsId).getTemplateById(id);
+            if (existing && (existing.isSystemLocked || existing.id === 'tmpl-standard-product-code')) {
+                throw new Error("Default Standard Product Code template is permanent and cannot be deleted.");
+            }
             await templatesRepo.delete(id);
             await codeTemplatesRepo.delete(id).catch(() => {});
         },

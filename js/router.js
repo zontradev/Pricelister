@@ -63,6 +63,11 @@ export const discardActiveUnsavedChanges = () => {
         if (manageWorker) manageWorker.style.display = 'none';
         const addWorker = document.getElementById('add-worker-container');
         if (addWorker) addWorker.style.display = 'none';
+        document.querySelectorAll('.prd-batch-action-bar').forEach(b => {
+            b.classList.remove('visible');
+            b.style.display = 'none';
+            b.remove();
+        });
     } catch (e) {
         console.warn("Error discarding unsaved changes:", e);
     }
@@ -338,7 +343,18 @@ export const initRouter = async (workspaceIdParam = null) => {
                 breadcrumbs.textContent = routeParam ? `${route.title} / ${routeParam.replace(/_/g, ' ')}` : route.title;
             }
 
-            // Render fresh view
+            // Render fresh view with YouTube-Style Smart Top Loading
+            const topBar = document.getElementById('youtube-top-progress');
+            const topLoader = document.getElementById('youtube-top-loader');
+            if (topLoader) {
+                topLoader.style.display = 'block';
+                topLoader.style.opacity = '1';
+            }
+            if (topBar) {
+                topBar.style.opacity = '1';
+                topBar.style.width = '65%';
+            }
+
             const mainContainer = document.getElementById('workspace-container');
             const loader = document.getElementById('app-loader');
             const shell = document.getElementById('app-shell');
@@ -362,6 +378,9 @@ export const initRouter = async (workspaceIdParam = null) => {
                 if (loader) loader.style.display = 'none';
                 if (shell) shell.style.display = 'flex';
                 document.body.classList.remove('app-loading');
+                if (typeof window.__dismissWorkspaceLoader === 'function') {
+                    window.__dismissWorkspaceLoader('route_rendered');
+                }
             }
 
             // Update active sidebar nav indicators & hierarchical tree state

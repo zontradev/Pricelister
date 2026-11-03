@@ -11,7 +11,7 @@ import { generateUniqueId } from '../../DataModel.js';
 import { exportInvoicesExcel } from '../utils/exportEngine.js';
 import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
-import { openInvoiceDetailsModal } from './invoiceDetailsModal.js';
+import { openInvoiceDetailsModal, renderInvoiceDetailPanel } from './invoiceDetailsModal.js';
 import { storageService } from '../../supabase/storage.js';
 import { draftManager } from '../services/draftManager.js';
 
@@ -63,6 +63,12 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     let customDateVal = '';
     let activeSort = 'NEWEST';
     let searchQuery = '';
+    let activeQueryFilter = 'ALL'; // 'ALL', 'VALUE_RANGE', 'ITEM_RANGE', 'HIGH_VAL', 'UNPAID', 'PAID', 'MULTI_ITEM'
+    let filterValMin = '';
+    let filterValMax = '';
+    let filterItemMin = '';
+    let filterItemMax = '';
+    const selectedInvoiceIds = new Set();
 
     // Quick Add Entity State
     let quickAddTargetType = null; // 'business' | 'client' | 'customer'
@@ -111,6 +117,31 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     
                     <input type="date" id="inv-custom-date" style="display:none; width: auto; padding: 0.35rem 0.75rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px;" class="form-control">
 
+                    <!-- Query Filter Dropdown -->
+                    <select id="inv-filter-query" class="form-control" style="width: auto; padding: 0.4rem 0.85rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px; font-weight:600;">
+                        <option value="ALL">All Invoices</option>
+                        <option value="VALUE_RANGE">Value Range ($ Min - Max)</option>
+                        <option value="ITEM_RANGE">Item Range (Min - Max)</option>
+                        <option value="HIGH_VAL">High Value (&gt; $500)</option>
+                        <option value="UNPAID">Unpaid / Balance Due</option>
+                        <option value="PAID">Paid in Full</option>
+                        <option value="MULTI_ITEM">Multi-Item (3+ Items)</option>
+                    </select>
+
+                    <!-- Value Range 2-block Inputs -->
+                    <div id="inv-val-range-wrap" style="display:none; align-items:center; gap:4px;">
+                        <input type="number" id="inv-val-min" min="0" placeholder="Min $" class="form-control" style="width:72px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
+                        <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
+                        <input type="number" id="inv-val-max" min="0" placeholder="Max $" class="form-control" style="width:72px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
+                    </div>
+
+                    <!-- Item Range 2-block Inputs -->
+                    <div id="inv-item-range-wrap" style="display:none; align-items:center; gap:4px;">
+                        <input type="number" id="inv-item-min" min="0" placeholder="Min Items" class="form-control" style="width:78px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
+                        <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
+                        <input type="number" id="inv-item-max" min="0" placeholder="Max Items" class="form-control" style="width:78px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
+                    </div>
+
                     <!-- Sort Dropdown -->
                     <select id="inv-sort-by" class="form-control" style="width: auto; padding: 0.4rem 0.85rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px;">
                         <option value="NEWEST">Newest First</option>
@@ -133,7 +164,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <table style="width:100%; border-collapse: collapse; text-align:left;">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary); background: var(--surface-50);">
-                                <th style="padding:0.95rem 1.25rem; font-weight:700; font-size:0.84rem; border-bottom: 1px solid var(--border-color); background: var(--surface-50); color: var(--text-primary);">Invoice #</th>
+                                <th style="padding:0.95rem 0.5rem 0.95rem 1.25rem; width:38px; border-bottom: 1px solid var(--border-color); background: var(--surface-50);">
+                                    <input type="checkbox" id="inv-select-all" style="cursor:pointer; width:16px; height:16px; accent-color:#18181B; border-radius:4px;">
+                                </th>
+                                <th style="padding:0.95rem 1rem; font-weight:700; font-size:0.84rem; border-bottom: 1px solid var(--border-color); background: var(--surface-50); color: var(--text-primary);">Invoice #</th>
                                 <th style="padding:0.95rem 1rem; font-weight:700; font-size:0.84rem; border-bottom: 1px solid var(--border-color); background: var(--surface-50); color: var(--text-primary);">Date</th>
                                 <th style="padding:0.95rem 1rem; font-weight:700; font-size:0.84rem; border-bottom: 1px solid var(--border-color); background: var(--surface-50); color: var(--text-primary);">${isBusinessInvoice ? 'Business (Issuer) & Recipient' : 'Customer / Recipient'}</th>
                                 <th style="padding:0.95rem 1rem; font-weight:700; font-size:0.84rem; border-bottom: 1px solid var(--border-color); background: var(--surface-50); color: var(--text-primary);">Status</th>
@@ -156,7 +190,36 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     </table>
                 </div>
             </div>
+
+            <!-- FLOATING INVOICE BATCH ACTION BAR (Multi-selection) -->
+            <div id="inv-batch-action-bar" class="prd-batch-action-bar" style="display:none;">
+                <div style="display:flex; align-items:center; gap:0.65rem;">
+                    <span id="inv-batch-count" class="prd-batch-badge">0 selected</span>
+                    <button type="button" id="btn-inv-batch-select-all" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem;" title="Select all active invoices or deselect all">
+                        Select All
+                    </button>
+                    <button type="button" id="btn-inv-batch-invert" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem; display:none;" title="Invert selection">
+                        Invert
+                    </button>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                    <button type="button" id="btn-inv-batch-export" class="btn btn-primary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #18181B; background:#18181B; color:#FFFFFF; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Export selected invoices as CSV">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <span>Export Selected</span>
+                    </button>
+                    <button type="button" id="btn-inv-batch-delete" class="btn btn-danger btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1.5px solid #fca5a5; background:#FFFFFF; color:#dc2626; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Delete all selected invoices">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <span>Delete Selected</span>
+                    </button>
+                    <button type="button" id="btn-inv-batch-cancel" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.85rem;" title="Clear selection">
+                        Cancel
+                    </button>
+                </div>
+            </div>
         </div>
+
+        <!-- ================= DEDICATED INVOICE DETAIL VIEW PANEL ================= -->
+        <div id="invoice-detail-view" style="display:none; padding-bottom:2.5rem;"></div>
 
         <!-- ================= EXPANDED INVOICE CREATION / EDIT VIEW ================= -->
         <div id="invoice-editor-view" style="display:none; margin-bottom: 2.5rem;">
@@ -959,7 +1022,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     }
 
     // Switch View Helper
-    const showEditorView = (isEdit = false, invoice = null) => {
+    const showEditorView = (isEdit = false, invoice = null, preselectedTarget = null) => {
         if (listView) listView.style.display = 'none';
         if (editorView) editorView.style.display = 'block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -997,13 +1060,15 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             editingInvoiceUniqueId = generateUniqueId();
             if (formTitle) formTitle.textContent = `New ${typeLabel}`;
             if (btnSubmit) btnSubmit.textContent = 'Save Invoice';
-            resetForm();
+            resetForm(preselectedTarget);
             initialInvoiceFormSnapshot = getInvoiceFormSnapshot();
 
-            const newDraftKey = 'inv_' + (isBusinessInvoice ? 'bus_' : 'cust_') + 'new';
-            const restored = restoreInvoiceDraftIfAny(newDraftKey);
-            if (restored) {
-                showAlert.info("Restored progressive unsaved invoice draft.");
+            if (!preselectedTarget) {
+                const newDraftKey = 'inv_' + (isBusinessInvoice ? 'bus_' : 'cust_') + 'new';
+                const restored = restoreInvoiceDraftIfAny(newDraftKey);
+                if (restored) {
+                    showAlert.info("Restored progressive unsaved invoice draft.");
+                }
             }
 
             updateInvoiceSubmitState();
@@ -1334,13 +1399,15 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         // Line Items
         invoiceItems = (inv.items || []).map(item => ({
             productId: item.productId,
+            productRefId: item.productRefId || (typeof item.productId === 'string' && isNaN(Number(item.productId)) ? item.productId : null),
             productName: item.productName,
             quantity: Number(item.quantity) || 1,
             unitPrice: Number(item.unitPrice) || 0,
             unitCost: Number(item.unitCost) || 0,
             totalPrice: Number(item.totalPrice) || ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)),
             itemProfit: Number(item.itemProfit) || 0,
-            sizeWeight: item.sizeWeight || ''
+            sizeWeight: item.sizeWeight || '',
+            imageUrl: item.imageUrl || item.imageUri || ''
         }));
 
         // Adjustments (All 4 supported across both types)
@@ -1385,8 +1452,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         updateLiveTotals();
     };
 
-    // Reset Form for Creation
-    const resetForm = () => {
+    // Reset Form for Creation (Supports preserving preselected target from Contracts/Directory)
+    const resetForm = (preselectedTarget = null) => {
         container.querySelector('#invoice-form').reset();
         invoiceItems = [];
         pickerSelections = {};
@@ -1407,16 +1474,40 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (searchCustInput) searchCustInput.value = '';
         if (searchCliInput) searchCliInput.value = '';
 
-        // Default Business Selection:
-        // Automatically preselect designated Primary Business for new invoices
-        const primaryBus = allBusinesses.find(b => b.isPrimary === true) || (allBusinesses.length > 0 ? allBusinesses[0] : null);
-        const busSelect = container.querySelector('#inv-business');
-        if (busSelect && primaryBus) {
-            busSelect.value = primaryBus.id;
-            if (searchBusInput) searchBusInput.value = primaryBus.name || '';
+        // Business Selection: Check if preselectedTarget is a business issuer
+        let selectedBus = null;
+        if (preselectedTarget && preselectedTarget.mode === 'business') {
+            selectedBus = allBusinesses.find(b => b.id === preselectedTarget.id || b.uniqueId === preselectedTarget.id) ||
+                          { id: preselectedTarget.id, name: preselectedTarget.name };
+        } else {
+            selectedBus = allBusinesses.find(b => b.isPrimary === true) || (allBusinesses.length > 0 ? allBusinesses[0] : null);
         }
 
-        setRecipientMode(isBusinessInvoice ? 'client' : 'customer');
+        const busSelect = container.querySelector('#inv-business');
+        if (busSelect && selectedBus) {
+            busSelect.value = selectedBus.id;
+            if (searchBusInput) searchBusInput.value = selectedBus.name || '';
+        }
+
+        // Recipient Selection: check if preselectedTarget is customer or client
+        if (preselectedTarget && (preselectedTarget.mode === 'customer' || preselectedTarget.mode === 'client')) {
+            setRecipientMode(preselectedTarget.mode);
+            if (preselectedTarget.mode === 'customer') {
+                const custSelect = container.querySelector('#inv-customer');
+                if (custSelect && preselectedTarget.id) {
+                    custSelect.value = preselectedTarget.id;
+                    if (searchCustInput) searchCustInput.value = preselectedTarget.name || '';
+                }
+            } else if (preselectedTarget.mode === 'client') {
+                const cliSelect = container.querySelector('#inv-client');
+                if (cliSelect && preselectedTarget.id) {
+                    cliSelect.value = preselectedTarget.id;
+                    if (searchCliInput) searchCliInput.value = preselectedTarget.name || '';
+                }
+            }
+        } else {
+            setRecipientMode(isBusinessInvoice ? 'client' : 'customer');
+        }
 
         const invNumInput = container.querySelector('#inv-number-input');
         if (invNumInput) invNumInput.value = generateRandomInvoiceId(isBusinessInvoice);
@@ -1797,7 +1888,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             list.innerHTML = `<div style="color:var(--text-muted); font-size:0.875rem; padding:1.25rem 0; text-align:center; background:var(--surface-50); border-radius:8px; border:1px dashed var(--border-color);">No products added yet. Click above to pick products.</div>`;
         } else {
             list.innerHTML = invoiceItems.map((item, idx) => {
-                const prod = allProducts.find(p => p.id === item.productId || p.uniqueId === item.productId);
+                const refId = item.productRefId || item.productId;
+                const prod = allProducts.find(p => p.id === refId || p.uniqueId === refId || p.id === item.productId || p.uniqueId === item.productId);
                 const thumbUrl = item.imageUrl || item.imageUri || prod?.imageUri || prod?.imageUrl || '';
                 return `
                 <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:0.65rem 0.85rem; border:1px solid var(--border-color); border-radius:10px; gap: 0.75rem; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
@@ -1827,7 +1919,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
                     if (isVendingActive) {
                         const item = invoiceItems[idx];
-                        const prod = allProducts.find(p => p.id === item.productId);
+                        const refId = item.productRefId || item.productId;
+                        const prod = allProducts.find(p => p.id === refId || p.uniqueId === refId || p.id === item.productId);
                         if (prod && val > prod.quantity) {
                             val = Math.max(1, prod.quantity);
                             showAlert.warning(`Stock limit reached for ${item.productName} (${prod.quantity} available).`);
@@ -1935,28 +2028,114 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         `).join('');
     };
 
+    // Dedicated Invoice Detail View helper (Full Panel, Grey/Black combo)
+    const showInvoiceDetail = (inv) => {
+        if (!inv) return;
+        const detailPanel = container.querySelector('#invoice-detail-view');
+        const listView = container.querySelector('#invoice-list-view');
+        const editorView = container.querySelector('#invoice-editor-view');
+        if (!detailPanel || !listView) return;
+
+        if (editorView) editorView.style.display = 'none';
+        listView.style.display = 'none';
+        detailPanel.style.display = 'block';
+        detailPanel.scrollIntoView({ behavior: 'smooth' });
+
+        renderInvoiceDetailPanel(detailPanel, inv, {
+            allBusinesses,
+            allCustomers,
+            allClients,
+            onBack: () => {
+                detailPanel.style.display = 'none';
+                listView.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            onEdit: (invoiceToEdit) => {
+                detailPanel.style.display = 'none';
+                showEditorView(true, invoiceToEdit);
+            }
+        });
+    };
+
+    // Update Floating Invoice Batch Bar
+    const updateInvoiceBatchBar = (filteredInvoices = []) => {
+        if (!container || !container.isConnected) return;
+        let bar = document.getElementById('inv-batch-action-bar');
+        if (!bar) bar = container.querySelector('#inv-batch-action-bar');
+        if (bar && bar.parentElement !== document.body) {
+            document.body.appendChild(bar);
+        }
+        const countEl = bar ? bar.querySelector('#inv-batch-count') : null;
+        const invertBtn = bar ? bar.querySelector('#btn-inv-batch-invert') : null;
+        const selectAllBtn = bar ? bar.querySelector('#btn-inv-batch-select-all') : null;
+        const count = selectedInvoiceIds.size;
+
+        if (bar) {
+            if (count > 0) {
+                bar.style.display = 'flex';
+                setTimeout(() => bar.classList.add('visible'), 10);
+            } else {
+                bar.classList.remove('visible');
+                setTimeout(() => { if (selectedInvoiceIds.size === 0) bar.style.display = 'none'; }, 200);
+            }
+        }
+
+        if (countEl) {
+            countEl.textContent = `${count} selected`;
+        }
+
+        if (selectAllBtn) {
+            const total = filteredInvoices.length;
+            selectAllBtn.textContent = (count === total && total > 0) ? 'Deselect All' : 'Select All';
+        }
+
+        // Invert selection button: visible only when 2 or more items are selected
+        if (invertBtn) {
+            if (count >= 2) {
+                invertBtn.style.display = 'inline-flex';
+            } else {
+                invertBtn.style.display = 'none';
+            }
+        }
+
+        container.querySelectorAll('.inv-select-chk').forEach(chk => {
+            const id = chk.getAttribute('data-id');
+            chk.checked = selectedInvoiceIds.has(id);
+        });
+
+        container.querySelectorAll('.inv-table-row').forEach(row => {
+            const id = row.getAttribute('data-id');
+            if (selectedInvoiceIds.has(id)) {
+                row.style.backgroundColor = '#F4F4F5';
+            } else {
+                row.style.backgroundColor = '';
+            }
+        });
+
+        const headerChk = container.querySelector('#inv-select-all');
+        if (headerChk) {
+            const total = filteredInvoices.length;
+            headerChk.checked = total > 0 && count === total;
+            headerChk.indeterminate = count > 0 && count < total;
+        }
+    };
+
     // Attach row events
     const attachInvoiceItemEvents = (invoices) => {
+        // Individual View buttons
         container.querySelectorAll('.view-inv').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const id = e.target.getAttribute('data-id');
+                e.stopPropagation();
+                const id = e.currentTarget.getAttribute('data-id');
                 const inv = invoices.find(i => i.id === id);
-                if (inv) {
-                    openInvoiceDetailsModal(inv, {
-                        onEdit: (invoiceToEdit) => {
-                            showEditorView(true, invoiceToEdit);
-                        },
-                        allBusinesses,
-                        allCustomers,
-                        allClients
-                    });
-                }
+                if (inv) showInvoiceDetail(inv);
             });
         });
 
         container.querySelectorAll('.export-pdf-inv').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const id = e.target.getAttribute('data-id');
+                e.stopPropagation();
+                const id = e.currentTarget.getAttribute('data-id');
                 const inv = invoices.find(i => i.id === id);
                 if (inv) {
                     openInvoiceViewerModal(inv, (invoiceToEdit) => {
@@ -1968,6 +2147,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         container.querySelectorAll('.edit-inv').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const id = e.currentTarget.getAttribute('data-id');
                 const inv = invoices.find(i => i.id === id);
                 if (inv) {
@@ -1987,6 +2167,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         container.querySelectorAll('.del-inv').forEach(btn => {
             btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
                 const id = e.currentTarget.getAttribute('data-id');
                 const inv = invoices.find(i => i.id === id);
                 if (!inv) return;
@@ -2011,6 +2192,191 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 }
             });
         });
+
+        // Checkbox events
+        container.querySelectorAll('.inv-select-chk').forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                e.stopPropagation();
+                const id = e.target.getAttribute('data-id');
+                if (e.target.checked) {
+                    selectedInvoiceIds.add(id);
+                } else {
+                    selectedInvoiceIds.delete(id);
+                }
+                updateInvoiceBatchBar(invoices);
+            });
+            chk.addEventListener('click', (e) => e.stopPropagation());
+        });
+
+        // Row Click & Long-press (~450ms) to trigger multi-selection
+        container.querySelectorAll('.inv-table-row').forEach(row => {
+            let pressTimer = null;
+            let isLongPress = false;
+
+            const startPress = () => {
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    const id = row.getAttribute('data-id');
+                    if (selectedInvoiceIds.has(id)) {
+                        selectedInvoiceIds.delete(id);
+                    } else {
+                        selectedInvoiceIds.add(id);
+                    }
+                    updateInvoiceBatchBar(invoices);
+                }, 450);
+            };
+
+            const cancelPress = () => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            };
+
+            row.addEventListener('mousedown', startPress);
+            row.addEventListener('mouseup', cancelPress);
+            row.addEventListener('mouseleave', cancelPress);
+            row.addEventListener('touchstart', startPress, { passive: true });
+            row.addEventListener('touchend', cancelPress);
+            row.addEventListener('touchmove', cancelPress);
+
+            row.addEventListener('click', (e) => {
+                if (isLongPress) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+                if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+
+                const id = row.getAttribute('data-id');
+                const inv = invoices.find(i => i.id === id);
+
+                // When multi-select mode is active, card click only toggles selection!
+                if (selectedInvoiceIds.size > 0) {
+                    e.preventDefault();
+                    if (selectedInvoiceIds.has(id)) {
+                        selectedInvoiceIds.delete(id);
+                    } else {
+                        selectedInvoiceIds.add(id);
+                    }
+                    updateInvoiceBatchBar(invoices);
+                    return;
+                }
+
+                // If not in multi-selection mode, open dedicated detail view
+                if (inv) {
+                    showInvoiceDetail(inv);
+                }
+            });
+        });
+
+        // Batch Action Bar Button Listeners
+        const selectAllBtn = container.querySelector('#btn-inv-batch-select-all');
+        if (selectAllBtn) {
+            selectAllBtn.onclick = () => {
+                const total = invoices.length;
+                if (selectedInvoiceIds.size === total && total > 0) {
+                    selectedInvoiceIds.clear();
+                } else {
+                    invoices.forEach(i => selectedInvoiceIds.add(i.id));
+                }
+                updateInvoiceBatchBar(invoices);
+            };
+        }
+
+        const invertBtn = container.querySelector('#btn-inv-batch-invert');
+        if (invertBtn) {
+            invertBtn.onclick = () => {
+                invoices.forEach(i => {
+                    if (selectedInvoiceIds.has(i.id)) {
+                        selectedInvoiceIds.delete(i.id);
+                    } else {
+                        selectedInvoiceIds.add(i.id);
+                    }
+                });
+                updateInvoiceBatchBar(invoices);
+            };
+        }
+
+        const cancelBatchBtn = container.querySelector('#btn-inv-batch-cancel');
+        if (cancelBatchBtn) {
+            cancelBatchBtn.onclick = () => {
+                selectedInvoiceIds.clear();
+                updateInvoiceBatchBar(invoices);
+            };
+        }
+
+        const exportBatchBtn = container.querySelector('#btn-inv-batch-export');
+        if (exportBatchBtn) {
+            exportBatchBtn.onclick = () => {
+                const sel = invoices.filter(i => selectedInvoiceIds.has(i.id));
+                if (sel.length === 0) {
+                    showAlert.warning("Please select at least one invoice to export.");
+                    return;
+                }
+                exportInvoicesExcel(sel, isBusinessInvoice, getAppCurrencySymbol());
+            };
+        }
+
+        const deleteBatchBtn = container.querySelector('#btn-inv-batch-delete');
+        if (deleteBatchBtn) {
+            deleteBatchBtn.onclick = async () => {
+                if (userRestrictions.disableDelete) {
+                    showAlert.warning("You are restricted from deleting invoices.");
+                    return;
+                }
+                const idsToDelete = Array.from(selectedInvoiceIds);
+                if (idsToDelete.length === 0) return;
+
+                if (await showAlert.confirm(`Are you sure you want to delete all ${idsToDelete.length} selected invoices? This action cannot be undone.`)) {
+                    let deletedCount = 0;
+                    for (const id of idsToDelete) {
+                        try {
+                            await invoiceService.deleteInvoice(id, isBusinessInvoice);
+                            deletedCount++;
+                        } catch (err) {
+                            console.error(`Failed to delete invoice ${id}:`, err);
+                        }
+                    }
+                    selectedInvoiceIds.clear();
+                    showAlert.success(`Successfully deleted ${deletedCount} invoices.`);
+                    applyFiltersAndRender();
+                }
+            };
+        }
+
+        // Header Checkbox
+        const headerChk = container.querySelector('#inv-select-all');
+        if (headerChk) {
+            headerChk.onclick = (e) => {
+                e.stopPropagation();
+                if (headerChk.checked) {
+                    invoices.forEach(i => selectedInvoiceIds.add(i.id));
+                } else {
+                    selectedInvoiceIds.clear();
+                }
+                updateInvoiceBatchBar(invoices);
+            };
+        }
+
+        // Keyboard Shortcut: Ctrl+A / Cmd+A when multi-select is active
+        const handleKeyDown = (e) => {
+            if (!container || !container.isConnected) return;
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+                if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+                if (selectedInvoiceIds.size > 0 && container.querySelector('#invoice-list-view')?.style.display !== 'none') {
+                    e.preventDefault();
+                    invoices.forEach(i => selectedInvoiceIds.add(i.id));
+                    updateInvoiceBatchBar(invoices);
+                }
+            }
+        };
+        window.removeEventListener('keydown', container.__invKeyHandler);
+        container.__invKeyHandler = handleKeyDown;
+        window.addEventListener('keydown', handleKeyDown);
+
+        updateInvoiceBatchBar(invoices);
     };
 
     // Filter and Render Rows
@@ -2060,6 +2426,33 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             });
         }
 
+        // Apply Query Filters
+        if (activeQueryFilter && activeQueryFilter !== 'ALL') {
+            if (activeQueryFilter === 'VALUE_RANGE') {
+                const min = filterValMin !== '' ? Number(filterValMin) : -Infinity;
+                const max = filterValMax !== '' ? Number(filterValMax) : Infinity;
+                filtered = filtered.filter(i => {
+                    const val = Number(i.totalPrice || i.grandTotal || i.total || 0);
+                    return val >= min && val <= max;
+                });
+            } else if (activeQueryFilter === 'ITEM_RANGE') {
+                const min = filterItemMin !== '' ? Number(filterItemMin) : -Infinity;
+                const max = filterItemMax !== '' ? Number(filterItemMax) : Infinity;
+                filtered = filtered.filter(i => {
+                    const count = Array.isArray(i.items) ? i.items.length : 0;
+                    return count >= min && count <= max;
+                });
+            } else if (activeQueryFilter === 'HIGH_VAL') {
+                filtered = filtered.filter(i => (Number(i.totalPrice) || 0) >= 500);
+            } else if (activeQueryFilter === 'UNPAID') {
+                filtered = filtered.filter(i => (i.status || '').toUpperCase() !== 'PAID');
+            } else if (activeQueryFilter === 'PAID') {
+                filtered = filtered.filter(i => (i.status || '').toUpperCase() === 'PAID');
+            } else if (activeQueryFilter === 'MULTI_ITEM') {
+                filtered = filtered.filter(i => Array.isArray(i.items) && i.items.length >= 3);
+            }
+        }
+
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             filtered = filtered.filter(inv => {
@@ -2085,7 +2478,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (filtered.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" style="padding: 3.5rem 1rem; text-align: center;">
+                    <td colspan="7" style="padding: 3.5rem 1rem; text-align: center;">
                         <div style="color: var(--text-muted); opacity: 0.35; margin-bottom: 0.75rem;">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                         </div>
@@ -2094,6 +2487,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     </td>
                 </tr>
             `;
+            updateInvoiceBatchBar([]);
             return;
         }
 
@@ -2119,10 +2513,14 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             const canEdit = !userRestrictions.disableUpdate && (!userRestrictions.disableUpdateOthers || isCreatorSelf);
             const canDelete = !userRestrictions.disableDelete && (!userRestrictions.disableDeleteOthers || isCreatorSelf);
             const showUniqueIdSub = inv.uniqueId && inv.uniqueId !== displayInvNumber;
+            const isSelected = selectedInvoiceIds.has(inv.id);
 
             return `
-                <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.15s ease;">
-                    <td style="padding:1rem 1.25rem; border-bottom: 1px solid var(--border-color);">
+                <tr class="inv-table-row" data-id="${inv.id}" style="border-bottom: 1px solid var(--border-color); transition: background-color 0.15s ease; cursor:pointer; ${isSelected ? 'background: #F4F4F5;' : ''}">
+                    <td style="padding:1rem 0.5rem 1rem 1.25rem; border-bottom: 1px solid var(--border-color); width:38px;">
+                        <input type="checkbox" class="inv-select-chk" data-id="${inv.id}" ${isSelected ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px; accent-color:#18181B;">
+                    </td>
+                    <td style="padding:1rem; border-bottom: 1px solid var(--border-color);">
                         <code style="font-family: monospace; font-size: 0.85rem; background: var(--surface-100); border: 1.5px solid var(--border-color); padding: 0.25rem 0.55rem; border-radius: 6px; font-weight: 700; color: var(--text-primary);">${displayInvNumber}</code>
                         ${showUniqueIdSub ? `<div style="font-size:0.72rem; font-family:monospace; color:var(--text-muted); margin-top:3px;" title="Document uniqueId">${inv.uniqueId}</div>` : ''}
                     </td>
@@ -2289,16 +2687,32 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             try { await reloadClients(); } catch (cErr) { console.warn("reloadClients error:", cErr); }
             try { await reloadCustomers(); } catch (custErr) { console.warn("reloadCustomers error:", custErr); }
 
-            // Auto-select if directed from People / Directory "Create Invoice"
-            if (window.__preselectedInvoiceRecipient) {
-                const pre = window.__preselectedInvoiceRecipient;
+            // Auto-select if directed from People / Directory "Create Invoice" (checks global and sessionStorage)
+            let pre = window.__preselectedInvoiceRecipient;
+            if (!pre) {
+                try {
+                    const stored = sessionStorage.getItem('pricelister_preselected_invoice_target');
+                    if (stored) {
+                        pre = JSON.parse(stored);
+                        sessionStorage.removeItem('pricelister_preselected_invoice_target');
+                    }
+                } catch (e) {
+                    console.warn("Could not read preselected invoice recipient from sessionStorage:", e);
+                }
+            } else {
                 window.__preselectedInvoiceRecipient = null;
-                showEditorView(false);
+                try { sessionStorage.removeItem('pricelister_preselected_invoice_target'); } catch (e) {}
+            }
+
+            if (pre) {
+                showEditorView(false, null, pre);
                 if (pre.mode === 'customer') {
                     setRecipientMode('customer');
                     const custSelect = container.querySelector('#inv-customer');
                     if (custSelect && pre.id) {
                         custSelect.value = pre.id;
+                        const searchCustInput = container.querySelector('#search-inv-customer');
+                        if (searchCustInput) searchCustInput.value = pre.name || '';
                         updateRecipientPreview();
                     }
                 } else if (pre.mode === 'client') {
@@ -2306,12 +2720,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     const cliSelect = container.querySelector('#inv-client');
                     if (cliSelect && pre.id) {
                         cliSelect.value = pre.id;
+                        const searchCliInput = container.querySelector('#search-inv-client');
+                        if (searchCliInput) searchCliInput.value = pre.name || '';
                         updateRecipientPreview();
                     }
                 } else if (pre.mode === 'business') {
                     const busSelect = container.querySelector('#inv-business');
                     if (busSelect && pre.id) {
                         busSelect.value = pre.id;
+                        const searchBusInput = container.querySelector('#search-inv-business');
+                        if (searchBusInput) searchBusInput.value = pre.name || '';
                         updateBusinessPreview();
                     }
                 }
@@ -2389,7 +2807,18 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         } else {
             quickAddTitle.textContent = 'Add New Customer Profile';
         }
-        quickAddModal.style.display = 'flex';
+
+        if (quickAddModal) {
+            if (quickAddModal.parentElement !== document.body) {
+                document.body.appendChild(quickAddModal);
+            }
+            quickAddModal.style.position = 'fixed';
+            quickAddModal.style.inset = '0';
+            quickAddModal.style.width = '100vw';
+            quickAddModal.style.height = '100vh';
+            quickAddModal.style.zIndex = '100010';
+            quickAddModal.style.display = 'flex';
+        }
         container.querySelector('#qa-name')?.focus();
     };
 
@@ -2625,6 +3054,48 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     if (sortByEl) {
         sortByEl.addEventListener('change', (e) => {
             activeSort = e.target.value;
+            applyFiltersAndRender();
+        });
+    }
+
+    const filterQueryEl = container.querySelector('#inv-filter-query');
+    const valRangeWrap = container.querySelector('#inv-val-range-wrap');
+    const itemRangeWrap = container.querySelector('#inv-item-range-wrap');
+    const valMinEl = container.querySelector('#inv-val-min');
+    const valMaxEl = container.querySelector('#inv-val-max');
+    const itemMinEl = container.querySelector('#inv-item-min');
+    const itemMaxEl = container.querySelector('#inv-item-max');
+
+    if (filterQueryEl) {
+        filterQueryEl.addEventListener('change', (e) => {
+            activeQueryFilter = e.target.value;
+            if (valRangeWrap) valRangeWrap.style.display = activeQueryFilter === 'VALUE_RANGE' ? 'inline-flex' : 'none';
+            if (itemRangeWrap) itemRangeWrap.style.display = activeQueryFilter === 'ITEM_RANGE' ? 'inline-flex' : 'none';
+            applyFiltersAndRender();
+        });
+    }
+
+    if (valMinEl) {
+        valMinEl.addEventListener('input', (e) => {
+            filterValMin = e.target.value.trim();
+            applyFiltersAndRender();
+        });
+    }
+    if (valMaxEl) {
+        valMaxEl.addEventListener('input', (e) => {
+            filterValMax = e.target.value.trim();
+            applyFiltersAndRender();
+        });
+    }
+    if (itemMinEl) {
+        itemMinEl.addEventListener('input', (e) => {
+            filterItemMin = e.target.value.trim();
+            applyFiltersAndRender();
+        });
+    }
+    if (itemMaxEl) {
+        itemMaxEl.addEventListener('input', (e) => {
+            filterItemMax = e.target.value.trim();
             applyFiltersAndRender();
         });
     }
@@ -2868,6 +3339,14 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     if (btnOpenScanner) {
         btnOpenScanner.addEventListener('click', () => {
             if (scannerModal) {
+                if (scannerModal.parentElement !== document.body) {
+                    document.body.appendChild(scannerModal);
+                }
+                scannerModal.style.position = 'fixed';
+                scannerModal.style.inset = '0';
+                scannerModal.style.width = '100vw';
+                scannerModal.style.height = '100vh';
+                scannerModal.style.zIndex = '100010';
                 scannerModal.style.display = 'flex';
                 if (scannerInput) {
                     scannerInput.value = '';
@@ -3057,17 +3536,26 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         });
 
         if (drawerOverlay) {
+            // Append directly to document.body so dialog covers entire viewport, topbar, and sidebar
+            if (drawerOverlay.parentElement !== document.body) {
+                document.body.appendChild(drawerOverlay);
+            }
+            drawerOverlay.style.position = 'fixed';
+            drawerOverlay.style.top = '0';
+            drawerOverlay.style.left = '0';
+            drawerOverlay.style.width = '100vw';
+            drawerOverlay.style.height = '100vh';
             drawerOverlay.style.display = 'flex';
             drawerOverlay.classList.add('open', 'is-open');
             drawerOverlay.style.opacity = '1';
             drawerOverlay.style.pointerEvents = 'auto';
-            drawerOverlay.style.zIndex = '10005';
+            drawerOverlay.style.zIndex = '100005';
         }
         if (drawerPanel) {
             drawerPanel.style.display = 'flex';
             drawerPanel.classList.add('open', 'is-open');
             drawerPanel.style.transform = 'none';
-            drawerPanel.style.zIndex = '10006';
+            drawerPanel.style.zIndex = '100006';
         }
 
         if (targetType === 'business') {
@@ -3591,13 +4079,20 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 invoiceData.invoiceNumber = invNumber;
                 invoiceData.busInvNumber = invNumber;
 
+                // Ensure items have 1-based sequential integer position productId before saving
+                const finalItems = invoiceItems.map((item, idx) => ({
+                    ...item,
+                    productId: idx + 1,
+                    productRefId: item.productRefId || (typeof item.productId === 'string' ? item.productId : null)
+                }));
+
                 if (editingInvoiceId) {
                     invoiceData.uniqueId = editingInvoiceUniqueId;
-                    await invoiceService.updateInvoice(editingInvoiceId, invoiceData, invoiceItems, isVendingActive);
+                    await invoiceService.updateInvoice(editingInvoiceId, invoiceData, finalItems, isVendingActive);
                     showAlert.success(`Invoice ${invoiceData.invoiceNumber} updated successfully!`);
                 } else {
                     invoiceData.uniqueId = editingInvoiceUniqueId || generateUniqueId();
-                    await invoiceService.createInvoice(invoiceData, invoiceItems, currentUser?.uid || '', isVendingActive);
+                    await invoiceService.createInvoice(invoiceData, finalItems, currentUser?.uid || '', isVendingActive);
                     showAlert.success(`Invoice ${invoiceData.invoiceNumber} created successfully! ${isVendingActive ? '(Stock deducted in Vending Mode)' : ''}`);
                 }
 

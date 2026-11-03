@@ -2,21 +2,37 @@
  * productSchema.js
  * Source of truth for Product validation.
  */
-export const validateProduct = (data) => {
+export const validateProduct = (data, isPartial = false) => {
     const errors = [];
 
-    // Required fields
-    if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
-        errors.push('Product Name is required.');
-    }
-    if (data.salePrice === undefined || data.salePrice === null || typeof data.salePrice !== 'number' || data.salePrice < 0) {
-        errors.push('Sale Price must be a valid non-negative number.');
-    }
-    if (!data.category || data.category.trim() === '') {
-        errors.push('Category is required.');
-    }
-    if (data.quantity !== undefined && data.quantity !== null && (typeof data.quantity !== 'number' || data.quantity < 0 || !Number.isInteger(data.quantity))) {
-        errors.push('Quantity must be a valid non-negative integer.');
+    if (!isPartial) {
+        // Required fields on full creation
+        if (!data.name || typeof data.name !== 'string' || data.name.trim() === '') {
+            errors.push('Product Name is required.');
+        }
+        if (data.salePrice === undefined || data.salePrice === null || typeof data.salePrice !== 'number' || data.salePrice < 0) {
+            errors.push('Sale Price must be a valid non-negative number.');
+        }
+        if (!data.category || typeof data.category !== 'string' || data.category.trim() === '') {
+            errors.push('Category is required.');
+        }
+        if (data.quantity !== undefined && data.quantity !== null && (typeof data.quantity !== 'number' || data.quantity < 0 || !Number.isInteger(data.quantity))) {
+            errors.push('Quantity must be a valid non-negative integer.');
+        }
+    } else {
+        // Partial updates: only validate fields that are explicitly provided
+        if (data.name !== undefined && (!data.name || typeof data.name !== 'string' || data.name.trim() === '')) {
+            errors.push('Product Name is required.');
+        }
+        if (data.salePrice !== undefined && (data.salePrice === null || typeof data.salePrice !== 'number' || data.salePrice < 0)) {
+            errors.push('Sale Price must be a valid non-negative number.');
+        }
+        if (data.category !== undefined && (!data.category || typeof data.category !== 'string' || data.category.trim() === '')) {
+            errors.push('Category is required.');
+        }
+        if (data.quantity !== undefined && data.quantity !== null && (typeof data.quantity !== 'number' || data.quantity < 0 || !Number.isInteger(data.quantity))) {
+            errors.push('Quantity must be a valid non-negative integer.');
+        }
     }
 
     // Optional Price fields

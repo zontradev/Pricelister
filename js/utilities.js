@@ -57,3 +57,14 @@ export const formatExactTimestamp = (val) => {
     return `${day} (${month}) ${year} ${hours}:${minutes} ${ampm}`;
 };
 
+export const escapeHtml = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
+

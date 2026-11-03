@@ -1938,8 +1938,37 @@ tbody tr:hover {
     }
 }
 
-.app-loading #app-shell {
-    display: none !important;
+/* ===== YouTube-Style Smart Top Loading Line ===== */
+.youtube-top-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    z-index: 99999;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.youtube-top-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #18181b 0%, #3f3f46 50%, #18181b 100%);
+    box-shadow: 0 0 10px rgba(24, 24, 27, 0.4);
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+/* Route View Smooth Fade-In (Zero layout shift, instant preloaded feel) */
+.route-view {
+    animation: routeViewFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes routeViewFadeIn {
+    from {
+        opacity: 0.65;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 /* ===== Filter Toolbar & Controls ===== */
@@ -5185,12 +5214,10 @@ section:hover::-webkit-scrollbar-thumb {
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(6px);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
     }
 }
 
@@ -6496,43 +6523,57 @@ button[disabled] {
 
 /* Floating Batch Action Bar */
 .prd-batch-action-bar {
-    position: fixed;
-    bottom: 1.75rem;
-    left: 50%;
-    transform: translateX(-50%) translateY(140%);
-    background: #ffffff;
-    border: 2px solid #0f172a;
-    border-radius: 14px;
-    padding: 0.65rem 1.15rem;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18), 0 3px 10px rgba(0, 0, 0, 0.08);
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    z-index: 9999;
-    transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.26s ease;
-    opacity: 0;
-    pointer-events: none;
-    flex-wrap: wrap;
-    max-width: 95vw;
+    position: fixed !important;
+    bottom: 24px !important;
+    left: 50% !important;
+    transform: translateX(-50%) translateY(140%) !important;
+    background: #ffffff !important;
+    border: 1px solid #E4E4E7 !important;
+    border-radius: 14px !important;
+    padding: 0.65rem 1.15rem !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    z-index: 999999 !important;
+    transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.26s ease !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    flex-wrap: wrap !important;
+    max-width: 95vw !important;
 }
 
 .prd-batch-action-bar.visible {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-    pointer-events: auto;
+    transform: translateX(-50%) translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
 .prd-batch-badge {
-    background: #0f172a;
+    background: #18181B;
     color: #ffffff;
     font-size: 0.8rem;
     font-weight: 700;
     padding: 0.35rem 0.8rem;
     border-radius: 8px;
+    border: 1px solid #27272A;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     white-space: nowrap;
+}
+
+.prd-batch-action-bar .btn-secondary {
+    border: 1px solid #E4E4E7 !important;
+    background: #FFFFFF !important;
+    color: #18181B !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+.prd-batch-action-bar .btn-secondary:hover {
+    background: #F4F4F5 !important;
+    border-color: #D4D4D8 !important;
 }
 
 /* Checkbox on Grid Find Cards */

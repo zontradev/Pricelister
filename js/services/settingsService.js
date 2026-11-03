@@ -6,15 +6,12 @@ import { authService } from '../../firebase/auth.js';
 const db = getFirestore(firebaseApp);
 
 export const getSettingsService = (workspaceId) => {
-    // Only mock if explicitly the demo workspace or demo UID without real workspace ID
-    const isMock = !workspaceId || 
-                   workspaceId === 'ws_dev_mock' || 
-                   workspaceId === 'demo' || 
-                   workspaceId === 'dev-mock-uid' ||
-                   workspaceId === 'DEMO-SANDBOX-01' ||
-                   authService.getCurrentUser()?.uid === 'dev-mock-uid' ||
-                   Boolean(localStorage.getItem('mock_dev_session')) ||
-                   (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo'));
+    const isExplicitDemo = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_explicit_demo') === 'true') ||
+                           (typeof localStorage !== 'undefined' && localStorage.getItem('pricelister_demo_mode') === 'true') ||
+                           (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo=true'));
+
+    // Only mock if this is explicitly the demo workspace or demo user in explicit demo mode
+    const isMock = (workspaceId === 'ws_dev_mock' || workspaceId === 'demo' || workspaceId === 'dev-mock-uid' || workspaceId === 'DEMO-SANDBOX-01') && isExplicitDemo;
 
     return {
         getWorkspaceSettings: async () => {

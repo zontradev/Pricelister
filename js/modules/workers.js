@@ -24,6 +24,17 @@ const escapeHtml = (str) => {
 export const renderWorkers = async (container, workspaceId) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return;
+
+    // Clean up any stale orphaned modals from previous visits
+    const staleManageModal = document.getElementById('manage-worker-container');
+    if (staleManageModal && staleManageModal.parentElement === document.body) {
+        staleManageModal.remove();
+    }
+    const staleAddModal = document.getElementById('add-worker-container');
+    if (staleAddModal && staleAddModal.parentElement === document.body) {
+        staleAddModal.remove();
+    }
+
     
     // Show smooth initial skeleton loader
     container.innerHTML = `
@@ -109,19 +120,19 @@ export const renderWorkers = async (container, workspaceId) => {
     const storeUrl = window.location.origin + window.location.pathname.replace('app.html', 'customer.html') + `?ws=${encodeURIComponent(workspaceId)}`;
 
     container.innerHTML = `
-        <div class="workspace-view-wrapper" style="max-width: 1320px; margin: 0 auto; padding-bottom: 3.5rem;">
+        <div class="workspace-view-wrapper" style="max-width: 1680px; width: 100%; margin: 0 auto; padding: 0 1.5rem 3.5rem; box-sizing: border-box;">
 
             <!-- ======================================================== -->
             <!-- 1. TOP HERO COVER BANNER (LARGE BANNER & GLASS ARMATURE) -->
             <!-- ======================================================== -->
-            <div class="ws-hero-banner" style="position:relative; border-radius: 22px; overflow: hidden; min-height: 270px; ${wsInfo.bannerUrl || wsInfo.banner ? `background: linear-gradient(180deg, rgba(9, 9, 11, 0.4) 0%, rgba(9, 9, 11, 0.88) 100%), url('${wsInfo.bannerUrl || wsInfo.banner}') center/cover no-repeat;` : `background: linear-gradient(135deg, #09090b 0%, #18181b 45%, #27272a 100%);`} color: #ffffff; box-shadow: 0 18px 45px -10px rgba(0, 0, 0, 0.35); border: 1.5px solid rgba(255, 255, 255, 0.14); margin-bottom: 1.75rem; transition: background 0.3s ease;">
+            <div class="ws-hero-banner" style="position:relative; border-radius: 24px; overflow: hidden; min-height: 280px; ${wsInfo.bannerUrl || wsInfo.banner ? `background: linear-gradient(180deg, rgba(9, 9, 11, 0.4) 0%, rgba(9, 9, 11, 0.88) 100%), url('${wsInfo.bannerUrl || wsInfo.banner}') center/cover no-repeat;` : `background: linear-gradient(135deg, #09090b 0%, #18181b 45%, #27272a 100%);`} color: #ffffff; box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.35); border: 1.5px solid rgba(255, 255, 255, 0.14); margin-bottom: 2rem; transition: background 0.3s ease;">
                 
                 <!-- Ambient Glow Orbs -->
-                <div style="position:absolute; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.09) 0%, transparent 70%); top: -100px; right: -80px; pointer-events:none;"></div>
-                <div style="position:absolute; width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%); bottom: -60px; left: 10%; pointer-events:none;"></div>
+                <div style="position:absolute; width: 440px; height: 440px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%); top: -120px; right: -80px; pointer-events:none;"></div>
+                <div style="position:absolute; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%); bottom: -60px; left: 10%; pointer-events:none;"></div>
 
                 <!-- Main Hero Body -->
-                <div style="padding: 2.5rem 2.25rem 2rem; position:relative; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.5rem;">
+                <div style="padding: 2.75rem 2.5rem 2.25rem; position:relative; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.75rem;">
                     
                     <!-- Left: Avatar + Title + Tagline -->
                     <div style="display: flex; gap: 1.5rem; align-items: center; max-width: 800px;">
@@ -318,9 +329,9 @@ export const renderWorkers = async (container, workspaceId) => {
             </div>
 
             <!-- ======================================================== -->
-            <!-- 4. CORE TWO-COLUMN ARCHITECTURE                          -->
+            <!-- 4. CORE TWO-COLUMN ARCHITECTURE (EXPANDED ENTERPRISE CONSOLE) -->
             <!-- ======================================================== -->
-            <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.75rem; align-items: start;">
+            <div style="display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 2rem; align-items: start;">
                 
                 <!-- ======================== LEFT COLUMN ======================== -->
                 <div style="display: flex; flex-direction: column; gap: 1.75rem;">
@@ -604,9 +615,9 @@ export const renderWorkers = async (container, workspaceId) => {
                         </div>
 
                         <!-- Members Cards Container -->
-                        <div id="members-cards-container" style="display: flex; flex-direction: column; gap: 0.65rem; max-height: 420px; overflow-y: auto; padding-right: 0.2rem;">
+                        <div id="members-cards-container" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 520px; overflow-y: auto; padding-right: 0.25rem;">
                             <!-- Dynamic Member Cards Rendered by Snapshot -->
-                            <div style="padding: 1rem; text-align:center; color: var(--text-muted); font-size: 0.85rem;">
+                            <div style="padding: 1.25rem; text-align:center; color: var(--text-muted); font-size: 0.85rem;">
                                 Loading workspace members...
                             </div>
                         </div>
@@ -625,7 +636,7 @@ export const renderWorkers = async (container, workspaceId) => {
             <!-- ======================================================== -->
             <!-- 5. INVITE WORKER MODAL / DRAWER (Wider 2-Col Layout)     -->
             <!-- ======================================================== -->
-            <div id="add-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(9, 9, 11, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1.25rem;">
+            <div id="add-worker-container" style="display:none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(9, 9, 11, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100010; align-items: center; justify-content: center; padding: 1.25rem;">
                 <div class="card" style="background: #FFFFFF !important; border-radius: 20px; max-width: 820px; width: 100%; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.22); overflow: hidden; border: 1px solid #E4E4E7 !important; animation: modalPop 0.24s cubic-bezier(0.16, 1, 0.3, 1);">
                     
                     <!-- Header: Background & surface totally #FFFFFF & no border with clear spacing -->
@@ -747,7 +758,7 @@ export const renderWorkers = async (container, workspaceId) => {
             <!-- ======================================================== -->
             <!-- 6. MANAGE WORKER MODAL (Wider 2-Col Layout with Promote/Demote & Temporary Blocked) -->
             <!-- ======================================================== -->
-            <div id="manage-worker-container" style="display:none; position: fixed; inset: 0; background: rgba(9, 9, 11, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; padding: 1.25rem;">
+            <div id="manage-worker-container" style="display:none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(9, 9, 11, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100010; align-items: center; justify-content: center; padding: 1.25rem;">
                 <div class="card" style="background: #FFFFFF !important; border-radius: 20px; max-width: 820px; width: 100%; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.22); overflow: hidden; border: 1px solid #E4E4E7 !important; animation: modalPop 0.24s cubic-bezier(0.16, 1, 0.3, 1);">
                     
                     <!-- Header: Background & surface totally #FFFFFF & no border with clear spacing -->
@@ -939,8 +950,8 @@ export const renderWorkers = async (container, workspaceId) => {
     // -------------------------------------------------------------
     // DOM Elements & Event Handlers
     // -------------------------------------------------------------
-    const addContainer = container.querySelector('#add-worker-container');
-    const manageContainer = container.querySelector('#manage-worker-container');
+    let addContainer = container.querySelector('#add-worker-container');
+    let manageContainer = container.querySelector('#manage-worker-container');
     const addForm = container.querySelector('#add-worker-form');
     const manageForm = container.querySelector('#manage-worker-form');
     const membersCardsContainer = container.querySelector('#members-cards-container');
@@ -975,28 +986,41 @@ export const renderWorkers = async (container, workspaceId) => {
     // 3. Open Invite Modal Triggers
     const openInviteModal = () => {
         if (!canManageWorkers) return;
-        if (manageContainer) manageContainer.style.display = 'none';
-        if (addContainer) {
+        const curManage = document.getElementById('manage-worker-container') || manageContainer;
+        if (curManage) curManage.style.display = 'none';
+        const curAdd = document.getElementById('add-worker-container') || addContainer;
+        if (curAdd) {
+            if (addContainer.parentElement !== document.body) {
+                document.body.appendChild(addContainer);
+            }
+            addContainer.style.position = 'fixed';
+            addContainer.style.inset = '0';
+            addContainer.style.width = '100vw';
+            addContainer.style.height = '100vh';
+            addContainer.style.zIndex = '100010';
             addContainer.style.display = 'flex';
-            const roleSelect = container.querySelector('#worker-role');
+            const aDoc = addContainer || document;
+            const roleSelect = aDoc.querySelector('#worker-role');
             if (roleSelect) roleSelect.value = 'WORKER';
             syncInviteRoleUI();
-            container.querySelector('#worker-email')?.focus();
+            aDoc.querySelector('#worker-email')?.focus();
         }
     };
 
     const closeInviteModal = () => {
-        if (addContainer) {
-            addContainer.style.display = 'none';
-            if (addForm) addForm.reset();
+        const curAdd = document.getElementById('add-worker-container') || addContainer;
+        if (curAdd) {
+            curAdd.style.display = 'none';
+            const curForm = curAdd.querySelector('#add-worker-form') || addForm;
+            if (curForm) curForm.reset();
         }
     };
 
     container.querySelector('#btn-trigger-invite-hub')?.addEventListener('click', openInviteModal);
     container.querySelector('#btn-quick-invite-member')?.addEventListener('click', openInviteModal);
     container.querySelector('#qa-invite-worker')?.addEventListener('click', openInviteModal);
-    container.querySelector('#btn-close-invite-modal')?.addEventListener('click', closeInviteModal);
-    container.querySelector('#btn-cancel-worker')?.addEventListener('click', closeInviteModal);
+    (addContainer || document).querySelector('#btn-close-invite-modal')?.addEventListener('click', closeInviteModal);
+    (addContainer || document).querySelector('#btn-cancel-worker')?.addEventListener('click', closeInviteModal);
 
     // Edit Workspace Settings Button
     container.querySelector('#btn-hero-edit-workspace')?.addEventListener('click', () => {
@@ -1062,11 +1086,12 @@ export const renderWorkers = async (container, workspaceId) => {
 
     // 4. Close Manage Modal
     const closeManageModal = () => {
-        if (manageContainer) manageContainer.style.display = 'none';
+        const curManage = document.getElementById('manage-worker-container') || manageContainer;
+        if (curManage) curManage.style.display = 'none';
         initialManageSnapshot = null;
     };
-    container.querySelector('#btn-close-manage-modal')?.addEventListener('click', closeManageModal);
-    container.querySelector('#btn-cancel-manage')?.addEventListener('click', closeManageModal);
+    (manageContainer || document).querySelector('#btn-close-manage-modal')?.addEventListener('click', closeManageModal);
+    (manageContainer || document).querySelector('#btn-cancel-manage')?.addEventListener('click', closeManageModal);
 
     // -------------------------------------------------------------
     // Real-Time Members Firestore Listener
@@ -1239,9 +1264,9 @@ export const renderWorkers = async (container, workspaceId) => {
         };
 
         const updateRevocationDurationPreview = () => {
-            const startDisp = container.querySelector('#manage-revoke-start-disp');
-            const endInput = container.querySelector('#manage-revoke-end-input');
-            const durationText = container.querySelector('#manage-revoke-duration-text');
+            const startDisp = (manageContainer || document).querySelector('#manage-revoke-start-disp');
+            const endInput = (manageContainer || document).querySelector('#manage-revoke-end-input');
+            const durationText = (manageContainer || document).querySelector('#manage-revoke-duration-text');
             if (!durationText) return;
 
             const startStr = startDisp ? startDisp.textContent : formatDurationDate(Date.now());
@@ -1253,48 +1278,50 @@ export const renderWorkers = async (container, workspaceId) => {
             }
         };
 
-        // Attach action handlers
-        container.querySelectorAll('.btn-manage-member').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const email = e.currentTarget.getAttribute('data-email');
-                const r = e.currentTarget.getAttribute('data-role');
-                const cannotCost = e.currentTarget.getAttribute('data-cost') === '1';
-                const cannotProfit = e.currentTarget.getAttribute('data-profit') === '1';
-                const dAdd = e.currentTarget.getAttribute('data-add') === '1';
-                const dDelOthers = e.currentTarget.getAttribute('data-del-others') === '1';
-                const dUpdOthers = e.currentTarget.getAttribute('data-upd-others') === '1';
-                const isRevoked = e.currentTarget.getAttribute('data-revoked') === '1' || e.currentTarget.getAttribute('data-blocked') === '1';
-                const rStart = e.currentTarget.getAttribute('data-revoke-start');
-                const rEnd = e.currentTarget.getAttribute('data-revoke-end');
-                const rStartFmt = e.currentTarget.getAttribute('data-revoke-start-fmt');
-                const rEndFmt = e.currentTarget.getAttribute('data-revoke-end-fmt');
+        // Helper to open manage member modal from button element
+        const openManageForButton = (btn) => {
+            if (!btn) return;
+            const email = btn.getAttribute('data-email');
+            const r = btn.getAttribute('data-role');
+            const cannotCost = btn.getAttribute('data-cost') === '1';
+            const cannotProfit = btn.getAttribute('data-profit') === '1';
+            const dAdd = btn.getAttribute('data-add') === '1';
+            const dDelOthers = btn.getAttribute('data-del-others') === '1';
+            const dUpdOthers = btn.getAttribute('data-upd-others') === '1';
+            const isRevoked = btn.getAttribute('data-revoked') === '1' || btn.getAttribute('data-blocked') === '1';
+            const rStart = btn.getAttribute('data-revoke-start');
+            const rEnd = btn.getAttribute('data-revoke-end');
+            const rStartFmt = btn.getAttribute('data-revoke-start-fmt');
+            const rEndFmt = btn.getAttribute('data-revoke-end-fmt');
                 
-                container.querySelector('#manage-email').value = email;
-                container.querySelector('#manage-email-display').textContent = email;
+                const curManage = document.getElementById('manage-worker-container') || manageContainer;
+                const mDoc = curManage || document;
+                mDoc.querySelector('#manage-email').value = email;
+                mDoc.querySelector('#manage-email-display').textContent = email;
                 
-                const prevRoleInput = container.querySelector('#manage-prev-role');
+                const prevRoleInput = mDoc.querySelector('#manage-prev-role');
                 if (prevRoleInput) {
                     prevRoleInput.value = (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? 'CO_ADMIN' : 'WORKER';
                 }
                 
-                const avatarCircle = container.querySelector('#manage-avatar-circle');
+                const avatarCircle = mDoc.querySelector('#manage-avatar-circle');
                 if (avatarCircle) {
                     avatarCircle.textContent = (email.charAt(0) || 'M').toUpperCase();
                 }
 
-                const roleSelect = container.querySelector('#manage-role');
+                const roleSelect = mDoc.querySelector('#manage-role');
                 if (roleSelect) {
                     roleSelect.value = (r === 'CO_ADMIN' || r === 'CO-ADMIN') ? 'CO_ADMIN' : 'WORKER';
                 }
                 
-                const costBox = container.querySelector('#manage-cannot-see-cost');
-                const profitBox = container.querySelector('#manage-cannot-see-profit');
+                const costBox = mDoc.querySelector('#manage-cannot-see-cost');
+                const profitBox = mDoc.querySelector('#manage-cannot-see-profit');
                 if (costBox) costBox.checked = cannotCost;
                 if (profitBox) profitBox.checked = cannotProfit;
 
-                const addBox = container.querySelector('#manage-disable-add');
-                const delOthersBox = container.querySelector('#manage-disable-delete-others');
-                const updOthersBox = container.querySelector('#manage-disable-update-others');
+                const addBox = mDoc.querySelector('#manage-disable-add');
+                const delOthersBox = mDoc.querySelector('#manage-disable-delete-others');
+                const updOthersBox = mDoc.querySelector('#manage-disable-update-others');
                 if (addBox) addBox.checked = dAdd;
                 if (delOthersBox) delOthersBox.checked = dDelOthers;
                 if (updOthersBox) updOthersBox.checked = dUpdOthers;
@@ -1303,8 +1330,8 @@ export const renderWorkers = async (container, workspaceId) => {
                 syncManageRoleUI(r);
 
                 // Handle Revocation Controls
-                const startDisp = container.querySelector('#manage-revoke-start-disp');
-                const endInput = container.querySelector('#manage-revoke-end-input');
+                const startDisp = mDoc.querySelector('#manage-revoke-start-disp');
+                const endInput = mDoc.querySelector('#manage-revoke-end-input');
 
                 const nowMs = Date.now();
                 const effectiveStart = rStart ? Number(rStart) : nowMs;
@@ -1328,9 +1355,18 @@ export const renderWorkers = async (container, workspaceId) => {
                 // Sync Revocation & Temporary Blocked Switch UI
                 syncRevokeToggleUI(isRevoked);
                 
-                if (addContainer) addContainer.style.display = 'none';
-                if (manageContainer) {
-                    manageContainer.style.display = 'flex';
+                const curAdd = document.getElementById('add-worker-container') || addContainer;
+                if (curAdd) curAdd.style.display = 'none';
+                if (curManage) {
+                    if (curManage.parentElement !== document.body) {
+                        document.body.appendChild(curManage);
+                    }
+                    curManage.style.position = 'fixed';
+                    curManage.style.inset = '0';
+                    curManage.style.width = '100vw';
+                    curManage.style.height = '100vh';
+                    curManage.style.zIndex = '100010';
+                    curManage.style.display = 'flex';
                 }
 
                 initialManageSnapshot = {
@@ -1344,8 +1380,27 @@ export const renderWorkers = async (container, workspaceId) => {
                     endVal: endInput ? endInput.value : ''
                 };
                 checkManageDirty();
+        };
+
+        // Attach action handlers directly to buttons
+        container.querySelectorAll('.btn-manage-member').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openManageForButton(e.currentTarget);
             });
         });
+
+        // Also delegate on membersCardsContainer for robust zero-failure handling
+        if (membersCardsContainer && !membersCardsContainer.__manageClickBound) {
+            membersCardsContainer.__manageClickBound = true;
+            membersCardsContainer.addEventListener('click', (e) => {
+                const manageBtn = e.target.closest('.btn-manage-member');
+                if (manageBtn) {
+                    e.stopPropagation();
+                    openManageForButton(manageBtn);
+                }
+            });
+        }
 
         container.querySelectorAll('.btn-cancel-invite').forEach(btn => {
             btn.addEventListener('click', async (e) => {
@@ -1380,13 +1435,13 @@ export const renderWorkers = async (container, workspaceId) => {
         });
     }
 
-    // Subscribe to Members Subcollection
-    try {
-        const membersRef = collection(db, 'Workspaces/' + workspaceId + '/Members');
-        onSnapshot(membersRef, (snap) => {
-            const members = snap.docs.map(d => ({ email: d.id, ...d.data() }));
+    // Subscribe to Members Subcollection (with Mock / Demo sandbox fallback)
+    const isMock = workspaceId === 'ws_dev_mock' || workspaceId === 'dev-mock-uid' || !workspaceId ||
+                   (typeof localStorage !== 'undefined' && localStorage.getItem('pricelister_demo_mode') === 'true');
 
-            // Ensure workspace creator is always represented
+    if (isMock) {
+        firestoreService.getWorkspaceMembers(workspaceId).then(mockMembers => {
+            const members = Array.isArray(mockMembers) ? [...mockMembers] : [];
             if (wsInfo.adminEmail) {
                 const hasCreator = members.some(m => (m.email || '').toLowerCase() === wsInfo.adminEmail.toLowerCase());
                 if (!hasCreator) {
@@ -1401,21 +1456,50 @@ export const renderWorkers = async (container, workspaceId) => {
             }
 
             currentMembersList = members;
-
-            // Update Badges & Counters
             if (membersCountBadge) membersCountBadge.textContent = `${members.length}`;
             if (heroMembersBadgeText) heroMembersBadgeText.textContent = `${members.length} member${members.length === 1 ? '' : 's'}`;
             if (statMembersCount) statMembersCount.textContent = `${members.length}`;
-
             renderMembersCards(members);
-        }, (error) => {
-            console.error("Members Listener Error:", error);
-            if (membersCardsContainer) {
-                membersCardsContainer.innerHTML = '<div style="padding:1rem; text-align:center; color: var(--error);">Error loading members.</div>';
-            }
+        }).catch(err => {
+            console.warn("Mock members load warning:", err);
         });
-    } catch (e) {
-        console.error("Failed to initialize members listener:", e);
+    } else {
+        try {
+            const membersRef = collection(db, 'Workspaces/' + workspaceId + '/Members');
+            onSnapshot(membersRef, (snap) => {
+                const members = snap.docs.map(d => ({ email: d.id, ...d.data() }));
+
+                // Ensure workspace creator is always represented
+                if (wsInfo.adminEmail) {
+                    const hasCreator = members.some(m => (m.email || '').toLowerCase() === wsInfo.adminEmail.toLowerCase());
+                    if (!hasCreator) {
+                        members.unshift({
+                            email: wsInfo.adminEmail,
+                            role: 'CREATOR_ADMIN',
+                            status: 'JOINED',
+                            isCreator: true,
+                            joinedAt: wsInfo.timestamp || null
+                        });
+                    }
+                }
+
+                currentMembersList = members;
+
+                // Update Badges & Counters
+                if (membersCountBadge) membersCountBadge.textContent = `${members.length}`;
+                if (heroMembersBadgeText) heroMembersBadgeText.textContent = `${members.length} member${members.length === 1 ? '' : 's'}`;
+                if (statMembersCount) statMembersCount.textContent = `${members.length}`;
+
+                renderMembersCards(members);
+            }, (error) => {
+                console.error("Members Listener Error:", error);
+                if (membersCardsContainer) {
+                    membersCardsContainer.innerHTML = '<div style="padding:1rem; text-align:center; color: var(--error);">Error loading members.</div>';
+                }
+            });
+        } catch (e) {
+            console.error("Failed to initialize members listener:", e);
+        }
     }
 
     // -------------------------------------------------------------
@@ -1512,14 +1596,15 @@ export const renderWorkers = async (container, workspaceId) => {
     // Helper: Sync Invite Team Member Role UI
     // worker = restricable [] boxes clickable; co-admin = [] boxes unclickable, disabled & existing selection revoked to empty box
     const syncInviteRoleUI = () => {
-        const roleSelect = container.querySelector('#worker-role');
+        const aDoc = addContainer || document;
+        const roleSelect = aDoc.querySelector('#worker-role');
         const isCoAdmin = roleSelect && roleSelect.value === 'CO_ADMIN';
-        const boxes = container.querySelectorAll('.invite-restr-box');
-        const labels = container.querySelectorAll('.invite-restr-label');
-        const coadminNotice = container.querySelector('#invite-coadmin-locked-notice');
-        const restrBadge = container.querySelector('#invite-restrictions-badge');
-        const infoTitle = container.querySelector('#invite-role-info-title');
-        const infoDesc = container.querySelector('#invite-role-info-desc');
+        const boxes = aDoc.querySelectorAll('.invite-restr-box');
+        const labels = aDoc.querySelectorAll('.invite-restr-label');
+        const coadminNotice = aDoc.querySelector('#invite-coadmin-locked-notice');
+        const restrBadge = aDoc.querySelector('#invite-restrictions-badge');
+        const infoTitle = aDoc.querySelector('#invite-role-info-title');
+        const infoDesc = aDoc.querySelector('#invite-role-info-desc');
 
         if (isCoAdmin) {
             // Co-Admin: Unclickable, disabled & existing selection revoked to empty box
@@ -1567,7 +1652,9 @@ export const renderWorkers = async (container, workspaceId) => {
     // Helper: Sync Manage Team Member Role UI
     // If co-admin: show Co-Admin guard notice, disable & revoke checkboxes. Co-admins cannot be restricted without demotion first!
     const syncManageRoleUI = (targetRole) => {
-        const roleSelect = container.querySelector('#manage-role');
+        const curManage = document.getElementById('manage-worker-container') || manageContainer;
+        const mDoc = curManage || document;
+        const roleSelect = mDoc.querySelector('#manage-role');
         const role = targetRole || (roleSelect ? roleSelect.value : 'WORKER');
         const isCoAdmin = (role === 'CO_ADMIN' || role === 'CO-ADMIN');
 
@@ -1575,14 +1662,14 @@ export const renderWorkers = async (container, workspaceId) => {
             roleSelect.value = isCoAdmin ? 'CO_ADMIN' : 'WORKER';
         }
 
-        const shiftBtn = container.querySelector('#btn-quick-shift-role');
-        const shiftText = container.querySelector('#btn-quick-shift-text');
-        const shiftTag = container.querySelector('#manage-role-shift-tag');
-        const roleBadge = container.querySelector('#manage-role-pill-badge');
-        const guardNotice = container.querySelector('#manage-coadmin-guard-notice');
-        const restrBadge = container.querySelector('#manage-restrictions-badge');
-        const boxes = container.querySelectorAll('.manage-restr-box');
-        const labels = container.querySelectorAll('.manage-restr-label');
+        const shiftBtn = mDoc.querySelector('#btn-quick-shift-role');
+        const shiftText = mDoc.querySelector('#btn-quick-shift-text');
+        const shiftTag = mDoc.querySelector('#manage-role-shift-tag');
+        const roleBadge = mDoc.querySelector('#manage-role-pill-badge');
+        const guardNotice = mDoc.querySelector('#manage-coadmin-guard-notice');
+        const restrBadge = mDoc.querySelector('#manage-restrictions-badge');
+        const boxes = mDoc.querySelectorAll('.manage-restr-box');
+        const labels = mDoc.querySelectorAll('.manage-restr-label');
 
         if (isCoAdmin) {
             if (shiftBtn) {
@@ -1668,11 +1755,13 @@ export const renderWorkers = async (container, workspaceId) => {
 
     // Helper: Sync Temporary Blocked Switch & Details Box UI
     const syncRevokeToggleUI = (isBlocked) => {
-        const toggle = container.querySelector('#manage-access-revoke-toggle');
-        const track = container.querySelector('#manage-toggle-track');
-        const thumb = container.querySelector('#manage-toggle-thumb');
-        const box = container.querySelector('#manage-revoke-details-box');
-        const statusBadge = container.querySelector('#manage-status-pill-badge');
+        const curManage = document.getElementById('manage-worker-container') || manageContainer;
+        const mDoc = curManage || document;
+        const toggle = mDoc.querySelector('#manage-access-revoke-toggle');
+        const track = mDoc.querySelector('#manage-toggle-track');
+        const thumb = mDoc.querySelector('#manage-toggle-thumb');
+        const box = mDoc.querySelector('#manage-revoke-details-box');
+        const statusBadge = mDoc.querySelector('#manage-status-pill-badge');
 
         const checked = (typeof isBlocked === 'boolean') ? isBlocked : (toggle ? toggle.checked : false);
         if (toggle && toggle.checked !== checked) toggle.checked = checked;
@@ -1702,23 +1791,25 @@ export const renderWorkers = async (container, workspaceId) => {
     // -------------------------------------------------------------
     let initialManageSnapshot = null;
     const checkManageDirty = () => {
-        const btnSave = container.querySelector('#btn-save-manage');
+        const curManage = document.getElementById('manage-worker-container') || manageContainer;
+        const mDoc = curManage || document;
+        const btnSave = mDoc.querySelector('#btn-save-manage');
         if (!btnSave) return;
         if (!initialManageSnapshot) {
             btnSave.disabled = true;
             return;
         }
 
-        const roleSelect = container.querySelector('#manage-role');
+        const roleSelect = mDoc.querySelector('#manage-role');
         const currentRole = roleSelect ? roleSelect.value : 'WORKER';
         const isCoAdmin = (currentRole === 'CO_ADMIN');
-        const currentCost = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-cost')?.checked);
-        const currentProfit = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-profit')?.checked);
-        const currentDAdd = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-add')?.checked);
-        const currentDDelOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-delete-others')?.checked);
-        const currentDUpdOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-update-others')?.checked);
-        const currentRevoked = Boolean(container.querySelector('#manage-access-revoke-toggle')?.checked);
-        const currentEndVal = container.querySelector('#manage-revoke-end-input')?.value || '';
+        const currentCost = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-cannot-see-cost')?.checked);
+        const currentProfit = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-cannot-see-profit')?.checked);
+        const currentDAdd = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-disable-add')?.checked);
+        const currentDDelOthers = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-disable-delete-others')?.checked);
+        const currentDUpdOthers = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-disable-update-others')?.checked);
+        const currentRevoked = Boolean(mDoc.querySelector('#manage-access-revoke-toggle')?.checked);
+        const currentEndVal = mDoc.querySelector('#manage-revoke-end-input')?.value || '';
 
         const isDirty = (
             currentRole !== initialManageSnapshot.role ||
@@ -1735,19 +1826,20 @@ export const renderWorkers = async (container, workspaceId) => {
     };
 
     // Wire Invite Modal Role & Checkbox Handlers
-    container.querySelector('#worker-role')?.addEventListener('change', () => {
+    (addContainer || document).querySelector('#worker-role')?.addEventListener('change', () => {
         syncInviteRoleUI();
     });
 
-    container.querySelectorAll('.invite-restr-box').forEach(b => {
+    (addContainer || document).querySelectorAll('.invite-restr-box').forEach(b => {
         b.addEventListener('change', () => {
             syncInviteRoleUI();
         });
     });
 
     // Wire Manage Modal Promote/Demote & Role Handlers
-    container.querySelector('#btn-quick-shift-role')?.addEventListener('click', () => {
-        const roleSelect = container.querySelector('#manage-role');
+    (manageContainer || document).querySelector('#btn-quick-shift-role')?.addEventListener('click', () => {
+        const mDoc = manageContainer || document;
+        const roleSelect = mDoc.querySelector('#manage-role');
         const currentRole = roleSelect ? roleSelect.value : 'WORKER';
         const nextRole = (currentRole === 'CO_ADMIN') ? 'WORKER' : 'CO_ADMIN';
         if (roleSelect) roleSelect.value = nextRole;
@@ -1755,26 +1847,28 @@ export const renderWorkers = async (container, workspaceId) => {
         checkManageDirty();
     });
 
-    container.querySelector('#btn-guard-demote-to-worker')?.addEventListener('click', () => {
-        const roleSelect = container.querySelector('#manage-role');
+    (manageContainer || document).querySelector('#btn-guard-demote-to-worker')?.addEventListener('click', () => {
+        const mDoc = manageContainer || document;
+        const roleSelect = mDoc.querySelector('#manage-role');
         if (roleSelect) roleSelect.value = 'WORKER';
         syncManageRoleUI('WORKER');
         checkManageDirty();
         showAlert.info("Member demoted to Worker. You can now configure restriction checkboxes below.");
     });
 
-    container.querySelector('#manage-role')?.addEventListener('change', (e) => {
+    (manageContainer || document).querySelector('#manage-role')?.addEventListener('change', (e) => {
         syncManageRoleUI(e.target.value);
         checkManageDirty();
     });
 
-    container.querySelectorAll('.manage-restr-box').forEach(b => {
+    (manageContainer || document).querySelectorAll('.manage-restr-box').forEach(b => {
         b.addEventListener('change', () => {
-            const roleSelect = container.querySelector('#manage-role');
+            const mDoc = manageContainer || document;
+            const roleSelect = mDoc.querySelector('#manage-role');
             if (roleSelect && roleSelect.value !== 'CO_ADMIN') {
                 let count = 0;
-                container.querySelectorAll('.manage-restr-box').forEach(x => { if (x.checked) count++; });
-                const restrBadge = container.querySelector('#manage-restrictions-badge');
+                mDoc.querySelectorAll('.manage-restr-box').forEach(x => { if (x.checked) count++; });
+                const restrBadge = mDoc.querySelector('#manage-restrictions-badge');
                 if (restrBadge) {
                     restrBadge.textContent = count > 0 ? `${count} / 5 Active` : 'Customizable for Worker';
                     restrBadge.style.background = count > 0 ? '#18181B' : '#F4F4F5';
@@ -1787,12 +1881,12 @@ export const renderWorkers = async (container, workspaceId) => {
     });
 
     // Wire Temporary Blocked Switch Handlers
-    container.querySelector('#manage-access-revoke-toggle')?.addEventListener('change', (e) => {
+    (manageContainer || document).querySelector('#manage-access-revoke-toggle')?.addEventListener('change', (e) => {
         syncRevokeToggleUI(e.target.checked);
         checkManageDirty();
     });
 
-    container.querySelector('#manage-revoke-end-input')?.addEventListener('input', () => {
+    (manageContainer || document).querySelector('#manage-revoke-end-input')?.addEventListener('input', () => {
         updateRevocationDurationPreview();
         checkManageDirty();
     });
@@ -1801,24 +1895,25 @@ export const renderWorkers = async (container, workspaceId) => {
     if (manageForm) {
         manageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btnSave = container.querySelector('#btn-save-manage');
-            btnSave.disabled = true;
+            const mDoc = manageContainer || document;
+            const btnSave = mDoc.querySelector('#btn-save-manage');
+            if (btnSave) btnSave.disabled = true;
 
-            const email = container.querySelector('#manage-email').value;
-            const prevRole = container.querySelector('#manage-prev-role')?.value || 'WORKER';
-            const roleSelect = container.querySelector('#manage-role');
+            const email = mDoc.querySelector('#manage-email').value;
+            const prevRole = mDoc.querySelector('#manage-prev-role')?.value || 'WORKER';
+            const roleSelect = mDoc.querySelector('#manage-role');
             const newRole = roleSelect ? roleSelect.value : 'WORKER';
             const isCoAdmin = (newRole === 'CO_ADMIN');
             
             // If Co-Admin, all restrictions are strictly disabled and cleared
-            const cannotSeeCost = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-cost')?.checked);
-            const cannotSeeProfit = isCoAdmin ? false : Boolean(container.querySelector('#manage-cannot-see-profit')?.checked);
-            const dAdd = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-add')?.checked);
-            const dDelOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-delete-others')?.checked);
-            const dUpdOthers = isCoAdmin ? false : Boolean(container.querySelector('#manage-disable-update-others')?.checked);
+            const cannotSeeCost = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-cannot-see-cost')?.checked);
+            const cannotSeeProfit = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-cannot-see-profit')?.checked);
+            const dAdd = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-disable-add')?.checked);
+            const dDelOthers = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-disable-delete-others')?.checked);
+            const dUpdOthers = isCoAdmin ? false : Boolean(mDoc.querySelector('#manage-disable-update-others')?.checked);
             
             // Temporary Revocation & Functional Block Logic
-            const accessRevoked = Boolean(container.querySelector('#manage-access-revoke-toggle')?.checked);
+            const accessRevoked = Boolean(mDoc.querySelector('#manage-access-revoke-toggle')?.checked);
             let revokeStart = null;
             let revokeEnd = null;
             let revokeStartFormatted = '';
@@ -1826,8 +1921,8 @@ export const renderWorkers = async (container, workspaceId) => {
             let isAccessBlocked = false;
 
             if (accessRevoked) {
-                const startDisp = container.querySelector('#manage-revoke-start-disp');
-                const endInput = container.querySelector('#manage-revoke-end-input');
+                const startDisp = mDoc.querySelector('#manage-revoke-start-disp');
+                const endInput = mDoc.querySelector('#manage-revoke-end-input');
 
                 const parsedStart = startDisp && startDisp.dataset.timestamp ? Number(startDisp.dataset.timestamp) : Date.now();
                 revokeStart = parsedStart;
@@ -1889,7 +1984,25 @@ export const renderWorkers = async (container, workspaceId) => {
                     };
                 }
 
-                await updateDoc(memberRef, updatePayload);
+                // If mock / demo sandbox, update in local storage mock members
+                if (isMock) {
+                    try {
+                        let mockList = JSON.parse(localStorage.getItem('pricelister_mock_members') || '[]');
+                        const idx = mockList.findIndex(m => (m.email || '').toLowerCase() === email.toLowerCase());
+                        if (idx >= 0) {
+                            mockList[idx] = { ...mockList[idx], ...updatePayload };
+                        } else {
+                            mockList.push({ email, ...updatePayload });
+                        }
+                        localStorage.setItem('pricelister_mock_members', JSON.stringify(mockList));
+                        currentMembersList = mockList;
+                        renderMembersCards(mockList);
+                    } catch (e) {
+                        console.warn("Mock member update notice:", e);
+                    }
+                } else {
+                    await updateDoc(memberRef, updatePayload);
+                }
 
                 // Send Firestore Notification & Console Broadcast
                 if (isPromoted) {
@@ -1964,8 +2077,9 @@ export const renderWorkers = async (container, workspaceId) => {
         });
 
         // Remove Member
-        container.querySelector('#btn-remove-worker')?.addEventListener('click', async () => {
-            const email = container.querySelector('#manage-email').value;
+        (manageContainer || document).querySelector('#btn-remove-worker')?.addEventListener('click', async () => {
+            const mDoc = manageContainer || document;
+            const email = mDoc.querySelector('#manage-email').value;
             if (await showAlert.confirm(`Are you sure you want to remove ${email} from this workspace?`, "Remove Member")) {
                 try {
                     await deleteDoc(doc(db, 'Workspaces/' + workspaceId + '/Members', email));

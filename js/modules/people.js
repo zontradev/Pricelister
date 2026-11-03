@@ -20,8 +20,20 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     let allInvoices = [];
     let activePersonDetail = null; // When non-null, shows dedicated large informative detail view
     let activeDetailTab = 'invoices'; // 'invoices', 'notes'
+    let detailInvoiceStatusFilter = 'ALL'; // 'ALL', 'PAID', 'UNPAID'
     let salesOverviewFilter = '6_MONTHS'; // 'TODAY', 'THIS_WEEK', 'THIS_MONTH', '6_MONTHS', '1_YEAR', 'ALL_TIME', 'CUSTOM'
     let customSalesDate = '';
+    
+    // Directory Search, Filter, Sort & Selection States
+    let peopleSearchTerm = '';
+    let peopleFilterQuery = 'all'; // 'all', 'unused', 'custom_count', 'count_range', 'spent_range', 'high_spent'
+    let customInvoiceCountVal = '';
+    let peopleCountMin = '';
+    let peopleCountMax = '';
+    let peopleSpentMin = '';
+    let peopleSpentMax = '';
+    let peopleSortQuery = 'newest'; // 'newest', 'oldest', 'spent_high', 'spent_low', 'invoices_high', 'name_asc', 'name_desc'
+    const selectedPeopleIds = new Set();
     
     const isBusinessMode = defaultTab === 'businesses';
 
@@ -335,13 +347,64 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     </form>
                 </div>
 
+                <!-- SEARCH, QUERY FILTER & SORT TOOLBAR -->
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap;">
+                    <div style="position:relative; flex:1; min-width:240px; max-width:440px;">
+                        <input type="text" id="people-search-input" placeholder="Search by name, phone, email, address, ID..." value="${escapeHtml(peopleSearchTerm)}" style="width:100%; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.85rem 0 2.25rem; font-size:0.85rem; background:#FFFFFF; color:#18181B; outline:none; transition:border-color 0.2s ease;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" style="position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:0.35rem;">
+                            <label style="font-size:0.78rem; font-weight:700; color:#71717A; text-transform:uppercase;">Filter:</label>
+                            <select id="people-filter-query" style="height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.75rem; font-size:0.82rem; font-weight:600; background:#FFFFFF; color:#18181B; outline:none; cursor:pointer;">
+                                <option value="all" ${peopleFilterQuery === 'all' ? 'selected' : ''}>All Profiles</option>
+                                <option value="unused" ${peopleFilterQuery === 'unused' ? 'selected' : ''}>Unused (0 Invoices)</option>
+                                <option value="custom_count" ${peopleFilterQuery === 'custom_count' ? 'selected' : ''}>Custom Invoice Count</option>
+                                <option value="count_range" ${peopleFilterQuery === 'count_range' ? 'selected' : ''}>Invoice Count Range</option>
+                                <option value="spent_range" ${peopleFilterQuery === 'spent_range' ? 'selected' : ''}>Spent Range ($ Min - Max)</option>
+                                <option value="high_spent" ${peopleFilterQuery === 'high_spent' ? 'selected' : ''}>High Spent (&gt; $500)</option>
+                            </select>
+                            <input type="number" id="people-custom-count" min="0" placeholder="Count..." value="${escapeHtml(customInvoiceCountVal)}" style="width:85px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.65rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none; display:${peopleFilterQuery === 'custom_count' ? 'inline-block' : 'none'};" title="Filter by exact invoice count">
+                            
+                            <!-- Invoice Count Range Inputs -->
+                            <div id="people-count-range-wrap" style="display:${peopleFilterQuery === 'count_range' ? 'inline-flex' : 'none'}; align-items:center; gap:4px;">
+                                <input type="number" id="people-count-min" min="0" placeholder="Min" value="${escapeHtml(peopleCountMin)}" style="width:65px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Minimum invoice count">
+                                <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
+                                <input type="number" id="people-count-max" min="0" placeholder="Max" value="${escapeHtml(peopleCountMax)}" style="width:65px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Maximum invoice count">
+                            </div>
+
+                            <!-- Spent Range Inputs -->
+                            <div id="people-spent-range-wrap" style="display:${peopleFilterQuery === 'spent_range' ? 'inline-flex' : 'none'}; align-items:center; gap:4px;">
+                                <input type="number" id="people-spent-min" min="0" placeholder="Min $" value="${escapeHtml(peopleSpentMin)}" style="width:72px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Minimum total spent">
+                                <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
+                                <input type="number" id="people-spent-max" min="0" placeholder="Max $" value="${escapeHtml(peopleSpentMax)}" style="width:72px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Maximum total spent">
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.35rem;">
+                            <label style="font-size:0.78rem; font-weight:700; color:#71717A; text-transform:uppercase;">Sort:</label>
+                            <select id="people-sort-query" style="height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.75rem; font-size:0.82rem; font-weight:600; background:#FFFFFF; color:#18181B; outline:none; cursor:pointer;">
+                                <option value="newest" ${peopleSortQuery === 'newest' ? 'selected' : ''}>Newest Added</option>
+                                <option value="oldest" ${peopleSortQuery === 'oldest' ? 'selected' : ''}>Oldest Added</option>
+                                <option value="spent_high" ${peopleSortQuery === 'spent_high' ? 'selected' : ''}>Highest Spent</option>
+                                <option value="spent_low" ${peopleSortQuery === 'spent_low' ? 'selected' : ''}>Lowest Spent</option>
+                                <option value="invoices_high" ${peopleSortQuery === 'invoices_high' ? 'selected' : ''}>Most Invoices</option>
+                                <option value="name_asc" ${peopleSortQuery === 'name_asc' ? 'selected' : ''}>Name (A → Z)</option>
+                                <option value="name_desc" ${peopleSortQuery === 'name_desc' ? 'selected' : ''}>Name (Z → A)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- DIRECTORY TABLE -->
                 <div class="card" style="padding:0; overflow:hidden; border:1px solid var(--border-color); border-radius:14px; box-shadow:0 4px 20px rgba(0,0,0,0.03);">
                     <div style="overflow-x:auto;">
                         <table style="width:100%; border-collapse:collapse; text-align:left;">
                             <thead>
                                 <tr style="background:var(--surface-50); border-bottom:1px solid var(--border-color); font-size:0.78rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">
-                                    <th style="padding:1rem 1.25rem;">Profile & Name</th>
+                                    <th style="padding:1rem 0.5rem 1rem 1.25rem; width:38px;">
+                                        <input type="checkbox" id="people-select-all" style="cursor:pointer; width:16px; height:16px; accent-color:#18181B; border-radius:4px;">
+                                    </th>
+                                    <th style="padding:1rem 1rem;">Profile & Name</th>
                                     <th style="padding:1rem;">Contact Info</th>
                                     <th style="padding:1rem;">Address</th>
                                     <th style="padding:1rem;">Total Spent</th>
@@ -352,7 +415,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                             <tbody id="people-list-body">
                                 ${Array(4).fill(0).map(() => `
                                     <tr style="border-bottom:1px solid var(--border-color);">
-                                        <td style="padding:1rem 1.25rem;"><div class="skeleton-shimmer" style="width:160px; height:18px;"></div></td>
+                                        <td style="padding:1rem 0.5rem 1rem 1.25rem;"><div class="skeleton-shimmer" style="width:16px; height:16px; border-radius:4px;"></div></td>
+                                        <td style="padding:1rem 1rem;"><div class="skeleton-shimmer" style="width:160px; height:18px;"></div></td>
                                         <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:120px; height:16px;"></div></td>
                                         <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:140px; height:16px;"></div></td>
                                         <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:80px; height:16px;"></div></td>
@@ -362,6 +426,32 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 `).join('')}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- FLOATING PEOPLE BATCH ACTION BAR (Multi-selection) -->
+                <div id="people-batch-action-bar" class="prd-batch-action-bar" style="display:none;">
+                    <div style="display:flex; align-items:center; gap:0.65rem;">
+                        <span id="people-batch-count" class="prd-batch-badge">0 selected</span>
+                        <button type="button" id="btn-people-batch-select-all" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem;" title="Select all active contacts or deselect all">
+                            Select All
+                        </button>
+                        <button type="button" id="btn-people-batch-invert" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem; display:none;" title="Invert selection">
+                            Invert
+                        </button>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                        <button type="button" id="btn-people-batch-export" class="btn btn-primary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #18181B; background:#18181B; color:#FFFFFF; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Export selected profiles as CSV">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            <span>Export Selected</span>
+                        </button>
+                        <button type="button" id="btn-people-batch-delete" class="btn btn-danger btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1.5px solid #fca5a5; background:#FFFFFF; color:#dc2626; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Delete all selected profiles">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <span>Delete Selected</span>
+                        </button>
+                        <button type="button" id="btn-people-batch-cancel" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.85rem;" title="Clear selection">
+                            Cancel
+                        </button>
                     </div>
                 </div>
             </div>
@@ -695,7 +785,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         <div class="card" style="padding:1.5rem; background:#ffffff; border-radius:16px; border:1px solid var(--border-color);">
                             
                             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
-                                <div style="display:flex; gap:0.75rem;">
+                                <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
                                     <button type="button" class="detail-subtab-btn ${activeDetailTab === 'invoices' ? 'active-subtab' : ''}" data-subtab="invoices">
                                         Orders & Invoices (${stats.invoices.length})
                                     </button>
@@ -705,6 +795,28 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                     <button type="button" class="detail-subtab-btn ${activeDetailTab === 'notes' ? 'active-subtab' : ''}" data-subtab="notes">
                                         Notes & Remarks
                                     </button>
+
+                                    ${activeDetailTab === 'invoices' ? (() => {
+                                        const paidCount = stats.invoices.filter(i => {
+                                            const s = String(i.status || '').toLowerCase();
+                                            return s === 'paid' || s === 'completed';
+                                        }).length;
+                                        const unpaidCount = stats.invoices.length - paidCount;
+
+                                        return `
+                                            <div style="display:inline-flex; align-items:center; gap:0.35rem; margin-left:0.5rem; background:#F4F4F5; padding:3px 5px; border-radius:999px; border:1px solid #E4E4E7;">
+                                                <button type="button" class="btn-detail-inv-filter ${detailInvoiceStatusFilter === 'ALL' ? 'active-filter-pill' : ''}" data-inv-status="ALL" style="font-size:0.72rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:999px; border:none; cursor:pointer; ${detailInvoiceStatusFilter === 'ALL' ? 'background:#18181B; color:#FFFFFF;' : 'background:transparent; color:#71717A;'}">
+                                                    All (${stats.invoices.length})
+                                                </button>
+                                                <button type="button" class="btn-detail-inv-filter ${detailInvoiceStatusFilter === 'PAID' ? 'active-filter-pill' : ''}" data-inv-status="PAID" style="font-size:0.72rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:999px; border:none; cursor:pointer; ${detailInvoiceStatusFilter === 'PAID' ? 'background:#18181B; color:#FFFFFF;' : 'background:transparent; color:#71717A;'}">
+                                                    Paid (${paidCount})
+                                                </button>
+                                                <button type="button" class="btn-detail-inv-filter ${detailInvoiceStatusFilter === 'UNPAID' ? 'active-filter-pill' : ''}" data-inv-status="UNPAID" style="font-size:0.72rem; font-weight:700; padding:0.2rem 0.55rem; border-radius:999px; border:none; cursor:pointer; ${detailInvoiceStatusFilter === 'UNPAID' ? 'background:#18181B; color:#FFFFFF;' : 'background:transparent; color:#71717A;'}">
+                                                    Unpaid (${unpaidCount})
+                                                </button>
+                                            </div>
+                                        `;
+                                    })() : ''}
                                 </div>
 
                                 <button type="button" class="btn btn-secondary btn-sm" onclick="window.location.hash='#/${isBusinessMode ? 'invoices/business' : 'invoices/customer'}'" style="font-size:0.78rem; padding:0.3rem 0.75rem; font-weight:600;">
@@ -712,7 +824,15 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 </button>
                             </div>
 
-                            ${activeDetailTab === 'invoices' ? `
+                            ${activeDetailTab === 'invoices' ? (() => {
+                                const displayedInvoices = stats.invoices.filter(inv => {
+                                    if (detailInvoiceStatusFilter === 'ALL') return true;
+                                    const s = String(inv.status || '').toLowerCase();
+                                    const isPaid = s === 'paid' || s === 'completed';
+                                    return detailInvoiceStatusFilter === 'PAID' ? isPaid : !isPaid;
+                                });
+
+                                return `
                                 <div style="overflow-x:auto;">
                                     <table style="width:100%; border-collapse:collapse; text-align:left;">
                                         <thead>
@@ -726,15 +846,15 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            ${stats.invoices.length === 0 ? `
+                                            ${displayedInvoices.length === 0 ? `
                                                 <tr>
                                                     <td colspan="6" style="padding:2.5rem 1rem; text-align:center; color:var(--text-muted);">
                                                         <strong>No Invoices Found</strong>
-                                                        <p style="margin:0.25rem 0 1rem 0; font-size:0.85rem;">No invoices have been billed to this profile yet.</p>
-                                                        <button type="button" id="btn-tab-empty-invoice" class="btn btn-primary btn-sm" style="background:#18181B; font-weight:700;">Create First Invoice</button>
+                                                        <p style="margin:0.25rem 0 1rem 0; font-size:0.85rem;">No ${detailInvoiceStatusFilter !== 'ALL' ? detailInvoiceStatusFilter.toLowerCase() : ''} invoices found for this profile.</p>
+                                                        <button type="button" id="btn-tab-empty-invoice" class="btn btn-primary btn-sm" style="background:#18181B; font-weight:700;">Create Invoice</button>
                                                     </td>
                                                 </tr>
-                                            ` : stats.invoices.map(inv => {
+                                            ` : displayedInvoices.map(inv => {
                                                 const invId = inv.id;
                                                 const invNum = inv.invoiceNumber || inv.busInvNumber || inv.uniqueId || 'INV-DRAFT';
                                                 const dateStr = inv.timestamp ? new Date(inv.timestamp).toLocaleDateString() : 'Recent';
@@ -773,7 +893,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                         </tbody>
                                     </table>
                                 </div>
-                            ` : activeDetailTab === 'emi' ? `
+                                `;
+                            })() : activeDetailTab === 'emi' ? `
                                 <div style="padding:0.5rem 0;">
                                     <div id="customer-emi-container">
                                         <div style="padding:1.5rem; text-align:center; color:#71717A;">Loading customer EMI accounts...</div>
@@ -1389,6 +1510,13 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         });
 
+        container.querySelectorAll('.btn-detail-inv-filter').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                detailInvoiceStatusFilter = e.currentTarget.getAttribute('data-inv-status');
+                renderDedicatedDetailView();
+            });
+        });
+
         const btnSetPrimary = container.querySelector('#btn-detail-set-primary');
         if (btnSetPrimary && activePersonDetail) {
             btnSetPrimary.addEventListener('click', async () => {
@@ -1441,13 +1569,16 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         }
 
-        // Create Invoice pre-filled with this person
+        // Create Invoice pre-filled with this person / business / client
         const triggerCreateInvoice = () => {
             const p = activePersonDetail;
             if (!p) return;
-            const isBus = isBusinessMode || currentTab === 'businesses' || (p.isClient && currentTab === 'clients');
-            window.__preselectedInvoiceRecipient = {
-                mode: currentTab === 'clients' ? 'client' : (currentTab === 'businesses' ? 'business' : 'customer'),
+            const isBus = isBusinessMode || currentTab === 'businesses';
+            const targetMode = currentTab === 'clients' ? 'client' : (currentTab === 'businesses' ? 'business' : 'customer');
+            const targetRoute = isBus ? '/invoices/customer' : (targetMode === 'client' ? '/invoices/business' : '/invoices/customer');
+            
+            const preselectedPayload = {
+                mode: targetMode,
                 id: p.id,
                 uniqueId: p.uniqueId || p.id,
                 name: p.name,
@@ -1456,7 +1587,19 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 address: p.address || '',
                 imageUrl: p.imageUrl || p.imageUri || ''
             };
-            window.location.hash = `#/${isBus ? 'invoices/business' : 'invoices/customer'}`;
+
+            window.__preselectedInvoiceRecipient = preselectedPayload;
+            try {
+                sessionStorage.setItem('pricelister_preselected_invoice_target', JSON.stringify(preselectedPayload));
+            } catch (e) {
+                console.warn('Could not store preselected invoice recipient in sessionStorage', e);
+            }
+
+            if (window.navigateToRoute) {
+                window.navigateToRoute(targetRoute, true);
+            } else {
+                window.location.hash = '#' + targetRoute;
+            }
         };
 
         const btnCreateInv1 = container.querySelector('#btn-detail-create-invoice');
@@ -1630,20 +1773,75 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     };
 
     // -------------------------------------------------------------
+    // FLOATING BATCH ACTION BAR UPDATER
+    // -------------------------------------------------------------
+    const updatePeopleBatchBar = (filteredPeople = []) => {
+        if (!container || !container.isConnected) return;
+        let bar = document.getElementById('people-batch-action-bar');
+        if (!bar) bar = container.querySelector('#people-batch-action-bar');
+        if (bar && bar.parentElement !== document.body) {
+            document.body.appendChild(bar);
+        }
+        const countEl = bar ? bar.querySelector('#people-batch-count') : null;
+        const invertBtn = bar ? bar.querySelector('#btn-people-batch-invert') : null;
+        const selectAllBtn = bar ? bar.querySelector('#btn-people-batch-select-all') : null;
+        const count = selectedPeopleIds.size;
+
+        if (bar) {
+            if (count > 0) {
+                bar.style.display = 'flex';
+                setTimeout(() => bar.classList.add('visible'), 10);
+            } else {
+                bar.classList.remove('visible');
+                setTimeout(() => { if (selectedPeopleIds.size === 0) bar.style.display = 'none'; }, 200);
+            }
+        }
+
+        if (countEl) {
+            countEl.textContent = `${count} selected`;
+        }
+
+        if (selectAllBtn) {
+            const total = filteredPeople.length;
+            selectAllBtn.textContent = (count === total && total > 0) ? 'Deselect All' : 'Select All';
+        }
+
+        // Invert button: only visible if 2 or more items are selected
+        if (invertBtn) {
+            if (count >= 2) {
+                invertBtn.style.display = 'inline-flex';
+            } else {
+                invertBtn.style.display = 'none';
+            }
+        }
+
+        container.querySelectorAll('.people-select-chk').forEach(chk => {
+            const id = chk.getAttribute('data-id');
+            chk.checked = selectedPeopleIds.has(id);
+        });
+
+        container.querySelectorAll('.people-table-row').forEach(row => {
+            const id = row.getAttribute('data-id');
+            if (selectedPeopleIds.has(id)) {
+                row.style.backgroundColor = '#F4F4F5';
+            } else {
+                row.style.backgroundColor = '';
+            }
+        });
+
+        const headerChk = container.querySelector('#people-select-all');
+        if (headerChk) {
+            const total = filteredPeople.length;
+            headerChk.checked = total > 0 && count === total;
+            headerChk.indeterminate = count > 0 && count < total;
+        }
+    };
+
+    // -------------------------------------------------------------
     // REALTIME LIST RENDERER
     // -------------------------------------------------------------
     function renderRealtimeList(data) {
         dataList = data || [];
-        
-        // Update header count badge dynamically
-        const countBadge = container.querySelector('#people-count-badge');
-        if (countBadge) {
-            const count = dataList.length;
-            const label = isBusinessMode 
-                ? (count === 1 ? 'Business' : 'Businesses') 
-                : (currentTab === 'clients' ? (count === 1 ? 'Client' : 'Clients') : (count === 1 ? 'Customer' : 'Customers'));
-            countBadge.textContent = `${count} ${label}`;
-        }
 
         if (activePersonDetail) {
             const updatedObj = dataList.find(x => x.id === activePersonDetail.id);
@@ -1652,28 +1850,115 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             return;
         }
 
+        // Apply search filter
+        let filtered = [...dataList];
+        if (peopleSearchTerm) {
+            const q = peopleSearchTerm.toLowerCase();
+            filtered = filtered.filter(p => {
+                const name = (p.name || p.businessName || '').toLowerCase();
+                const phone = (p.phone || '').toLowerCase();
+                const email = (p.email || '').toLowerCase();
+                const addr = (p.address || '').toLowerCase();
+                const uid = (p.uniqueId || p.id || '').toLowerCase();
+                return name.includes(q) || phone.includes(q) || email.includes(q) || addr.includes(q) || uid.includes(q);
+            });
+        }
+
+        // Apply query filter (all, unused, custom_count, count_range, spent_range, high_spent)
+        if (peopleFilterQuery && peopleFilterQuery !== 'all') {
+            filtered = filtered.filter(p => {
+                const stats = getPersonStats(p);
+                if (peopleFilterQuery === 'unused') return stats.count === 0;
+                if (peopleFilterQuery === 'custom_count') {
+                    if (customInvoiceCountVal === '' || isNaN(Number(customInvoiceCountVal))) return true;
+                    return stats.count === Number(customInvoiceCountVal);
+                }
+                if (peopleFilterQuery === 'count_range') {
+                    const min = peopleCountMin !== '' ? Number(peopleCountMin) : -Infinity;
+                    const max = peopleCountMax !== '' ? Number(peopleCountMax) : Infinity;
+                    return stats.count >= min && stats.count <= max;
+                }
+                if (peopleFilterQuery === 'spent_range') {
+                    const min = peopleSpentMin !== '' ? Number(peopleSpentMin) : -Infinity;
+                    const max = peopleSpentMax !== '' ? Number(peopleSpentMax) : Infinity;
+                    return stats.totalSpent >= min && stats.totalSpent <= max;
+                }
+                if (peopleFilterQuery === 'high_spent') {
+                    return stats.totalSpent >= 500;
+                }
+                return true;
+            });
+        }
+
+        // Apply sort
+        filtered.sort((a, b) => {
+            const statsA = getPersonStats(a);
+            const statsB = getPersonStats(b);
+            if (peopleSortQuery === 'newest') {
+                const tA = a.createdAt || a.timestamp || 0;
+                const tB = b.createdAt || b.timestamp || 0;
+                return Number(tB) - Number(tA);
+            }
+            if (peopleSortQuery === 'oldest') {
+                const tA = a.createdAt || a.timestamp || 0;
+                const tB = b.createdAt || b.timestamp || 0;
+                return Number(tA) - Number(tB);
+            }
+            if (peopleSortQuery === 'spent_high') {
+                return statsB.totalSpent - statsA.totalSpent;
+            }
+            if (peopleSortQuery === 'spent_low') {
+                return statsA.totalSpent - statsB.totalSpent;
+            }
+            if (peopleSortQuery === 'invoices_high') {
+                return statsB.count - statsA.count;
+            }
+            if (peopleSortQuery === 'name_asc') {
+                return (a.name || '').localeCompare(b.name || '');
+            }
+            if (peopleSortQuery === 'name_desc') {
+                return (b.name || '').localeCompare(a.name || '');
+            }
+            return 0;
+        });
+        
+        // Update header count badge dynamically
+        const countBadge = container.querySelector('#people-count-badge');
+        if (countBadge) {
+            const count = filtered.length;
+            const label = isBusinessMode 
+                ? (count === 1 ? 'Business' : 'Businesses') 
+                : (currentTab === 'clients' ? (count === 1 ? 'Client' : 'Clients') : (count === 1 ? 'Customer' : 'Customers'));
+            countBadge.textContent = `${count} ${label}`;
+        }
+
         const tbody = container.querySelector('#people-list-body');
         if (!tbody) return;
 
-        if (dataList.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="padding:2.5rem; text-align:center; color: var(--text-muted);">No ${isBusinessMode ? 'businesses' : currentTab} found. Click "Add New" to create one.</td></tr>`;
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="padding:2.5rem; text-align:center; color: var(--text-muted);">No matching ${isBusinessMode ? 'businesses' : currentTab} found.</td></tr>`;
+            updatePeopleBatchBar([]);
             return;
         }
 
         const currSym = getAppCurrencySymbol();
 
-        tbody.innerHTML = dataList.map(person => {
+        tbody.innerHTML = filtered.map(person => {
             const stats = getPersonStats(person);
             const count = stats.count;
             const img = person.imageUrl || person.imageUri;
+            const isSelected = selectedPeopleIds.has(person.id);
 
             const avatarFallback = currentTab === 'clients' 
                 ? ICONS.client 
                 : (isBusinessMode ? ICONS.business : ICONS.person);
 
             return `
-                <tr class="people-table-row" data-id="${person.id}">
-                    <td style="padding:0.9rem 1.25rem;">
+                <tr class="people-table-row" data-id="${person.id}" style="${isSelected ? 'background:#F4F4F5;' : ''}">
+                    <td style="padding:0.9rem 0.5rem 0.9rem 1.25rem;">
+                        <input type="checkbox" class="people-select-chk" data-id="${person.id}" ${isSelected ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px; accent-color:#18181B;">
+                    </td>
+                    <td style="padding:0.9rem 1rem;">
                         <div style="display:flex; align-items:center; gap:0.75rem;">
                             <div style="width:38px; height:38px; border-radius:50%; background:#F4F4F5; border:1.5px solid #E4E4E7; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#18181B;">
                                 ${img ? `
@@ -1736,15 +2021,103 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             `;
         }).join('');
 
+        // Wire Toolbar Search, Filter & Sort Events
+        const searchInput = container.querySelector('#people-search-input');
+        if (searchInput && !searchInput.__bound) {
+            searchInput.__bound = true;
+            searchInput.addEventListener('input', (e) => {
+                peopleSearchTerm = e.target.value.trim();
+                renderRealtimeList(dataList);
+            });
+        }
+
+        const filterSelect = container.querySelector('#people-filter-query');
+        if (filterSelect && !filterSelect.__bound) {
+            filterSelect.__bound = true;
+            filterSelect.addEventListener('change', (e) => {
+                peopleFilterQuery = e.target.value;
+                const countInput = container.querySelector('#people-custom-count');
+                const countRangeWrap = container.querySelector('#people-count-range-wrap');
+                const spentRangeWrap = container.querySelector('#people-spent-range-wrap');
+                if (countInput) {
+                    countInput.style.display = peopleFilterQuery === 'custom_count' ? 'inline-block' : 'none';
+                    if (peopleFilterQuery === 'custom_count') countInput.focus();
+                }
+                if (countRangeWrap) {
+                    countRangeWrap.style.display = peopleFilterQuery === 'count_range' ? 'inline-flex' : 'none';
+                }
+                if (spentRangeWrap) {
+                    spentRangeWrap.style.display = peopleFilterQuery === 'spent_range' ? 'inline-flex' : 'none';
+                }
+                renderRealtimeList(dataList);
+            });
+        }
+
+        const customCountInput = container.querySelector('#people-custom-count');
+        if (customCountInput && !customCountInput.__bound) {
+            customCountInput.__bound = true;
+            customCountInput.addEventListener('input', (e) => {
+                customInvoiceCountVal = e.target.value.trim();
+                renderRealtimeList(dataList);
+            });
+        }
+
+        const countMinInput = container.querySelector('#people-count-min');
+        if (countMinInput && !countMinInput.__bound) {
+            countMinInput.__bound = true;
+            countMinInput.addEventListener('input', (e) => {
+                peopleCountMin = e.target.value.trim();
+                renderRealtimeList(dataList);
+            });
+        }
+        const countMaxInput = container.querySelector('#people-count-max');
+        if (countMaxInput && !countMaxInput.__bound) {
+            countMaxInput.__bound = true;
+            countMaxInput.addEventListener('input', (e) => {
+                peopleCountMax = e.target.value.trim();
+                renderRealtimeList(dataList);
+            });
+        }
+
+        const spentMinInput = container.querySelector('#people-spent-min');
+        if (spentMinInput && !spentMinInput.__bound) {
+            spentMinInput.__bound = true;
+            spentMinInput.addEventListener('input', (e) => {
+                peopleSpentMin = e.target.value.trim();
+                renderRealtimeList(dataList);
+            });
+        }
+        const spentMaxInput = container.querySelector('#people-spent-max');
+        if (spentMaxInput && !spentMaxInput.__bound) {
+            spentMaxInput.__bound = true;
+            spentMaxInput.addEventListener('input', (e) => {
+                peopleSpentMax = e.target.value.trim();
+                renderRealtimeList(dataList);
+            });
+        }
+
+        const sortSelect = container.querySelector('#people-sort-query');
+        if (sortSelect && !sortSelect.__bound) {
+            sortSelect.__bound = true;
+            sortSelect.addEventListener('change', (e) => {
+                peopleSortQuery = e.target.value;
+                renderRealtimeList(dataList);
+            });
+        }
+
+        // Wire Item Action Buttons
         container.querySelectorAll('.add-invoice-for-person').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id = e.currentTarget.getAttribute('data-id');
-                const p = dataList.find(x => x.id === id);
+                const p = filtered.find(x => x.id === id);
                 if (p) {
-                    const isBus = isBusinessMode || currentTab === 'businesses' || (p.isClient && currentTab === 'clients');
-                    window.__preselectedInvoiceRecipient = {
-                        mode: currentTab === 'clients' ? 'client' : (currentTab === 'businesses' ? 'business' : 'customer'),
+                    const isBus = isBusinessMode || currentTab === 'businesses';
+                    const targetMode = currentTab === 'clients' ? 'client' : (currentTab === 'businesses' ? 'business' : 'customer');
+                    const targetRoute = isBus ? '/invoices/customer' : (targetMode === 'client' ? '/invoices/business' : '/invoices/customer');
+
+                    const preselectedPayload = {
+                        mode: targetMode,
                         id: p.id,
                         uniqueId: p.uniqueId || p.id,
                         name: p.name,
@@ -1753,7 +2126,19 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                         address: p.address || '',
                         imageUrl: p.imageUrl || p.imageUri || ''
                     };
-                    window.location.hash = `#/${isBus ? 'invoices/business' : 'invoices/customer'}`;
+
+                    window.__preselectedInvoiceRecipient = preselectedPayload;
+                    try {
+                        sessionStorage.setItem('pricelister_preselected_invoice_target', JSON.stringify(preselectedPayload));
+                    } catch (err) {
+                        console.warn('Could not store preselected invoice recipient in sessionStorage', err);
+                    }
+
+                    if (window.navigateToRoute) {
+                        window.navigateToRoute(targetRoute, true);
+                    } else {
+                        window.location.hash = '#' + targetRoute;
+                    }
                 }
             });
         });
@@ -1762,7 +2147,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const id = e.currentTarget.getAttribute('data-id');
-                const p = dataList.find(x => x.id === id);
+                const p = filtered.find(x => x.id === id);
                 try {
                     await peopleService.setPrimaryBusiness(id);
                     showAlert.success(`"${p?.name || 'Business'}" is now the Primary Business (default for new invoices).`);
@@ -1778,7 +2163,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id = e.currentTarget.getAttribute('data-id');
-                const p = dataList.find(x => x.id === id);
+                const p = filtered.find(x => x.id === id);
                 if (p) {
                     activePersonDetail = p;
                     activeDetailTab = 'invoices';
@@ -1787,11 +2172,78 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         });
 
+        // Checkbox events
+        container.querySelectorAll('.people-select-chk').forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                e.stopPropagation();
+                const id = e.target.getAttribute('data-id');
+                if (e.target.checked) {
+                    selectedPeopleIds.add(id);
+                } else {
+                    selectedPeopleIds.delete(id);
+                }
+                updatePeopleBatchBar(filtered);
+            });
+            chk.addEventListener('click', (e) => e.stopPropagation());
+        });
+
+        // Row Click & Long-press (~450ms) to trigger multi-selection
         container.querySelectorAll('.people-table-row').forEach(row => {
+            let pressTimer = null;
+            let isLongPress = false;
+
+            const startPress = () => {
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    const id = row.getAttribute('data-id');
+                    if (selectedPeopleIds.has(id)) {
+                        selectedPeopleIds.delete(id);
+                    } else {
+                        selectedPeopleIds.add(id);
+                    }
+                    updatePeopleBatchBar(filtered);
+                }, 450);
+            };
+
+            const cancelPress = () => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            };
+
+            row.addEventListener('mousedown', startPress);
+            row.addEventListener('mouseup', cancelPress);
+            row.addEventListener('mouseleave', cancelPress);
+            row.addEventListener('touchstart', startPress, { passive: true });
+            row.addEventListener('touchend', cancelPress);
+            row.addEventListener('touchmove', cancelPress);
+
             row.addEventListener('click', (e) => {
-                if (e.target.closest('button') || e.target.closest('a')) return;
+                if (isLongPress) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+                if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+
                 const id = row.getAttribute('data-id');
-                const p = dataList.find(x => x.id === id);
+                const p = filtered.find(x => x.id === id);
+
+                // When multi-select mode is active, card click only toggles selection!
+                if (selectedPeopleIds.size > 0) {
+                    e.preventDefault();
+                    if (selectedPeopleIds.has(id)) {
+                        selectedPeopleIds.delete(id);
+                    } else {
+                        selectedPeopleIds.add(id);
+                    }
+                    updatePeopleBatchBar(filtered);
+                    return;
+                }
+
+                // If not in multi-selection mode, open view
                 if (p) {
                     activePersonDetail = p;
                     activeDetailTab = 'invoices';
@@ -1799,6 +2251,147 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 }
             });
         });
+
+        // Batch Action Bar Button Listeners
+        const selectAllBtn = container.querySelector('#btn-people-batch-select-all');
+        if (selectAllBtn) {
+            selectAllBtn.onclick = () => {
+                const total = filtered.length;
+                if (selectedPeopleIds.size === total && total > 0) {
+                    selectedPeopleIds.clear();
+                } else {
+                    filtered.forEach(p => selectedPeopleIds.add(p.id));
+                }
+                updatePeopleBatchBar(filtered);
+            };
+        }
+
+        const invertBtn = container.querySelector('#btn-people-batch-invert');
+        if (invertBtn) {
+            invertBtn.onclick = () => {
+                filtered.forEach(p => {
+                    if (selectedPeopleIds.has(p.id)) {
+                        selectedPeopleIds.delete(p.id);
+                    } else {
+                        selectedPeopleIds.add(p.id);
+                    }
+                });
+                updatePeopleBatchBar(filtered);
+            };
+        }
+
+        const cancelBatchBtn = container.querySelector('#btn-people-batch-cancel');
+        if (cancelBatchBtn) {
+            cancelBatchBtn.onclick = () => {
+                selectedPeopleIds.clear();
+                updatePeopleBatchBar(filtered);
+            };
+        }
+
+        const exportBatchBtn = container.querySelector('#btn-people-batch-export');
+        if (exportBatchBtn) {
+            exportBatchBtn.onclick = () => {
+                const sel = filtered.filter(p => selectedPeopleIds.has(p.id));
+                if (sel.length === 0) {
+                    showAlert.warning("Please select at least one profile to export.");
+                    return;
+                }
+                const header = ["ID", "Name", "Phone", "Email", "Address", "Total Spent", "Invoices"];
+                const rows = sel.map(p => {
+                    const stats = getPersonStats(p);
+                    return [
+                        `"${p.uniqueId || p.id || ''}"`,
+                        `"${(p.name || '').replace(/"/g, '""')}"`,
+                        `"${(p.phone || '').replace(/"/g, '""')}"`,
+                        `"${(p.email || '').replace(/"/g, '""')}"`,
+                        `"${(p.address || '').replace(/"/g, '""')}"`,
+                        stats.totalSpent.toFixed(2),
+                        stats.count
+                    ].join(',');
+                });
+                const csvContent = "data:text/csv;charset=utf-8," + [header.join(','), ...rows].join('\n');
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `${isBusinessMode ? 'businesses' : currentTab}_export_${Date.now()}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            };
+        }
+
+        const deleteBatchBtn = container.querySelector('#btn-people-batch-delete');
+        if (deleteBatchBtn) {
+            deleteBatchBtn.onclick = async () => {
+                if (userRestrictions.disableDelete) {
+                    showAlert.warning("You are restricted from deleting directory profiles.");
+                    return;
+                }
+                const idsToDelete = Array.from(selectedPeopleIds);
+                if (idsToDelete.length === 0) return;
+
+                const typeName = isBusinessMode ? 'business' : (currentTab === 'clients' ? 'client' : 'customer');
+                if (await showAlert.confirm(`Are you sure you want to delete all ${idsToDelete.length} selected ${typeName} profiles? Profiles associated with invoices will be protected.`)) {
+                    let deletedCount = 0;
+                    let skippedCount = 0;
+                    for (const id of idsToDelete) {
+                        const person = filtered.find(x => x.id === id);
+                        const stats = getPersonStats(person);
+                        if (stats.count > 0) {
+                            skippedCount++;
+                            continue;
+                        }
+                        try {
+                            if (currentTab === 'customers') await peopleService.deleteCustomer(id);
+                            else if (currentTab === 'businesses') await peopleService.deleteBusiness(id);
+                            else if (currentTab === 'clients') await peopleService.deleteClient(id);
+                            deletedCount++;
+                        } catch (err) {
+                            console.error(`Failed to delete person ${id}:`, err);
+                        }
+                    }
+                    selectedPeopleIds.clear();
+                    if (skippedCount > 0) {
+                        showAlert.info(`Deleted ${deletedCount} profiles. (${skippedCount} skipped because they have existing invoices).`);
+                    } else {
+                        showAlert.success(`Successfully deleted ${deletedCount} profiles.`);
+                    }
+                    renderRealtimeList(dataList);
+                }
+            };
+        }
+
+        // Header Checkbox
+        const headerChk = container.querySelector('#people-select-all');
+        if (headerChk) {
+            headerChk.onclick = (e) => {
+                e.stopPropagation();
+                if (headerChk.checked) {
+                    filtered.forEach(p => selectedPeopleIds.add(p.id));
+                } else {
+                    selectedPeopleIds.clear();
+                }
+                updatePeopleBatchBar(filtered);
+            };
+        }
+
+        // Keyboard Shortcut: Ctrl+A / Cmd+A when multi-select is active
+        const handleKeyDown = (e) => {
+            if (!container || !container.isConnected) return;
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+                if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+                if (selectedPeopleIds.size > 0 && !activePersonDetail) {
+                    e.preventDefault();
+                    filtered.forEach(p => selectedPeopleIds.add(p.id));
+                    updatePeopleBatchBar(filtered);
+                }
+            }
+        };
+        window.removeEventListener('keydown', container.__peopleKeyHandler);
+        container.__peopleKeyHandler = handleKeyDown;
+        window.addEventListener('keydown', handleKeyDown);
+
+        updatePeopleBatchBar(filtered);
 
         container.querySelectorAll('.edit-person').forEach(btn => {
             btn.addEventListener('click', (e) => {

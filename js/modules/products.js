@@ -6,7 +6,7 @@ import { getUserRestrictions } from '../auth-handler.js';
 import { showAlert } from '../alert-handler.js';
 import { storageService } from '../../supabase/storage.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
-import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp } from '../utilities.js';
+import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp, escapeHtml } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { draftManager } from '../services/draftManager.js';
 import { getCodeStudioService } from '../services/codeStudioService.js';
@@ -1108,33 +1108,50 @@ export const renderProducts = async (container, workspaceId) => {
                                     </div>
                                 </div>
 
-                                <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:1rem; margin-bottom: 1rem;">
-                                    <div>
-                                        <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Category <span style="color:var(--danger)">*</span></label>
-                                        <div style="display:flex; gap:0.4rem;">
-                                            <select id="prd-category" required class="form-control" style="flex:1; padding:0.6rem 0.75rem;">
-                                                <option value="">Select Category</option>
-                                            </select>
-                                            <button type="button" id="btn-quick-cat" class="btn btn-secondary" style="padding:0.6rem 0.85rem; font-weight:700;" title="Create New Category">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                            </button>
+                                <!-- Row 2: Category (Dedicated Individual Row) -->
+                                <div style="margin-bottom: 1rem;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                                        <label style="font-size:0.82rem; font-weight:600; color:var(--text-primary); margin:0;">Category <span style="color:var(--danger)">*</span></label>
+                                        <div id="prd-cat-chip-preview" style="display:none; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; padding:0.15rem 0.6rem; border-radius:999px; background:#ECFDF5; border:1px solid #A7F3D0;">
+                                            <span id="prd-cat-chip-dot" style="width:8px; height:8px; border-radius:50%; background:#10B981; display:inline-block;"></span>
+                                            <span id="prd-cat-chip-name" style="color:#065F46;">Category</span>
                                         </div>
                                     </div>
-                                    <div>
-                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                                    <div style="display:flex; gap:0.4rem;">
+                                        <select id="prd-category" required class="form-control" style="flex:1; padding:0.6rem 0.75rem;">
+                                            <option value="">Select Category</option>
+                                        </select>
+                                        <button type="button" id="btn-quick-cat" class="btn btn-secondary" style="padding:0.6rem 0.85rem; font-weight:700;" title="Create New Category">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: UPC / Product Code (Dedicated Individual Row with Full Action Suite) -->
+                                <div style="margin-bottom: 1rem;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem; flex-wrap:wrap; gap:4px;">
+                                        <div style="display:flex; align-items:center; gap:6px;">
                                             <label style="font-size:0.82rem; font-weight:600; color:var(--text-primary); margin:0;">UPC / Product Code</label>
-                                            <span id="prd-code-status-pill" style="font-size:0.7rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:999px; background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7;">Unique Code</span>
+                                            <span id="prd-generator-name-tag" style="font-size:0.68rem; font-weight:700; color:#71717A; background:#FAFAFA; border:1px solid #E4E4E7; border-radius:4px; padding:0.1rem 0.4rem; display:inline-flex; align-items:center; gap:3px;">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                                <span id="prd-current-tmpl-label">Standard Product Code</span>
+                                            </span>
                                         </div>
-                                        <div style="display:flex; gap:0.4rem;">
-                                            <input type="text" id="prd-upc" class="form-control" style="flex:1; padding:0.6rem 0.75rem; font-family:monospace; font-weight:700;" placeholder="e.g. GROC-RET-000412">
-                                            <button type="button" id="btn-generate-upc" class="btn btn-secondary" style="padding:0.6rem 0.75rem; font-size:0.75rem; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:3px;" title="Auto-Generate Using Workspace Default Template">
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5v14"></path><path d="M8 5v14"></path><path d="M12 5v14"></path><path d="M17 5v14"></path><path d="M21 5v14"></path></svg>
-                                                Auto Gen
-                                            </button>
-                                            <button type="button" id="btn-code-assistant" class="btn btn-secondary" style="padding:0.6rem 0.75rem; font-size:0.75rem; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:3px;" title="Choose Code Template or Configure Options">
-                                                Templates &darr;
-                                            </button>
-                                        </div>
+                                        <span id="prd-code-status-pill" style="font-size:0.7rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:999px; background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7;">Unique Code</span>
+                                    </div>
+                                    <div style="display:flex; gap:0.4rem; flex-wrap:nowrap;">
+                                        <input type="text" id="prd-upc" class="form-control" style="flex:1; padding:0.6rem 0.75rem; font-family:monospace; font-weight:700;" placeholder="e.g. 8908796598438">
+                                        <button type="button" id="btn-scan-main-upc" class="btn btn-secondary" style="padding:0.6rem 0.75rem; font-size:0.75rem; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:4px;" title="Scan Barcode with Camera or Handheld Laser">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="7" y1="12" x2="17" y2="12"></line></svg>
+                                            Scan
+                                        </button>
+                                        <button type="button" id="btn-generate-upc" class="btn btn-secondary" style="padding:0.6rem 0.75rem; font-size:0.75rem; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:4px;" title="Auto-Generate Using Workspace Template">
+                                            <svg class="gen-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5v14"></path><path d="M8 5v14"></path><path d="M12 5v14"></path><path d="M17 5v14"></path><path d="M21 5v14"></path></svg>
+                                            <span class="gen-text">Auto Gen</span>
+                                        </button>
+                                        <button type="button" id="btn-code-assistant" class="btn btn-secondary" style="padding:0.6rem 0.75rem; font-size:0.75rem; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:3px;" title="Choose Code Template or Configure Options">
+                                            Templates &darr;
+                                        </button>
                                     </div>
                                 </div>
 
@@ -1231,13 +1248,26 @@ export const renderProducts = async (container, workspaceId) => {
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                                         <span>Product Variations & Barcodes</span>
                                     </div>
-                                    <button type="button" id="btn-add-variation-row" class="btn btn-secondary" style="font-size:0.78rem; padding:0.35rem 0.75rem; display:flex; align-items:center; gap:4px; font-weight:600;">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                        Add Variant
-                                    </button>
+                                    <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+                                        <!-- Realtime Batch Generator Toggle Button -->
+                                        <button type="button" id="btn-toggle-var-batch" class="btn btn-secondary" style="font-size:0.75rem; padding:0.35rem 0.65rem; display:flex; align-items:center; gap:4px; font-weight:700; background:#FAFAFA;" title="When enabled, any added variation block gets automatically barcoded using the selected template">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                            <span id="var-batch-label">Batch Auto-Barcode: OFF</span>
+                                        </button>
+                                        <!-- Template Dialog Button -->
+                                        <button type="button" id="btn-var-template-dialog" class="btn btn-secondary" style="font-size:0.75rem; padding:0.35rem 0.65rem; display:flex; align-items:center; gap:4px; font-weight:700;" title="Select Generator Template for Variations">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                            <span id="var-current-tmpl-label">Template &darr;</span>
+                                        </button>
+                                        <!-- Add Variant Button -->
+                                        <button type="button" id="btn-add-variation-row" class="btn btn-primary" style="font-size:0.75rem; padding:0.35rem 0.75rem; display:flex; align-items:center; gap:4px; font-weight:700; background:#18181B; color:#FFFFFF;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            Add Variant
+                                        </button>
+                                    </div>
                                 </div>
-                                <div id="prd-variations-list" style="display:flex; flex-direction:column; gap:0.6rem;">
-                                    <!-- Dynamic variation rows -->
+                                <div id="prd-variations-list" style="display:flex; flex-direction:column; gap:0.75rem;">
+                                    <!-- Dynamic 2-row variation blocks -->
                                 </div>
                                 <div id="prd-no-variations-msg" style="color:var(--text-muted); font-size:0.82rem; font-style:italic; padding:0.4rem 0;">
                                     No custom variations configured. Click "Add Variant" to create flavor, size, or secondary UPC mappings.
@@ -1417,9 +1447,15 @@ export const renderProducts = async (container, workspaceId) => {
             <div id="prd-batch-action-bar" class="prd-batch-action-bar" style="display:none;">
                 <div style="display:flex; align-items:center; gap:0.65rem;">
                     <span id="prd-batch-count" class="prd-batch-badge">0 selected</span>
+                    <button type="button" id="btn-batch-select-all" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem;" title="Select all active products or deselect all">
+                        Select All
+                    </button>
+                    <button type="button" id="btn-batch-invert" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem; display:none;" title="Invert selection">
+                        Invert
+                    </button>
                 </div>
                 <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                    <button type="button" id="btn-batch-category" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-primary); border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Change category for all selected products">
+                    <button type="button" id="btn-batch-category" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Change category for all selected products">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
                         <span>Change Category</span>
                     </button>
@@ -1434,31 +1470,31 @@ export const renderProducts = async (container, workspaceId) => {
                         <span>Delete Selected</span>
                     </button>
 
-                    <button type="button" id="btn-batch-clear" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-secondary); border-radius:8px;" title="Clear selection">
+                    <button type="button" id="btn-batch-clear" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.85rem;" title="Clear selection">
                         Cancel
                     </button>
                 </div>
             </div>
 
-            <!-- BATCH CHANGE CATEGORY MODAL -->
-            <div id="batch-category-modal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:99999; align-items:center; justify-content:center;">
-                <div class="modal-box" style="background:var(--bg-card); border-radius:14px; width:92%; max-width:440px; padding:1.5rem; box-shadow:var(--shadow-elevated); border:1px solid var(--border-color); color:var(--text-primary);">
+            <!-- BATCH CHANGE CATEGORY MODAL (Mounted top-level when opened) -->
+            <div id="batch-category-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15, 23, 42, 0.65); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); z-index:9999999; align-items:center; justify-content:center;">
+                <div class="modal-box" style="background:#FFFFFF; border-radius:16px; width:92%; max-width:440px; padding:1.5rem; box-shadow:0 20px 48px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.08); border:1px solid #E4E4E7; color:#18181B;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                        <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:var(--text-primary);">Batch Change Category</h3>
-                        <button type="button" id="batch-cat-close" class="btn btn-secondary btn-sm" style="width:28px; height:28px; padding:0; border-radius:6px; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-secondary); cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                        <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#18181B;">Batch Change Category</h3>
+                        <button type="button" id="batch-cat-close" class="btn btn-secondary btn-sm" style="width:28px; height:28px; padding:0; border-radius:6px; border:1px solid #E4E4E7; background:#FFFFFF; color:#71717A; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                     </div>
-                    <p style="font-size:0.84rem; color:var(--text-secondary); margin-top:0; margin-bottom:1.25rem;">
-                        Select the new category to apply to all <strong id="batch-cat-count" style="color:var(--text-primary);">0</strong> selected products:
+                    <p style="font-size:0.84rem; color:#71717A; margin-top:0; margin-bottom:1.25rem;">
+                        Select the new category to apply to all <strong id="batch-cat-count" style="color:#18181B;">0</strong> selected products:
                     </p>
                     <div style="margin-bottom:1.5rem;">
-                        <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--text-primary); margin-bottom:0.4rem;">Target Category</label>
-                        <select id="batch-cat-dropdown" class="form-control" style="width:100%; height:38px; font-size:0.85rem; border-radius:8px; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-primary);">
+                        <label style="display:block; font-size:0.8rem; font-weight:700; color:#18181B; margin-bottom:0.4rem;">Target Category</label>
+                        <select id="batch-cat-dropdown" class="form-control" style="width:100%; height:40px; font-size:0.85rem; border-radius:8px; border:1px solid #E4E4E7; background:#FAFAFA; color:#18181B;">
                             <!-- Injected dynamically -->
                         </select>
                     </div>
                     <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
-                        <button type="button" id="batch-cat-cancel" class="btn btn-secondary" style="height:36px; padding:0 1rem; border-radius:8px; font-weight:600; border:1px solid var(--border-color); background:var(--surface-100); color:var(--text-primary);">Cancel</button>
-                        <button type="button" id="batch-cat-confirm" class="btn btn-primary" style="height:36px; padding:0 1.25rem; border-radius:8px; font-weight:700; border:1px solid var(--btn-primary-border); background:var(--btn-primary-bg); color:var(--btn-primary-text);">Apply Category</button>
+                        <button type="button" id="batch-cat-cancel" class="btn btn-secondary" style="height:36px; padding:0 1rem; border-radius:8px; font-weight:600; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B;">Cancel</button>
+                        <button type="button" id="batch-cat-confirm" class="btn btn-primary" style="height:36px; padding:0 1.25rem; border-radius:8px; font-weight:700; border:1px solid #18181B; background:#18181B; color:#FFFFFF;">Apply Category</button>
                     </div>
                 </div>
             </div>
@@ -1908,16 +1944,30 @@ export const renderProducts = async (container, workspaceId) => {
     };
 
     function updateBatchBar() {
-        const bar = container.querySelector('#prd-batch-action-bar');
-        const countEl = container.querySelector('#prd-batch-count');
-        const catCountEl = container.querySelector('#batch-cat-count');
+        if (!container || !container.isConnected) return;
+        let bar = document.getElementById('prd-batch-action-bar');
+        if (!bar) bar = container.querySelector('#prd-batch-action-bar');
+        if (bar && bar.parentElement !== document.body) {
+            document.body.appendChild(bar);
+        }
+        const countEl = bar ? bar.querySelector('#prd-batch-count') : null;
+        const catCountEl = bar ? bar.querySelector('#batch-cat-count') : null;
+        const invertBtn = bar ? bar.querySelector('#btn-batch-invert') : null;
+        const selectAllBtn = bar ? bar.querySelector('#btn-batch-select-all') : null;
         const count = selectedProductIds.size;
+
         if (bar) {
             if (count > 0) {
                 bar.style.display = 'flex';
                 setTimeout(() => bar.classList.add('visible'), 10);
                 if (countEl) countEl.textContent = `${count} selected`;
                 if (catCountEl) catCountEl.textContent = `${count}`;
+                if (invertBtn) invertBtn.style.display = count >= 2 ? 'inline-flex' : 'none';
+                if (selectAllBtn) {
+                    const allActiveIds = activeProducts.map(p => p.id);
+                    const allSelected = allActiveIds.length > 0 && allActiveIds.every(id => selectedProductIds.has(id));
+                    selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
+                }
             } else {
                 bar.classList.remove('visible');
                 setTimeout(() => { bar.style.display = 'none'; }, 260);
@@ -1958,10 +2008,66 @@ export const renderProducts = async (container, workspaceId) => {
             }
         };
 
-        container.querySelectorAll('.view-prd, .view-prd-title, .view-prd-img, .prd-find-card, .prd-large-list-card').forEach(el => {
-            el.addEventListener('click', (e) => {
+        // Long-press and card click handling for Multi-selection
+        let pressTimer = null;
+        let isLongPress = false;
+
+        container.querySelectorAll('.prd-item-row, .prd-find-card, .prd-large-list-card, .prd-cube-card, .prd-grid-card').forEach(card => {
+            const getCardId = () => card.getAttribute('data-id') || card.querySelector('.prd-select-chk')?.getAttribute('data-id');
+
+            const startPress = (e) => {
+                if (e.target.closest('button, a, input, select')) return;
+                isLongPress = false;
+                clearTimeout(pressTimer);
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    const id = getCardId();
+                    if (id) {
+                        if (selectedProductIds.has(id)) {
+                            selectedProductIds.delete(id);
+                        } else {
+                            selectedProductIds.add(id);
+                        }
+                        const chk = card.querySelector('.prd-select-chk');
+                        if (chk) chk.checked = selectedProductIds.has(id);
+                        updateBatchBar();
+                    }
+                }, 450);
+            };
+            const cancelPress = () => clearTimeout(pressTimer);
+
+            card.addEventListener('mousedown', startPress);
+            card.addEventListener('mouseup', cancelPress);
+            card.addEventListener('mouseleave', cancelPress);
+            card.addEventListener('touchstart', startPress, { passive: true });
+            card.addEventListener('touchend', cancelPress);
+            card.addEventListener('touchcancel', cancelPress);
+
+            card.addEventListener('click', (e) => {
+                if (isLongPress) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isLongPress = false;
+                    return;
+                }
                 if (e.target.closest('.edit-prd, .dup-prd, .del-prd, .prd-select-chk, .restricted-action')) return;
-                const id = e.currentTarget.getAttribute('data-id') || e.target.closest('[data-id]')?.getAttribute('data-id');
+                
+                // If multi-select mode is active, clicking card toggles selection instead of opening view!
+                if (selectedProductIds.size > 0) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const id = getCardId();
+                    if (id) {
+                        if (selectedProductIds.has(id)) selectedProductIds.delete(id);
+                        else selectedProductIds.add(id);
+                        const chk = card.querySelector('.prd-select-chk');
+                        if (chk) chk.checked = selectedProductIds.has(id);
+                        updateBatchBar();
+                    }
+                    return;
+                }
+
+                const id = getCardId();
                 if (id) openDetail(id);
             });
         });
@@ -2068,6 +2174,16 @@ export const renderProducts = async (container, workspaceId) => {
                     restoreProductDraftIfAny(prd.id);
                     checkProductDirty();
                 }
+            });
+        });
+
+        // View Product Details Button, Title, and Thumbnail Clicks
+        container.querySelectorAll('.view-prd, .view-prd-title, .view-prd-img').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = el.getAttribute('data-id') || el.closest('[data-id]')?.getAttribute('data-id');
+                if (id) openDetail(id);
             });
         });
 
@@ -2368,6 +2484,297 @@ export const renderProducts = async (container, workspaceId) => {
         }
     }
 
+    let isVarBatchAutoBarcodeActive = false;
+    let selectedVariationTemplate = null;
+    let selectedMainTemplate = null;
+
+    // Helper: Open Camera & Handheld Barcode Scanner Dialog
+    function openBarcodeScannerDialog(onScanned) {
+        const modalId = 'prd-barcode-scanner-modal';
+        let modal = document.getElementById(modalId);
+        if (modal) modal.remove();
+
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(8px);
+            z-index: 100010; display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+        `;
+
+        modal.innerHTML = `
+            <div class="card" style="background:#ffffff; width:100%; max-width:500px; border-radius:18px; border:1px solid var(--border-color); box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden; animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:1.15rem 1.4rem; border-bottom:1px solid var(--border-color); background:var(--surface-50);">
+                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                        <div style="width:34px; height:34px; border-radius:10px; background:#F4F4F5; color:#18181B; display:flex; align-items:center; justify-content:center; border:1px solid #E4E4E7;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-size:1.05rem; font-weight:800; color:#18181B;">Scan Barcode</h3>
+                            <p style="margin:2px 0 0; font-size:0.75rem; color:#71717A;">Scan real barcode via camera or USB handheld laser</p>
+                        </div>
+                    </div>
+                    <button type="button" id="prd-scanner-close-btn" style="background:#F4F4F5; border:1px solid #E4E4E7; border-radius:8px; width:30px; height:30px; color:#71717A; font-size:1.25rem; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">&times;</button>
+                </div>
+
+                <div style="padding:1.25rem 1.4rem;">
+                    <!-- Video viewfinder -->
+                    <div style="position:relative; width:100%; height:210px; background:#09090B; border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                        <video id="prd-scanner-video" playsinline muted style="width:100%; height:100%; object-fit:cover;"></video>
+                        <div style="position:absolute; width:170px; height:110px; border:2px dashed #FFFFFF; border-radius:10px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,0.38);">
+                            <div style="position:absolute; top:50%; left:0; width:100%; height:2px; background:#EF4444; opacity:0.85; transform:translateY(-50%);"></div>
+                        </div>
+                        <div id="prd-scanner-cam-status" style="position:absolute; bottom:8px; left:8px; right:8px; text-align:center; font-size:0.72rem; color:#ffffff; background:rgba(0,0,0,0.7); padding:4px 8px; border-radius:6px;">
+                            Initializing camera...
+                        </div>
+                    </div>
+
+                    <!-- Manual input / USB scanner -->
+                    <div style="margin-top:1rem;">
+                        <label style="display:block; font-size:0.78rem; font-weight:700; color:#18181B; margin-bottom:0.35rem;">
+                            Handheld Laser Scanner / Manual Code
+                        </label>
+                        <div style="display:flex; gap:0.5rem;">
+                            <input type="text" id="prd-scanner-manual-input" class="form-control" placeholder="Scan barcode or type digits..." style="flex:1; padding:0.55rem 0.75rem; font-family:monospace; font-weight:700; font-size:0.92rem;">
+                            <button type="button" id="prd-scanner-insert-btn" class="btn btn-primary" style="background:#18181B; color:#FFFFFF; border:1px solid #18181B; font-weight:700; padding:0.55rem 1rem; border-radius:8px;">
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.85rem 1.4rem; background:var(--surface-50); border-top:1px solid var(--border-color);">
+                    <button type="button" id="prd-scanner-toggle-cam" class="btn btn-secondary" style="font-size:0.78rem; padding:0.4rem 0.85rem; font-weight:600;">
+                        Toggle Camera
+                    </button>
+                    <button type="button" id="prd-scanner-done-btn" class="btn btn-secondary" style="font-size:0.78rem; padding:0.4rem 0.85rem; font-weight:700;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        let stream = null;
+        let detectInterval = null;
+        const video = modal.querySelector('#prd-scanner-video');
+        const statusEl = modal.querySelector('#prd-scanner-cam-status');
+        const inputEl = modal.querySelector('#prd-scanner-manual-input');
+
+        const stopCamera = () => {
+            if (detectInterval) { clearInterval(detectInterval); detectInterval = null; }
+            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            if (video) video.srcObject = null;
+        };
+
+        const closeScanner = () => {
+            stopCamera();
+            modal.remove();
+        };
+
+        const applyCode = (code) => {
+            const clean = String(code || '').trim();
+            if (!clean) return;
+            closeScanner();
+            if (typeof onScanned === 'function') {
+                onScanned(clean);
+            }
+        };
+
+        modal.querySelector('#prd-scanner-close-btn').onclick = closeScanner;
+        modal.querySelector('#prd-scanner-done-btn').onclick = closeScanner;
+        modal.querySelector('#prd-scanner-insert-btn').onclick = () => applyCode(inputEl.value);
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyCode(inputEl.value);
+            }
+        });
+
+        const startCamera = async () => {
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                    });
+                    if (video) {
+                        video.srcObject = stream;
+                        await video.play();
+                    }
+                    if (statusEl) statusEl.textContent = 'Camera active • Align barcode inside the box';
+
+                    if ('BarcodeDetector' in window) {
+                        try {
+                            const detector = new window.BarcodeDetector({ formats: ['code_128', 'ean_13', 'ean_8', 'qr_code', 'upc_a', 'upc_e'] });
+                            detectInterval = setInterval(async () => {
+                                if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+                                    try {
+                                        const codes = await detector.detect(video);
+                                        if (codes && codes.length > 0 && codes[0].rawValue) {
+                                            applyCode(codes[0].rawValue);
+                                        }
+                                    } catch (err) {}
+                                }
+                            }, 450);
+                        } catch (e) {
+                            console.warn("BarcodeDetector unavailable", e);
+                        }
+                    }
+                } else {
+                    if (statusEl) statusEl.textContent = 'Camera not supported • Use handheld scanner above';
+                }
+            } catch (err) {
+                if (statusEl) statusEl.textContent = 'Camera unavailable • Use handheld scanner above';
+            }
+        };
+
+        modal.querySelector('#prd-scanner-toggle-cam').onclick = () => {
+            if (stream) {
+                stopCamera();
+                if (statusEl) statusEl.textContent = 'Camera stopped • Use handheld scanner';
+            } else {
+                startCamera();
+            }
+        };
+
+        startCamera();
+        setTimeout(() => inputEl.focus(), 80);
+    }
+
+    // Helper: Open Template Selection Dialog
+    async function openTemplateSelectionDialog(codeService, onSelected) {
+        let templates = [];
+        try {
+            templates = await codeService.getAllTemplates(false);
+        } catch (err) {
+            console.warn("Failed fetching templates, using defaults:", err);
+        }
+        if (!templates || templates.length === 0) {
+            templates = [
+                { id: 'tmpl-standard-product-code', name: 'Standard Product Code', isDefault: true, isSystemLocked: true, description: 'Permanent default standard 13-digit random numeric barcode', blocks: [{ type: 'random_numbers', length: 13 }] },
+                { id: 'tmpl-date-coder', name: 'Date Coder', description: 'Real-time creation date timestamp coder (DDMMYYYY)', blocks: [{ type: 'date', format: 'DDMMYYYY' }] },
+                { id: 'tmpl-timestamp', name: 'Timestamp Coder', description: 'High-precision epoch millisecond timestamp barcode', blocks: [{ type: 'timestamp', format: 'milliseconds' }] },
+                { id: 'tmpl-supermarket', name: 'Supermarket Standard', description: 'Standard grocery store sequence: GROC-RET-000001', blocks: [{ type: 'fixed_text', value: 'GROC' }, { type: 'fixed_text', value: 'RET' }, { type: 'sequential', length: 6, startNumber: 1 }] },
+                { id: 'tmpl-pricelister-origin', name: 'Pricelister Origin', description: 'Core product sequence: PL-PRODUCT-00001', blocks: [{ type: 'fixed_text', value: 'PL' }, { type: 'fixed_text', value: 'PRODUCT' }, { type: 'sequential', length: 5, startNumber: 1 }] }
+            ];
+        }
+
+        const modalId = 'modal-code-gen-picker';
+        let modal = document.getElementById(modalId);
+        if (modal) modal.remove();
+
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(8px);
+            z-index: 100010; display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+        `;
+
+        modal.innerHTML = `
+            <div class="card" style="background: #FFFFFF; border-radius: 18px; width: 100%; max-width: 860px; border: 1px solid #E4E4E7; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.25); overflow: hidden; animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+                <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #E4E4E7; display: flex; justify-content: space-between; align-items: center; background:#FAFAFA;">
+                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                        <div style="width:34px; height:34px; border-radius:10px; background:#F4F4F5; color:#18181B; display:flex; align-items:center; justify-content:center; border:1px solid #E4E4E7;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #18181B;">Select Code Generator Template</h3>
+                            <p style="margin: 2px 0 0; font-size: 0.78rem; color: #71717A;">Choose a workspace generator model to produce barcodes</p>
+                        </div>
+                    </div>
+                    <button id="btn-close-picker-modal" style="background:#F4F4F5; border:1px solid #E4E4E7; border-radius:8px; width:30px; height:30px; color:#71717A; font-size:1.25rem; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">&times;</button>
+                </div>
+                <div style="padding: 0.75rem 1.5rem; border-bottom: 1px solid #E4E4E7; background: #FFFFFF;">
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #71717A; display: flex; align-items: center;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </span>
+                        <input type="text" id="tmpl-search-input" class="form-control" placeholder="Search coder models by name, prefix, format (e.g. Supermarket, Date, 13-digit)..." style="width: 100%; padding: 0.55rem 0.75rem 0.55rem 2.25rem; font-size: 0.86rem; border: 1.5px solid #E4E4E7; border-radius: 8px;">
+                    </div>
+                </div>
+                <div id="tmpl-items-grid" style="padding: 1.25rem 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 0.85rem; max-height: 65vh; overflow-y: auto;">
+                    <!-- Template cards rendered dynamically -->
+                </div>
+            </div>
+        `;
+
+        const gridContainer = modal.querySelector('#tmpl-items-grid');
+        const searchInput = modal.querySelector('#tmpl-search-input');
+
+        const renderTemplateCards = (filterText = '') => {
+            const query = filterText.trim().toLowerCase();
+            const filtered = templates.filter(t => {
+                if (!query) return true;
+                const n = (t.name || '').toLowerCase();
+                const d = (t.description || '').toLowerCase();
+                const id = (t.id || '').toLowerCase();
+                return n.includes(query) || d.includes(query) || id.includes(query);
+            });
+
+            if (filtered.length === 0) {
+                gridContainer.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; color: #71717A;">
+                        <p style="margin: 0; font-size: 0.9rem; font-weight: 600;">No code generators found matching "${escapeHtml(filterText)}"</p>
+                        <p style="margin: 4px 0 0; font-size: 0.78rem;">Try searching for "Date", "Supermarket", "Random", or "Timestamp"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            gridContainer.innerHTML = filtered.map(t => {
+                let sample = '';
+                try {
+                    sample = codeService.assembleCode(t.blocks, t);
+                } catch (e) {
+                    sample = t.name || 'CODE';
+                }
+                return `
+                    <div class="tmpl-picker-item" data-id="${t.id}" style="padding: 1rem 1.15rem; border: 1.5px solid #E4E4E7; border-radius: 12px; cursor: pointer; transition: all 0.15s ease; background: #FFFFFF; display:flex; flex-direction:column; justify-content:space-between; gap:0.5rem;" onmouseover="this.style.borderColor='#18181B'; this.style.background='#FAFAFA';" onmouseout="this.style.borderColor='#E4E4E7'; this.style.background='#FFFFFF';">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                <strong style="color: #18181B; font-size: 0.95rem;">${escapeHtml(t.name)}</strong>
+                                <div style="display:flex; align-items:center; gap:0.4rem;">
+                                    ${t.isSystemLocked || t.id === 'tmpl-standard-product-code' ? `<span class="badge" style="background:#F4F4F5; color:#18181B; font-size:0.65rem; padding:0.15rem 0.45rem; border-radius:4px; border:1px solid #E4E4E7;">Permanent Standard</span>` : ''}
+                                    ${t.isDefault ? `<span class="badge" style="background:#18181B; color:#FFF; font-size:0.65rem; padding:0.15rem 0.45rem; border-radius:4px;">Default</span>` : ''}
+                                </div>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #71717A; line-height: 1.35;">${escapeHtml(t.description || '')}</div>
+                        </div>
+                        <div style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: #18181B; background: #FAFAFA; padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid #E4E4E7; display:flex; align-items:center; justify-content:space-between;">
+                            <span>Sample: <strong>${escapeHtml(sample)}</strong></span>
+                            <span style="font-size:0.72rem; color:#71717A; white-space:nowrap;">Select &rarr;</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            gridContainer.querySelectorAll('.tmpl-picker-item').forEach(item => {
+                item.addEventListener('click', async () => {
+                    const targetId = item.dataset.id;
+                    let tmpl = null;
+                    try {
+                        tmpl = await codeService.getTemplateById(targetId);
+                    } catch (e) {}
+                    if (!tmpl) {
+                        tmpl = templates.find(t => t.id === targetId);
+                    }
+                    close();
+                    if (tmpl && typeof onSelected === 'function') {
+                        onSelected(tmpl);
+                    }
+                });
+            });
+        };
+
+        renderTemplateCards('');
+        searchInput?.addEventListener('input', (e) => {
+            renderTemplateCards(e.target.value);
+        });
+        setTimeout(() => searchInput?.focus(), 80);
+    }
+
     function checkVariationsEmpty() {
         const varListEl = container.querySelector('#prd-variations-list');
         const varEmptyMsg = container.querySelector('#prd-no-variations-msg');
@@ -2381,25 +2788,57 @@ export const renderProducts = async (container, workspaceId) => {
         checkVariationsEmpty();
     }
 
-    function addVariationRow(sizeFlavor = '', upcCode = '') {
+    // Advanced 2-Row Variation Block with Realtime Barcoding, Scanning & Template Controls
+    function addVariationRow(sizeFlavor = '', upcCode = '', autoGenerateBarcode = false) {
         const varListEl = container.querySelector('#prd-variations-list');
         if (!varListEl) return;
         const row = document.createElement('div');
         row.className = 'prd-variation-item-row';
-        row.style.cssText = 'display:flex; gap:0.75rem; align-items:center; background:var(--surface-50); padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);';
+        row.style.cssText = 'display:flex; flex-direction:column; gap:0.6rem; background:#FFFFFF; padding:0.85rem 1rem; border-radius:12px; border:1.5px solid var(--border-color); box-shadow:0 1px 3px rgba(0,0,0,0.02); transition:all 0.15s ease;';
+        
         row.innerHTML = `
-            <div style="flex:2;">
-                <input type="text" class="form-control var-size-input" placeholder="Size / Flavor / Variant (e.g. 500g, Strawberry)" value="${sizeFlavor || ''}" style="width:100%; padding:0.45rem 0.65rem; font-size:0.85rem;">
+            <!-- Row 1: Variation Name -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem;">
+                <div style="flex:1; display:flex; align-items:center; gap:0.5rem;">
+                    <span style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Variation Name:</span>
+                    <input type="text" class="form-control var-size-input" placeholder="e.g. 500g, Strawberry, Large, Blue..." value="${escapeHtml(sizeFlavor || '')}" style="flex:1; padding:0.45rem 0.65rem; font-size:0.86rem; font-weight:600;">
+                </div>
+                <button type="button" class="btn-remove-var" style="background:#FAFAFA; border:1px solid #E4E4E7; border-radius:6px; color:#EF4444; cursor:pointer; padding:0.25rem 0.55rem; font-size:0.85rem; display:inline-flex; align-items:center; gap:3px;" title="Delete variation">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <span>Remove</span>
+                </button>
             </div>
-            <div style="flex:2;">
-                <input type="text" class="form-control var-upc-input" placeholder="UPC / Barcode (Optional)" value="${upcCode || ''}" style="width:100%; padding:0.45rem 0.65rem; font-size:0.85rem; font-family:monospace;">
+
+            <!-- Row 2: Barcode & Options (Scan - Gen - Template) -->
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:nowrap;">
+                <div style="flex:1; position:relative;">
+                    <input type="text" class="form-control var-upc-input" placeholder="UPC / Barcode" value="${escapeHtml(upcCode || '')}" style="width:100%; padding:0.45rem 0.65rem; font-size:0.85rem; font-family:monospace; font-weight:700;">
+                </div>
+                <!-- Scan Button -->
+                <button type="button" class="btn btn-secondary var-btn-scan" style="padding:0.45rem 0.65rem; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;" title="Scan Barcode for this Variant">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="7" y1="12" x2="17" y2="12"></line></svg>
+                    Scan
+                </button>
+                <!-- Gen Button -->
+                <button type="button" class="btn btn-secondary var-btn-gen" style="padding:0.45rem 0.65rem; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;" title="Generate Barcode for this Variant">
+                    <svg class="var-gen-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 5v14"></path><path d="M8 5v14"></path><path d="M12 5v14"></path><path d="M17 5v14"></path><path d="M21 5v14"></path></svg>
+                    <span class="var-gen-text">Gen</span>
+                </button>
+                <!-- Template Button -->
+                <button type="button" class="btn btn-secondary var-btn-tmpl" style="padding:0.45rem 0.65rem; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;" title="Pick Template for this Variant">
+                    Template &darr;
+                </button>
             </div>
-            <button type="button" class="btn-remove-var" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:4px 8px; font-size:1.3rem; line-height:1;" title="Remove variation">&times;</button>
         `;
 
-        row.querySelectorAll('input').forEach(inp => {
-            inp.addEventListener('input', checkProductDirty);
-        });
+        const sizeInput = row.querySelector('.var-size-input');
+        const upcInput = row.querySelector('.var-upc-input');
+        const btnScan = row.querySelector('.var-btn-scan');
+        const btnGen = row.querySelector('.var-btn-gen');
+        const btnTmpl = row.querySelector('.var-btn-tmpl');
+
+        sizeInput.addEventListener('input', checkProductDirty);
+        upcInput.addEventListener('input', checkProductDirty);
 
         row.querySelector('.btn-remove-var').addEventListener('click', () => {
             row.remove();
@@ -2407,25 +2846,118 @@ export const renderProducts = async (container, workspaceId) => {
             checkProductDirty();
         });
 
+        // Scan button for variant
+        btnScan.addEventListener('click', () => {
+            openBarcodeScannerDialog((scannedCode) => {
+                upcInput.value = scannedCode;
+                checkProductDirty();
+                showAlert.success(`Applied scanned barcode to variant: ${scannedCode}`);
+            });
+        });
+
+        // Generator helper for variant
+        const generateVariantBarcode = async (templateToUse = null) => {
+            const codeService = getCodeStudioService(workspaceId);
+            btnGen.disabled = true;
+            const originalHtml = btnGen.innerHTML;
+            btnGen.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin-icon" style="animation: spin 0.8s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                <span>Generating...</span>
+            `;
+
+            try {
+                const tmpl = templateToUse || selectedVariationTemplate || await codeService.getDefaultTemplate();
+                const nextSeq = await codeService.atomicGetNextSequence(tmpl.id || 'default_supermarket');
+                const pName = container.querySelector('#prd-name')?.value.trim() || '';
+                const pCat = container.querySelector('#prd-category')?.value.trim() || '';
+                const vName = sizeInput.value.trim();
+
+                let candidate = codeService.assembleCode(tmpl.blocks, tmpl, {
+                    sequence: nextSeq,
+                    product: { name: pName, category: pCat },
+                    variation: { sizeFlavor: vName }
+                });
+
+                const check = await codeService.checkCodeUniqueness(candidate);
+                if (!check.isUnique) {
+                    const fallbackSeq = await codeService.atomicGetNextSequence(tmpl.id || 'default_supermarket');
+                    candidate = codeService.assembleCode(tmpl.blocks, tmpl, {
+                        sequence: fallbackSeq,
+                        product: { name: pName, category: pCat },
+                        variation: { sizeFlavor: vName }
+                    });
+                }
+
+                await codeService.reserveCode(candidate, 'product_draft', 60, { template: tmpl.name, variant: vName });
+                upcInput.value = candidate;
+                checkProductDirty();
+                showAlert.success(`Generated variant code "${candidate}" using "${tmpl.name}".`);
+            } catch (err) {
+                console.error("Variant code generation error:", err);
+                showAlert.error(`Variant code generation failed: ${err.message}`);
+            } finally {
+                btnGen.disabled = false;
+                btnGen.innerHTML = originalHtml;
+            }
+        };
+
+        btnGen.addEventListener('click', () => generateVariantBarcode());
+
+        // Template button for variant
+        btnTmpl.addEventListener('click', () => {
+            const codeService = getCodeStudioService(workspaceId);
+            openTemplateSelectionDialog(codeService, (chosenTmpl) => {
+                generateVariantBarcode(chosenTmpl);
+            });
+        });
+
         varListEl.appendChild(row);
         checkVariationsEmpty();
         checkProductDirty();
+
+        // If batch generator is running / enabled and no UPC was supplied, auto-generate barcode immediately
+        if ((autoGenerateBarcode || isVarBatchAutoBarcodeActive) && !upcCode) {
+            generateVariantBarcode();
+        }
     }
 
     function setupMainViewEvents() {
+        const userRestrictions = getUserRestrictions();
+        const codeService = getCodeStudioService(workspaceId);
         const formContainer = container.querySelector('#product-form-container');
         const form = container.querySelector('#product-form');
         const catSelect = container.querySelector('#prd-category');
 
-        // Populate Category Dropdowns
+        // Populate Category Dropdowns with colored chip indicators
+        const updateCategoryChip = () => {
+            const val = catSelect?.value;
+            const previewChip = container.querySelector('#prd-cat-chip-preview');
+            const chipDot = container.querySelector('#prd-cat-chip-dot');
+            const chipName = container.querySelector('#prd-cat-chip-name');
+            if (!previewChip || !chipDot || !chipName) return;
+            const foundCat = categoriesList.find(c => c.uniqueId === val || c.id === val || c.name === val);
+            if (foundCat) {
+                const color = foundCat.color || '#10B981';
+                previewChip.style.display = 'inline-flex';
+                chipDot.style.background = color;
+                chipName.textContent = foundCat.name;
+                previewChip.style.borderColor = color + '40';
+                previewChip.style.background = color + '14';
+            } else {
+                previewChip.style.display = 'none';
+            }
+        };
+
         if (catSelect) {
             catSelect.innerHTML = '<option value="">Select Category</option>' +
-                categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
+                categoriesList.map(c => `<option value="${c.uniqueId || c.id}">● ${escapeHtml(c.name)}</option>`).join('');
+            catSelect.addEventListener('change', updateCategoryChip);
+            updateCategoryChip();
         }
         const filterCat = container.querySelector('#filter-category');
         if (filterCat) {
             filterCat.innerHTML = '<option value="all">All Categories</option>' +
-                categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
+                categoriesList.map(c => `<option value="${c.uniqueId || c.id}">● ${escapeHtml(c.name)}</option>`).join('');
         }
 
         container.querySelector('#filter-search')?.addEventListener('input', () => {
@@ -2535,50 +3067,71 @@ export const renderProducts = async (container, workspaceId) => {
 
         // 5. Multi-Product Batch Actions
         // Batch Action A: Change Category
+        const getBatchCategoryModal = () => {
+            return document.getElementById('batch-category-modal') || container.querySelector('#batch-category-modal');
+        };
+
         container.querySelector('#btn-batch-category')?.addEventListener('click', () => {
             if (selectedProductIds.size === 0) return;
-            const modal = container.querySelector('#batch-category-modal');
-            const catDropdown = container.querySelector('#batch-cat-dropdown');
-            const catCount = container.querySelector('#batch-cat-count');
+            const modal = getBatchCategoryModal();
+            if (!modal) return;
+            if (modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
+            }
+            const catDropdown = modal.querySelector('#batch-cat-dropdown');
+            const catCount = modal.querySelector('#batch-cat-count');
             if (catDropdown) {
                 catDropdown.innerHTML = categoriesList.map(c => `<option value="${c.uniqueId || c.id}">${c.name}</option>`).join('');
             }
             if (catCount) catCount.textContent = selectedProductIds.size;
-            if (modal) modal.style.display = 'flex';
+            modal.style.display = 'flex';
         });
 
-        container.querySelector('#batch-cat-close')?.addEventListener('click', () => {
-            const modal = container.querySelector('#batch-category-modal');
-            if (modal) modal.style.display = 'none';
-        });
+        // Event delegation for batch category modal buttons whether inside container or mounted on document.body
+        if (!window.__batchCatClickBound) {
+            window.__batchCatClickBound = true;
+            document.addEventListener('click', async (e) => {
+                const closeBtn = e.target.closest('#batch-cat-close');
+                const cancelBtn = e.target.closest('#batch-cat-cancel');
+                const confirmBtn = e.target.closest('#batch-cat-confirm');
 
-        container.querySelector('#batch-cat-cancel')?.addEventListener('click', () => {
-            const modal = container.querySelector('#batch-category-modal');
-            if (modal) modal.style.display = 'none';
-        });
-
-        container.querySelector('#batch-cat-confirm')?.addEventListener('click', async () => {
-            const targetCat = container.querySelector('#batch-cat-dropdown')?.value;
-            if (!targetCat) {
-                showAlert.error('Please select a target category.');
-                return;
-            }
-            const count = selectedProductIds.size;
-            try {
-                for (const id of selectedProductIds) {
-                    await productService.updateProduct(id, { category: targetCat }, userRestrictions, currentUser.uid);
+                if (closeBtn || cancelBtn) {
+                    const modal = getBatchCategoryModal();
+                    if (modal) modal.style.display = 'none';
+                    return;
                 }
-                showAlert.success(`Successfully updated category for ${count} product(s)!`);
-                selectedProductIds.clear();
-                const modal = container.querySelector('#batch-category-modal');
-                if (modal) modal.style.display = 'none';
-                activeProducts = await productService.getAllActiveProducts();
-                renderProductList();
-                updateBatchBar();
-            } catch (err) {
-                showAlert.error(err.message || 'Failed to update category for selected products');
-            }
-        });
+
+                if (confirmBtn) {
+                    const modal = getBatchCategoryModal();
+                    if (!modal) return;
+                    const targetCat = modal.querySelector('#batch-cat-dropdown')?.value;
+                    if (!targetCat) {
+                        showAlert.error('Please select a target category.');
+                        return;
+                    }
+                    const count = selectedProductIds.size;
+                    if (count === 0) {
+                        modal.style.display = 'none';
+                        return;
+                    }
+                    try {
+                        const targetCatObj = categoriesList.find(c => c.uniqueId === targetCat || c.id === targetCat || c.name === targetCat);
+                        const targetCatName = targetCatObj ? targetCatObj.name : targetCat;
+                        for (const id of selectedProductIds) {
+                            await productService.updateProduct(id, { category: targetCat }, userRestrictions, currentUser.uid);
+                        }
+                        showAlert.success(`Successfully updated category to "${targetCatName}" for ${count} product(s)!`);
+                        selectedProductIds.clear();
+                        modal.style.display = 'none';
+                        activeProducts = await productService.getAllActiveProducts();
+                        renderProductList();
+                        updateBatchBar();
+                    } catch (err) {
+                        showAlert.error(err.message || 'Failed to update category for selected products');
+                    }
+                }
+            });
+        }
 
         // Batch Action B: Transfer to Market Updator for mass detail editing
         container.querySelector('#btn-batch-transfer-market')?.addEventListener('click', () => {
@@ -2621,6 +3174,54 @@ export const renderProducts = async (container, workspaceId) => {
             updateBatchBar();
         });
 
+        // Batch Action E: Select All / Deselect All Button
+        container.querySelector('#btn-batch-select-all')?.addEventListener('click', () => {
+            const allActiveIds = activeProducts.map(p => p.id);
+            const allSelected = allActiveIds.length > 0 && allActiveIds.every(id => selectedProductIds.has(id));
+            if (allSelected) {
+                selectedProductIds.clear();
+            } else {
+                allActiveIds.forEach(id => selectedProductIds.add(id));
+            }
+            container.querySelectorAll('.prd-select-chk').forEach(c => {
+                c.checked = selectedProductIds.has(c.getAttribute('data-id'));
+            });
+            updateBatchBar();
+        });
+
+        // Batch Action F: Invert Selection
+        container.querySelector('#btn-batch-invert')?.addEventListener('click', () => {
+            const allActiveIds = activeProducts.map(p => p.id);
+            allActiveIds.forEach(id => {
+                if (selectedProductIds.has(id)) {
+                    selectedProductIds.delete(id);
+                } else {
+                    selectedProductIds.add(id);
+                }
+            });
+            container.querySelectorAll('.prd-select-chk').forEach(c => {
+                c.checked = selectedProductIds.has(c.getAttribute('data-id'));
+            });
+            updateBatchBar();
+        });
+
+        // Keyboard Shortcut: Ctrl+A / Cmd+A when multi-selection is active
+        const handleProductsCtrlA = (e) => {
+            if (!container || !container.isConnected) return;
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+                if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+                if (selectedProductIds.size > 0) {
+                    e.preventDefault();
+                    activeProducts.forEach(p => selectedProductIds.add(p.id));
+                    container.querySelectorAll('.prd-select-chk').forEach(c => c.checked = true);
+                    updateBatchBar();
+                }
+            }
+        };
+        window.removeEventListener('keydown', container.__prdKeyHandler);
+        container.__prdKeyHandler = handleProductsCtrlA;
+        window.addEventListener('keydown', handleProductsCtrlA);
+
         // Prev / Next Pagination Buttons
         container.querySelector('#prd-page-prev')?.addEventListener('click', () => {
             if (currentPage > 1) {
@@ -2635,7 +3236,62 @@ export const renderProducts = async (container, workspaceId) => {
 
         const btnAddVar = container.querySelector('#btn-add-variation-row');
         if (btnAddVar) {
-            btnAddVar.addEventListener('click', () => addVariationRow('', ''));
+            btnAddVar.addEventListener('click', () => addVariationRow('', '', isVarBatchAutoBarcodeActive));
+        }
+
+        // Realtime Variation Batch Auto-Barcode Toggle
+        const btnToggleVarBatch = container.querySelector('#btn-toggle-var-batch');
+        const varBatchLabel = container.querySelector('#var-batch-label');
+        if (btnToggleVarBatch && varBatchLabel) {
+            btnToggleVarBatch.addEventListener('click', () => {
+                isVarBatchAutoBarcodeActive = !isVarBatchAutoBarcodeActive;
+                if (isVarBatchAutoBarcodeActive) {
+                    btnToggleVarBatch.style.background = '#18181B';
+                    btnToggleVarBatch.style.color = '#FFFFFF';
+                    varBatchLabel.textContent = 'Batch Auto-Barcode: ON';
+                    showAlert.info("Batch generator active. Newly added variations will automatically get barcodes generated.");
+                } else {
+                    btnToggleVarBatch.style.background = '#FAFAFA';
+                    btnToggleVarBatch.style.color = '#18181B';
+                    varBatchLabel.textContent = 'Batch Auto-Barcode: OFF';
+                }
+            });
+        }
+
+        // Variation Template Selection Dialog
+        const btnVarTmplDialog = container.querySelector('#btn-var-template-dialog');
+        const varCurrentTmplLabel = container.querySelector('#var-current-tmpl-label');
+        if (btnVarTmplDialog) {
+            btnVarTmplDialog.addEventListener('click', () => {
+                openTemplateSelectionDialog(codeService, (chosenTmpl) => {
+                    selectedVariationTemplate = chosenTmpl;
+                    if (varCurrentTmplLabel) {
+                        varCurrentTmplLabel.textContent = chosenTmpl.name;
+                    }
+                    showAlert.success(`Selected template "${chosenTmpl.name}" for variations.`);
+                });
+            });
+        }
+
+        // Main Product Scan Barcode Button
+        const btnScanMainUpc = container.querySelector('#btn-scan-main-upc');
+        if (btnScanMainUpc) {
+            btnScanMainUpc.addEventListener('click', () => {
+                openBarcodeScannerDialog((scannedCode) => {
+                    const upcInput = container.querySelector('#prd-upc');
+                    if (upcInput) {
+                        upcInput.value = scannedCode;
+                        const pill = container.querySelector('#prd-code-status-pill');
+                        if (pill) {
+                            pill.textContent = 'Scanned Code';
+                            pill.style.background = '#18181B';
+                            pill.style.color = '#FFFFFF';
+                        }
+                        checkProductDirty();
+                        showAlert.success(`Scanned barcode: ${scannedCode}`);
+                    }
+                });
+            });
         }
 
         form?.querySelectorAll('input, select, textarea').forEach(el => {
@@ -2670,11 +3326,32 @@ export const renderProducts = async (container, workspaceId) => {
         }
 
         // Add Product Click
-        container.querySelector('#btn-add-product')?.addEventListener('click', () => {
+        container.querySelector('#btn-add-product')?.addEventListener('click', async () => {
             form.reset();
             clearVariations();
             container.querySelector('#prd-id').value = '';
             updateImagePreview('');
+            selectedMainTemplate = null;
+            selectedVariationTemplate = null;
+            isVarBatchAutoBarcodeActive = false;
+
+            const btnToggleVarBatch = container.querySelector('#btn-toggle-var-batch');
+            const varBatchLabel = container.querySelector('#var-batch-label');
+            if (btnToggleVarBatch && varBatchLabel) {
+                btnToggleVarBatch.style.background = '#FAFAFA';
+                btnToggleVarBatch.style.color = '#18181B';
+                varBatchLabel.textContent = 'Batch Auto-Barcode: OFF';
+            }
+
+            const tmplLabel = container.querySelector('#prd-current-tmpl-label');
+            if (tmplLabel) {
+                try {
+                    const def = await codeService.getDefaultTemplate();
+                    tmplLabel.textContent = def?.name || 'Standard Product Code';
+                } catch (e) {
+                    tmplLabel.textContent = 'Standard Product Code';
+                }
+            }
 
             const badgeEl = container.querySelector('#prd-form-badge');
             if (badgeEl) badgeEl.textContent = 'New Catalog Entry';
@@ -2701,17 +3378,26 @@ export const renderProducts = async (container, workspaceId) => {
         });
 
         // Product Code Generation Engine & Assistant
-        const codeService = getCodeStudioService(workspaceId);
+        // (codeService is initialized at the top of setupMainViewEvents)
 
-        // Mode A: Auto-Generate using Workspace Default Template
-        container.querySelector('#btn-generate-upc')?.addEventListener('click', async () => {
+        // Mode A: Auto-Generate using Workspace Default/Selected Template with Loading State
+        const btnGenUpc = container.querySelector('#btn-generate-upc');
+        btnGenUpc?.addEventListener('click', async () => {
+            if (btnGenUpc.disabled) return;
+            const originalHtml = btnGenUpc.innerHTML;
+            btnGenUpc.disabled = true;
+            btnGenUpc.innerHTML = `
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin-icon" style="animation: spin 0.8s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                <span>Generating...</span>
+            `;
+
             try {
-                const defaultTmpl = await codeService.getDefaultTemplate();
-                const nextSeq = await codeService.atomicGetNextSequence(defaultTmpl.id || 'default_supermarket');
+                const targetTmpl = selectedMainTemplate || await codeService.getDefaultTemplate();
+                const nextSeq = await codeService.atomicGetNextSequence(targetTmpl.id || 'default_supermarket');
                 const pName = container.querySelector('#prd-name')?.value.trim() || '';
                 const pCat = container.querySelector('#prd-category')?.value.trim() || '';
 
-                let candidate = codeService.assembleCode(defaultTmpl.blocks, defaultTmpl, {
+                let candidate = codeService.assembleCode(targetTmpl.blocks, targetTmpl, {
                     sequence: nextSeq,
                     product: { name: pName, category: pCat }
                 });
@@ -2719,16 +3405,15 @@ export const renderProducts = async (container, workspaceId) => {
                 // Collision detection verification
                 const check = await codeService.checkCodeUniqueness(candidate);
                 if (!check.isUnique) {
-                    // Advance sequence to resolve collision deterministically
-                    const fallbackSeq = await codeService.atomicGetNextSequence(defaultTmpl.id || 'default_supermarket');
-                    candidate = codeService.assembleCode(defaultTmpl.blocks, defaultTmpl, {
+                    const fallbackSeq = await codeService.atomicGetNextSequence(targetTmpl.id || 'default_supermarket');
+                    candidate = codeService.assembleCode(targetTmpl.blocks, targetTmpl, {
                         sequence: fallbackSeq,
                         product: { name: pName, category: pCat }
                     });
                 }
 
                 // Reserve the code safely
-                await codeService.reserveCode(candidate, 'product_draft', 60, { template: defaultTmpl.name });
+                await codeService.reserveCode(candidate, 'product_draft', 60, { template: targetTmpl.name });
 
                 const upcInput = container.querySelector('#prd-upc');
                 if (upcInput) {
@@ -2739,90 +3424,34 @@ export const renderProducts = async (container, workspaceId) => {
                         pill.style.background = '#18181B';
                         pill.style.color = '#FFFFFF';
                     }
+                    const tmplLabel = container.querySelector('#prd-current-tmpl-label');
+                    if (tmplLabel) {
+                        tmplLabel.textContent = targetTmpl.name;
+                    }
                     checkProductDirty();
-                    showAlert.success(`Generated code "${candidate}" using "${defaultTmpl.name}".`);
+                    showAlert.success(`Generated code "${candidate}" using "${targetTmpl.name}".`);
                 }
             } catch (err) {
                 console.error("Auto code generation error:", err);
                 showAlert.error(`Code generation failed: ${err.message}`);
+            } finally {
+                btnGenUpc.disabled = false;
+                btnGenUpc.innerHTML = originalHtml;
             }
         });
 
-        // Mode B: Choose Template Modal
+        // Mode B: Choose Template Modal (Topmost Level Overlay)
         container.querySelector('#btn-code-assistant')?.addEventListener('click', async () => {
-            const templates = await codeService.getAllTemplates(false);
-            const modalId = 'modal-code-gen-picker';
-            let modal = document.getElementById(modalId);
-            if (modal) modal.remove();
+            openTemplateSelectionDialog(codeService, async (tmpl) => {
+                selectedMainTemplate = tmpl;
+                const tmplLabel = container.querySelector('#prd-current-tmpl-label');
+                if (tmplLabel) {
+                    tmplLabel.textContent = tmpl.name;
+                }
 
-            modal = document.createElement('div');
-            modal.id = modalId;
-            modal.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-                background: rgba(0,0,0,0.45); z-index: 10000;
-                display: flex; align-items: center; justify-content: center; padding: 1.5rem;
-            `;
-
-            modal.innerHTML = `
-                <div style="background: #FFFFFF; border-radius: 14px; width: 100%; max-width: 520px; border: 1px solid #E4E4E7; box-shadow: 0 20px 40px rgba(0,0,0,0.15); overflow: hidden;">
-                    <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #E4E4E7; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #18181B;">Select Code Generation Template</h3>
-                            <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #71717A;">Choose a department template or generate the next atomic sequence.</p>
-                        </div>
-                        <button id="btn-close-picker-modal" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#71717A;">&times;</button>
-                    </div>
-                    <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; max-height: 70vh; overflow-y: auto;">
-                        ${templates.map(t => {
-                            const sample = codeService.assembleCode(t.blocks, t);
-                            return `
-                                <div class="tmpl-picker-item" data-id="${t.id}" style="padding: 1rem; border: 1px solid #E4E4E7; border-radius: 10px; cursor: pointer; transition: all 0.15s ease; background: #FAFAFA;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                                        <strong style="color: #18181B; font-size: 0.95rem;">${escapeHtml(t.name)}</strong>
-                                        ${t.isDefault ? `<span class="badge" style="background:#18181B; color:#FFF; font-size:0.65rem; padding:0.15rem 0.45rem; border-radius:4px;">Default</span>` : ''}
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: #71717A; margin-bottom: 0.5rem;">${escapeHtml(t.description || '')}</div>
-                                    <div style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: #18181B; background: #FFFFFF; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #E4E4E7;">
-                                        Preview: ${escapeHtml(sample)}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(modal);
-            const close = () => modal.remove();
-            modal.querySelector('#btn-close-picker-modal').onclick = close;
-
-            modal.querySelectorAll('.tmpl-picker-item').forEach(item => {
-                item.addEventListener('click', async () => {
-                    const tmpl = await codeService.getTemplateById(item.dataset.id);
-                    if (tmpl) {
-                        const nextSeq = await codeService.atomicGetNextSequence(tmpl.id);
-                        const pName = container.querySelector('#prd-name')?.value.trim() || '';
-                        const pCat = container.querySelector('#prd-category')?.value.trim() || '';
-                        const code = codeService.assembleCode(tmpl.blocks, tmpl, {
-                            sequence: nextSeq,
-                            product: { name: pName, category: pCat }
-                        });
-                        await codeService.reserveCode(code, 'product_draft', 60, { template: tmpl.name });
-                        const upcInput = container.querySelector('#prd-upc');
-                        if (upcInput) {
-                            upcInput.value = code;
-                            const pill = container.querySelector('#prd-code-status-pill');
-                            if (pill) {
-                                pill.textContent = 'Reserved & Unique';
-                                pill.style.background = '#18181B';
-                                pill.style.color = '#FFFFFF';
-                            }
-                            checkProductDirty();
-                            showAlert.success(`Applied template "${tmpl.name}". Generated: ${code}`);
-                        }
-                    }
-                    close();
-                });
+                if (btnGenUpc) {
+                    btnGenUpc.click();
+                }
             });
         });
 
