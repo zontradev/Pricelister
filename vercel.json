@@ -1,76 +1,33 @@
 {
   "version": 2,
-  "cleanUrls": true,
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        }
-      ]
-    },
-    {
-      "source": "/(css|js|firebase|supabase)/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)\\.(ico|png|jpg|jpeg|svg|webp|gif|woff|woff2|ttf|eot)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)\\.html",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    }
-  ],
   "rewrites": [
-    {
-      "source": "/",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/(css|js|firebase|supabase)/(.*)",
-      "destination": "/$1/$2"
-    },
-    {
-      "source": "/Workspace/(.*)\\.(png|jpg|jpeg|svg|webp|gif|ico|css|js)",
-      "destination": "/Workspace/$1.$2"
-    },
-    {
-      "source": "/workspace/(.*)\\.(png|jpg|jpeg|svg|webp|gif|ico|css|js)",
-      "destination": "/Workspace/$1.$2"
-    },
     {
       "source": "/(home|explore|pricing|find|privacy|terms|connection)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/Workspace/(.*)",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/workspace/(.*)",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/Workspace",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/workspace",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/demo",
+      "destination": "/app.html"
+    },
+    {
+      "source": "/demo/(.*)",
+      "destination": "/app.html"
     },
     {
       "source": "/login",
@@ -79,34 +36,7 @@
     {
       "source": "/customer",
       "destination": "/customer.html"
-    },
-    {
-      "source": "/customer/(.*)",
-      "destination": "/customer.html"
-    },
-    {
-      "source": "/(Workspace|workspace)",
-      "destination": "/app.html"
-    },
-    {
-      "source": "/(Workspace|workspace)/(.*)",
-      "destination": "/app.html"
-    },
-    {
-      "source": "/(demo|app)",
-      "destination": "/app.html"
-    },
-    {
-      "source": "/(demo|app)/(.*)",
-      "destination": "/app.html"
-    },
-    {
-      "source": "/(overview|analytics|schema-analyzer|members|products|market-inserter|categories|barcode-generator|finance-tracker|emi-calculator|customer-emi|emi-collection|emi-overdue|profit-calculator|invoices|customer-invoices|business-invoices|shipping-export|customers|businesses|clients|suppliers|notifications-center|automation-rules|scheduled-reports|task-monitor|notification-settings|supplier-directory|supplier-pricing|market-comparison|supplier-performance|price-history|workers|settings|customer-panel|orders|profile|mailbox)",
-      "destination": "/app.html"
-    },
-    {
-      "source": "/(analytics|schema-analyzer|invoices)/(.*)",
-      "destination": "/app.html"
     }
   ]
 }
+
