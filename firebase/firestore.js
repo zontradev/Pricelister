@@ -1005,6 +1005,50 @@ export const firestoreService = {
         }
     },
 
+    updateWorkspaceMember: async (workspaceDocUid, memberEmail, updates = {}) => {
+        if (!workspaceDocUid || !memberEmail) return false;
+        const cleanEmail = memberEmail.toLowerCase().trim();
+
+        // 1. Mock support
+        if (workspaceDocUid === 'ws_dev_mock' || workspaceDocUid === 'dev-mock-uid') {
+            try {
+                const rawMock = localStorage.getItem('pricelister_mock_members');
+                if (rawMock) {
+                    const parsed = JSON.parse(rawMock);
+                    const idx = parsed.findIndex(m => (m.email || '').toLowerCase() === cleanEmail);
+                    if (idx >= 0) {
+                        parsed[idx] = { ...parsed[idx], ...updates };
+                        localStorage.setItem('pricelister_mock_members', JSON.stringify(parsed));
+                    }
+                }
+            } catch (e) {}
+            return true;
+        }
+
+        // 2. Real Firestore
+        try {
+            const memberRef = doc(db, `Workspaces/${workspaceDocUid}/Members`, cleanEmail);
+            await setDoc(memberRef, updates, { merge: true });
+
+            // If updating roleTag or photoURL on Admin, also sync root Workspace doc
+            const rootWsUpdates = {};
+            if (updates.roleTag) rootWsUpdates.adminRoleTag = updates.roleTag;
+            if (updates.photoURL) rootWsUpdates.adminPhotoURL = updates.photoURL;
+            if (updates.name) rootWsUpdates.adminName = updates.name;
+
+            if (Object.keys(rootWsUpdates).length > 0) {
+                try {
+                    const wsRef = doc(db, 'Workspaces', workspaceDocUid);
+                    await setDoc(wsRef, rootWsUpdates, { merge: true });
+                } catch (e) {}
+            }
+            return true;
+        } catch (err) {
+            console.warn("Error updating workspace member in Firestore:", err);
+            return false;
+        }
+    },
+
     updateMetricsCounter: async (workspaceDocUid, type, isAdding, itemCreatorId = null, count = 1) => {
         if (!workspaceDocUid || workspaceDocUid === 'ws_dev_mock') return;
         const currentUser = auth.currentUser;

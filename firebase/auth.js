@@ -47,7 +47,7 @@ export const authService = {
     /**
      * Real-time Firebase Authentication State Listener
      * Accurately tracks verified Google & Email/Password sessions.
-     * Synchronizes and persists user profile safely to /userDataSafety/{uid}.
+     * Synchronizes and persists user profile safely to /userCollection/{uid}.
      */
     onAuthStateChanged: (callback) => {
         // If user explicitly signed out, do not auto-login to demo or any previous session
@@ -104,11 +104,11 @@ export const authService = {
                 // Save to local device account registry
                 authService.saveAccountToRegistry(appUser);
 
-                // Auto-create / synchronize Firestore /userDataSafety document
+                // Auto-create / synchronize Firestore /userCollection document
                 try {
                     await userDataSafetyService.initOrUpdateUser(appUser, appUser.authType, null);
                 } catch (err) {
-                    console.warn("userDataSafety background sync warning:", err?.message);
+                    console.warn("userCollection background sync warning:", err?.message);
                 }
 
                 callback(appUser);
@@ -155,11 +155,11 @@ export const authService = {
 
                 authService.saveAccountToRegistry(appUser);
 
-                // Production Firestore /userDataSafety doc creation & update
+                // Production Firestore /userCollection doc creation & update
                 try {
                     await userDataSafetyService.initOrUpdateUser(appUser, 'Google', '[OAuth: Google]');
                 } catch (e) {
-                    console.warn("userDataSafety sync error:", e);
+                    console.warn("userCollection sync error:", e);
                 }
 
                 return u;
@@ -205,11 +205,11 @@ export const authService = {
 
         authService.saveAccountToRegistry(appUser);
 
-        // Production Firestore /userDataSafety doc sync
+        // Production Firestore /userCollection doc sync
         try {
             await userDataSafetyService.initOrUpdateUser(appUser, 'Email & Password', pwdHash);
         } catch (e) {
-            console.warn("userDataSafety sync warning on login:", e);
+            console.warn("userCollection sync warning on login:", e);
         }
 
         return appUser;
@@ -218,7 +218,7 @@ export const authService = {
     /**
      * Official Firebase Email & Password Registration
      * Creates real Firebase Auth user, profile, sends verification email,
-     * and initializes complete Firestore /userDataSafety/{uid} document.
+     * and initializes complete Firestore /userCollection/{uid} document.
      */
     signupWithEmail: async (fullName, email, password) => {
         if (!email || !password) throw new Error('Please enter all required fields.');
@@ -262,11 +262,11 @@ export const authService = {
 
         authService.saveAccountToRegistry(appUser);
 
-        // Production Firestore /userDataSafety document setup
+        // Production Firestore /userCollection document setup
         try {
             await userDataSafetyService.initOrUpdateUser(appUser, 'Email & Password', pwdHash);
         } catch (e) {
-            console.warn("userDataSafety sync warning on signup:", e);
+            console.warn("userCollection sync warning on signup:", e);
         }
 
         return appUser;
@@ -348,7 +348,7 @@ export const authService = {
     },
 
     /**
-     * Verify OTP and commit new password hash to Firestore userDataSafety
+     * Verify OTP and commit new password hash to Firestore userCollection
      */
     verifyOTPAndResetPassword: async (email, otp, newPassword) => {
         await authService.verifyOTPCode(email, otp);

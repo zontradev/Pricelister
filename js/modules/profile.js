@@ -9,6 +9,11 @@ import { getSettingsService } from '../services/settingsService.js';
 import { showAlert } from '../alert-handler.js';
 import { getRoleBadgeHtml, openAccountSwitcherModal, getUserRestrictions } from '../auth-handler.js';
 import { openExportModal } from './importExportModal.js';
+import { storageService } from '../../supabase/storage.js';
+import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { firebaseApp } from '../../firebase/firebase-config.js';
+
+const db = getFirestore(firebaseApp);
 
 export const renderProfile = async (container, workspaceId) => {
     // Clean up any previously attached active realtime listeners on this container
@@ -66,8 +71,8 @@ export const renderProfile = async (container, workspaceId) => {
     `;
 
     try {
-        // Fetch initial workspace details
-        const [wsData, initialProducts, initialCustInvoices, initialBusInvoices, initialBusinesses, initialCustomers, initialClients, initialCategories, isVending] = await Promise.all([
+        // Fetch initial workspace details & permanent personal profile from /userCollection
+        const [wsData, initialProducts, initialCustInvoices, initialBusInvoices, initialBusinesses, initialCustomers, initialClients, initialCategories, isVending, userPersonalDoc] = await Promise.all([
             firestoreService.checkWorkspaceExists(currentUser.uid, currentUser.email).catch(() => null),
             productService.getAllActiveProducts().catch(() => []),
             invoiceService.getAllInvoices(false).catch(() => []),
@@ -76,13 +81,14 @@ export const renderProfile = async (container, workspaceId) => {
             peopleService.getAllCustomers().catch(() => []),
             peopleService.getAllClients().catch(() => []),
             categoryService.getAllCategories().catch(() => []),
-            settingsService.isVendingEnabled().catch(() => false)
+            settingsService.isVendingEnabled().catch(() => false),
+            userDataSafetyService.getUserDataSafety(currentUser).catch(() => null)
         ]);
 
         const adminUid = wsData?.id || workspaceId;
-        const displayName = currentUser.displayName || currentUser.email.split('@')[0];
+        const displayName = (userPersonalDoc?.name || currentUser.displayName || currentUser.email.split('@')[0]).trim().substring(0, 99);
         const email = currentUser.email;
-        const photoURL = currentUser.photoURL;
+        const photoURL = userPersonalDoc?.photoURL || currentUser.photoURL || '';
         const role = wsData?.role || (wsData?.id === currentUser.uid ? 'CREATOR_ADMIN' : 'WORKER');
 
         // Resolve authenticated provider for credentials & password management
@@ -107,6 +113,17 @@ export const renderProfile = async (container, workspaceId) => {
                 console.warn("Could not load worker member doc:", err);
             }
         }
+
+        // Workspace-specific role tag (displayed in My Profile & Members Activity only)
+        const currentRoleTag = (isAdmin 
+            ? (wsData?.adminRoleTag || wsData?.roleTag || 'Administrator') 
+            : (myMember?.roleTag || myMember?.tag || (isCoAdmin ? 'Manager' : 'Staff'))).trim();
+
+        const allowedTags = isAdmin 
+            ? ['Owner', 'Leader', 'Author', 'Administrator', 'Boss', 'Founder', 'Director']
+            : (isCoAdmin 
+                ? ['Manager', 'Assistant', 'Co-Operator', 'Supervisor', 'Coordinator']
+                : ['Staff', 'Employee', 'Member', 'Associate', 'Specialist', 'Operator']);
 
         // 1. Resolve User ID (appWorkerId for workers, adminId for admin)
         const displayUserId = isAdmin
@@ -245,6 +262,10 @@ export const renderProfile = async (container, workspaceId) => {
                     <p style="color: var(--text-secondary); margin: 0;">Account identity, credentials, and personal contribution footprint.</p>
                 </div>
                 <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                    <button id="btn-profile-edit" class="btn btn-secondary" style="display:flex; align-items:center; gap:0.45rem; font-weight:700; border:1px solid var(--border-color); background:#ffffff; color:var(--text-primary);">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        Edit Profile
+                    </button>
                     <button id="btn-profile-switch-acc" class="btn btn-primary" style="display:flex; align-items:center; gap:0.4rem; font-weight:600;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
                         Switch / Add Account
@@ -279,10 +300,10 @@ export const renderProfile = async (container, workspaceId) => {
                                 : `<div style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg, #334155, #0f172a); color:white; font-size:1.75rem; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.15);">${initial}</div>`
                             }
                             <div>
-                                <h3 style="margin:0 0 0.25rem 0; font-size:1.35rem; color:var(--text-primary); font-weight:700;">${displayName}</h3>
-                                <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.5rem;">${email}</div>
-                                <div>
-                                    ${getRoleBadgeHtml(role)}
+                                <h3 id="prof-user-display-name" style="margin:0 0 0.25rem 0; font-size:1.35rem; color:var(--text-primary); font-weight:700;">${displayName}</h3>
+                                <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.4rem;">${email}</div>
+                                <div id="prof-user-role-badge">
+                                    ${getRoleBadgeHtml(role, currentRoleTag)}
                                 </div>
                             </div>
                         </div>
@@ -298,11 +319,11 @@ export const renderProfile = async (container, workspaceId) => {
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span style="color:var(--text-secondary);">Connected Workspace</span>
-                                <code style="font-family:monospace; font-size:0.85rem; font-weight:700; color:var(--primary); background:rgba(16,185,129,0.08); padding:0.15rem 0.5rem; border-radius:4px;">${displayWorkspaceId}</code>
+                                <code style="font-family:monospace; font-size:0.85rem; font-weight:700; color:#18181b; background:#f4f4f5; border:1px solid #e4e4e7; padding:0.15rem 0.5rem; border-radius:4px;">${displayWorkspaceId}</code>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span style="color:var(--text-secondary);">Active Role</span>
-                                <div>${getRoleBadgeHtml(role)}</div>
+                                <div>${getRoleBadgeHtml(role, currentRoleTag)}</div>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span style="color:var(--text-secondary);">Auth Provider</span>
@@ -331,7 +352,7 @@ export const renderProfile = async (container, workspaceId) => {
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
                                 <span style="color:var(--text-secondary);">Workspace Code</span>
-                                <code style="font-family:monospace; font-size:0.88rem; color:var(--primary); font-weight:700;">${displayWorkspaceId}</code>
+                                <code style="font-family:monospace; font-size:0.88rem; color:#18181b; background:#f4f4f5; border:1px solid #e4e4e7; padding:0.15rem 0.5rem; border-radius:4px; font-weight:700;">${displayWorkspaceId}</code>
                             </div>
                             <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
                                 <span style="color:var(--text-secondary);">Joined Workspace</span>
@@ -345,7 +366,7 @@ export const renderProfile = async (container, workspaceId) => {
                                     <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Active Products</div>
                                 </div>
                                 <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
-                                    <div id="prof-overview-invoices" style="font-size:1.35rem; font-weight:800; color:var(--primary);">${liveCustInvoices.length + liveBusInvoices.length}</div>
+                                    <div id="prof-overview-invoices" style="font-size:1.35rem; font-weight:800; color:#18181b;">${liveCustInvoices.length + liveBusInvoices.length}</div>
                                     <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase;">Total Invoices</div>
                                 </div>
                                 <div style="background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1px solid var(--border-color); text-align:center;">
@@ -368,7 +389,7 @@ export const renderProfile = async (container, workspaceId) => {
             <div class="card" style="padding: 2rem; border-radius: var(--radius-card); box-shadow: var(--shadow-float); margin-bottom: 2rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-color); padding-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
                     <div>
-                        <div style="font-size:0.75rem; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">
+                        <div style="font-size:0.75rem; font-weight:800; color:#18181b; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.25rem;">
                             ACTIVITY & CREATION DASHBOARD (LIVE)
                         </div>
                         <h3 style="margin:0; font-size:1.25rem; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
@@ -389,7 +410,7 @@ export const renderProfile = async (container, workspaceId) => {
                     </div>
                     <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
                         <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Invoices Issued</span>
-                        <strong id="prof-metric-invoices" style="font-size:1.75rem; font-weight:800; color:var(--primary);">${initInvCount}</strong>
+                        <strong id="prof-metric-invoices" style="font-size:1.75rem; font-weight:800; color:#18181b;">${initInvCount}</strong>
                     </div>
                     <div style="background:var(--surface-50); padding:1.15rem; border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:0.35rem;">
                         <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em;">Categories Created</span>
@@ -1016,6 +1037,229 @@ export const renderProfile = async (container, workspaceId) => {
                 });
             });
         }
+
+        // -------------------------------------------------------------
+        // EDIT PROFILE MODAL (Name < 100 chars, Photo <= 5MB, Role Tag)
+        // -------------------------------------------------------------
+        const openEditProfileModal = () => {
+            const existing = document.getElementById('edit-profile-modal-overlay');
+            if (existing) existing.remove();
+
+            let tempPhotoDataUrl = photoURL;
+            let selectedFileToUpload = null;
+
+            const modal = document.createElement('div');
+            modal.id = 'edit-profile-modal-overlay';
+            modal.style.cssText = `
+                position: fixed;
+                inset: 0;
+                z-index: 100050;
+                background: rgba(9, 9, 11, 0.72);
+                backdrop-filter: blur(10px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1.25rem;
+                box-sizing: border-box;
+            `;
+
+            modal.innerHTML = `
+                <div style="background:#ffffff; border-radius:22px; border:1.5px solid var(--border-color); max-width:480px; width:100%; padding:2rem; box-shadow:0 25px 60px -15px rgba(0,0,0,0.3); box-sizing:border-box; animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);">
+                        <div>
+                            <h3 style="margin:0; font-size:1.3rem; font-weight:800; color:var(--text-primary);">Edit Profile</h3>
+                            <p style="margin:0.25rem 0 0 0; font-size:0.82rem; color:var(--text-secondary);">Permanent user info saves to userCollection. Role tag is workspace-specific.</p>
+                        </div>
+                        <button type="button" id="btn-close-edit-profile-modal" style="background:none; border:none; cursor:pointer; color:var(--text-secondary); padding:4px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+
+                    <!-- Custom Profile Image (Max 5MB) -->
+                    <div style="display:flex; align-items:center; gap:1.25rem; margin-bottom:1.4rem; padding:1.1rem; background:var(--surface-50); border-radius:14px; border:1px solid var(--border-color);">
+                        <div id="modal-preview-avatar-box" style="width:68px; height:68px; border-radius:50%; overflow:hidden; background:#18181b; color:#ffffff; display:flex; align-items:center; justify-content:center; font-size:1.6rem; font-weight:800; flex-shrink:0; border:2.5px solid #ffffff; box-shadow:0 4px 12px rgba(0,0,0,0.12);">
+                            ${photoURL ? `<img id="modal-preview-img" src="${photoURL}" style="width:100%; height:100%; object-fit:cover;">` : `<span id="modal-preview-initial">${initial}</span>`}
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); display:block; margin-bottom:0.2rem;">Custom Profile Image</label>
+                            <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.55rem;">Max 5MB (PNG, JPG, WebP)</div>
+                            <input type="file" id="modal-photo-file-input" accept="image/png, image/jpeg, image/webp" style="display:none;">
+                            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                                <button type="button" id="btn-trigger-photo-upload" class="btn btn-sm btn-outline" style="font-size:0.8rem; font-weight:700; border-radius:8px; border:1px solid var(--border-color); background:#ffffff; color:var(--text-primary); cursor:pointer;">
+                                    Upload Photo
+                                </button>
+                                ${photoURL ? `
+                                    <button type="button" id="btn-remove-photo" style="background:none; border:none; color:var(--danger); font-size:0.75rem; font-weight:700; cursor:pointer; padding:0.2rem 0.4rem;">
+                                        Remove
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Full Name (Max < 100) -->
+                    <div style="margin-bottom:1.5rem;">
+                        <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); display:block; margin-bottom:0.45rem;">Full Name</label>
+                        <input type="text" id="modal-name-input" maxlength="99" value="${displayName.replace(/"/g, '&quot;')}" placeholder="Enter your full name" style="width:100%; height:46px; min-height:46px; line-height:1.4; padding:0.65rem 0.95rem; border-radius:10px; border:1.5px solid var(--border-color); font-size:0.95rem; font-weight:600; color:var(--text-primary); box-sizing:border-box;">
+                        <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.35rem;">Max 100 characters. Persists permanently in your userCollection across all workspaces.</div>
+                    </div>
+
+                    <!-- Role Tag Dropdown (Fixed List based on Role) -->
+                    <div style="margin-bottom:2rem;">
+                        <label style="font-size:0.85rem; font-weight:700; color:var(--text-primary); display:block; margin-bottom:0.45rem;">Role Tag (${role})</label>
+                        <select id="modal-role-tag-select" style="width:100%; height:46px; min-height:46px; line-height:1.4; padding:0.6rem 0.95rem; border-radius:10px; border:1.5px solid var(--border-color); font-size:0.95rem; font-weight:700; color:var(--text-primary); background:#ffffff; box-sizing:border-box; display:block; appearance:auto; -webkit-appearance:menulist;">
+                            ${allowedTags.map(tag => `<option value="${tag}" ${tag.toLowerCase() === currentRoleTag.toLowerCase() ? 'selected' : ''}>${tag}</option>`).join('')}
+                        </select>
+                        <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.4rem;">Applies only to this workspace in Members Activity and Profile. Core workspace permissions remain strictly protected.</div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                        <button type="button" id="btn-cancel-edit-profile" class="btn btn-outline" style="border-radius:10px; font-weight:700; border:1px solid var(--border-color);">Cancel</button>
+                        <button type="button" id="btn-save-edit-profile" class="btn btn-primary" style="border-radius:10px; font-weight:700; background:#18181b; color:#ffffff; border:1px solid #18181b;">Save Changes</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const btnClose = modal.querySelector('#btn-close-edit-profile-modal');
+            const btnCancel = modal.querySelector('#btn-cancel-edit-profile');
+            const btnSave = modal.querySelector('#btn-save-edit-profile');
+            const btnTriggerUpload = modal.querySelector('#btn-trigger-photo-upload');
+            const fileInput = modal.querySelector('#modal-photo-file-input');
+            const previewBox = modal.querySelector('#modal-preview-avatar-box');
+            const btnRemovePhoto = modal.querySelector('#btn-remove-photo');
+
+            const closeModal = () => modal.remove();
+            btnClose.addEventListener('click', closeModal);
+            btnCancel.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+
+            if (btnRemovePhoto) {
+                btnRemovePhoto.addEventListener('click', () => {
+                    tempPhotoDataUrl = '';
+                    selectedFileToUpload = null;
+                    previewBox.innerHTML = `<span id="modal-preview-initial">${initial}</span>`;
+                });
+            }
+
+            if (btnTriggerUpload && fileInput) {
+                btnTriggerUpload.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+
+                    // Validate Max 5MB
+                    const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+                    if (file.size > MAX_BYTES) {
+                        showAlert.error(`Profile image size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds the 5MB limit.`);
+                        fileInput.value = '';
+                        return;
+                    }
+
+                    selectedFileToUpload = file;
+                    const reader = new FileReader();
+                    reader.onload = (loadEvt) => {
+                        tempPhotoDataUrl = loadEvt.target.result;
+                        previewBox.innerHTML = `<img id="modal-preview-img" src="${tempPhotoDataUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            btnSave.addEventListener('click', async () => {
+                const nameInput = modal.querySelector('#modal-name-input');
+                const tagSelect = modal.querySelector('#modal-role-tag-select');
+                const cleanName = (nameInput?.value || '').trim().substring(0, 99);
+
+                if (!cleanName) {
+                    showAlert.error('Full name cannot be empty.');
+                    return;
+                }
+
+                const selectedTag = tagSelect ? tagSelect.value : currentRoleTag;
+
+                btnSave.disabled = true;
+                btnSave.textContent = 'Saving...';
+
+                try {
+                    let finalPhotoUrl = tempPhotoDataUrl || '';
+                    if (selectedFileToUpload) {
+                        btnSave.textContent = 'Uploading image...';
+                        try {
+                            const uploadedUrl = await storageService.uploadImage(selectedFileToUpload, currentUser.uid, 'avatar');
+                            if (uploadedUrl) {
+                                finalPhotoUrl = uploadedUrl;
+                            }
+                        } catch (uploadErr) {
+                            console.warn("Supabase profile upload fallback to data URL:", uploadErr);
+                        }
+                    }
+
+                    // 1. Permanent personal user data saved in /userCollection/{uid} with Supabase URL
+                    await userDataSafetyService.updateUserProfile(currentUser, {
+                        name: cleanName,
+                        photoURL: finalPhotoUrl
+                    });
+
+                    // 2. Firebase Auth updateProfile
+                    if (currentUser && typeof currentUser.updateProfile === 'function') {
+                        try {
+                            await currentUser.updateProfile({
+                                displayName: cleanName,
+                                photoURL: finalPhotoUrl || null
+                            });
+                        } catch (e) {}
+                    }
+
+                    // 3. Workspace-specific role tag saved in Workspaces/{adminUid}/Members/{email}
+                    await firestoreService.updateWorkspaceMember(adminUid, email, {
+                        name: cleanName,
+                        roleTag: selectedTag,
+                        photoURL: finalPhotoUrl
+                    });
+
+                    // If Admin, also update root workspace doc
+                    if (isAdmin) {
+                        try {
+                            const wsRef = doc(db, 'Workspaces', adminUid);
+                            await setDoc(wsRef, { adminName: cleanName, adminRoleTag: selectedTag }, { merge: true });
+                        } catch (e) {}
+                    }
+
+                    // Update memory state
+                    currentUser.displayName = cleanName;
+                    currentUser.photoURL = finalPhotoUrl || null;
+
+                    // Update topbar header avatar and name in DOM
+                    const topbarName = document.querySelector('.user-name, #topbar-user-name');
+                    if (topbarName) topbarName.textContent = cleanName;
+                    const topbarAvatar = document.querySelector('.user-avatar img, #topbar-user-avatar');
+                    if (topbarAvatar && finalPhotoUrl) {
+                        topbarAvatar.src = finalPhotoUrl;
+                        topbarAvatar.style.display = 'block';
+                    }
+
+                    modal.remove();
+                    showAlert.success('Profile and workspace role tag updated successfully!');
+
+                    // Re-render profile view immediately
+                    await renderProfile(container, workspaceId);
+                } catch (err) {
+                    console.error('Error updating profile:', err);
+                    showAlert.error('Failed to save profile: ' + (err.message || 'Unknown error'));
+                    btnSave.disabled = false;
+                    btnSave.textContent = 'Save Changes';
+                }
+            });
+        };
+
+        container.querySelector('#btn-profile-edit')?.addEventListener('click', () => {
+            openEditProfileModal();
+        });
 
         container.querySelector('#btn-profile-switch-acc')?.addEventListener('click', () => {
             openAccountSwitcherModal(currentUser);

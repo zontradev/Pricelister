@@ -554,9 +554,13 @@ export const initAuthHandler = (pageType) => {
     authService.onAuthStateChanged(async (user) => {
         if (pageType === 'index') {
             const launcherContainer = document.getElementById('workspace-launcher-container');
-            document.body.classList.remove('app-loading');
-            if (loader) loader.style.display = 'none';
-            if (authContainer) authContainer.style.display = 'block';
+            const setupContainer = document.getElementById('workspace-setup-container');
+            const loadingIndicator = document.getElementById('connection-loading-indicator');
+
+            // ANTI-PREMATURE CONNECTION: Keep both containers hidden and show clean loading indicator until Firestore verification is 100% complete
+            if (loadingIndicator) loadingIndicator.style.display = 'flex';
+            if (launcherContainer) launcherContainer.style.display = 'none';
+            if (setupContainer) setupContainer.style.display = 'none';
 
             const urlParams = new URLSearchParams(window.location.search);
             const isConnectionRoute = urlParams.get('view') === 'connection' || 
@@ -565,25 +569,46 @@ export const initAuthHandler = (pageType) => {
                                      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_last_landing_view') === 'connection');
 
             if (user) {
-                // If logged in on public page, check if workspace exists
+                // If logged in on public page, check if workspace exists with Firestore
                 try {
                     const workspace = await firestoreService.checkWorkspaceExists(user.uid, user.email);
                     await updateLandingHeaderAuthState(user, workspace);
 
                     if (workspace) {
-                        // User has a workspace: Keep landing page visible, populate launcher DOM elements
+                        // User verified to have a workspace: populate launcher DOM elements
                         if (launcherContainer) {
                             const nameEl = document.getElementById('launcher-workspace-name');
                             if (nameEl) nameEl.textContent = workspace.name || 'Your Workspace';
 
-                            // Banner Cover
-                            const coverBanner = document.getElementById('launcher-cover-banner');
-                            if (coverBanner) {
-                                if (workspace.bannerUrl) {
-                                    coverBanner.style.backgroundImage = `linear-gradient(180deg, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0.88) 100%), url('${workspace.bannerUrl}')`;
-                                } else {
-                                    coverBanner.style.backgroundImage = 'linear-gradient(135deg, #09090b 0%, #1e293b 100%)';
-                                }
+                            // Top Round Logo: Logged-in Account Logo
+                            const topPhoto = document.getElementById('launcher-top-account-photo');
+                            const topInitial = document.getElementById('launcher-top-account-initial');
+                            if (user.photoURL && topPhoto) {
+                                topPhoto.src = user.photoURL;
+                                topPhoto.style.display = 'block';
+                                if (topInitial) topInitial.style.display = 'none';
+                            } else if (topInitial) {
+                                topInitial.textContent = ((user.displayName || user.email || 'U').charAt(0)).toUpperCase();
+                                topInitial.style.display = 'flex';
+                                if (topPhoto) topPhoto.style.display = 'none';
+                            }
+
+                            // Banner: Default Architectural Illustration (no pitch black banner) or Custom Uploaded Banner
+                            const defaultBannerSvg = document.getElementById('launcher-default-banner-svg');
+                            const customBannerImg = document.getElementById('launcher-custom-banner-img');
+                            if (workspace.bannerUrl && customBannerImg) {
+                                customBannerImg.src = workspace.bannerUrl;
+                                customBannerImg.style.display = 'block';
+                                if (defaultBannerSvg) defaultBannerSvg.style.display = 'none';
+                            } else {
+                                if (defaultBannerSvg) defaultBannerSvg.style.display = 'block';
+                                if (customBannerImg) customBannerImg.style.display = 'none';
+                            }
+
+                            // Tagline / Subtitle
+                            const taglineEl = document.getElementById('launcher-workspace-tagline');
+                            if (taglineEl) {
+                                taglineEl.textContent = workspace.tagline || workspace.description || 'Professional product management workspace';
                             }
 
                             // Workspace Logo & Fallback
@@ -660,24 +685,9 @@ export const initAuthHandler = (pageType) => {
                             const descEl = launcherCard ? launcherCard.querySelector('p') : null;
                             const enterBtn = document.getElementById('launcher-enter-btn');
 
-                            // Ensure Admin Email row exists
-                            let adminRow = document.getElementById('launcher-admin-email-row');
-                            if (!adminRow) {
-                                const kvContainer = launcherContainer.querySelector('div[style*="display: flex; flex-direction: column; gap: 0.85rem"]');
-                                if (kvContainer) {
-                                    adminRow = document.createElement('div');
-                                    adminRow.id = 'launcher-admin-email-row';
-                                    adminRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center;';
-                                    adminRow.innerHTML = `
-                                        <span style="color:#64748b; font-weight:600; font-size:0.85rem;">Admin:</span>
-                                        <span id="launcher-admin-email-text" style="font-weight:700; color:#0f172a; font-size:0.86rem;">${workspace.adminEmail || 'Administrator'}</span>
-                                    `;
-                                    kvContainer.insertBefore(adminRow, kvContainer.firstChild);
-                                }
-                            } else {
-                                const aText = document.getElementById('launcher-admin-email-text');
-                                if (aText) aText.textContent = workspace.adminEmail || 'Administrator';
-                            }
+                            // Admin Email Text
+                            const aText = document.getElementById('launcher-admin-email-text');
+                            if (aText) aText.textContent = workspace.adminEmail || user.email || 'Administrator';
 
                             // Dynamic Duration Row for Temporary Revocation
                             let durationRow = document.getElementById('launcher-duration-row');
@@ -692,18 +702,18 @@ export const initAuthHandler = (pageType) => {
                                 }
 
                                 if (!durationRow) {
-                                    const kvContainer = launcherContainer.querySelector('div[style*="display: flex; flex-direction: column; gap: 0.85rem"]');
-                                    if (kvContainer) {
+                                    const metaGrid = launcherContainer.querySelector('.launcher-meta-grid');
+                                    if (metaGrid) {
                                         durationRow = document.createElement('div');
                                         durationRow.id = 'launcher-duration-row';
-                                        durationRow.style.cssText = 'display:flex; flex-direction:column; gap:0.25rem; background:#fee2e2; padding:0.75rem 0.9rem; border-radius:12px; border:1.5px solid #fecdd3; margin-top:0.4rem;';
+                                        durationRow.style.cssText = 'display:flex; flex-direction:column; gap:0.25rem; background:#fee2e2; padding:0.75rem 0.9rem; border-radius:12px; border:1.5px solid #fecdd3; margin-bottom:1.25rem;';
                                         durationRow.innerHTML = `
                                             <span style="color:#991b1b; font-weight:700; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em;">Access Block Duration:</span>
                                             <span id="launcher-block-duration-text" style="color:#7f1d1d; font-weight:800; font-size:0.82rem; font-family:monospace;">
                                                 ${workspace.revokeStartFormatted || 'Immediate'} — ${workspace.revokeEndFormatted || 'Indefinite'}
                                             </span>
                                         `;
-                                        kvContainer.appendChild(durationRow);
+                                        metaGrid.parentNode.insertBefore(durationRow, metaGrid.nextSibling);
                                     }
                                 } else {
                                     const dText = document.getElementById('launcher-block-duration-text');
@@ -730,19 +740,23 @@ export const initAuthHandler = (pageType) => {
                                 if (titleEl) titleEl.textContent = 'Workspace Found';
                                 if (descEl) {
                                     descEl.textContent = 'Ready to manage your business.';
-                                    descEl.style.color = '#64748b';
+                                    descEl.style.color = '#71717a';
                                     descEl.style.fontWeight = '500';
                                 }
                                 if (durationRow) durationRow.style.display = 'none';
 
                                 if (enterBtn) {
                                     enterBtn.disabled = false;
-                                    enterBtn.style.background = '#09090b';
+                                    enterBtn.style.background = '#ffffff';
+                                    enterBtn.style.color = '#18181b';
+                                    enterBtn.style.border = '1.5px solid #18181b';
+                                    enterBtn.style.borderRadius = '4px';
+                                    enterBtn.style.fontWeight = '800';
                                     enterBtn.style.cursor = 'pointer';
-                                    enterBtn.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
+                                    enterBtn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)';
                                     enterBtn.innerHTML = `
                                         <span>Enter Workspace</span>
-                                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
                                     `;
                                     enterBtn.onclick = () => {
                                         window.location.href = 'app.html';
@@ -788,7 +802,8 @@ export const initAuthHandler = (pageType) => {
                             }
 
                             // Ensure launcher container is active inside view-connection
-                            launcherContainer.style.display = 'block';
+                            if (loadingIndicator) loadingIndicator.style.display = 'none';
+                            launcherContainer.style.display = 'flex';
                             if (setupContainer) setupContainer.style.display = 'none';
 
                             // When entering index.html, if a workspace is found, automatically show "Workspace Found" connection screen
@@ -799,12 +814,10 @@ export const initAuthHandler = (pageType) => {
                             }
                         }
                     } else {
-                        // NO WORKSPACE FOUND: Keep landing page visible, populate setup DOM elements
-                        document.body.classList.remove('app-loading');
-                        if (loader) loader.style.display = 'none';
-                        if (authContainer) authContainer.style.display = 'block';
+                        // NO WORKSPACE FOUND: Populate setup card DOM elements
+                        if (loadingIndicator) loadingIndicator.style.display = 'none';
                         if (launcherContainer) launcherContainer.style.display = 'none';
-                        if (setupContainer) setupContainer.style.display = 'none';
+                        if (setupContainer) setupContainer.style.display = 'block';
                         
                         // Populate account details in setup card
                         const setupEmail = document.getElementById('setup-account-email');
@@ -840,7 +853,7 @@ export const initAuthHandler = (pageType) => {
                         }
 
                         if (badgeCount) {
-                            badgeCount.textContent = `${invites.length} Request${invites.length === 1 ? '' : 's'}`;
+                            badgeCount.textContent = `(${invites.length})`;
                         }
 
                         if (invites && invites.length > 0) {
@@ -891,7 +904,7 @@ export const initAuthHandler = (pageType) => {
                                             btn.closest('div[style*="background: #ffffff"]')?.remove();
                                             invites = invites.filter(i => i.id !== id);
                                             if (badgeCount) {
-                                                badgeCount.textContent = `${invites.length} Request${invites.length === 1 ? '' : 's'}`;
+                                                badgeCount.textContent = `(${invites.length})`;
                                             }
                                             if (invites.length === 0) {
                                                 list.style.display = 'none';
@@ -961,12 +974,23 @@ export const initAuthHandler = (pageType) => {
                             window.showLandingView('connection', false);
                         }
                     }
+
+                    // Verification 100% Complete: reveal content and dismiss loader safely
+                    document.body.classList.remove('app-loading');
+                    if (loader) loader.style.display = 'none';
+                    if (authContainer) authContainer.style.display = 'block';
+                    if (typeof window.__dismissLandingLoader === 'function') {
+                        window.__dismissLandingLoader('auth_verified');
+                    }
                 } catch (error) {
                     console.error("Auth check error:", error);
                     showAlert.error('Error checking account status. Please check connection.');
                     document.body.classList.remove('app-loading');
                     if (loader) loader.style.display = 'none';
                     if (authContainer) authContainer.style.display = 'block';
+                    if (typeof window.__dismissLandingLoader === 'function') {
+                        window.__dismissLandingLoader('auth_error');
+                    }
                 }
             } else {
                 // If attempting to visit connection view while unauthenticated -> login barrier
@@ -978,6 +1002,7 @@ export const initAuthHandler = (pageType) => {
                 document.body.classList.remove('app-loading');
                 if (loader) loader.style.display = 'none';
                 if (authContainer) authContainer.style.display = 'block';
+                if (loadingIndicator) loadingIndicator.style.display = 'none';
                 if (setupContainer) setupContainer.style.display = 'none';
                 if (launcherContainer) launcherContainer.style.display = 'none';
                 await updateLandingHeaderAuthState(null);
@@ -1788,6 +1813,17 @@ export const initAuthHandler = (pageType) => {
                     wsLogoImgPreview.src = wsLogoDataUrl;
                     wsLogoImgPreview.style.display = 'block';
                 }
+                // Sync dynamic top-left logo in setup card header
+                const headerLogoImg = document.getElementById('setup-header-logo-img');
+                const headerLogoDefault = document.getElementById('setup-header-logo-default-icon');
+                if (headerLogoImg) {
+                    headerLogoImg.src = wsLogoDataUrl;
+                    headerLogoImg.style.display = 'block';
+                }
+                if (headerLogoDefault) {
+                    headerLogoDefault.style.display = 'none';
+                }
+
                 if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'none';
                 if (btnWsRemoveLogo) btnWsRemoveLogo.style.display = 'inline-block';
                 if (btnWsChooseLogo) btnWsChooseLogo.textContent = 'Change';
@@ -1837,6 +1873,15 @@ export const initAuthHandler = (pageType) => {
                     wsLogoImgPreview.src = val;
                     wsLogoImgPreview.style.display = 'block';
                 }
+                const headerLogoImg = document.getElementById('setup-header-logo-img');
+                const headerLogoDefault = document.getElementById('setup-header-logo-default-icon');
+                if (headerLogoImg) {
+                    headerLogoImg.src = val;
+                    headerLogoImg.style.display = 'block';
+                }
+                if (headerLogoDefault) {
+                    headerLogoDefault.style.display = 'none';
+                }
                 if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'none';
                 if (btnWsRemoveLogo) btnWsRemoveLogo.style.display = 'inline-block';
             }
@@ -1851,6 +1896,15 @@ export const initAuthHandler = (pageType) => {
             if (wsLogoImgPreview) {
                 wsLogoImgPreview.src = '';
                 wsLogoImgPreview.style.display = 'none';
+            }
+            const headerLogoImg = document.getElementById('setup-header-logo-img');
+            const headerLogoDefault = document.getElementById('setup-header-logo-default-icon');
+            if (headerLogoImg) {
+                headerLogoImg.src = '';
+                headerLogoImg.style.display = 'none';
+            }
+            if (headerLogoDefault) {
+                headerLogoDefault.style.display = 'block';
             }
             if (wsLogoEmptyState) wsLogoEmptyState.style.display = 'flex';
             btnWsRemoveLogo.style.display = 'none';

@@ -255,22 +255,13 @@
     .landing-header {
         padding: 0.65rem 0.85rem;
         border-radius: 16px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        justify-content: space-between;
         gap: 0.5rem;
     }
 
     .nav-links {
-        order: 3;
-        width: 100%;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 0.35rem;
-        gap: 1rem;
-        scrollbar-width: none;
-    }
-
-    .nav-links::-webkit-scrollbar {
-        display: none;
+        display: none !important;
     }
 
     .hero-section {
@@ -544,7 +535,8 @@
     }
 
     .pricing-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
     }
 }
 
@@ -719,9 +711,10 @@
         gap: 2.5rem;
     }
 
-    .pricing-grid {
-        max-width: 1400px;
-        gap: 2.5rem;
+    .pricing-grid,
+    .pricing-compare-section {
+        max-width: 1560px;
+        gap: 2rem;
     }
 
     .footer-grid {

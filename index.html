@@ -363,34 +363,54 @@
             overflow: hidden;
         }
 
-        /* ===== Pricing Cards ===== */
+        /* ===== Pricing Cards & Responsive Matrix ===== */
         .pricing-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.75rem;
-            max-width: 1100px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: clamp(1rem, 1.8vw, 1.75rem);
+            max-width: 1440px;
+            width: 100%;
             margin: 0 auto;
+            padding: 0 clamp(1rem, 2.5vw, 2.5rem);
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 1180px) {
+            .pricing-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .pricing-grid {
+                grid-template-columns: 1fr;
+                gap: 1.25rem;
+                padding: 0 1rem;
+                max-width: 440px;
+            }
         }
 
         .pricing-card {
             background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            padding: 2.25rem 2rem;
+            border: 1.5px solid #e4e4e7;
+            border-radius: 20px;
+            padding: 2.25rem 1.75rem 2rem;
             position: relative;
             display: flex;
             flex-direction: column;
-            transition: box-shadow 0.2s, transform 0.2s;
+            transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
         }
 
         .pricing-card:hover {
-            box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.09);
             transform: translateY(-3px);
+            border-color: #cbd5e1;
         }
 
         .pricing-card.featured {
             border-color: #18181b;
-            box-shadow: 0 0 0 1px #18181b, 0 16px 36px -8px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 0 0 1.5px #18181b, 0 20px 42px -10px rgba(0, 0, 0, 0.14);
         }
 
         .pricing-badge {
@@ -399,13 +419,14 @@
             left: 50%;
             transform: translateX(-50%);
             background: linear-gradient(180deg, #27272a 0%, #18181b 100%);
-            color: white;
+            color: #ffffff;
             font-size: 0.75rem;
-            font-weight: 700;
-            padding: 0.25rem 0.85rem;
+            font-weight: 800;
+            padding: 0.25rem 0.9rem;
             border-radius: 999px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-            letter-spacing: 0.04em;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
 
         .pricing-price {
@@ -416,15 +437,16 @@
         }
 
         .pricing-price .amount {
-            font-size: 2.5rem;
+            font-size: 2.35rem;
             font-weight: 800;
             color: #0f172a;
+            letter-spacing: -0.03em;
         }
 
         .pricing-price .period {
             color: #64748b;
             font-size: 0.95rem;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .pricing-features {
@@ -435,17 +457,642 @@
         }
 
         .pricing-features li {
-            padding: 0.5rem 0;
-            font-size: 0.92rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            padding: 0.55rem 0;
+            font-size: 0.88rem;
+            line-height: 1.45;
             color: #334155;
             border-bottom: 1px dashed #f1f5f9;
         }
 
+        .pricing-features li:last-child {
+            border-bottom: none;
+        }
+
         .pricing-features li::before {
-            content: "✓ ";
-            color: #10b981;
+            display: none !important;
+            content: none !important;
+        }
+
+        .feature-check-svg {
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            color: #18181b;
+            stroke: #18181b;
+            background: #f4f4f5;
+            border: 1.5px solid #d4d4d8;
+            border-radius: 50%;
+            padding: 3px;
+            box-sizing: border-box;
+            margin-top: 1.5px;
+            flex-shrink: 0;
+        }
+
+        /* View & Compare Controls & Modal */
+        .btn-view-compare {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            padding: 0.65rem 1.4rem;
+            font-size: 0.92rem;
+            font-weight: 700;
+            border-radius: 999px;
+            border: 1.5px solid #18181b;
+            background: #ffffff;
+            color: #18181b;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            transition: all 0.18s ease;
+        }
+
+        .btn-view-compare:hover {
+            background: #18181b;
+            color: #ffffff;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            transform: translateY(-1px);
+        }
+
+        /* Dedicated Full-Wired Comparison Section (Wide Full-Sized Enterprise Spec) */
+        .pricing-compare-section {
+            width: 100%;
+            max-width: 100%;
+            margin: 4.5rem auto 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .pricing-compare-card {
+            background: #ffffff;
+            border: 1.5px solid #d4d4d8;
+            border-radius: 20px;
+            box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* Standalone Connection Gateway View (Completely Hide Floating Header & Footer) */
+        body.view-is-connection .landing-header-wrapper,
+        body[data-active-view="connection"] .landing-header-wrapper,
+        body.view-is-connection .landing-footer-elevated,
+        body[data-active-view="connection"] .landing-footer-elevated {
+            display: none !important;
+        }
+
+        body.view-is-connection,
+        body[data-active-view="connection"] {
+            background: #f4f4f5 !important;
+        }
+
+        #pricing-compare-modal-container {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.22s ease;
+        }
+
+        #pricing-compare-modal-container.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .compare-modal-dialog {
+            background: #ffffff;
+            width: 95%;
+            max-width: 1320px;
+            max-height: 90vh;
+            border-radius: 24px;
+            box-shadow: 0 35px 80px -15px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            transform: scale(0.96) translateY(10px);
+            transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #pricing-compare-modal-container.is-open .compare-modal-dialog {
+            transform: scale(1) translateY(0);
+        }
+
+        .compare-table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 0;
+            width: 100%;
+        }
+
+        .pricing-compare-table {
+            width: 100%;
+            min-width: 860px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.9rem;
+        }
+
+        .pricing-compare-table th,
+        .pricing-compare-table td {
+            padding: 1.05rem 1.25rem;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .pricing-compare-table thead th {
+            position: sticky;
+            top: 0;
+            background: #ffffff;
+            z-index: 4;
             font-weight: 800;
-            margin-right: 0.35rem;
+            color: #0f172a;
+            border-bottom: 2px solid #e4e4e7;
+        }
+
+        .pricing-compare-table thead th.col-feature {
+            width: 32%;
+            background: #fafafa;
+        }
+
+        .pricing-compare-table thead th.col-plan {
+            width: 17%;
+            text-align: center;
+        }
+
+        .pricing-compare-table thead th.col-plan.featured-col {
+            background: #fafafa;
+            border-top: 3.5px solid #18181b;
+        }
+
+        .pricing-compare-table tbody td.plan-val {
+            text-align: center;
+            color: #18181b;
+        }
+
+        .pricing-compare-table tbody td.featured-cell {
+            background: #fafafa;
+            font-weight: 600;
+        }
+
+        .pricing-compare-table tbody tr:hover:not(.section-row) {
+            background: #f8fafc;
+        }
+
+        .pricing-compare-table tbody tr:hover:not(.section-row) td.featured-cell {
+            background: #f4f4f5;
+        }
+
+        .pricing-compare-table .feature-title {
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .pricing-compare-table .support-note {
+            display: block;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: #71717a;
+            margin-top: 0.25rem;
+        }
+
+        .pricing-compare-table .section-row td {
+            background: #f4f4f5;
+            font-weight: 800;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: #27272a;
+            padding: 0.75rem 1.25rem;
+            border-top: 1px solid #e4e4e7;
+            border-bottom: 1px solid #e4e4e7;
+        }
+
+        .compare-val-highlight {
+            font-weight: 800;
+            color: #09090b;
+            font-size: 0.98rem;
+        }
+
+        /* Pure Monochrome Grey & Black Outline Badges & Icons */
+        .feature-icon-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #f4f4f5;
+            border: 1.5px solid #d4d4d8;
+            color: #18181b;
+            flex-shrink: 0;
+        }
+
+        .feature-icon-box svg {
+            stroke: #18181b !important;
+        }
+
+        .plan-check-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.28rem 0.75rem;
+            border-radius: 999px;
+            background: #ffffff;
+            border: 1.5px solid #d4d4d8;
+            color: #09090b;
+            font-weight: 700;
+            font-size: 0.84rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: all 0.15s ease;
+        }
+
+        .plan-check-badge:hover {
+            background: #f4f4f5;
+            border-color: #18181b;
+        }
+
+        .check-svg-circle {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            color: #18181b;
+            stroke: #18181b;
+        }
+
+        .plan-dash-dim {
+            color: #a1a1aa;
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+
+        .compare-eyebrow-badge {
+            display: inline-block;
+            font-size: 0.74rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #52525b;
+            background: #f4f4f5;
+            border: 1.5px solid #d4d4d8;
+            padding: 0.28rem 0.85rem;
+            border-radius: 999px;
+            margin-bottom: 0.65rem;
+        }
+
+        .table-scroll-hint {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #52525b;
+            margin-bottom: 0.75rem;
+            padding: 0.45rem 0.85rem;
+            background: #fafafa;
+            border: 1.5px solid #e4e4e7;
+            border-radius: 12px;
+        }
+
+        .mobile-quick-nav-pills {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .mobile-quick-nav-pills::-webkit-scrollbar {
+            display: none;
+        }
+
+        .plan-nav-pill-btn {
+            padding: 0.25rem 0.65rem;
+            font-size: 0.74rem;
+            font-weight: 700;
+            border-radius: 999px;
+            border: 1.5px solid #d4d4d8;
+            background: #ffffff;
+            color: #18181b;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s ease;
+        }
+
+        .plan-nav-pill-btn:hover,
+        .plan-nav-pill-btn.active {
+            background: #18181b;
+            color: #ffffff;
+            border-color: #18181b;
+        }
+
+        /* 3-Line Mobile Navigation Toggle Button & Full Overlay Top-Order Drawer */
+        .mobile-nav-toggle-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1.5px solid #d4d4d8;
+            color: #18181b;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+            padding: 0;
+        }
+
+        .mobile-nav-toggle-btn:hover {
+            background: #f4f4f5;
+            border-color: #18181b;
+        }
+
+        /* Top-Order Full Viewport Drawer (Hostinger/Modern Enterprise Style) */
+        .mobile-nav-drawer {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            z-index: 100050;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(-8px);
+            transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s ease;
+        }
+
+        .mobile-nav-drawer.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .mobile-drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e4e4e7;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+
+        .mobile-drawer-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            text-decoration: none;
+        }
+
+        .mobile-drawer-close-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #f4f4f5;
+            border: 1.5px solid #d4d4d8;
+            color: #18181b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.15s ease;
+        }
+
+        .mobile-drawer-close-btn:hover {
+            background: #e4e4e7;
+            border-color: #18181b;
+        }
+
+        .mobile-drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 1rem 1.25rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .mobile-drawer-group-title {
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #71717a;
+            margin: 0.5rem 0 0.5rem 0.25rem;
+        }
+
+        .mobile-drawer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.15rem;
+            border-radius: 14px;
+            border: 1.5px solid #e4e4e7;
+            background: #ffffff;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+
+        .mobile-drawer-item:hover {
+            background: #f4f4f5;
+            border-color: #18181b;
+        }
+
+        .mobile-drawer-item.active {
+            background: #fafafa;
+            border-color: #18181b;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        .mobile-drawer-item-left {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .mobile-drawer-item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #f4f4f5;
+            border: 1.5px solid #d4d4d8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .mobile-drawer-item.active .mobile-drawer-item-icon {
+            background: #18181b;
+        }
+
+        .mobile-drawer-item.active .mobile-drawer-item-icon svg {
+            stroke: #ffffff !important;
+        }
+
+        .mobile-drawer-item-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .mobile-drawer-item-title {
+            font-size: 0.98rem;
+            font-weight: 800;
+            color: #09090b;
+        }
+
+        .mobile-drawer-item-sub {
+            font-size: 0.76rem;
+            font-weight: 500;
+            color: #71717a;
+        }
+
+        .mobile-drawer-item-arrow {
+            transition: transform 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .mobile-drawer-item:hover .mobile-drawer-item-arrow {
+            transform: translateX(3px);
+            stroke: #18181b;
+        }
+
+        .mobile-drawer-footer {
+            padding: 1.25rem;
+            border-top: 1px solid #e4e4e7;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 992px) {
+            .landing-header .nav-links {
+                display: none !important;
+            }
+            .mobile-nav-toggle-btn {
+                display: inline-flex !important;
+            }
+            .landing-header .brand-tagline {
+                display: none !important;
+            }
+            #header-connected-ws-title {
+                display: none !important;
+            }
+            #header-btn-enter-connected {
+                padding: 0.35rem 0.45rem !important;
+                gap: 0 !important;
+            }
+            #header-btn-login {
+                padding: 0.42rem 0.85rem !important;
+                font-size: 0.82rem !important;
+            }
+            #header-btn-enter-ws span {
+                display: none !important;
+            }
+            #header-btn-enter-ws {
+                padding: 0.42rem 0.65rem !important;
+            }
+            #header-btn-create-ws span:not(#header-avatar-init-unconnected) {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 540px) {
+            .landing-header {
+                padding: 0 0.85rem !important;
+                gap: 0.4rem !important;
+            }
+            .landing-header .brand-name {
+                font-size: 1.05rem !important;
+            }
+        }
+
+        /* High Level Workspace Launcher Responsive Rules */
+        .launcher-btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1.25fr 1fr;
+            gap: 0.75rem;
+        }
+        @media (max-width: 768px) {
+            .workspace-found-card {
+                padding: 2rem 1.5rem 1.75rem !important;
+                border-radius: 20px !important;
+            }
+            .launcher-meta-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 1.25rem !important;
+            }
+            #launcher-banner-container {
+                display: none !important;
+            }
+        }
+        @media (max-width: 520px) {
+            .workspace-found-card {
+                padding: 1.75rem 1.15rem 1.5rem !important;
+            }
+            .launcher-meta-grid {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+            .launcher-btn-row {
+                gap: 0.5rem !important;
+            }
+            .launcher-btn-text {
+                display: none !important;
+            }
+            #launcher-back-home-btn,
+            #launcher-change-account-btn,
+            #launcher-logout-btn {
+                padding: 0.75rem 0.5rem !important;
+                justify-content: center !important;
+            }
+        }
+
+        /* Sticky Left Column on Mobile / Tablet */
+        @media (max-width: 960px) {
+            .table-scroll-hint {
+                display: flex;
+            }
+            .pricing-compare-table thead th.col-feature,
+            .pricing-compare-table tbody td:first-child {
+                position: sticky;
+                left: 0;
+                background: #ffffff;
+                z-index: 5;
+                box-shadow: 3px 0 8px -2px rgba(0, 0, 0, 0.06);
+            }
+            .pricing-compare-table thead th.col-feature {
+                background: #fafafa;
+                z-index: 6;
+            }
+            .pricing-compare-table tr.section-row td {
+                position: sticky;
+                left: 0;
+            }
         }
 
         /* Universal Smooth Outline & Stroke Protection (No harsh black strokes) */
@@ -2200,19 +2847,16 @@
 
 
 
-    <!-- Full Screen Loader -->
+    <!-- Full Screen Loader (Waits for Auth & Workspace Verification) -->
     <div id="app-loader" class="full-loader">
         <div class="spinner"></div>
         <p id="loader-text">Loading PriceLister...</p>
         <div id="loader-error"
             style="color:#ff4d4f;max-width:400px;margin-top:1rem;font-size:0.9rem;word-break:break-all;display:none;">
         </div>
-        <button id="index-loader-bypass-btn" type="button" style="display:none; margin-top:1.25rem; padding:0.6rem 1.4rem; font-size:0.85rem; font-weight:700; border-radius:999px; background:#18181b; color:#ffffff; border:1.5px solid #334155; cursor:pointer;">
-            Continue to PriceLister &rarr;
-        </button>
     </div>
 
-    <!-- Synchronous Emergency Watchdog for Landing Page -->
+    <!-- Synchronous Controller for Landing Page Loader -->
     <script>
         (function() {
             window.__dismissLandingLoader = function(reason) {
@@ -2224,25 +2868,14 @@
                 console.log("[PriceLister] Landing loader dismissed: " + (reason || 'unknown'));
             };
 
-            // If still loading after 1.2s, reveal continue button
-            setTimeout(function() {
-                var btn = document.getElementById('index-loader-bypass-btn');
-                var loader = document.getElementById('app-loader');
-                if (btn && loader && loader.style.display !== 'none') {
-                    btn.style.display = 'inline-block';
-                    btn.onclick = function() {
-                        window.__dismissLandingLoader('manual_bypass');
-                    };
-                }
-            }, 1000);
-
-            // Auto-dismiss failsafe: Maximum 1.6s wait so user is NEVER locked out
+            // Ultimate offline fallback: Only triggers after 15s if network completely hangs
             setTimeout(function() {
                 var loader = document.getElementById('app-loader');
                 if (loader && loader.style.display !== 'none') {
-                    window.__dismissLandingLoader('emergency_timeout');
+                    console.warn("[PriceLister] Extreme network timeout reached. Dismissing loader.");
+                    window.__dismissLandingLoader('network_timeout_failsafe');
                 }
-            }, 1600);
+            }, 15000);
         })();
     </script>
 
@@ -2333,8 +2966,124 @@
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                         </button>
                     </div>
+
+                    <!-- 4. Mobile 3-Line Hamburger Menu Toggle Button -->
+                    <button type="button" id="mobile-nav-toggle-btn" class="mobile-nav-toggle-btn" aria-label="Toggle Navigation Menu" aria-expanded="false">
+                        <svg class="hamburger-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.4" stroke-linecap="round">
+                            <line x1="4" y1="7" x2="20" y2="7"></line>
+                            <line x1="4" y1="12" x2="20" y2="12"></line>
+                            <line x1="4" y1="17" x2="20" y2="17"></line>
+                        </svg>
+                        <svg class="close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.4" stroke-linecap="round" style="display:none;">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
             </header>
+        </div>
+
+        <!-- FULL-SCREEN ENTERPRISE MOBILE NAVIGATION DRAWER (TOP ORDER) -->
+        <div id="mobile-nav-drawer" class="mobile-nav-drawer" style="display: none;" aria-hidden="true">
+            <!-- Drawer Top Bar -->
+            <div class="mobile-drawer-header">
+                <a href="/home" data-view="home" class="mobile-drawer-brand nav-link">
+                    <div class="brand-logo-glass">
+                        <img src="pricelister_org.png" alt="PriceLister" style="height:26px;width:auto;border-radius:5px;">
+                    </div>
+                    <div>
+                        <div class="brand-name" style="margin-bottom:0px; font-weight:800; font-size:1.18rem; letter-spacing:-0.02em; color:var(--primary);">PriceLister</div>
+                        <div class="brand-tagline" style="font-weight:600; color:#64748b; font-size:0.68rem;">Business Workspace</div>
+                    </div>
+                </a>
+                <button type="button" id="btn-close-mobile-nav" class="mobile-drawer-close-btn" aria-label="Close navigation menu">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.5" stroke-linecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Drawer Navigation Links -->
+            <div class="mobile-drawer-body">
+                <div class="mobile-drawer-nav-group">
+                    <div class="mobile-drawer-group-title">Menu Options</div>
+                    <a href="/home" data-view="home" class="mobile-drawer-item nav-link active">
+                        <div class="mobile-drawer-item-left">
+                            <span class="mobile-drawer-item-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            </span>
+                            <div class="mobile-drawer-item-text">
+                                <span class="mobile-drawer-item-title">Home</span>
+                                <span class="mobile-drawer-item-sub">Overview, Workflow &amp; Architecture</span>
+                            </div>
+                        </div>
+                        <svg class="mobile-drawer-item-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2.2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </a>
+
+                    <a href="/explore" data-view="explore" class="mobile-drawer-item nav-link">
+                        <div class="mobile-drawer-item-left">
+                            <span class="mobile-drawer-item-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                            </span>
+                            <div class="mobile-drawer-item-text">
+                                <span class="mobile-drawer-item-title">Features &amp; Workflow</span>
+                                <span class="mobile-drawer-item-sub">Catalog, Pricing, POS &amp; Storefront</span>
+                            </div>
+                        </div>
+                        <svg class="mobile-drawer-item-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2.2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </a>
+
+                    <a href="/pricing" data-view="pricing" class="mobile-drawer-item nav-link">
+                        <div class="mobile-drawer-item-left">
+                            <span class="mobile-drawer-item-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                            </span>
+                            <div class="mobile-drawer-item-text">
+                                <span class="mobile-drawer-item-title">Pricing &amp; Comparison</span>
+                                <span class="mobile-drawer-item-sub">Compare 4 subscription tiers</span>
+                            </div>
+                        </div>
+                        <svg class="mobile-drawer-item-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2.2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </a>
+
+                    <a href="/find" data-view="find" class="mobile-drawer-item nav-link">
+                        <div class="mobile-drawer-item-left">
+                            <span class="mobile-drawer-item-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            </span>
+                            <div class="mobile-drawer-item-text">
+                                <span class="mobile-drawer-item-title">Find Workspace</span>
+                                <span class="mobile-drawer-item-sub">Look up and access your company hub</span>
+                            </div>
+                        </div>
+                        <svg class="mobile-drawer-item-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2.2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Drawer Footer Actions -->
+            <div class="mobile-drawer-footer">
+                <div id="mobile-drawer-auth-logged-out" style="display:flex; flex-direction:column; gap:0.65rem;">
+                    <a href="login.html" class="btn" style="height:44px; display:flex; align-items:center; justify-content:center; font-weight:700; border-radius:12px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; text-decoration:none;">
+                        Login to Account
+                    </a>
+                    <button type="button" class="btn open-login-modal" style="height:44px; display:flex; align-items:center; justify-content:center; gap:0.4rem; font-weight:700; border-radius:12px; border:none; background:#18181b; color:#ffffff; cursor:pointer;">
+                        <span>Enter Workspace</span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                </div>
+
+                <div id="mobile-drawer-auth-connected" style="display:none; flex-direction:column; gap:0.65rem;">
+                    <a href="app.html" class="btn" style="height:44px; display:flex; align-items:center; justify-content:center; gap:0.55rem; font-weight:700; border-radius:12px; border:none; background:#18181b; color:#ffffff; text-decoration:none;">
+                        <span id="mobile-drawer-connected-title">Enter Workspace &rarr;</span>
+                    </a>
+                    <button type="button" id="mobile-drawer-logout-btn" class="btn" style="height:40px; display:flex; align-items:center; justify-content:center; gap:0.4rem; font-weight:700; border-radius:12px; border:1.5px solid #e4e4e7; background:#fafafa; color:#71717a; cursor:pointer;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span>Sign Out</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- ===================== VIEWS ===================== -->
@@ -4707,78 +5456,445 @@
 
             <!-- ========== PRICING VIEW ========== -->
             <section id="view-pricing" class="view">
-                <div class="section" style="padding: 4rem 5%;">
+                <div class="section pricing-view-section" style="padding: 4rem clamp(1rem, 3.5vw, 4rem); max-width: 1720px; margin: 0 auto; width: 100%; box-sizing: border-box;">
                     <div class="section-header">
                         <span
                             style="font-size:0.82rem; font-weight:800; text-transform:uppercase; color:#18181b; letter-spacing:0.08em; display:block; margin-bottom:0.4rem;">Transparent
                             Plans</span>
                         <h2 style="font-size:2.4rem; font-weight:800; color:#0f172a;">Simple, Transparent Pricing</h2>
-                        <p style="font-size:1.1rem; color:#64748b;">Choose the plan matching your business size. Upgrade
-                            or change anytime.</p>
+                        <p style="font-size:1.1rem; color:#64748b;">Choose the plan matching your business size. Upgrade or change anytime.</p>
+                        
+                        <!-- VIEW & COMPARE BUTTON -->
+                        <div style="margin-top: 1.5rem;">
+                            <button type="button" id="btn-open-compare-modal" class="btn-view-compare">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                                </svg>
+                                <span>View & Compare Plans</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="pricing-grid">
-                        <!-- Small Business -->
+                        <!-- 1. Basic Plan -->
                         <div class="pricing-card">
-                            <h3>Small Business</h3>
+                            <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0;">Basic</h3>
                             <div class="pricing-price">
-                                <span class="amount">$5</span>
+                                <span class="amount">$2.99</span>
                                 <span class="period">/month</span>
                             </div>
-                            <p class="pricing-desc">Perfect for single stores and boutique shops</p>
+                            <p class="pricing-desc" style="font-size: 0.88rem; color: #64748b; margin-bottom: 1.25rem;">For solo founders, freelancers & starter shops</p>
                             <ul class="pricing-features">
-                                <li>Up to <strong>3 Workers</strong></li>
-                                <li>Price Lister <strong>Pro</strong> access</li>
-                                <li><strong>15 GB</strong> cloud storage</li>
-                                <li>Product & Price List engine</li>
-                                <li>Customer & Invoice suite</li>
-                                <li>Role-based permissions</li>
-                                <li>Standard email support</li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>1 Member</strong> account</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>50 Products</strong> /month</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>50 Invoices</strong> /month</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>50 Barcodes</strong> /month</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>500 MB</strong> Cloud Storage</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Full Data Export (.xlsx, .pdf)</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Real-time Cloud Sync</span>
+                                </li>
                             </ul>
-                            <button class="btn btn-primary btn-block open-login-modal" type="button">Get
-                                Started</button>
+                            <button class="btn btn-primary btn-block open-login-modal" type="button" style="margin-top: auto; padding: 0.75rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #18181b; background: #ffffff; color: #18181b;">Get Started</button>
                         </div>
 
-                        <!-- Large Business (Featured) -->
+                        <!-- 2. Small Business -->
+                        <div class="pricing-card">
+                            <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0;">Small Business</h3>
+                            <div class="pricing-price">
+                                <span class="amount">$9.99</span>
+                                <span class="period">/month</span>
+                            </div>
+                            <p class="pricing-desc" style="font-size: 0.88rem; color: #64748b; margin-bottom: 1.25rem;">Perfect for single stores and boutique shops</p>
+                            <ul class="pricing-features">
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>5 Members</strong> included</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>200 Products</strong> /month</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>200 Invoices</strong> /month</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>500 Barcodes</strong> /month</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>10 GB</strong> Cloud Storage</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Price Lister Pro Access</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Role-Based Permissions</span>
+                                </li>
+                            </ul>
+                            <button class="btn btn-primary btn-block open-login-modal" type="button" style="margin-top: auto; padding: 0.75rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #18181b; background: #ffffff; color: #18181b;">Get Started</button>
+                        </div>
+
+                        <!-- 3. Large Business (Featured) -->
                         <div class="pricing-card featured">
                             <div class="pricing-badge">Recommended</div>
-                            <h3>Large Business</h3>
+                            <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0;">Large Business</h3>
                             <div class="pricing-price">
                                 <span class="amount">$39</span>
                                 <span class="period">/month</span>
                             </div>
-                            <p class="pricing-desc">For growing teams, distributors & multi-location stores</p>
+                            <p class="pricing-desc" style="font-size: 0.88rem; color: #64748b; margin-bottom: 1.25rem;">For growing teams, distributors & multi-location stores</p>
                             <ul class="pricing-features">
-                                <li>Up to <strong>12 Workers</strong></li>
-                                <li>Price Lister <strong>Pro</strong> access</li>
-                                <li><strong>150 GB</strong> high-speed storage</li>
-                                <li>Everything in Small Business</li>
-                                <li>Customer Web Portal & WhatsApp</li>
-                                <li>Dedicated PDF Invoice Designer</li>
-                                <li>Priority support & instant sync</li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>20 Members</strong> included</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>1,000 Products</strong> /month</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>1,000 Invoices</strong> /month</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>10,000 Barcodes</strong> /month</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>50 GB</strong> High-Speed Storage</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Customer Web Portal & WhatsApp</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Dedicated PDF Invoice Designer</span>
+                                </li>
                             </ul>
                             <button class="btn btn-primary btn-block open-login-modal" type="button"
-                                style="background:var(--primary-gradient);">Get Started</button>
+                                style="margin-top: auto; padding: 0.75rem; font-weight: 700; border-radius: 10px; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; box-shadow: 0 4px 14px rgba(0,0,0,0.18);">Get Started</button>
                         </div>
 
-                        <!-- Market Plan -->
+                        <!-- 4. Market Plan -->
                         <div class="pricing-card">
-                            <h3>Market Plan</h3>
+                            <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0;">Market Plan</h3>
                             <div class="pricing-price">
                                 <span class="amount">$99</span>
                                 <span class="period">/month</span>
                             </div>
-                            <p class="pricing-desc">For large wholesale markets & corporate distributors</p>
+                            <p class="pricing-desc" style="font-size: 0.88rem; color: #64748b; margin-bottom: 1.25rem;">For large wholesale markets & corporate distributors</p>
                             <ul class="pricing-features">
-                                <li>Up to <strong>50+ Workers</strong></li>
-                                <li>Price Lister <strong>Pro + Market</strong></li>
-                                <li>High-capacity custom storage</li>
-                                <li>Dedicated Success Manager</li>
-                                <li>Custom branding & SLA</li>
-                                <li>Everything in Large Business</li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>Up to 50+</strong> Members <span style="font-size:0.75rem; color:#64748b; font-weight:600;">(Scalable)</span></span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>Unlimited</strong> Products <span style="font-size:0.75rem; color:#64748b; font-weight:600;">(10k base)</span></span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>Unlimited</strong> Invoices <span style="font-size:0.75rem; color:#64748b; font-weight:600;">(10k base)</span></span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>Unlimited</strong> Barcodes</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span><strong>Scalable Storage</strong> <span style="font-size:0.75rem; color:#64748b; font-weight:600;">(100gb base)</span></span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Price Lister Pro + Market</span>
+                                </li>
+                                <li>
+                                    <svg class="feature-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Custom Branding, SLA & Manager</span>
+                                </li>
                             </ul>
-                            <button class="btn btn-primary btn-block open-login-modal" type="button">Contact
-                                Sales</button>
+                            <button class="btn btn-primary btn-block open-login-modal" type="button" style="margin-top: auto; padding: 0.75rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #18181b; background: #ffffff; color: #18181b;">Contact Sales</button>
+                        </div>
+                    </div>
+
+                    <!-- DETAILED IN-PAGE COMPARISON TABLE -->
+                    <div class="pricing-compare-section">
+                        <div style="text-align: center; margin-bottom: 2.25rem;">
+                            <span class="compare-eyebrow-badge">Plan Breakdown</span>
+                            <h3 style="font-size: clamp(1.8rem, 2.5vw, 2.2rem); font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0;">Detailed Plan Comparison</h3>
+                            <p style="font-size: 1rem; color: #64748b; margin: 0; max-width: 680px; margin: 0 auto;">Comprehensive side-by-side feature comparison across all 4 PriceLister plans.</p>
+                        </div>
+
+                        <div class="table-scroll-hint">
+                            <div style="display:flex; align-items:center; gap:0.45rem;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                                <span>Compare plans horizontally</span>
+                            </div>
+                            <div class="mobile-quick-nav-pills" id="inpage-plan-pills">
+                                <button type="button" class="plan-nav-pill-btn active" data-plan-target="0">Basic</button>
+                                <button type="button" class="plan-nav-pill-btn" data-plan-target="1">Small ($9.99)</button>
+                                <button type="button" class="plan-nav-pill-btn" data-plan-target="2">Large ($39)</button>
+                                <button type="button" class="plan-nav-pill-btn" data-plan-target="3">Market ($99)</button>
+                            </div>
+                        </div>
+
+                        <div class="pricing-compare-card">
+                            <div class="compare-table-wrapper" id="inpage-compare-wrapper">
+                                <table class="pricing-compare-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="col-feature" style="padding: 1.35rem 1.75rem; background: #fafafa;">Feature / Metric</th>
+                                            <th class="col-plan" style="padding: 1.35rem 1rem;">
+                                                <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">Basic</div>
+                                                <div style="font-size: 0.95rem; font-weight: 700; color: #64748b; margin-top: 2px;">$2.99<span style="font-size: 0.75rem; font-weight: 500;">/mo</span></div>
+                                            </th>
+                                            <th class="col-plan" style="padding: 1.35rem 1rem;">
+                                                <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">Small Business</div>
+                                                <div style="font-size: 0.95rem; font-weight: 700; color: #64748b; margin-top: 2px;">$9.99<span style="font-size: 0.75rem; font-weight: 500;">/mo</span></div>
+                                            </th>
+                                            <th class="col-plan featured-col" style="padding: 1.35rem 1rem;">
+                                                <div style="display: inline-block; background: #18181b; color: #fff; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; margin-bottom: 4px; letter-spacing: 0.06em;">Recommended</div>
+                                                <div style="font-size: 1.2rem; font-weight: 800; color: #0f172a;">Large Business</div>
+                                                <div style="font-size: 0.95rem; font-weight: 700; color: #18181b; margin-top: 2px;">$39<span style="font-size: 0.75rem; font-weight: 500;">/mo</span></div>
+                                            </th>
+                                            <th class="col-plan" style="padding: 1.35rem 1rem;">
+                                                <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">Market Plan</div>
+                                                <div style="font-size: 0.95rem; font-weight: 700; color: #64748b; margin-top: 2px;">$99<span style="font-size: 0.75rem; font-weight: 500;">/mo</span></div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Section: Core Capacity & Limits -->
+                                        <tr class="section-row">
+                                            <td colspan="5">Core Capacity & Usage Limits</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-left: 1.75rem;">
+                                                <span class="feature-title">
+                                                    <span class="feature-icon-box">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                                    </span>
+                                                    Workspace Members
+                                                </span>
+                                                <span class="support-note">Total team seats & collaborators</span>
+                                            </td>
+                                            <td class="plan-val"><span class="compare-val-highlight">1</span></td>
+                                            <td class="plan-val"><span class="compare-val-highlight">5</span></td>
+                                            <td class="plan-val featured-cell"><span class="compare-val-highlight">20</span></td>
+                                            <td class="plan-val">
+                                                <span class="compare-val-highlight">Up to 50+</span>
+                                                <span class="support-note" style="color: #71717a; font-weight: 600;">Scaleable When Required</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-left: 1.75rem;">
+                                                <span class="feature-title">
+                                                    <span class="feature-icon-box">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                                                    </span>
+                                                    Products
+                                                </span>
+                                                <span class="support-note">Active product listings & variations</span>
+                                            </td>
+                                            <td class="plan-val"><span class="compare-val-highlight">50</span> /month</td>
+                                            <td class="plan-val"><span class="compare-val-highlight">200</span> /month</td>
+                                            <td class="plan-val featured-cell"><span class="compare-val-highlight">1,000</span> /month</td>
+                                            <td class="plan-val">
+                                                <span class="compare-val-highlight" style="color: #09090b; font-weight: 800;">Unlimited</span>
+                                                <span class="support-note">Base Limit 10k/m</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-left: 1.75rem;">
+                                                <span class="feature-title">
+                                                    <span class="feature-icon-box">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                                    </span>
+                                                    Invoices
+                                                </span>
+                                                <span class="support-note">Customer & supplier sales bills generated</span>
+                                            </td>
+                                            <td class="plan-val"><span class="compare-val-highlight">50</span> /month</td>
+                                            <td class="plan-val"><span class="compare-val-highlight">200</span> /month</td>
+                                            <td class="plan-val featured-cell"><span class="compare-val-highlight">1,000</span> /month</td>
+                                            <td class="plan-val">
+                                                <span class="compare-val-highlight" style="color: #09090b; font-weight: 800;">Unlimited</span>
+                                                <span class="support-note">Base Limit 10k/m</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-left: 1.75rem;">
+                                                <span class="feature-title">
+                                                    <span class="feature-icon-box">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><line x1="3" y1="4" x2="3" y2="20"></line><line x1="7" y1="4" x2="7" y2="20"></line><line x1="11" y1="4" x2="11" y2="20"></line><line x1="15" y1="4" x2="15" y2="20"></line><line x1="19" y1="4" x2="19" y2="20"></line><line x1="21" y1="4" x2="21" y2="20"></line></svg>
+                                                    </span>
+                                                    Barcode & QR Code Generation
+                                                </span>
+                                                <span class="support-note">Code-128, EAN-13 & QR label batches</span>
+                                            </td>
+                                            <td class="plan-val"><span class="compare-val-highlight">50</span> /month</td>
+                                            <td class="plan-val"><span class="compare-val-highlight">500</span> /month</td>
+                                            <td class="plan-val featured-cell"><span class="compare-val-highlight">10,000</span> /month</td>
+                                            <td class="plan-val">
+                                                <span class="compare-val-highlight" style="color: #09090b; font-weight: 800;">Unlimited</span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-left: 1.75rem;">
+                                                <span class="feature-title">
+                                                    <span class="feature-icon-box">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                                    </span>
+                                                    Cloud Storage
+                                                </span>
+                                                <span class="support-note">Product images, PDF records & database</span>
+                                            </td>
+                                            <td class="plan-val"><span class="compare-val-highlight">500 MB</span></td>
+                                            <td class="plan-val"><span class="compare-val-highlight">10 GB</span></td>
+                                            <td class="plan-val featured-cell"><span class="compare-val-highlight">50 GB</span></td>
+                                            <td class="plan-val">
+                                                <span class="compare-val-highlight" style="color: #09090b; font-weight: 800;">Scalable</span>
+                                                <span class="support-note">Based Monthly Limit 100gb/m</span>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Section: Feature Inclusions -->
+                                        <tr class="section-row">
+                                            <td colspan="5">Features, Automation & Intelligence</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-left: 1.75rem;">
+                                                <span class="feature-title">Price Lister Pro Engine</span>
+                                                <span class="support-note">Multi-currency & bulk price modifier</span>
+                                            </td>
+                                            <td class="plan-val"><span style="color:#71717a; font-weight:600;">Basic View</span></td>
+                                            <td class="plan-val">
+                                                <span class="plan-check-badge">
+                                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Full</span>
+                                                </span>
+                                            </td>
+                                            <td class="plan-val featured-cell">
+                                                <span class="plan-check-badge">
+                                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Full</span>
+                                                </span>
+                                            </td>
+                                            <td class="plan-val">
+                                                <span class="plan-check-badge">
+                                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Pro + Market</span>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-left: 1.75rem;">
+                                                <span class="feature-title">Customer Storefront & Web Portal</span>
+                                                <span class="support-note">Live public link & direct WhatsApp order sharing</span>
+                                            </td>
+                                            <td class="plan-val"><span class="plan-dash-dim">—</span></td>
+                                            <td class="plan-val">
+                                                <span class="plan-check-badge">
+                                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Standard</span>
+                                                </span>
+                                            </td>
+                                            <td class="plan-val featured-cell">
+                                                <span class="plan-check-badge">
+                                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Advanced</span>
+                                                </span>
+                                            </td>
+                                            <td class="plan-val">
+                                                <span class="plan-check-badge">
+                                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Custom Domain & SLA</span>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-left: 1.75rem;">
+                                                <span class="feature-title">Role-Based Access Control</span>
+                                                <span class="support-note">Admin, Co-Admin, Manager, Worker, Visitor permissions</span>
+                                            </td>
+                                            <td class="plan-val"><span style="color:#71717a; font-weight:600;">Owner Only</span></td>
+                                            <td class="plan-val">
+                                                <span class="plan-check-badge">
+                                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Included</span>
+                                                </span>
+                                            </td>
+                                            <td class="plan-val featured-cell">
+                                                <span class="plan-check-badge">
+                                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Full Matrix</span>
+                                                </span>
+                                            </td>
+                                            <td class="plan-val">
+                                                <span class="plan-check-badge">
+                                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Granular Audit Trail</span>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding-left: 1.75rem;">
+                                                <span class="feature-title">Support & Service Level</span>
+                                                <span class="support-note">Response speed & account management</span>
+                                            </td>
+                                            <td class="plan-val"><span style="font-weight:600; color:#52525b;">Community</span></td>
+                                            <td class="plan-val"><span style="font-weight:600; color:#52525b;">Standard Email</span></td>
+                                            <td class="plan-val featured-cell"><span style="font-weight:700; color:#18181b;">Priority 24/7</span></td>
+                                            <td class="plan-val"><span style="font-weight:700; color:#18181b;">Dedicated Success Manager</span></td>
+                                        </tr>
+                                        <tr style="background: #fafafa;">
+                                            <td style="padding: 1.35rem 1.75rem;">
+                                                <span style="font-weight: 800; color: #0f172a;">Action</span>
+                                            </td>
+                                            <td class="plan-val" style="padding: 1.25rem 0.75rem;">
+                                                <button class="btn btn-primary open-login-modal" type="button" style="width: 100%; padding: 0.6rem; font-size: 0.88rem; font-weight: 700; border-radius: 9px; border: 1.5px solid #18181b; background: #ffffff; color: #18181b;">Select Basic</button>
+                                            </td>
+                                            <td class="plan-val" style="padding: 1.25rem 0.75rem;">
+                                                <button class="btn btn-primary open-login-modal" type="button" style="width: 100%; padding: 0.6rem; font-size: 0.88rem; font-weight: 700; border-radius: 9px; border: 1.5px solid #18181b; background: #ffffff; color: #18181b;">Select Small</button>
+                                            </td>
+                                            <td class="plan-val featured-cell" style="padding: 1.25rem 0.75rem;">
+                                                <button class="btn btn-primary open-login-modal" type="button" style="width: 100%; padding: 0.6rem; font-size: 0.88rem; font-weight: 700; border-radius: 9px; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">Get Large</button>
+                                            </td>
+                                            <td class="plan-val" style="padding: 1.25rem 0.75rem;">
+                                                <button class="btn btn-primary open-login-modal" type="button" style="width: 100%; padding: 0.6rem; font-size: 0.88rem; font-weight: 700; border-radius: 9px; border: 1.5px solid #18181b; background: #ffffff; color: #18181b;">Contact Sales</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
@@ -5033,174 +6149,247 @@
 
         
             <!-- CONNECTION GATEWAY (ALONE PANEL: WORKSPACE FOUND OR CREATE WORKSPACE) -->
-            <section id="view-connection" class="view alone-connection-view">
-                <!-- WORKSPACE LAUNCHER (WORKSPACE FOUND GATEWAY) -->
-    <div id="workspace-launcher-container" style="display:none; padding: 2rem 1.25rem; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 20%, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.01) 50%, #f4f4f5 100%);">
-        <div class="workspace-found-card" style="width: 100%; max-width: 480px; margin: auto; background: #ffffff; border-radius: 24px; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06); border: 1.5px solid #f1f5f9; overflow: hidden; position: relative; animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1); padding: 2rem 1.85rem;">
+            <section id="view-connection" class="view alone-connection-view" style="background: #f4f4f5; min-height: 100vh;">
+                <!-- DEDICATED VERIFICATION LOADING INDICATOR (CLEAN SPINNER, ABSOLUTELY NO BUTTON) -->
+                <div id="connection-loading-indicator" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; box-sizing: border-box; text-align: center;">
+                    <div style="width: 42px; height: 42px; border: 3.5px solid #d4d4d8; border-top-color: #18181b; border-radius: 50%; animation: spin 0.75s linear infinite;"></div>
+                    <div style="margin-top: 1.25rem; font-size: 1.05rem; font-weight: 700; color: #18181b; letter-spacing: -0.01em;">Loading PriceLister...</div>
+                    <div style="margin-top: 0.35rem; font-size: 0.84rem; font-weight: 500; color: #71717a;">Verifying workspace connection &amp; organizational permissions</div>
+                </div>
 
-            <!-- Header Titles -->
-            <div style="text-align: center; margin-bottom: 1.75rem;">
-                <h1 style="color: #0f172a; font-size: 1.85rem; font-weight: 800; margin: 0 0 0.4rem 0; letter-spacing: -0.025em;">
-                    Workspace Found
-                </h1>
-                <p style="margin: 0; color: #64748b; font-size: 0.95rem; font-weight: 500;">
-                    Ready to manage your business.
-                </p>
-            </div>
+                <!-- WORKSPACE LAUNCHER (HIGH-LEVEL HIGH-FIDELITY WORKSPACE FOUND GATEWAY) -->
+                <div id="workspace-launcher-container" style="display:none; padding: 3rem 1.25rem; min-height: 100vh; align-items: center; justify-content: center; background: #f4f4f5; box-sizing: border-box;">
+                    <div class="workspace-found-card" style="width: 100%; max-width: 860px; margin: auto; background: #ffffff; border-radius: 28px; box-shadow: 0 25px 65px -15px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.03); border: 1.5px solid #e4e4e7; overflow: hidden; position: relative; animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1); padding: 2.75rem 2.75rem 2.25rem; box-sizing: border-box;">
 
-            <!-- Inner Organization Details Card -->
-            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 18px; padding: 1.25rem 1.35rem; margin-bottom: 1.5rem;">
-                
-                <!-- Workspace Logo & Name Row -->
-                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.15rem;">
-                    <div id="launcher-logo-container" style="width: 54px; height: 54px; border-radius: 14px; background: #ffffff; border: 2px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
-                        <img id="launcher-workspace-logo" src="pricelister_org.png" alt="Workspace Logo" style="width: 100%; height: 100%; object-fit: contain; padding: 3px;">
-                        <div id="launcher-workspace-logo-fallback" style="display:none; width: 100%; height: 100%; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff; font-size: 1.45rem; font-weight: 800; align-items: center; justify-content: center;">W</div>
-                    </div>
-                    <div style="overflow: hidden; flex: 1;">
-                        <h2 id="launcher-workspace-name" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Loading Workspace...</h2>
-                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem;">
-                            <span style="font-size: 0.74rem; font-weight: 700; color: #64748b; text-transform: uppercase;">ID:</span>
-                            <code id="launcher-workspace-id" style="font-family: monospace; font-size: 0.8rem; font-weight: 700; color: #334155;">...</code>
-                            <button type="button" id="launcher-copy-id-btn" title="Copy Workspace ID" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; padding: 2px; display: inline-flex; align-items: center; transition: color 0.15s ease;">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <!-- Top Round Logo: Logged-in Account Logo with Verified Badge -->
+                        <div style="position: relative; width: 76px; height: 76px; margin: 0 auto 1.35rem; display: flex; align-items: center; justify-content: center;">
+                            <div id="launcher-top-avatar-box" style="width: 76px; height: 76px; border-radius: 50%; background: #ffffff; border: 3px solid #ffffff; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 0 0 1.5px #e4e4e7; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                <img id="launcher-top-account-photo" src="" alt="Account Photo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: none;">
+                                <div id="launcher-top-account-initial" style="width: 100%; height: 100%; background: #18181b; color: #ffffff; font-size: 1.8rem; font-weight: 800; display: flex; align-items: center; justify-content: center;">P</div>
+                            </div>
+                            <!-- Green Check Badge at bottom right (4 o'clock position) -->
+                            <div style="position: absolute; bottom: 0px; right: 0px; width: 24px; height: 24px; border-radius: 50%; background: #10b981; border: 2.5px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(16,185,129,0.35);">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Header Titles -->
+                        <div style="text-align: center; margin-bottom: 1.85rem;">
+                            <h1 style="color: #09090b; font-size: 2rem; font-weight: 800; margin: 0 0 0.35rem 0; letter-spacing: -0.03em;">
+                                Workspace Found
+                            </h1>
+                            <p style="margin: 0; color: #71717a; font-size: 0.98rem; font-weight: 500;">
+                                Ready to manage your business.
+                            </p>
+                        </div>
+
+                        <!-- Inner Organization Details Card (with Default Architectural Illustration Instead of Black Banner) -->
+                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 1.35rem 1.75rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; position: relative; overflow: hidden;">
+                            
+                            <!-- Workspace Identity: Logo, Name, Tagline & ID -->
+                            <div style="display: flex; align-items: center; gap: 1.15rem; min-width: 0; flex: 1;">
+                                <div id="launcher-logo-container" style="width: 62px; height: 62px; border-radius: 16px; background: #18181b; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 14px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                    <img id="launcher-workspace-logo" src="pricelister_org.png" alt="Workspace Logo" style="width: 100%; height: 100%; object-fit: contain; padding: 4px;">
+                                    <div id="launcher-workspace-logo-fallback" style="display:none; width: 100%; height: 100%; background: #18181b; color: #ffffff; font-size: 1.6rem; font-weight: 800; align-items: center; justify-content: center;">P</div>
+                                </div>
+                                <div style="min-width: 0; flex: 1;">
+                                    <h2 id="launcher-workspace-name" style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #09090b; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">PriceLister Demo Enterprise</h2>
+                                    <div id="launcher-workspace-tagline" style="color: #71717a; font-size: 0.88rem; font-weight: 500; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Professional product management workspace</div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.65rem;">
+                                        <span style="font-size: 0.78rem; font-weight: 600; color: #71717a;">Workspace ID:</span>
+                                        <span style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.2rem 0.65rem; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                            <code id="launcher-workspace-id" style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: #1e293b;">DEMO-SANDBOX-01</code>
+                                            <button type="button" id="launcher-copy-id-btn" title="Copy Workspace ID" style="background: transparent; border: none; cursor: pointer; color: #71717a; padding: 0; display: inline-flex; align-items: center; transition: color 0.15s ease;">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Side: Default Architectural Vector Illustration (Replacing Black Banner) -->
+                            <div id="launcher-banner-container" style="position: relative; flex-shrink: 0; width: 190px; height: 105px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden;">
+                                <svg id="launcher-default-banner-svg" width="190" height="105" viewBox="0 0 200 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <!-- Ground Horizon -->
+                                    <path d="M0 98h200v12H0z" fill="#f1f5f9"/>
+                                    <line x1="0" y1="98" x2="200" y2="98" stroke="#e2e8f0" stroke-width="1.5"/>
+                                    <!-- Soft Trees Left & Right -->
+                                    <ellipse cx="22" cy="85" rx="10" ry="14" fill="#cbd5e1" opacity="0.6"/>
+                                    <line x1="22" y1="85" x2="22" y2="98" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <ellipse cx="38" cy="88" rx="8" ry="11" fill="#e2e8f0"/>
+                                    <ellipse cx="178" cy="86" rx="11" ry="13" fill="#cbd5e1" opacity="0.7"/>
+                                    <line x1="178" y1="86" x2="178" y2="98" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <ellipse cx="162" cy="89" rx="8" ry="10" fill="#e2e8f0"/>
+                                    <!-- Back Building Wing -->
+                                    <path d="M48 62h32v36H48z" fill="#cbd5e1"/>
+                                    <path d="M80 62l14-6v42H80z" fill="#94a3b8"/>
+                                    <rect x="53" y="67" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="62" y="67" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="71" y="67" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="53" y="76" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="62" y="76" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="71" y="76" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <!-- Main Tower Front Facet -->
+                                    <path d="M94 38h46v60H94z" fill="#e2e8f0"/>
+                                    <!-- Tower Perspective Side -->
+                                    <path d="M140 38l22-12v72h-22z" fill="#cbd5e1"/>
+                                    <!-- Tower Roof -->
+                                    <path d="M94 38l22-12h24l-22 12z" fill="#94a3b8"/>
+                                    <path d="M118 26l22-6 22 6-22 12z" fill="#cbd5e1" opacity="0.5"/>
+                                    <!-- Windows Grid on Main Tower -->
+                                    <rect x="100" y="44" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="113" y="44" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="126" y="44" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="100" y="54" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="113" y="54" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="126" y="54" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="100" y="64" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="113" y="64" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="126" y="64" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="100" y="74" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="113" y="74" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <rect x="126" y="74" width="7" height="6" rx="1" fill="#ffffff"/>
+                                    <!-- Entrance Doorway -->
+                                    <rect x="108" y="86" width="16" height="12" rx="1.5" fill="#18181b"/>
+                                    <line x1="116" y1="86" x2="116" y2="98" stroke="#ffffff" stroke-width="1"/>
+                                    <!-- Perspective Windows -->
+                                    <polygon points="146,45 156,39 156,45 146,51" fill="#94a3b8" opacity="0.6"/>
+                                    <polygon points="146,55 156,49 156,55 146,61" fill="#94a3b8" opacity="0.6"/>
+                                    <polygon points="146,65 156,59 156,65 146,71" fill="#94a3b8" opacity="0.6"/>
+                                    <polygon points="146,75 156,69 156,75 146,81" fill="#94a3b8" opacity="0.6"/>
+                                </svg>
+                                <img id="launcher-custom-banner-img" src="" alt="Workspace Banner" style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:12px;">
+                            </div>
+                        </div>
+
+                        <!-- 5 Horizontal Columns Metadata Grid -->
+                        <div class="launcher-meta-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.85rem; padding: 1.15rem 0.25rem; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+                            
+                            <!-- Col 1: Administrator -->
+                            <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #71717a;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    <span style="font-size: 0.76rem; font-weight: 600;">Administrator</span>
+                                </div>
+                                <div id="launcher-admin-email-text" style="font-weight: 800; color: #09090b; font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">developer@local.test</div>
+                            </div>
+
+                            <!-- Col 2: Access Account -->
+                            <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #71717a;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                    <span style="font-size: 0.76rem; font-weight: 600;">Access Account</span>
+                                </div>
+                                <div id="launcher-account-email" style="font-weight: 800; color: #09090b; font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">developer@local.test</div>
+                            </div>
+
+                            <!-- Col 3: Access Role -->
+                            <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #71717a;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                    <span style="font-size: 0.76rem; font-weight: 600;">Access Role</span>
+                                </div>
+                                <div>
+                                    <span id="launcher-user-role" class="badge-role badge-role-admin" style="font-size: 0.76rem; padding: 0.2rem 0.65rem; border-radius: 999px; font-weight: 700; background: #f4f4f5; color: #18181b; border: 1px solid #d4d4d8; display: inline-block;">Administrator</span>
+                                </div>
+                            </div>
+
+                            <!-- Col 4: Since Joined -->
+                            <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #71717a;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <span style="font-size: 0.76rem; font-weight: 600;">Since Joined</span>
+                                </div>
+                                <div id="launcher-joined-date" style="font-weight: 800; color: #09090b; font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Recently</div>
+                            </div>
+
+                            <!-- Col 5: Members -->
+                            <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #71717a;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                    <span style="font-size: 0.76rem; font-weight: 600;">Members</span>
+                                </div>
+                                <div id="launcher-workspace-size" style="font-weight: 800; color: #09090b; font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">1 Member</div>
+                            </div>
+
+                        </div>
+
+                        <!-- Primary Enter Workspace CTA Button (Boxy 4dp Outlined Monochrome with Login Icon) -->
+                        <button type="button" id="launcher-enter-btn" class="btn btn-block" style="width: 100%; font-size: 0.98rem; padding: 0.85rem 1.5rem; border-radius: 4px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.55rem; background: #ffffff; color: #18181b; border: 1.5px solid #18181b; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1); letter-spacing: 0.02em; margin-bottom: 0.85rem;">
+                             <span>Enter Workspace</span>
+                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                        </button>
+
+                        <!-- Secondary Options: [Back Home] [Change Account] [Logout] -->
+                        <div class="launcher-btn-row">
+                            <button type="button" id="launcher-back-home-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.75rem 0.85rem; font-size: 0.86rem; font-weight: 700; border-radius: 12px; border: 1.5px solid #d4d4d8; background: #ffffff; color: #18181b; cursor: pointer; transition: all 0.15s ease;" title="Back to Landing Home">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2" style="flex-shrink: 0;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                <span class="launcher-btn-text">Back Home</span>
+                            </button>
+
+                            <button type="button" id="launcher-change-account-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.75rem 0.85rem; font-size: 0.86rem; font-weight: 700; border-radius: 12px; border: 1.5px solid #d4d4d8; background: #ffffff; color: #18181b; cursor: pointer; transition: all 0.15s ease;" title="Change Account">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2" style="flex-shrink: 0;">
+                                    <polyline points="17 1 21 5 17 9"></polyline>
+                                    <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                                    <polyline points="7 23 3 19 7 15"></polyline>
+                                    <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                                </svg>
+                                <span class="launcher-btn-text">Change Account</span>
+                            </button>
+
+                            <button type="button" id="launcher-logout-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.45rem; padding: 0.75rem 0.85rem; font-size: 0.86rem; font-weight: 700; border-radius: 12px; border: 1.5px solid #fecdd3; background: #ffffff; color: #dc2626; cursor: pointer; transition: all 0.15s ease;" title="Sign out">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2" style="flex-shrink: 0;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                                <span class="launcher-btn-text">Logout</span>
                             </button>
                         </div>
+
                     </div>
                 </div>
-
-                <!-- Clean Divider -->
-                <div style="height: 1px; background: #e2e8f0; margin-bottom: 1.1rem;"></div>
-
-                <!-- Key-Value Rows Grid -->
-                <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.88rem;">
-                    
-                    <!-- Row 1: Access Account -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
-                        <span style="color: #64748b; font-weight: 600; font-size: 0.85rem;">Access Account:</span>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden; max-width: 65%;">
-                            <img id="launcher-photo" class="user-picture" style="width: 24px; height: 24px; min-width: 24px; border-radius: 50%; object-fit: cover; display: none;" alt="User">
-                            <div id="launcher-avatar" style="width: 24px; height: 24px; min-width: 24px; border-radius: 50%; background: #18181b; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">?</div>
-                            <span id="launcher-account-email" style="font-weight: 700; color: #0f172a; font-size: 0.86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">user@example.com</span>
-                        </div>
-                    </div>
-
-                    <!-- Row 2: Access Role -->
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #64748b; font-weight: 600; font-size: 0.85rem;">Access Role:</span>
-                        <span id="launcher-user-role" class="badge-role badge-role-admin" style="font-size: 0.78rem; padding: 0.25rem 0.75rem; border-radius: 999px; font-weight: 700; background: rgba(24, 24, 27, 0.04); color: #18181b; border: 1.5px solid #d4d4d8; box-shadow: none;">Administrator</span>
-                    </div>
-
-                    <!-- Row 3: Since Joined -->
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #64748b; font-weight: 600; font-size: 0.85rem;">Since Joined:</span>
-                        <span id="launcher-joined-date" style="font-weight: 700; color: #0f172a; font-size: 0.86rem;">...</span>
-                    </div>
-
-                    <!-- Row 4: Workspace Size -->
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #64748b; font-weight: 600; font-size: 0.85rem;">Workspace Size:</span>
-                        <span id="launcher-workspace-size" style="font-weight: 700; color: #0f172a; font-size: 0.86rem;">1 Member</span>
-                    </div>
-
-                </div>
-
-            </div>
-
-            <!-- Primary Enter Workspace CTA Button (Smooth Transparent Outlined Button with Black Text) -->
-            <!-- Primary Option 1: Enter Workspace -->
-            <button type="button" id="launcher-enter-btn" class="btn btn-block" style="width: 100%; font-size: 0.98rem; padding: 0.85rem 1.25rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.6rem; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; box-shadow: 0 4px 14px rgba(0,0,0,0.14); cursor: pointer; transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.85rem;">
-                <span>Enter Workspace</span>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-            </button>
-
-            <!-- Secondary Options: [Back Home] [Change Account] [Logout] -->
-            <div style="display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
-                <button type="button" id="launcher-back-home-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.65rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #e4e4e7; background: #ffffff; color: #18181b; cursor: pointer; transition: all 0.15s ease;" title="Back to Landing Home">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                    <span>Back Home</span>
-                </button>
-
-                <button type="button" id="launcher-change-account-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.65rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #e4e4e7; background: #ffffff; color: #18181b; cursor: pointer; transition: all 0.15s ease;" title="Change Account">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2">
-                        <polyline points="17 1 21 5 17 9"></polyline>
-                        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                        <polyline points="7 23 3 19 7 15"></polyline>
-                        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                    </svg>
-                    <span>Change Account</span>
-                </button>
-
-                <button type="button" id="launcher-logout-btn" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.65rem 0.5rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #fee2e2; background: #fff5f5; color: #dc2626; cursor: pointer; transition: all 0.15s ease;" title="Sign out">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                    <span>Logout</span>
-                </button>
-            </div>
-
-        </div>
-    </div>
 
     <!-- WORKSPACE SETUP / NO WORKSPACE FOUND -->
-    <div id="workspace-setup-container"
-        style="display:none;padding:2.5rem 1rem;background:radial-gradient(circle at 50% 0%, rgba(225,29,72,0.06) 0%, transparent 60%);">
-        <div class="setup-container card"
-            style="max-width:880px;margin:2rem auto;border-radius:20px;box-shadow:0 20px 45px -10px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);border:1px solid #fecdd3;padding:2.25rem;background:#ffffff;">
+    <div id="workspace-setup-container" style="display:none; padding:2.5rem 1.25rem; background:#f4f4f5; min-height:100vh;">
+        <div class="setup-container card" style="max-width:1240px; width:100%; margin:1.5rem auto 3rem; border-radius:24px; box-shadow:0 20px 50px -15px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04); border:1.5px solid #d4d4d8; padding:2.5rem; background:#ffffff; box-sizing:border-box;">
 
             <!-- Enterprise Header -->
-            <div
-                style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:1px solid #f1f5f9;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1.25rem;margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:1px solid #f1f5f9;">
                 <div style="display:flex;align-items:center;gap:1rem;">
-                    <div
-                        style="width:52px;height:52px;border-radius:14px;background:#f4f4f5;color:#18181b;display:flex;align-items:center;justify-content:center;border:1.5px solid #e4e4e7;box-shadow:0 4px 14px rgba(0,0,0,0.06);flex-shrink:0;">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                    <!-- Dynamic Top-Left Logo Box (Shows Uploaded Logo or Default Icon) -->
+                    <div id="setup-header-logo-box" style="width:54px;height:54px;border-radius:14px;background:#f4f4f5;color:#18181b;display:flex;align-items:center;justify-content:center;border:1.5px solid #d4d4d8;box-shadow:0 4px 14px rgba(0,0,0,0.06);flex-shrink:0;overflow:hidden;">
+                        <svg id="setup-header-logo-default-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                             <polyline points="9 22 9 12 15 12 15 22"></polyline>
                         </svg>
+                        <img id="setup-header-logo-img" src="" alt="Workspace Logo" style="display:none; width:100%; height:100%; object-fit:contain; padding:4px;">
                     </div>
                     <div>
                         <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                            <h1
-                                style="color:var(--text-primary);font-weight:800;font-size:1.5rem;margin:0;line-height:1.2;">
+                            <h1 style="color:var(--text-primary);font-weight:800;font-size:1.5rem;margin:0;line-height:1.2;">
                                 Enterprise Workspace Setup</h1>
-                            <span class="badge"
-                                style="background:#f4f4f5;color:#18181b;border:1px solid #e4e4e7;font-size:0.72rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:999px;">Data
-                                Model v2.0</span>
+                            <span class="badge" style="background:#f4f4f5;color:#18181b;border:1px solid #d4d4d8;font-size:0.72rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:999px;">Data Model v2.0</span>
                         </div>
-                        <p style="color:var(--text-secondary);font-size:0.88rem;margin:0.25rem 0 0 0;">Provision a
-                            collaborative organization workspace with real-time audit trail and role permissions.</p>
+                        <p style="color:var(--text-secondary);font-size:0.88rem;margin:0.25rem 0 0 0;">Provision a collaborative organization workspace with real-time audit trail and role permissions.</p>
                     </div>
                 </div>
 
                 <!-- Current Signed-in Account Pill -->
-                <div
-                    style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:0.55rem 0.85rem;display:flex;align-items:center;gap:0.75rem;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                <div class="setup-account-pill" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:0.55rem 0.85rem;display:flex;align-items:center;gap:0.75rem;box-shadow:0 1px 3px rgba(0,0,0,0.03);flex-wrap:wrap;max-width:100%;">
                     <div style="display:flex;align-items:center;gap:0.5rem;overflow:hidden;">
-                        <img id="setup-account-photo" class="user-picture"
-                            style="width:28px;height:28px;min-width:28px;display:none;border-radius:50%;object-fit:cover;"
-                            alt="User">
-                        <div id="setup-account-avatar" class="user-avatar"
-                            style="width:28px;height:28px;min-width:28px;font-size:0.78rem;border-radius:50%;background:#18181b;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">
-                            ?</div>
-                        <div style="overflow:hidden;max-width:180px;">
-                            <div id="setup-account-email"
-                                style="font-size:0.8rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                user@example.com</div>
+                        <img id="setup-account-photo" class="user-picture" style="width:28px;height:28px;min-width:28px;display:none;border-radius:50%;object-fit:cover;" alt="User">
+                        <div id="setup-account-avatar" class="user-avatar" style="width:28px;height:28px;min-width:28px;font-size:0.78rem;border-radius:50%;background:#18181b;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;">?</div>
+                        <div style="overflow:hidden;max-width:160px;">
+                            <div id="setup-account-email" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">user@example.com</div>
                             <div style="font-size:0.7rem;color:var(--text-muted);">Creator Admin</div>
                         </div>
                     </div>
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        <button id="setup-back-home-btn" class="btn btn-xs btn-outline"
-                            style="white-space:nowrap;font-size:0.74rem;padding:0.25rem 0.6rem;display:inline-flex;align-items:center;gap:3px;border:1.5px solid #d4d4d8;background:#ffffff;color:#18181b;border-radius:8px;font-weight:700;cursor:pointer;"
-                            title="Back to Landing Home">
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <button id="setup-back-home-btn" class="btn btn-xs btn-outline" style="white-space:nowrap;font-size:0.74rem;padding:0.25rem 0.55rem;display:inline-flex;align-items:center;gap:3px;border:1.5px solid #d4d4d8;background:#ffffff;color:#18181b;border-radius:8px;font-weight:700;cursor:pointer;" title="Back to Landing Home">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                             <span>Back Home</span>
                         </button>
-                        <button id="setup-change-account-btn" class="btn btn-xs btn-outline"
-                            style="white-space:nowrap;font-size:0.72rem;padding:0.25rem 0.55rem;display:inline-flex;align-items:center;gap:3px;"
-                            title="Switch Google Account">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.5">
+                        <button id="setup-change-account-btn" class="btn btn-xs btn-outline" style="white-space:nowrap;font-size:0.72rem;padding:0.25rem 0.55rem;display:inline-flex;align-items:center;gap:3px;border:1.5px solid #d4d4d8;background:#ffffff;color:#18181b;border-radius:8px;font-weight:700;cursor:pointer;" title="Switch Google Account">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="17 1 21 5 17 9"></polyline>
                                 <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
                                 <polyline points="7 23 3 19 7 15"></polyline>
@@ -5208,9 +6397,7 @@
                             </svg>
                             <span>Switch</span>
                         </button>
-                        <button id="setup-logout-btn" class="btn btn-xs btn-outline"
-                            style="white-space:nowrap;font-size:0.72rem;padding:0.25rem 0.55rem;display:inline-flex;align-items:center;gap:3px;color:#dc2626;border-color:#fecdd3;background:#fff5f5;"
-                            title="Sign out">
+                        <button id="setup-logout-btn" class="btn btn-xs btn-outline" style="white-space:nowrap;font-size:0.72rem;padding:0.25rem 0.55rem;display:inline-flex;align-items:center;gap:3px;color:#dc2626;border:1.5px solid #fecdd3;background:#fff5f5;border-radius:8px;font-weight:700;cursor:pointer;" title="Sign out">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                             <span>Logout</span>
                         </button>
@@ -5231,7 +6418,7 @@
                                 <span style="font-size:0.78rem; color:#64748b;">Pending team collaboration requests</span>
                             </div>
                         </div>
-                        <span id="mailbox-badge-count" style="font-size:0.74rem; font-weight:700; padding:0.2rem 0.6rem; border-radius:999px; background:#f1f5f9; color:#475569;">0 Requests</span>
+                        <span id="mailbox-badge-count" style="font-size:0.74rem; font-weight:700; padding:0.2rem 0.65rem; border-radius:999px; background:#f4f4f5; color:#18181b; border:1px solid #d4d4d8; white-space:nowrap; flex-shrink:0;">(0)</span>
                     </div>
 
                     <!-- Invitations List (shown when invites exist) -->
@@ -5259,7 +6446,7 @@
             <form id="workspace-setup-form">
 
                 <div
-                    style="display:grid;grid-template-columns:repeat(auto-fit, minmax(min(100%, 360px), 1fr));gap:1.5rem;margin-bottom:1.75rem;">
+                    style="display:grid;grid-template-columns:repeat(auto-fit, minmax(min(100%, 460px), 1fr));gap:1.75rem;margin-bottom:1.75rem;">
 
                     <!-- LEFT COLUMN: Identity, Logo & Banner -->
                     <div
@@ -5279,7 +6466,7 @@
                                 <label style="font-weight:700;font-size:0.82rem;margin:0;display:block;color:var(--text-primary);">
                                     Workspace Logo (1:1 Square)
                                 </label>
-                                <span style="font-size:0.7rem; font-weight:700; color:#2563eb; background:rgba(59,130,246,0.1); padding:0.1rem 0.45rem; border-radius:999px;">
+                                <span style="font-size:0.7rem; font-weight:700; color:#18181b; background:#f4f4f5; border:1px solid #d4d4d8; padding:0.1rem 0.45rem; border-radius:999px;">
                                     1:1 Recommended
                                 </span>
                             </div>
@@ -5335,7 +6522,7 @@
                                 <label style="font-weight:700;font-size:0.82rem;margin:0;display:block;color:var(--text-primary);">
                                     Cover Banner (16:9 Wide)
                                 </label>
-                                <span style="font-size:0.7rem; font-weight:700; color:#059669; background:rgba(16,185,129,0.1); padding:0.1rem 0.45rem; border-radius:999px;">
+                                <span style="font-size:0.7rem; font-weight:700; color:#18181b; background:#f4f4f5; border:1px solid #d4d4d8; padding:0.1rem 0.45rem; border-radius:999px;">
                                     1920×1080 Recommended
                                 </span>
                             </div>
@@ -5653,6 +6840,241 @@
     </div>
 
     <!-- ===== LOGIN MODAL ===== -->
+    <!-- ===== PRICING COMPARISON MODAL ===== -->
+    <div id="pricing-compare-modal-container" style="display: none;" role="dialog" aria-modal="true"
+        aria-labelledby="compare-dialog-title" aria-describedby="compare-dialog-desc">
+        <div class="compare-modal-dialog" role="document">
+            <div style="padding: 1.5rem 1.75rem 1.25rem; border-bottom: 1.5px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; background: #ffffff;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: #f4f4f5; display: flex; align-items: center; justify-content: center; color: #18181b;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 id="compare-dialog-title" style="font-size: 1.3rem; font-weight: 800; color: #0f172a; margin: 0;">Compare All PriceLister Plans</h2>
+                        <p id="compare-dialog-desc" style="font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0;">Side-by-side feature comparison & capacity limits across our 4 subscription tiers</p>
+                    </div>
+                </div>
+                <button type="button" class="login-close-btn" id="close-pricing-compare-modal" aria-label="Close comparison dialog" style="position: static; font-size: 1.6rem; line-height: 1; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+
+            <div class="compare-table-wrapper" style="padding: 1.25rem 1.5rem 1.5rem; max-height: calc(90vh - 85px);">
+                <table class="pricing-compare-table">
+                    <thead>
+                        <tr>
+                            <th class="col-feature" style="padding: 1.1rem 1.35rem; background: #fafafa;">Feature / Metric</th>
+                            <th class="col-plan" style="padding: 1.1rem 0.85rem;">
+                                <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Basic</div>
+                                <div style="font-size: 0.92rem; font-weight: 700; color: #64748b; margin-top: 2px;">$2.99<span style="font-size: 0.72rem; font-weight: 500;">/mo</span></div>
+                            </th>
+                            <th class="col-plan" style="padding: 1.1rem 0.85rem;">
+                                <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Small Business</div>
+                                <div style="font-size: 0.92rem; font-weight: 700; color: #64748b; margin-top: 2px;">$9.99<span style="font-size: 0.72rem; font-weight: 500;">/mo</span></div>
+                            </th>
+                            <th class="col-plan featured-col" style="padding: 1.1rem 0.85rem;">
+                                <div style="display: inline-block; background: #18181b; color: #fff; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 2px 7px; border-radius: 99px; margin-bottom: 3px; letter-spacing: 0.05em;">Recommended</div>
+                                <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">Large Business</div>
+                                <div style="font-size: 0.92rem; font-weight: 700; color: #18181b; margin-top: 2px;">$39<span style="font-size: 0.72rem; font-weight: 500;">/mo</span></div>
+                            </th>
+                            <th class="col-plan" style="padding: 1.1rem 0.85rem;">
+                                <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Market Plan</div>
+                                <div style="font-size: 0.92rem; font-weight: 700; color: #64748b; margin-top: 2px;">$99<span style="font-size: 0.72rem; font-weight: 500;">/mo</span></div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Core Capacity -->
+                        <tr class="section-row">
+                            <td colspan="5">Core Capacity & Usage Limits</td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 1.35rem;">
+                                <span class="feature-title">
+                                    <span class="feature-icon-box">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                    </span>
+                                    Workspace Members
+                                </span>
+                                <span class="support-note">Total team seats & collaborators</span>
+                            </td>
+                            <td class="plan-val"><span class="compare-val-highlight">1</span></td>
+                            <td class="plan-val"><span class="compare-val-highlight">5</span></td>
+                            <td class="plan-val featured-cell"><span class="compare-val-highlight">20</span></td>
+                            <td class="plan-val">
+                                <span class="compare-val-highlight">Up to 50+</span>
+                                <span class="support-note" style="color: #71717a; font-weight: 600;">Scaleable When Required</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 1.35rem;">
+                                <span class="feature-title">
+                                    <span class="feature-icon-box">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                                    </span>
+                                    Products
+                                </span>
+                                <span class="support-note">Active catalog inventory</span>
+                            </td>
+                            <td class="plan-val"><span class="compare-val-highlight">50</span> /month</td>
+                            <td class="plan-val"><span class="compare-val-highlight">200</span> /month</td>
+                            <td class="plan-val featured-cell"><span class="compare-val-highlight">1,000</span> /month</td>
+                            <td class="plan-val">
+                                <span class="compare-val-highlight" style="color: #09090b; font-weight: 800;">Unlimited</span>
+                                <span class="support-note">Base Limit 10k/m</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 1.35rem;">
+                                <span class="feature-title">
+                                    <span class="feature-icon-box">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                    </span>
+                                    Invoices
+                                </span>
+                                <span class="support-note">Customer & supplier sales bills generated</span>
+                            </td>
+                            <td class="plan-val"><span class="compare-val-highlight">50</span> /month</td>
+                            <td class="plan-val"><span class="compare-val-highlight">200</span> /month</td>
+                            <td class="plan-val featured-cell"><span class="compare-val-highlight">1,000</span> /month</td>
+                            <td class="plan-val">
+                                <span class="compare-val-highlight" style="color: #09090b; font-weight: 800;">Unlimited</span>
+                                <span class="support-note">Base Limit 10k/m</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 1.35rem;">
+                                <span class="feature-title">
+                                    <span class="feature-icon-box">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><line x1="3" y1="4" x2="3" y2="20"></line><line x1="7" y1="4" x2="7" y2="20"></line><line x1="11" y1="4" x2="11" y2="20"></line><line x1="15" y1="4" x2="15" y2="20"></line><line x1="19" y1="4" x2="19" y2="20"></line><line x1="21" y1="4" x2="21" y2="20"></line></svg>
+                                    </span>
+                                    Barcode & QR Generation
+                                </span>
+                                <span class="support-note">Code-128, EAN-13 & QR labels</span>
+                            </td>
+                            <td class="plan-val"><span class="compare-val-highlight">50</span> /month</td>
+                            <td class="plan-val"><span class="compare-val-highlight">500</span> /month</td>
+                            <td class="plan-val featured-cell"><span class="compare-val-highlight">10,000</span> /month</td>
+                            <td class="plan-val"><span class="compare-val-highlight" style="color: #09090b; font-weight: 800;">Unlimited</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 1.35rem;">
+                                <span class="feature-title">
+                                    <span class="feature-icon-box">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                    </span>
+                                    Storage
+                                </span>
+                                <span class="support-note">Cloud media & assets</span>
+                            </td>
+                            <td class="plan-val"><span class="compare-val-highlight">500 MB</span></td>
+                            <td class="plan-val"><span class="compare-val-highlight">10 GB</span></td>
+                            <td class="plan-val featured-cell"><span class="compare-val-highlight">50 GB</span></td>
+                            <td class="plan-val">
+                                <span class="compare-val-highlight" style="color: #09090b; font-weight: 800;">Scalable</span>
+                                <span class="support-note">Based Monthly Limit 100gb/m</span>
+                            </td>
+                        </tr>
+
+                        <!-- Features -->
+                        <tr class="section-row">
+                            <td colspan="5">Features, Automation & Intelligence</td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 1.35rem;">
+                                <span class="feature-title">Price Lister Pro Access</span>
+                            </td>
+                            <td class="plan-val"><span style="color:#71717a; font-weight:600;">Basic View</span></td>
+                            <td class="plan-val">
+                                <span class="plan-check-badge">
+                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Full</span>
+                                </span>
+                            </td>
+                            <td class="plan-val featured-cell">
+                                <span class="plan-check-badge">
+                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Full</span>
+                                </span>
+                            </td>
+                            <td class="plan-val">
+                                <span class="plan-check-badge">
+                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Pro + Market</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 1.35rem;">
+                                <span class="feature-title">Customer Storefront & Web Portal</span>
+                            </td>
+                            <td class="plan-val"><span class="plan-dash-dim">—</span></td>
+                            <td class="plan-val">
+                                <span class="plan-check-badge">
+                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Standard</span>
+                                </span>
+                            </td>
+                            <td class="plan-val featured-cell">
+                                <span class="plan-check-badge">
+                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Advanced</span>
+                                </span>
+                            </td>
+                            <td class="plan-val">
+                                <span class="plan-check-badge">
+                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Custom Domain & SLA</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 1.35rem;">
+                                <span class="feature-title">Role-Based Access Control</span>
+                            </td>
+                            <td class="plan-val"><span style="color:#71717a; font-weight:600;">Owner Only</span></td>
+                            <td class="plan-val">
+                                <span class="plan-check-badge">
+                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Included</span>
+                                </span>
+                            </td>
+                            <td class="plan-val featured-cell">
+                                <span class="plan-check-badge">
+                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Full Matrix</span>
+                                </span>
+                            </td>
+                            <td class="plan-val">
+                                <span class="plan-check-badge">
+                                    <svg class="check-svg-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Granular Audit Trail</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left: 1.35rem;">
+                                <span class="feature-title">Support Level</span>
+                            </td>
+                            <td class="plan-val"><span style="font-weight:600; color:#52525b;">Community</span></td>
+                            <td class="plan-val"><span style="font-weight:600; color:#52525b;">Standard Email</span></td>
+                            <td class="plan-val featured-cell"><span style="font-weight:700; color:#18181b;">Priority 24/7</span></td>
+                            <td class="plan-val"><span style="font-weight:700; color:#18181b;">Dedicated Success Manager</span></td>
+                        </tr>
+                        <tr style="background: #fafafa;">
+                            <td style="padding: 1.15rem 1.35rem;"><span style="font-weight: 800; color: #0f172a;">Action</span></td>
+                            <td class="plan-val"><button class="btn btn-primary open-login-modal" type="button" style="width: 100%; padding: 0.55rem; font-size: 0.85rem; font-weight: 700; border-radius: 8px; border: 1.5px solid #18181b; background: #ffffff; color: #18181b;">Select Basic</button></td>
+                            <td class="plan-val"><button class="btn btn-primary open-login-modal" type="button" style="width: 100%; padding: 0.55rem; font-size: 0.85rem; font-weight: 700; border-radius: 8px; border: 1.5px solid #18181b; background: #ffffff; color: #18181b;">Select Small</button></td>
+                            <td class="plan-val featured-cell"><button class="btn btn-primary open-login-modal" type="button" style="width: 100%; padding: 0.55rem; font-size: 0.85rem; font-weight: 700; border-radius: 8px; background: #18181b; color: #fff; border: 1.5px solid #18181b; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">Get Large</button></td>
+                            <td class="plan-val"><button class="btn btn-primary open-login-modal" type="button" style="width: 100%; padding: 0.55rem; font-size: 0.85rem; font-weight: 700; border-radius: 8px; border: 1.5px solid #18181b; background: #ffffff; color: #18181b;">Contact Sales</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     <!-- ===== LOGIN MODAL ===== -->
     <div id="login-modal-container" style="display: none;" role="dialog" aria-modal="true"
         aria-labelledby="login-dialog-title" aria-describedby="login-dialog-desc">
@@ -5792,6 +7214,10 @@
                 });
                 views[name].classList.add('active');
 
+                // Body view attribute & connection class for robust styling
+                document.body.setAttribute('data-active-view', name);
+                document.body.classList.toggle('view-is-connection', name === 'connection');
+
                 // Update nav active state
                 document.querySelectorAll('.nav-link').forEach(a => {
                     a.classList.toggle('active', a.dataset.view === name);
@@ -5847,11 +7273,10 @@
                 const queryView = (urlParams.get('view') || '').toLowerCase();
                 if (queryView && views[queryView]) return queryView;
 
-                const path = (window.location.pathname || '')
-                    .replace(/\/index\.html$/i, '')
-                    .replace(/^\/+/, '')
-                    .toLowerCase();
-                if (path && views[path]) return path;
+                // Robust matching for subfolder paths like /P/connection or /repo/connection
+                const pathSegments = (window.location.pathname || '').toLowerCase().split('/').filter(Boolean).map(s => s.replace(/\.html$/i, ''));
+                const matchedView = pathSegments.slice().reverse().find(seg => views[seg]);
+                if (matchedView) return matchedView;
 
                 const hash = (window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
                 if (hash && views[hash]) return hash;
@@ -6032,6 +7457,165 @@
                 googleBtn.classList.toggle('is-loading', loading);
                 googleBtn.disabled = loading;
             };
+
+            // ---------- Pricing Compare Modal ----------
+            const compareModal = document.getElementById('pricing-compare-modal-container');
+            const openCompareBtn = document.getElementById('btn-open-compare-modal');
+            const closeCompareBtn = document.getElementById('close-pricing-compare-modal');
+            let isCompareOpen = false;
+
+            function openCompareModal() {
+                if (!compareModal || isCompareOpen) return;
+                isCompareOpen = true;
+                compareModal.style.display = 'flex';
+                void compareModal.offsetWidth;
+                compareModal.classList.add('is-open');
+                document.body.classList.add('modal-open');
+            }
+
+            function closeCompareModal() {
+                if (!compareModal || !isCompareOpen) return;
+                isCompareOpen = false;
+                compareModal.classList.remove('is-open');
+                document.body.classList.remove('modal-open');
+                setTimeout(() => {
+                    if (!isCompareOpen) compareModal.style.display = 'none';
+                }, 220);
+            }
+
+            if (openCompareBtn) {
+                openCompareBtn.addEventListener('click', openCompareModal);
+            }
+            if (closeCompareBtn) {
+                closeCompareBtn.addEventListener('click', closeCompareModal);
+            }
+            if (compareModal) {
+                compareModal.addEventListener('click', (e) => {
+                    if (e.target === compareModal) closeCompareModal();
+                });
+            }
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && isCompareOpen) {
+                    e.preventDefault();
+                    closeCompareModal();
+                }
+            });
+            window.openPricingCompareModal = openCompareModal;
+            window.closePricingCompareModal = closeCompareModal;
+
+            // ---------- 3-Line Mobile Navigation Drawer (Top Order) ----------
+            const mobileNavToggleBtn = document.getElementById('mobile-nav-toggle-btn');
+            const mobileNavDrawer = document.getElementById('mobile-nav-drawer');
+            const btnCloseMobileNav = document.getElementById('btn-close-mobile-nav');
+
+            function openMobileNav() {
+                if (!mobileNavDrawer) return;
+                mobileNavDrawer.style.display = 'flex';
+                // Trigger reflow for CSS transition
+                void mobileNavDrawer.offsetHeight;
+                mobileNavDrawer.classList.add('is-open');
+                mobileNavDrawer.setAttribute('aria-hidden', 'false');
+                mobileNavToggleBtn?.setAttribute('aria-expanded', 'true');
+                document.body.style.overflow = 'hidden';
+
+                // Synchronize auth state into mobile drawer
+                syncMobileDrawerAuth();
+            }
+
+            function closeMobileNav() {
+                if (!mobileNavDrawer) return;
+                mobileNavDrawer.classList.remove('is-open');
+                mobileNavDrawer.setAttribute('aria-hidden', 'true');
+                mobileNavToggleBtn?.setAttribute('aria-expanded', 'false');
+                document.body.style.overflow = '';
+                setTimeout(() => {
+                    if (!mobileNavDrawer.classList.contains('is-open')) {
+                        mobileNavDrawer.style.display = 'none';
+                    }
+                }, 220);
+            }
+
+            function syncMobileDrawerAuth() {
+                const headConnected = document.getElementById('header-auth-connected');
+                const drawerLoggedOut = document.getElementById('mobile-drawer-auth-logged-out');
+                const drawerConnected = document.getElementById('mobile-drawer-auth-connected');
+
+                const isConnected = headConnected && headConnected.style.display !== 'none';
+                if (isConnected) {
+                    if (drawerLoggedOut) drawerLoggedOut.style.display = 'none';
+                    if (drawerConnected) drawerConnected.style.display = 'flex';
+                    const wsTitle = document.getElementById('header-connected-ws-title')?.textContent;
+                    const drawerWsTitle = document.getElementById('mobile-drawer-connected-title');
+                    if (wsTitle && drawerWsTitle) drawerWsTitle.textContent = wsTitle;
+                } else {
+                    if (drawerLoggedOut) drawerLoggedOut.style.display = 'flex';
+                    if (drawerConnected) drawerConnected.style.display = 'none';
+                }
+            }
+
+            if (mobileNavToggleBtn) {
+                mobileNavToggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openMobileNav();
+                });
+            }
+
+            if (btnCloseMobileNav) {
+                btnCloseMobileNav.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    closeMobileNav();
+                });
+            }
+
+            // Close on tapping any link and navigate immediately
+            if (mobileNavDrawer) {
+                mobileNavDrawer.querySelectorAll('a[data-view], .nav-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        const view = link.dataset.view;
+                        closeMobileNav();
+                        if (view && typeof showView === 'function') {
+                            e.preventDefault();
+                            showView(view, true);
+                        }
+                    });
+                });
+
+                // Sync logout click
+                document.getElementById('mobile-drawer-logout-btn')?.addEventListener('click', () => {
+                    closeMobileNav();
+                    document.getElementById('header-btn-logout-connected')?.click();
+                });
+
+                // Close on Escape
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && mobileNavDrawer.classList.contains('is-open')) {
+                        closeMobileNav();
+                    }
+                });
+            }
+
+            // ---------- Mobile In-Page Plan Quick Navigator ----------
+            const inpageCompareWrapper = document.getElementById('inpage-compare-wrapper');
+            const planPillBtns = document.querySelectorAll('#inpage-plan-pills .plan-nav-pill-btn');
+
+            if (inpageCompareWrapper && planPillBtns.length > 0) {
+                planPillBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const planIdx = parseInt(btn.dataset.planTarget, 10);
+                        planPillBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+
+                        const planHeaders = inpageCompareWrapper.querySelectorAll('thead th.col-plan');
+                        if (planHeaders && planHeaders[planIdx]) {
+                            const targetTh = planHeaders[planIdx];
+                            const featureTh = inpageCompareWrapper.querySelector('thead th.col-feature');
+                            const stickyWidth = featureTh ? featureTh.offsetWidth : 160;
+                            const scrollPos = Math.max(0, targetTh.offsetLeft - stickyWidth + 10);
+                            inpageCompareWrapper.scrollTo({ left: scrollPos, behavior: 'smooth' });
+                        }
+                    });
+                });
+            }
 
             // Bubble Fluid Water Glass UI Header Changing Animation
             const headerWrapper = document.querySelector('.landing-header-wrapper');

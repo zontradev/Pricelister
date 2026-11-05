@@ -84,8 +84,10 @@ export const renderMembers = async (container, workspaceId) => {
         const adminData = {
             name: wsInfo.adminName || 'Founder',
             email: wsInfo.adminEmail || 'admin@workspace.com',
+            photoURL: wsInfo.adminPhotoURL || wsInfo.photoURL || '',
             id: wsInfo.adminId || adminUid,
             role: 'CREATOR_ADMIN',
+            roleTag: wsInfo.adminRoleTag || wsInfo.roleTag || 'Administrator',
             isPending: false,
             joinedAt: wsInfo.createdAt,
             productCount: Math.max(adminPCount, Number(wsInfo.adminProductCount ?? 0)),
@@ -305,8 +307,10 @@ const mapMemberData = (m) => {
     return {
         name: isPending ? 'Pending Invite' : (m.name || 'Worker'),
         email: m.email || '—',
+        photoURL: m.photoURL || m.photo || '',
         id: m.appWorkerId || m.workerUid || 'N/A',
         role: m.role || 'Worker',
+        roleTag: (m.roleTag || m.tag || '').trim(),
         isPending: isPending,
         isRestricted: isRestricted,
         status: m.status || (isRestricted ? 'Restricted' : 'Joined'),
@@ -349,16 +353,20 @@ const renderMemberRowHtml = (member, defaultExpanded = false) => {
             <!-- Header Row -->
             <div class="member-row-header" data-target="${uniqueRowId}" style="padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:#ffffff; transition:background 0.15s ease;">
                 <div style="display:flex; align-items:center; gap:0.85rem; overflow:hidden;">
-                    <!-- Avatar Circle with initial -->
-                    <div style="width:36px; height:36px; border-radius:50%; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.88rem; flex-shrink:0; position:relative;">
-                        ${initial}
-                        <span style="position:absolute; bottom:0; right:0; width:9px; height:9px; border-radius:50%; background:${dotColor}; border:1.5px solid #ffffff;"></span>
+                    <!-- Avatar Circle with photo or initial -->
+                    <div style="width:36px; height:36px; border-radius:50%; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.88rem; flex-shrink:0; position:relative; overflow:hidden;">
+                        ${member.photoURL ? `
+                            <img src="${member.photoURL}" alt="${member.name || member.email}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.parentElement.innerHTML='${initial}<span style=\'position:absolute; bottom:0; right:0; width:9px; height:9px; border-radius:50%; background:${dotColor}; border:1.5px solid #ffffff;\'></span>';">
+                        ` : `
+                            ${initial}
+                        `}
+                        <span style="position:absolute; bottom:0; right:0; width:9px; height:9px; border-radius:50%; background:${dotColor}; border:1.5px solid #ffffff; z-index:2;"></span>
                     </div>
                     
                     <div style="overflow:hidden;">
                         <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
                             <strong style="font-size:0.92rem; color:var(--text-primary);">${member.email}</strong>
-                            ${getRoleBadgeHtml(member.role)}
+                            ${getRoleBadgeHtml(member.role, member.roleTag)}
                         </div>
                         <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:0.15rem;">
                             <span style="font-weight:600; color:var(--text-primary);">${member.name}</span>

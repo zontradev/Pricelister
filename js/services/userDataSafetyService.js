@@ -4,17 +4,21 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 const db = getFirestore(firebaseApp);
-const COLLECTION_NAME = 'userDataSafety';
+const COLLECTION_NAME = 'userCollection';
 
 /**
- * User Data Safety Service
- * Manages the dedicated 'userDataSafety' collection independently from workspace members.
- * Handles user credentials, lifetime update logs, devices, workspace history, and footprint metrics.
+ * User Collection Service (Permanently saves to /userCollection/{userId})
+ * Strictly adheres to Firestore Security Rules:
+ * match /userCollection/{userId} {
+ *   allow read, write: if isOwner(userId);
+ * }
+ * Stores permanent personal user data: name (max <100 chars), photoURL (max 5mb), credentials, device list & history.
+ * Persists independently across all workspaces.
  */
 export const userDataSafetyService = {
 
     /**
-     * Get user safety doc by user UID or email
+     * Get user doc from /userCollection/{userId}
      */
     getUserDataSafety: async (user) => {
         if (!user) return null;
@@ -22,10 +26,11 @@ export const userDataSafetyService = {
         const email = user.email || (typeof user === 'string' && user.includes('@') ? user : null);
 
         // 1. Check local cache first
-        const cacheKey = 'pricelister_userdata_safety_' + (uid || email);
+        const cacheKey = 'pricelister_usercollection_' + (uid || email);
+        const legacyCacheKey = 'pricelister_userdata_safety_' + (uid || email);
         let cached = null;
         try {
-            const raw = localStorage.getItem(cacheKey);
+            const raw = localStorage.getItem(cacheKey) || localStorage.getItem(legacyCacheKey);
             if (raw) cached = JSON.parse(raw);
         } catch (e) {}
 
@@ -40,7 +45,7 @@ export const userDataSafetyService = {
                     return data;
                 }
             } catch (err) {
-                console.warn("Could not read remote userDataSafety, returning cache:", err.message);
+                console.warn("Could not read remote userCollection, returning cache:", err.message);
             }
         }
 
@@ -48,13 +53,15 @@ export const userDataSafetyService = {
     },
 
     /**
-     * Initialize or update User Data Safety record on login, signup, or profile load
+     * Initialize or update User record in /userCollection/{userId} on login, signup, or profile load
      */
     initOrUpdateUser: async (user, authType = 'Email & Password', passwordHash = null, initialWsId = null) => {
         if (!user) return null;
         const uid = user.uid || 'usr_' + Math.random().toString(36).substr(2, 9);
         const email = (user.email || '').trim().toLowerCase();
-        const name = user.displayName || user.fullName || (email ? email.split('@')[0] : 'PriceLister User');
+        const rawName = user.displayName || user.fullName || (email ? email.split('@')[0] : 'PriceLister User');
+        const name = (rawName || '').trim().substring(0, 99); // Max char < 100
+        const photoURL = user.photoURL || '';
 
         const deviceInfo = {
             device: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown Browser',
@@ -66,13 +73,15 @@ export const userDataSafetyService = {
 
         const existing = await userDataSafetyService.getUserDataSafety(user);
 
-        // Build updated payload adhering strictly to user schema
+        // Build updated payload adhering strictly to userCollection schema
         const payload = {
             name: name,
+            photoURL: photoURL || existing?.photoURL || '',
             email: email,
             Auth: authType || (existing?.Auth || (user.providerData && user.providerData.some(p => p.providerId === 'google.com') ? 'Google' : 'Email & Password')),
             password: passwordHash || existing?.password || (authType === 'Google' ? '[OAuth: Google]' : ''),
             created: existing?.created || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             Subscription: existing?.Subscription || 'Free', // Free - Pro - Small Business - Large Business - Market Plan - Lite
             connectedWorkspace: initialWsId || existing?.connectedWorkspace || 'None/Un-Connected',
             SupabaseUsage: existing?.SupabaseUsage || {
@@ -125,25 +134,75 @@ export const userDataSafetyService = {
         }
 
         // Save locally for instant offline UI responsiveness
-        const cacheKey = 'pricelister_userdata_safety_' + (uid || email);
+        const cacheKey = 'pricelister_usercollection_' + (uid || email);
+        const legacyCacheKey = 'pricelister_userdata_safety_' + (uid || email);
         try {
             localStorage.setItem(cacheKey, JSON.stringify(payload));
+            localStorage.setItem(legacyCacheKey, JSON.stringify(payload));
             if (email) {
-                localStorage.setItem('pricelister_userdata_safety_' + email, JSON.stringify(payload));
+                localStorage.setItem('pricelister_usercollection_' + email, JSON.stringify(payload));
             }
         } catch (e) {}
 
-        // Persist to Firestore: /userDataSafety/{userId}
+        // Persist to Firestore: /userCollection/{userId}
         if (uid && uid !== 'dev-mock-uid') {
             try {
                 const userDocRef = doc(db, COLLECTION_NAME, uid);
                 await setDoc(userDocRef, payload, { merge: true });
             } catch (err) {
-                console.warn("Could not save to remote userDataSafety (using local cache):", err.message);
+                console.warn("Could not save to remote userCollection (using local cache):", err.message);
             }
         }
 
         return payload;
+    },
+
+    /**
+     * Update permanent personal user profile in /userCollection/{userId}
+     * Name: Max char < 100
+     * Photo: Max 5MB file upload
+     */
+    updateUserProfile: async (user, { name, photoURL }) => {
+        if (!user) return null;
+        const uid = user.uid || (typeof user === 'string' ? user : null);
+        const email = (user.email || '').trim().toLowerCase();
+
+        const updates = {
+            updatedAt: new Date().toISOString()
+        };
+
+        if (name !== undefined && name !== null) {
+            const trimmedName = String(name).trim().substring(0, 99); // Max char < 100
+            updates.name = trimmedName;
+        }
+
+        if (photoURL !== undefined && photoURL !== null) {
+            updates.photoURL = photoURL;
+        }
+
+        // Update local cache immediately
+        const cacheKey = 'pricelister_usercollection_' + (uid || email);
+        const legacyCacheKey = 'pricelister_userdata_safety_' + (uid || email);
+        const existing = await userDataSafetyService.getUserDataSafety(user) || {};
+        const merged = { ...existing, ...updates };
+
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(merged));
+            localStorage.setItem(legacyCacheKey, JSON.stringify(merged));
+            if (email) localStorage.setItem('pricelister_usercollection_' + email, JSON.stringify(merged));
+        } catch (e) {}
+
+        // Update Firestore: /userCollection/{userId}
+        if (uid && uid !== 'dev-mock-uid') {
+            try {
+                const userDocRef = doc(db, COLLECTION_NAME, uid);
+                await setDoc(userDocRef, updates, { merge: true });
+            } catch (err) {
+                console.warn("Could not save profile updates to userCollection in Firestore:", err.message);
+            }
+        }
+
+        return merged;
     },
 
     /**
@@ -286,4 +345,7 @@ export const userDataSafetyService = {
         }
     }
 };
+
+export const userCollectionService = userDataSafetyService;
+
 

@@ -1192,6 +1192,7 @@ export const renderWorkers = async (container, workspaceId) => {
                 } else if ((isAdmin && !isCreator) || (isCoAdmin && !isCreator && rUpper === 'WORKER')) {
                     actionBtnHtml = `
                         <button type="button" class="btn btn-sm btn-manage-member" 
+                            onclick="window.openManageWorkerModal(this)"
                             data-email="${escapeHtml(m.email)}" 
                             data-role="${rUpper}"
                             data-cost="${m.cannotSeeCost ? '1' : '0'}"
@@ -1205,8 +1206,9 @@ export const renderWorkers = async (container, workspaceId) => {
                             data-revoke-end="${m.revokeEnd || ''}"
                             data-revoke-start-fmt="${escapeHtml(m.revokeStartFormatted || '')}"
                             data-revoke-end-fmt="${escapeHtml(m.revokeEndFormatted || '')}"
-                            style="font-size:0.75rem; padding:0.25rem 0.65rem; font-weight:700; border-radius:6px; border:1px solid var(--border-color); background:#ffffff; color:var(--text-primary); cursor:pointer;">
-                            Manage
+                            style="font-size:0.78rem; padding:0.35rem 0.85rem; font-weight:700; border-radius:8px; border:1.5px solid #18181B; background:#18181B; color:#FFFFFF; cursor:pointer; display:inline-flex; align-items:center; gap:0.35rem; box-shadow:0 1px 3px rgba(0,0,0,0.1); transition:all 0.15s ease;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            <span>Manage</span>
                         </button>
                     `;
                 }
@@ -1279,6 +1281,43 @@ export const renderWorkers = async (container, workspaceId) => {
         };
 
         // Helper to open manage member modal from button element
+        
+    // Expose robust global handler so Manage button works under every DOM state
+    window.openManageWorkerModal = function(btn) {
+        if (!btn) return;
+        if (typeof openManageForButton === 'function') {
+            openManageForButton(btn);
+        }
+    };
+    window.openManageWorkerByEmail = function(targetEmail) {
+        if (!targetEmail) return;
+        const btn = document.querySelector(`.btn-manage-member[data-email="${targetEmail}"]`) || 
+                    document.querySelector(`button[data-email="${targetEmail}"]`);
+        if (btn) {
+            window.openManageWorkerModal(btn);
+        } else {
+            // Find member data from list
+            const m = currentMembersList.find(x => (x.email || '').toLowerCase() === targetEmail.toLowerCase());
+            if (m) {
+                const syntheticBtn = document.createElement('button');
+                syntheticBtn.setAttribute('data-email', m.email || targetEmail);
+                syntheticBtn.setAttribute('data-role', (m.role || 'WORKER').toUpperCase());
+                syntheticBtn.setAttribute('data-cost', m.cannotSeeCost ? '1' : '0');
+                syntheticBtn.setAttribute('data-profit', m.cannotSeeProfit ? '1' : '0');
+                syntheticBtn.setAttribute('data-add', m.disableAdd ? '1' : '0');
+                syntheticBtn.setAttribute('data-del-others', m.disableDeleteOthers ? '1' : '0');
+                syntheticBtn.setAttribute('data-upd-others', m.disableUpdateOthers ? '1' : '0');
+                syntheticBtn.setAttribute('data-revoked', m.accessRevoked ? '1' : '0');
+                syntheticBtn.setAttribute('data-blocked', m.isAccessBlocked ? '1' : '0');
+                syntheticBtn.setAttribute('data-revoke-start', m.revokeStart || '');
+                syntheticBtn.setAttribute('data-revoke-end', m.revokeEnd || '');
+                syntheticBtn.setAttribute('data-revoke-start-fmt', m.revokeStartFormatted || '');
+                syntheticBtn.setAttribute('data-revoke-end-fmt', m.revokeEndFormatted || '');
+                window.openManageWorkerModal(syntheticBtn);
+            }
+        }
+    };
+
         const openManageForButton = (btn) => {
             if (!btn) return;
             const email = btn.getAttribute('data-email');
