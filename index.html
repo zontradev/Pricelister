@@ -1046,8 +1046,8 @@
                 grid-template-columns: repeat(2, 1fr) !important;
                 gap: 1.25rem !important;
             }
-            #launcher-banner-container {
-                display: none !important;
+            #launcher-org-card {
+                padding: 1.25rem 1.35rem !important;
             }
         }
         @media (max-width: 520px) {
@@ -6185,82 +6185,78 @@
                             </p>
                         </div>
 
-                        <!-- Inner Organization Details Card (with Default Architectural Illustration Instead of Black Banner) -->
-                        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 1.35rem 1.75rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; position: relative; overflow: hidden;">
+                        <!-- Inner Organization Details Card (Full Edge-to-Edge Rounded Banner with Max Square Crop Rounded Logo) -->
+                        <div id="launcher-org-card" style="position: relative; border-radius: 20px; overflow: hidden; padding: 1.6rem 1.85rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; border: 1.5px solid #e2e8f0; background: #f8fafc; transition: all 0.25s ease;">
+                            
+                            <!-- Fullscreen Edge-to-Edge Banner Layer (Default Architect Vector or Uploaded Banner) -->
+                            <div id="launcher-banner-backdrop" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; overflow: hidden; pointer-events: none;">
+                                <svg id="launcher-default-banner-svg" width="100%" height="100%" viewBox="0 0 800 160" preserveAspectRatio="xMidYMid slice" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.85;">
+                                    <!-- Ground Horizon -->
+                                    <path d="M0 148h800v12H0z" fill="#f1f5f9"/>
+                                    <line x1="0" y1="148" x2="800" y2="148" stroke="#e2e8f0" stroke-width="1.5"/>
+                                    <!-- Trees Left -->
+                                    <ellipse cx="60" cy="132" rx="14" ry="18" fill="#cbd5e1" opacity="0.6"/>
+                                    <line x1="60" y1="132" x2="60" y2="148" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <ellipse cx="85" cy="136" rx="10" ry="14" fill="#e2e8f0"/>
+                                    <!-- Trees Right -->
+                                    <ellipse cx="740" cy="132" rx="15" ry="18" fill="#cbd5e1" opacity="0.7"/>
+                                    <line x1="740" y1="132" x2="740" y2="148" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <ellipse cx="715" cy="135" rx="11" ry="14" fill="#e2e8f0"/>
+                                    <!-- Back Wing Left -->
+                                    <path d="M480 92h50v56h-50z" fill="#cbd5e1"/>
+                                    <path d="M530 92l22-10v66h-22z" fill="#94a3b8"/>
+                                    <rect x="488" y="100" width="8" height="8" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="502" y="100" width="8" height="8" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="516" y="100" width="8" height="8" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="488" y="116" width="8" height="8" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="502" y="116" width="8" height="8" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <rect x="516" y="116" width="8" height="8" rx="1" fill="#ffffff" opacity="0.9"/>
+                                    <!-- Main Tower Front Facet -->
+                                    <path d="M552 56h72v92h-72z" fill="#e2e8f0"/>
+                                    <path d="M624 56l34-18v110h-34z" fill="#cbd5e1"/>
+                                    <path d="M552 56l34-18h38l-34 18z" fill="#94a3b8"/>
+                                    <!-- Windows Grid on Main Tower -->
+                                    <rect x="562" y="66" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="582" y="66" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="602" y="66" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="562" y="82" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="582" y="82" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="602" y="82" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="562" y="98" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="582" y="98" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="602" y="98" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="562" y="114" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="582" y="114" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <rect x="602" y="114" width="10" height="9" rx="1.5" fill="#ffffff"/>
+                                    <!-- Entrance Doorway -->
+                                    <rect x="574" y="130" width="26" height="18" rx="2" fill="#18181b"/>
+                                    <line x1="587" y1="130" x2="587" y2="148" stroke="#ffffff" stroke-width="1.5"/>
+                                </svg>
+                                <img id="launcher-custom-banner-img" src="" alt="Workspace Banner" style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">
+                                <!-- Soft gradient wash over banner for readability -->
+                                <div id="launcher-banner-overlay" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.88) 55%, rgba(255,255,255,0.4) 100%); transition: background 0.25s ease;"></div>
+                            </div>
                             
                             <!-- Workspace Identity: Logo, Name, Tagline & ID -->
-                            <div style="display: flex; align-items: center; gap: 1.15rem; min-width: 0; flex: 1;">
-                                <div id="launcher-logo-container" style="width: 62px; height: 62px; border-radius: 16px; background: #18181b; border: 1.5px solid #e2e8f0; box-shadow: 0 4px 14px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
-                                    <img id="launcher-workspace-logo" src="pricelister_org.png" alt="Workspace Logo" style="width: 100%; height: 100%; object-fit: contain; padding: 4px;">
-                                    <div id="launcher-workspace-logo-fallback" style="display:none; width: 100%; height: 100%; background: #18181b; color: #ffffff; font-size: 1.6rem; font-weight: 800; align-items: center; justify-content: center;">P</div>
+                            <div style="position: relative; z-index: 2; display: flex; align-items: center; gap: 1.25rem; min-width: 0; flex: 1;">
+                                <!-- Logo cropped max square-round with full cover crop -->
+                                <div id="launcher-logo-container" style="width: 68px; height: 68px; border-radius: 18px; background: #ffffff; border: 1.5px solid rgba(0,0,0,0.08); box-shadow: 0 8px 20px -4px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                    <img id="launcher-workspace-logo" src="pricelister_org.png" alt="Workspace Logo" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                                    <div id="launcher-workspace-logo-fallback" style="display:none; width: 100%; height: 100%; background: #18181b; color: #ffffff; font-size: 1.75rem; font-weight: 800; align-items: center; justify-content: center;">P</div>
                                 </div>
                                 <div style="min-width: 0; flex: 1;">
-                                    <h2 id="launcher-workspace-name" style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #09090b; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">PriceLister Demo Enterprise</h2>
-                                    <div id="launcher-workspace-tagline" style="color: #71717a; font-size: 0.88rem; font-weight: 500; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Professional product management workspace</div>
+                                    <h2 id="launcher-workspace-name" style="margin: 0; font-size: 1.3rem; font-weight: 800; color: #09090b; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(255,255,255,0.6);">PriceLister Demo Enterprise</h2>
+                                    <div id="launcher-workspace-tagline" style="color: #475569; font-size: 0.9rem; font-weight: 600; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Professional product management workspace</div>
                                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.65rem;">
-                                        <span style="font-size: 0.78rem; font-weight: 600; color: #71717a;">Workspace ID:</span>
-                                        <span style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.2rem 0.65rem; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                            <code id="launcher-workspace-id" style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: #1e293b;">DEMO-SANDBOX-01</code>
-                                            <button type="button" id="launcher-copy-id-btn" title="Copy Workspace ID" style="background: transparent; border: none; cursor: pointer; color: #71717a; padding: 0; display: inline-flex; align-items: center; transition: color 0.15s ease;">
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                        <span style="font-size: 0.78rem; font-weight: 700; color: #64748b;">Workspace ID:</span>
+                                        <span style="background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0.22rem 0.65rem; display: inline-flex; align-items: center; gap: 0.45rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                            <code id="launcher-workspace-id" style="font-family: monospace; font-size: 0.82rem; font-weight: 800; color: #0f172a;">DEMO-SANDBOX-01</code>
+                                            <button type="button" id="launcher-copy-id-btn" title="Copy Workspace ID" style="background: transparent; border: none; cursor: pointer; color: #64748b; padding: 0; display: inline-flex; align-items: center; transition: color 0.15s ease;">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                             </button>
                                         </span>
                                     </div>
                                 </div>
-                            </div>
-
-                            <!-- Right Side: Default Architectural Vector Illustration (Replacing Black Banner) -->
-                            <div id="launcher-banner-container" style="position: relative; flex-shrink: 0; width: 190px; height: 105px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden;">
-                                <svg id="launcher-default-banner-svg" width="190" height="105" viewBox="0 0 200 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <!-- Ground Horizon -->
-                                    <path d="M0 98h200v12H0z" fill="#f1f5f9"/>
-                                    <line x1="0" y1="98" x2="200" y2="98" stroke="#e2e8f0" stroke-width="1.5"/>
-                                    <!-- Soft Trees Left & Right -->
-                                    <ellipse cx="22" cy="85" rx="10" ry="14" fill="#cbd5e1" opacity="0.6"/>
-                                    <line x1="22" y1="85" x2="22" y2="98" stroke="#94a3b8" stroke-width="1.5"/>
-                                    <ellipse cx="38" cy="88" rx="8" ry="11" fill="#e2e8f0"/>
-                                    <ellipse cx="178" cy="86" rx="11" ry="13" fill="#cbd5e1" opacity="0.7"/>
-                                    <line x1="178" y1="86" x2="178" y2="98" stroke="#94a3b8" stroke-width="1.5"/>
-                                    <ellipse cx="162" cy="89" rx="8" ry="10" fill="#e2e8f0"/>
-                                    <!-- Back Building Wing -->
-                                    <path d="M48 62h32v36H48z" fill="#cbd5e1"/>
-                                    <path d="M80 62l14-6v42H80z" fill="#94a3b8"/>
-                                    <rect x="53" y="67" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
-                                    <rect x="62" y="67" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
-                                    <rect x="71" y="67" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
-                                    <rect x="53" y="76" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
-                                    <rect x="62" y="76" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
-                                    <rect x="71" y="76" width="5" height="5" rx="1" fill="#ffffff" opacity="0.9"/>
-                                    <!-- Main Tower Front Facet -->
-                                    <path d="M94 38h46v60H94z" fill="#e2e8f0"/>
-                                    <!-- Tower Perspective Side -->
-                                    <path d="M140 38l22-12v72h-22z" fill="#cbd5e1"/>
-                                    <!-- Tower Roof -->
-                                    <path d="M94 38l22-12h24l-22 12z" fill="#94a3b8"/>
-                                    <path d="M118 26l22-6 22 6-22 12z" fill="#cbd5e1" opacity="0.5"/>
-                                    <!-- Windows Grid on Main Tower -->
-                                    <rect x="100" y="44" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="113" y="44" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="126" y="44" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="100" y="54" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="113" y="54" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="126" y="54" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="100" y="64" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="113" y="64" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="126" y="64" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="100" y="74" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="113" y="74" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <rect x="126" y="74" width="7" height="6" rx="1" fill="#ffffff"/>
-                                    <!-- Entrance Doorway -->
-                                    <rect x="108" y="86" width="16" height="12" rx="1.5" fill="#18181b"/>
-                                    <line x1="116" y1="86" x2="116" y2="98" stroke="#ffffff" stroke-width="1"/>
-                                    <!-- Perspective Windows -->
-                                    <polygon points="146,45 156,39 156,45 146,51" fill="#94a3b8" opacity="0.6"/>
-                                    <polygon points="146,55 156,49 156,55 146,61" fill="#94a3b8" opacity="0.6"/>
-                                    <polygon points="146,65 156,59 156,65 146,71" fill="#94a3b8" opacity="0.6"/>
-                                    <polygon points="146,75 156,69 156,75 146,81" fill="#94a3b8" opacity="0.6"/>
-                                </svg>
-                                <img id="launcher-custom-banner-img" src="" alt="Workspace Banner" style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:12px;">
                             </div>
                         </div>
 
