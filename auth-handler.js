@@ -602,13 +602,14 @@ export const initAuthHandler = (pageType) => {
                                 customBannerImg.style.display = 'block';
                                 if (defaultBannerSvg) defaultBannerSvg.style.display = 'none';
                                 if (bannerOverlay) {
-                                    bannerOverlay.style.background = 'linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 55%, rgba(255,255,255,0.3) 100%)';
+                                    // Minimal subtle vignette for rich banner visibility without washing it out
+                                    bannerOverlay.style.background = 'linear-gradient(90deg, rgba(9,9,11,0.72) 0%, rgba(9,9,11,0.48) 42%, rgba(9,9,11,0.06) 78%, rgba(9,9,11,0.02) 100%)';
                                 }
                             } else {
                                 if (defaultBannerSvg) defaultBannerSvg.style.display = 'block';
                                 if (customBannerImg) customBannerImg.style.display = 'none';
                                 if (bannerOverlay) {
-                                    bannerOverlay.style.background = 'linear-gradient(90deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.88) 55%, rgba(255,255,255,0.4) 100%)';
+                                    bannerOverlay.style.background = 'linear-gradient(90deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.5) 45%, rgba(255,255,255,0.1) 100%)';
                                 }
                             }
 
