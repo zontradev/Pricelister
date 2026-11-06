@@ -1,4 +1,4 @@
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 import { setAppCurrencySymbol } from '../utilities.js';
 import { authService } from '../../firebase/auth.js';
@@ -6,93 +6,406 @@ import { authService } from '../../firebase/auth.js';
 const db = getFirestore(firebaseApp);
 
 export const getSettingsService = (workspaceId) => {
+    const isExplicitDemo = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_explicit_demo') === 'true') ||
+                           (typeof localStorage !== 'undefined' && localStorage.getItem('pricelister_demo_mode') === 'true') ||
+                           (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo=true'));
+
+    const currentUser = typeof authService !== 'undefined' && authService.getCurrentUser ? authService.getCurrentUser() : null;
+
+    // Recognize demo testing if explicitly in demo, using demo workspace id, or logged in as dev-mock-uid
+    const isMock = workspaceId === 'ws_dev_mock' || 
+                   workspaceId === 'demo' || 
+                   workspaceId === 'dev-mock-uid' || 
+                   workspaceId === 'DEMO-SANDBOX-01' ||
+                   currentUser?.uid === 'dev-mock-uid' ||
+                   Boolean(currentUser?.isDemo) ||
+                   isExplicitDemo;
+
+    const parseDateSafe = (val) => {
+        if (!val) return null;
+        if (typeof val?.toDate === 'function') {
+            try { return val.toDate(); } catch (e) {}
+        }
+        if (val?.seconds) return new Date(val.seconds * 1000);
+        try {
+            const d = new Date(val);
+            return isNaN(d.getTime()) ? null : d;
+        } catch (e) {
+            return null;
+        }
+    };
+
     return {
         getWorkspaceSettings: async () => {
-            try {
-                const receiptRef = doc(db, 'ReceiptData', workspaceId);
-                const wsRef = doc(db, 'Workspaces', workspaceId);
+            if (isMock) {
+                let mockSaved = {};
+                try {
+                    const raw = localStorage.getItem('pricelister_mock_settings');
+                    if (raw) mockSaved = JSON.parse(raw) || {};
+                } catch (e) {}
 
-                const [receiptSnap, wsSnap] = await Promise.all([
-                    getDoc(receiptRef).catch(() => null),
-                    getDoc(wsRef).catch(() => null)
-                ]);
+                const baseCurrency = mockSaved.currencySymbol || mockSaved.currency || '$';
+                setAppCurrencySymbol(baseCurrency);
+
+                const defaultDemoSettings = {
+                    enableVending: true,
+                    shopName: 'PriceLister Demo Enterprise',
+                    tradeName: 'PriceLister Global Commerce',
+                    country: 'United Kingdom',
+                    countryCode: 'GB',
+                    countryName: 'United Kingdom',
+                    operatedCountry: 'United Kingdom',
+                    region: 'England',
+                    industry: 'Retail & Commerce',
+                    tagline: 'Leading Wholesale and Retail Supply Ecosystem',
+                    description: 'Leading Wholesale and Retail Supply Ecosystem',
+                    website: 'https://pricelister.app',
+                    taxId: 'TAX-UK-GB9948201',
+                    address: '100 Regent Street, London W1B 5SR, United Kingdom',
+                    phone: '+44 20 7946 0912',
+                    supportPhone: '+44 20 7946 0915',
+                    endMessage: 'Thank you for choosing PriceLister Enterprise!',
+                    customerName: true,
+                    customerNumber: true,
+                    name: 'PriceLister Demo Enterprise',
+                    email: 'developer@local.test',
+                    currencySymbol: '€',
+                    currency: 'EUR',
+                    currencyCode: 'EUR',
+                    currencyName: 'Euro',
+                    logoUrl: '',
+                    bannerUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1920&q=80',
+                    createdAt: Date.now() - 86400000 * 30,
+                    createdTimestamp: new Date(Date.now() - 86400000 * 30).toISOString(),
+                    createdDate: '1 month ago',
+                    creatorEmail: 'developer@local.test',
+                    creatorName: 'Demo Admin',
+                    updatedAt: Date.now(),
+                    updateTimestamp: new Date().toISOString(),
+                    updatedDate: 'Just now',
+                    updatorEmail: 'developer@local.test',
+                    updatorName: 'Demo Admin',
+                    updatorRole: 'CREATOR_ADMIN'
+                };
+
+                return {
+                    ...defaultDemoSettings,
+                    ...mockSaved
+                };
+            }
+
+            try {
+                let receiptSnap = null;
+                let wsSnap = null;
+                let targetDocId = workspaceId;
+
+                try {
+                    const wsRef = doc(db, 'Workspaces', workspaceId);
+                    wsSnap = await getDoc(wsRef);
+                } catch (e) {}
+
+                // If not found by direct doc id, search by workspaceId field
+                if (!wsSnap || !wsSnap.exists()) {
+                    try {
+                        const qWs = query(collection(db, 'Workspaces'), where('workspaceId', '==', workspaceId));
+                        const qSnap = await getDocs(qWs);
+                        if (!qSnap.empty) {
+                            wsSnap = qSnap.docs[0];
+                            targetDocId = wsSnap.id;
+                        }
+                    } catch (e) {}
+                }
+
+                try {
+                    receiptSnap = await getDoc(doc(db, 'ReceiptData', targetDocId));
+                } catch (e) {}
+                if (!receiptSnap || !receiptSnap.exists()) {
+                    try {
+                        receiptSnap = await getDoc(doc(db, 'ReceiptData', workspaceId));
+                    } catch (e) {}
+                }
 
                 const receiptData = receiptSnap && receiptSnap.exists() ? receiptSnap.data() : {};
                 const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
+
+                // Check local offline fallback if Firestore had no data
+                let localOffline = {};
+                try {
+                    const rawOff = localStorage.getItem(`pricelister_offline_settings_${workspaceId}`);
+                    if (rawOff) localOffline = JSON.parse(rawOff) || {};
+                } catch (e) {}
 
                 const localCurrency = localStorage.getItem('pricelister_currency_symbol') || '$';
                 const resolvedCurrency = receiptData["Currency"] || wsData.currency || wsData.currencySymbol || localCurrency;
                 setAppCurrencySymbol(resolvedCurrency);
 
+                const cDate = parseDateSafe(wsData.createdAt);
+                const uDate = parseDateSafe(wsData.updatedAt);
+
                 return {
                     enableVending: receiptData["Vending"] !== undefined ? Boolean(receiptData["Vending"]) : (wsData.enableVending !== undefined ? Boolean(wsData.enableVending) : false),
-                    shopName: receiptData["Shop Name"] || wsData.name || '',
+                    shopName: receiptData["Shop Name"] || wsData.tradeName || wsData.shopName || wsData.name || '',
+                    tradeName: wsData.tradeName || receiptData["Shop Name"] || wsData.name || '',
+                    country: wsData.country || wsData.operatedCountry || receiptData["Country"] || 'United Kingdom',
+                    countryCode: wsData.countryCode || receiptData["CountryCode"] || 'GB',
+                    countryName: wsData.countryName || wsData.country || receiptData["Country"] || 'United Kingdom',
+                    operatedCountry: wsData.operatedCountry || wsData.country || receiptData["Country"] || 'United Kingdom',
+                    region: wsData.region || receiptData["Region"] || 'England',
+                    industry: wsData.industry || wsData.category || 'General',
+                    tagline: wsData.tagline || wsData.description || '',
+                    description: wsData.description || wsData.tagline || 'Main',
+                    website: wsData.website || '',
+                    taxId: wsData.taxId || wsData.vatNumber || receiptData["Tax Id"] || '',
                     address: receiptData["Address / Subtitle"] || wsData.address || '',
                     phone: receiptData["Phone Number"] || wsData.phone || '',
+                    supportPhone: wsData.supportPhone || '',
                     endMessage: receiptData["End Massage"] || '',
                     customerName: receiptData["Customer Name"] !== undefined ? receiptData["Customer Name"] : true,
                     customerNumber: receiptData["Customer number"] !== undefined ? receiptData["Customer number"] : true,
                     name: wsData.name || '',
                     email: wsData.email || '',
                     currencySymbol: resolvedCurrency,
-                    currency: resolvedCurrency
+                    currency: resolvedCurrency,
+                    currencyCode: (wsData.currencyCode || receiptData["CurrencyCode"] || 'EUR').toUpperCase(),
+                    currencyName: wsData.currencyName || receiptData["CurrencyName"] || 'Euro',
+                    logoUrl: wsData.logoUrl || wsData.logo || receiptData["Logo Url"] || '',
+                    bannerUrl: wsData.bannerUrl || wsData.banner || receiptData["Banner Url"] || '',
+
+                    // Creation & Audit Trail Data Model (Safe timestamps)
+                    createdAt: wsData.createdAt || null,
+                    createdTimestamp: wsData.createdTimestamp || receiptData["created_timestamp"] || (cDate ? cDate.toISOString() : ''),
+                    createdDate: wsData.createdDate || receiptData["created_date"] || (cDate ? cDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''),
+                    creatorEmail: wsData.creatorEmail || wsData.adminEmail || '',
+                    creatorName: wsData.creatorName || wsData.adminName || '',
+                    
+                    updatedAt: wsData.updatedAt || null,
+                    updateTimestamp: wsData.updateTimestamp || receiptData["updated_timestamp"] || (uDate ? uDate.toISOString() : ''),
+                    updatedDate: wsData.updatedDate || (uDate ? uDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''),
+                    updatorEmail: wsData.updatorEmail || receiptData["updated_by_email"] || '',
+                    updatorName: wsData.updatorName || '',
+                    updatorRole: wsData.updatorRole || ''
                 };
             } catch (err) {
                 console.error("Error fetching workspace settings:", err);
                 return {
                     enableVending: false,
                     shopName: '',
+                    tradeName: '',
+                    industry: 'General',
+                    tagline: '',
+                    website: '',
+                    taxId: '',
                     address: '',
                     phone: '',
+                    supportPhone: '',
                     endMessage: '',
                     customerName: true,
                     customerNumber: true,
                     name: '',
                     email: '',
                     currencySymbol: localStorage.getItem('pricelister_currency_symbol') || '$',
-                    currency: localStorage.getItem('pricelister_currency_symbol') || '$'
+                    currency: localStorage.getItem('pricelister_currency_symbol') || '$',
+                    logoUrl: '',
+                    bannerUrl: ''
                 };
             }
         },
 
         saveWorkspaceSettings: async (settings) => {
-            const receiptRef = doc(db, 'ReceiptData', workspaceId);
-            const wsRef = doc(db, 'Workspaces', workspaceId);
-
             const cleanCurrency = (settings.currencySymbol || settings.currency || '$').trim().substring(0, 3) || '$';
             setAppCurrencySymbol(cleanCurrency);
 
+            if (isMock) {
+                let existing = {};
+                try {
+                    const raw = localStorage.getItem('pricelister_mock_settings');
+                    if (raw) existing = JSON.parse(raw) || {};
+                } catch (e) {}
+
+                const updatedMock = {
+                    ...existing,
+                    ...settings,
+                    name: settings.name || settings.shopName || existing.name || 'PriceLister Demo Enterprise',
+                    shopName: settings.shopName || settings.tradeName || settings.name || existing.shopName || 'PriceLister Demo Enterprise',
+                    tradeName: settings.tradeName || settings.shopName || settings.name || existing.tradeName || 'PriceLister Global Commerce',
+                    industry: settings.industry || existing.industry || 'Retail & Commerce',
+                    tagline: settings.tagline || settings.description || existing.tagline || '',
+                    description: settings.description || settings.tagline || existing.description || 'Main',
+                    website: settings.website || existing.website || '',
+                    taxId: settings.taxId || existing.taxId || '',
+                    address: settings.address || existing.address || '',
+                    phone: settings.phone || existing.phone || '',
+                    supportPhone: settings.supportPhone || existing.supportPhone || '',
+                    country: settings.country || settings.countryName || existing.country || 'United Kingdom',
+                    countryCode: settings.countryCode || existing.countryCode || 'GB',
+                    countryName: settings.countryName || settings.country || existing.countryName || 'United Kingdom',
+                    operatedCountry: settings.operatedCountry || settings.country || existing.operatedCountry || 'United Kingdom',
+                    region: settings.region !== undefined ? settings.region : (existing.region || 'England'),
+                    currencyCode: (settings.currencyCode || existing.currencyCode || 'EUR').toUpperCase(),
+                    currencyName: settings.currencyName || existing.currencyName || 'Euro',
+                    logoUrl: settings.logoUrl !== undefined ? settings.logoUrl : (existing.logoUrl || ''),
+                    bannerUrl: settings.bannerUrl !== undefined ? settings.bannerUrl : (existing.bannerUrl || ''),
+                    currency: cleanCurrency,
+                    currencySymbol: cleanCurrency,
+                    updatedAt: Date.now(),
+                    updateTimestamp: new Date().toISOString(),
+                    updatedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    updatorEmail: 'developer@local.test',
+                    updatorName: 'Demo Admin',
+                    updatorRole: 'CREATOR_ADMIN'
+                };
+
+                try {
+                    localStorage.setItem('pricelister_mock_settings', JSON.stringify(updatedMock));
+                    localStorage.setItem('pricelister_currency_symbol', cleanCurrency);
+                } catch (e) {}
+
+                if (window.__activeWorkspace) {
+                    Object.assign(window.__activeWorkspace, updatedMock);
+                }
+                return true;
+            }
+
+            const currentUser = authService.getCurrentUser();
+            const now = new Date();
+            const nowEpoch = now.getTime();
+            const nowIso = now.toISOString();
+            const nowFormatted = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const updatorEmail = currentUser?.email || settings.email || '';
+            const updatorUid = currentUser?.uid || '';
+            const updatorName = currentUser?.displayName || (updatorEmail ? updatorEmail.split('@')[0] : 'Admin');
+
+            // Resolve document ID if workspaceId is a custom workspaceId string
+            let targetWsDocId = workspaceId;
+            try {
+                const directCheck = await getDoc(doc(db, 'Workspaces', workspaceId));
+                if (directCheck.exists()) {
+                    targetWsDocId = directCheck.id;
+                } else {
+                    const qWs = query(collection(db, 'Workspaces'), where('workspaceId', '==', workspaceId));
+                    const qSnap = await getDocs(qWs);
+                    if (!qSnap.empty) {
+                        targetWsDocId = qSnap.docs[0].id;
+                    }
+                }
+            } catch (e) {}
+
+            const receiptRef = doc(db, 'ReceiptData', targetWsDocId);
+            const wsRef = doc(db, 'Workspaces', targetWsDocId);
+
             const receiptPayload = {
                 "Vending": Boolean(settings.enableVending),
-                "Shop Name": settings.shopName || '',
+                "Shop Name": settings.shopName || settings.tradeName || settings.name || '',
                 "Address / Subtitle": settings.address || '',
                 "Phone Number": settings.phone || '',
                 "End Massage": settings.endMessage || '',
                 "Customer Name": settings.customerName !== undefined ? settings.customerName : true,
                 "Customer number": settings.customerNumber !== undefined ? settings.customerNumber : true,
+                "Country": settings.country || settings.countryName || '',
+                "CountryCode": settings.countryCode || '',
+                "Region": settings.region || '',
                 "Currency": cleanCurrency,
-                "last_updated": new Date()
+                "CurrencyCode": (settings.currencyCode || 'USD').toUpperCase(),
+                "CurrencyName": settings.currencyName || '',
+                "updated_by_email": updatorEmail,
+                "updated_timestamp": nowIso,
+                "last_updated": now
             };
+
+            if (settings.taxId !== undefined) {
+                receiptPayload["Tax Id"] = settings.taxId;
+            }
+            if (settings.logoUrl !== undefined) {
+                receiptPayload["Logo Url"] = settings.logoUrl;
+            }
+            if (settings.bannerUrl !== undefined) {
+                receiptPayload["Banner Url"] = settings.bannerUrl;
+            }
 
             const wsPayload = {
                 name: settings.name || settings.shopName || '',
+                tradeName: settings.tradeName || settings.shopName || settings.name || '',
+                industry: settings.industry || 'General',
+                tagline: settings.tagline || settings.description || '',
+                description: settings.description || settings.tagline || 'Main',
+                website: settings.website || '',
+                taxId: settings.taxId || '',
                 email: settings.email || '',
                 phone: settings.phone || '',
+                supportPhone: settings.supportPhone || '',
                 address: settings.address || '',
+                country: settings.country || settings.countryName || '',
+                countryCode: settings.countryCode || '',
+                countryName: settings.countryName || settings.country || '',
+                operatedCountry: settings.operatedCountry || settings.country || '',
+                region: settings.region || '',
                 currency: cleanCurrency,
                 currencySymbol: cleanCurrency,
-                enableVending: Boolean(settings.enableVending)
+                currencyCode: (settings.currencyCode || 'USD').toUpperCase(),
+                currencyName: settings.currencyName || '',
+                enableVending: Boolean(settings.enableVending),
+
+                // Audit Trail
+                updatedAt: nowEpoch,
+                updateTimestamp: nowIso,
+                updatedDate: nowFormatted,
+                updatorEmail: updatorEmail,
+                updatorUid: updatorUid,
+                updatorName: updatorName,
+                updatorRole: settings.userRole || 'ADMIN'
             };
 
-            await Promise.all([
-                setDoc(receiptRef, receiptPayload, { merge: true }),
-                setDoc(wsRef, wsPayload, { merge: true })
-            ]);
+            if (settings.logoUrl !== undefined) {
+                wsPayload.logoUrl = settings.logoUrl;
+                wsPayload.logo = settings.logoUrl;
+            }
+            if (settings.bannerUrl !== undefined) {
+                wsPayload.bannerUrl = settings.bannerUrl;
+                wsPayload.banner = settings.bannerUrl;
+            }
 
-            return true;
+            // Save local cache mirror immediately
+            try {
+                localStorage.setItem(`pricelister_offline_settings_${workspaceId}`, JSON.stringify({ ...receiptPayload, ...wsPayload }));
+                localStorage.setItem('pricelister_currency_symbol', cleanCurrency);
+            } catch (e) {}
+
+            if (window.__activeWorkspace) {
+                Object.assign(window.__activeWorkspace, wsPayload);
+            }
+
+            // Clean undefined values to prevent Firestore serialization crashes
+            const cleanFirestorePayload = (obj) => {
+                const res = {};
+                for (const [k, v] of Object.entries(obj)) {
+                    if (v !== undefined) {
+                        res[k] = v;
+                    }
+                }
+                return res;
+            };
+
+            receiptPayload["last_updated"] = serverTimestamp();
+
+            const cleanReceiptPayload = cleanFirestorePayload(receiptPayload);
+            const cleanWsPayload = cleanFirestorePayload(wsPayload);
+
+            try {
+                await Promise.all([
+                    setDoc(receiptRef, cleanReceiptPayload, { merge: true }),
+                    setDoc(wsRef, cleanWsPayload, { merge: true })
+                ]);
+                localStorage.setItem('pricelister_active_ws', workspaceId);
+                return { success: true, syncedWithServer: true };
+            } catch (cloudErr) {
+                console.error("Firestore settings cloud write error:", cloudErr);
+                // Throw so caller knows server sync status
+                throw new Error("Local cache updated, but cloud server sync failed: " + (cloudErr.message || 'Network/Permission error'));
+            }
         },
 
         isVendingEnabled: async () => {
+            if (isMock) return true;
             try {
                 const receiptRef = doc(db, 'ReceiptData', workspaceId);
                 const snap = await getDoc(receiptRef);
@@ -111,6 +424,29 @@ export const getSettingsService = (workspaceId) => {
         },
 
         getCustomerPanelSettings: async (overrideUid = null) => {
+            if (isMock) {
+                return {
+                    isPublished: true,
+                    enabled: true,
+                    storeName: 'PriceLister Demo Enterprise',
+                    announcement: 'Welcome to our online demo catalog! Browse items and calculate total or place orders.',
+                    termsAndConditions: '• Prices are subject to change without prior notice.\n• Stock availability is updated in real time.\n• For questions or orders, please contact us.',
+                    categorySelectionMode: 'ALL',
+                    allowedCategories: [],
+                    showMrp: true,
+                    showStockBadge: true,
+                    whatsappNumber: '+1 (555) 019-2834',
+                    phone: '+1 (555) 019-2834',
+                    email: 'developer@local.test',
+                    address: '100 Silicon Way, Suite 400, San Jose, CA',
+                    closedMessage: 'Temporary Closed\nShop is temporarily suspended, may start early.',
+                    currencySymbol: '$',
+                    publishedAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    uid: 'dev-mock-uid'
+                };
+            }
+
             try {
                 const uid = overrideUid || authService?.getCurrentUser()?.uid || workspaceId;
                 
@@ -170,7 +506,12 @@ export const getSettingsService = (workspaceId) => {
                 return {
                     isPublished: isPublished,
                     enabled: isPublished,
+                    brandingMode: merged.brandingMode || 'PRICELISTER', // 'PRICELISTER', 'CUSTOM', 'WORKSPACE'
                     storeName: defaultStoreName,
+                    storeLogo: merged.storeLogo || '',
+                    workspaceLogo: merged.workspaceLogo || wsData.logoUrl || wsData.imageUri || receiptData["Logo Url"] || '',
+                    customSlug: merged.customSlug || '',
+                    deployCountry: merged.deployCountry || 'Global',
                     announcement: merged.announcement || 'Welcome to our online catalog! Browse items and add to cart to calculate total or order directly.',
                     termsAndConditions: merged.termsAndConditions || '• Prices are subject to change without prior notice.\n• Stock availability is updated in real time.\n• For questions or orders, please contact us.',
                     categorySelectionMode: merged.categorySelectionMode || 'ALL', // 'ALL' or 'SPECIFIC'
@@ -192,7 +533,12 @@ export const getSettingsService = (workspaceId) => {
                 return {
                     isPublished: false,
                     enabled: false,
+                    brandingMode: 'PRICELISTER',
                     storeName: 'PriceLister Store',
+                    storeLogo: '',
+                    workspaceLogo: '',
+                    customSlug: '',
+                    deployCountry: 'Global',
                     announcement: 'Welcome to our online catalog!',
                     termsAndConditions: '• Prices are subject to change without prior notice.',
                     categorySelectionMode: 'ALL',
@@ -218,7 +564,12 @@ export const getSettingsService = (workspaceId) => {
             const payload = {
                 isPublished: isPublished,
                 enabled: isPublished,
+                brandingMode: panelSettings.brandingMode || 'PRICELISTER',
                 storeName: (panelSettings.storeName || '').trim(),
+                storeLogo: (panelSettings.storeLogo || '').trim(),
+                workspaceLogo: (panelSettings.workspaceLogo || '').trim(),
+                customSlug: (panelSettings.customSlug || '').trim().toLowerCase().replace(/[^a-z0-9-_]/g, ''),
+                deployCountry: (panelSettings.deployCountry || 'Global').trim(),
                 announcement: (panelSettings.announcement || '').trim(),
                 termsAndConditions: (panelSettings.termsAndConditions || '').trim(),
                 categorySelectionMode: panelSettings.categorySelectionMode === 'SPECIFIC' ? 'SPECIFIC' : 'ALL',
@@ -243,6 +594,11 @@ export const getSettingsService = (workspaceId) => {
             } catch (e) {
                 console.warn("Could not save customer panel to localStorage cache:", e);
             }
+
+            if (isMock) {
+                return true;
+            }
+
 
             // Target 1: Workspaces/{workspaceId}/CustomerPanel/{uid} (Primary user subfield)
             const subfieldRef = doc(db, 'Workspaces', workspaceId, 'CustomerPanel', uid);
