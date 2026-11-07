@@ -117,47 +117,44 @@ export const PERMISSIONS = {
 export const WORKSPACE_ROLES = {
     0: {
         level: 0,
+        id: 'MARKET_ADMIN',
+        name: 'Market Admin (future)',
+        defaultTag: 'Market Admin',
+        allowedTags: ['Market Admin'],
+        canBeRestricted: false,
+        canManageMembers: true,
+        canChangeSettings: true,
+        canViewProfit: true,
+        canCreateEdit: true,
+        description: 'Global Market Administrator. Platform supreme authority (future capability).',
+        permissions: Object.values(PERMISSIONS)
+    },
+    1: {
+        level: 1,
         id: 'ADMIN',
-        name: 'Admin / Founder',
-        defaultTag: 'Administrator',
-        allowedTags: ['Owner', 'Leader', 'Author', 'Administrator', 'Boss', 'Founder', 'Director'],
+        name: 'Administrator',
+        defaultTag: 'Admin',
+        allowedTags: ['Admin', 'Owner', 'Leader', 'Author', 'Administrator', 'Boss', 'Founder', 'Director'],
         canBeRestricted: false,
         canManageMembers: true,
         canChangeSettings: true,
         canViewProfit: true,
         canCreateEdit: true,
         description: 'Supreme authority over the workspace. Manages settings, identity, country, currency, invitations, promotions, demotions & role tags.',
-        permissions: [
-            PERMISSIONS.WORKSPACE_VIEW,
-            PERMISSIONS.WORKSPACE_UPDATE_IDENTITY,
-            PERMISSIONS.WORKSPACE_UPDATE_COUNTRY_CURRENCY,
-            PERMISSIONS.WORKSPACE_MANAGE_MEMBERS,
-            PERMISSIONS.WORKSPACE_MANAGE_ROLE_TAGS,
-            PERMISSIONS.WORKSPACE_PROMOTE_MEMBERS,
-            PERMISSIONS.WORKSPACE_DEMOTE_MEMBERS,
-            PERMISSIONS.BUSINESS_CREATE,
-            PERMISSIONS.BUSINESS_EDIT,
-            PERMISSIONS.INVOICE_CREATE,
-            PERMISSIONS.INVOICE_EDIT,
-            PERMISSIONS.INVOICE_DELETE,
-            PERMISSIONS.REPORTS_VIEW,
-            PERMISSIONS.REPORTS_VIEW_PROFIT,
-            PERMISSIONS.DATA_EXPORT,
-            PERMISSIONS.DATA_IMPORT
-        ]
+        permissions: Object.values(PERMISSIONS)
     },
-    1: {
-        level: 1,
+    2: {
+        level: 2,
         id: 'CO_ADMIN',
         name: 'Co-Admin',
-        defaultTag: 'Manager',
-        allowedTags: ['Manager', 'Assistant', 'Co-Operator', 'Supervisor', 'Coordinator'],
+        defaultTag: 'Co-Admin',
+        allowedTags: ['Co-Admin', 'Manager', 'Assistant', 'Co-Operator', 'Supervisor', 'Coordinator', 'Director', 'Deputy'],
         canBeRestricted: false,
         canManageMembers: true,
         canChangeSettings: false, // Protected workspace ownership/identity restricted to Admin
         canViewProfit: true,
         canCreateEdit: true,
-        description: 'Elevated workspace administration. Handles Visitors, Workers, and Managers. Cannot modify Admin or protected workspace ownership.',
+        description: 'Elevated workspace administration. Handles Workers and Visitors. Cannot modify Admin or protected workspace ownership.',
         permissions: [
             PERMISSIONS.WORKSPACE_VIEW,
             PERMISSIONS.WORKSPACE_MANAGE_MEMBERS,
@@ -173,40 +170,18 @@ export const WORKSPACE_ROLES = {
             PERMISSIONS.REPORTS_VIEW_PROFIT,
             PERMISSIONS.DATA_EXPORT,
             PERMISSIONS.DATA_IMPORT
-        ]
-    },
-    2: {
-        level: 2,
-        id: 'MANAGER',
-        name: 'Manager',
-        defaultTag: 'Manager',
-        allowedTags: ['Manager', 'Assistant', 'Co-Operator', 'Supervisor', 'Coordinator'],
-        canBeRestricted: true,
-        canManageMembers: false,
-        canChangeSettings: false,
-        canViewProfit: false, // Default: profit hidden unless explicitly authorized
-        canCreateEdit: true,
-        description: 'Operational manager. Handles invoices, catalog operations & sales floor. Cannot view profit by default or alter workspace settings.',
-        permissions: [
-            PERMISSIONS.WORKSPACE_VIEW,
-            PERMISSIONS.BUSINESS_CREATE,
-            PERMISSIONS.BUSINESS_EDIT,
-            PERMISSIONS.INVOICE_CREATE,
-            PERMISSIONS.INVOICE_EDIT,
-            PERMISSIONS.REPORTS_VIEW,
-            PERMISSIONS.DATA_EXPORT
         ]
     },
     3: {
         level: 3,
         id: 'WORKER',
         name: 'Worker',
-        defaultTag: 'Staff',
-        allowedTags: ['Staff', 'Employee', 'Member', 'Associate', 'Specialist', 'Operator'],
+        defaultTag: 'Worker',
+        allowedTags: ['Worker', 'Staff', 'Employee', 'Member', 'Associate', 'Specialist', 'Operator'],
         canBeRestricted: true,
         canManageMembers: false,
         canChangeSettings: false,
-        canViewProfit: false,
+        canViewProfit: false, // Default: profit hidden unless explicitly authorized
         canCreateEdit: true,
         description: 'Standard operator for sales and inventory. Can be restricted from add, update, or delete. Cannot view profit.',
         permissions: [
@@ -239,10 +214,10 @@ export const WORKSPACE_ROLES = {
 export function getRoleLevel(role) {
     if (typeof role === 'number') return Math.max(0, Math.min(4, Math.floor(role)));
     const r = String(role || '').toUpperCase().trim();
-    if (r === 'CREATOR_ADMIN' || r === 'ADMIN' || r === 'CREATOR' || r === 'FOUNDER' || r === '0') return 0;
-    if (r === 'CO_ADMIN' || r === 'CO-ADMIN' || r === 'COADMIN' || r === '1') return 1;
-    if (r === 'MANAGER' || r === 'STORE_MANAGER' || r === '2') return 2;
-    if (r === 'WORKER' || r === 'STAFF' || r === 'EMPLOYEE' || r === '3') return 3;
+    if (r === 'MARKET_ADMIN' || r === '0') return 0;
+    if (r === 'ADMIN' || r === 'ADMINISTRATOR' || r === 'CREATOR_ADMIN' || r === 'CREATOR' || r === 'FOUNDER' || r === '1') return 1;
+    if (r === 'CO_ADMIN' || r === 'CO-ADMIN' || r === 'COADMIN' || r === '2') return 2;
+    if (r === 'WORKER' || r === 'STAFF' || r === 'EMPLOYEE' || r === 'MANAGER' || r === 'STORE_MANAGER' || r === '3') return 3;
     if (r === 'VISITOR' || r === 'GUEST' || r === 'OBSERVER' || r === '4') return 4;
     return 3;
 }
@@ -271,8 +246,8 @@ export function hasPermission(userOrRole, permission) {
         level = getRoleLevel(userOrRole);
     }
 
-    // Role 0 (Admin) has unrestricted power
-    if (level === 0) return true;
+    // Role 0 (Market Admin) and Role 1 (Administrator) have unrestricted power
+    if (level <= 1) return true;
 
     // Check base permissions of the role
     const roleMeta = WORKSPACE_ROLES[level] || WORKSPACE_ROLES[3];

@@ -83,11 +83,11 @@ export const renderMembers = async (container, workspaceId) => {
 
         const adminMemberDoc = rawMembers.find(m => (m.email || '').toLowerCase() === adminEmail);
         const isCurrentAdmin = (currentUser.uid === adminUid) || ((currentUser.email || '').toLowerCase() === adminEmail);
-        const validAdminTags = ['Administrator', 'Owner', 'Leader', 'Author','Chief', 'Boss', 'Founder', 'Director'];
+        const validAdminTags = ['Admin', 'Owner', 'Leader', 'Author', 'Administrator', 'Boss', 'Founder', 'Director'];
 
         const safeAdminTag = (adminMemberDoc?.roleTag && validAdminTags.includes(adminMemberDoc.roleTag))
             ? adminMemberDoc.roleTag
-            : ((wsInfo.adminRoleTag && validAdminTags.includes(wsInfo.adminRoleTag)) ? wsInfo.adminRoleTag : 'Administrator');
+            : ((wsInfo.adminRoleTag && validAdminTags.includes(wsInfo.adminRoleTag)) ? wsInfo.adminRoleTag : 'Admin');
 
         const safeAdminPhoto = (isCurrentAdmin && currentUser.photoURL) 
             ? currentUser.photoURL 

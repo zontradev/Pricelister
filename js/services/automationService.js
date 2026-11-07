@@ -162,6 +162,20 @@ export const getAutomationService = (workspaceId) => {
             return filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         },
 
+        listenNotifications: (callback, includeArchived = false) => {
+            if (typeof notifRepo.listenAll === 'function') {
+                return notifRepo.listenAll((all) => {
+                    const filtered = (all || []).filter(n => includeArchived ? true : !n.archived);
+                    callback(filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
+                });
+            }
+            notifRepo.getAll().then(all => {
+                const filtered = (all || []).filter(n => includeArchived ? true : !n.archived);
+                callback(filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
+            }).catch(() => callback([]));
+            return () => {};
+        },
+
         getUnreadCount: async () => {
             const all = await notifRepo.getAll();
             return all.filter(n => !n.read && !n.archived).length;

@@ -2612,13 +2612,25 @@ html:not([data-color-mode="dark"]):not([data-color-mode="deep-dark"]):not([data-
 
 .topbar-icon-badge-dot {
     position: absolute;
-    top: 7px;
-    right: 7px;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #18181b;
+    top: 2px;
+    right: 2px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 9999px;
+    background: #ef4444 !important;
     border: 1.5px solid #ffffff;
+    color: #ffffff !important;
+    font-size: 0.65rem;
+    font-weight: 800;
+    line-height: 14px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    box-shadow: 0 1px 3px rgba(239, 68, 68, 0.45);
+    pointer-events: none;
+    z-index: 10;
 }
 
 /* Topbar Admin / Workspace Profile Pill */

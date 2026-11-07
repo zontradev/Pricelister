@@ -322,8 +322,8 @@ export const firestoreService = {
                 adminEmail: email || workspaceData.adminEmail || "",
                 adminName: adminNameResolved,
                 adminId: workspaceData.adminId || adminWorkerId,
-                workspaceRole: 0,
-                roleTag: (workspaceData.roleTag || "Administrator").trim(),
+                workspaceRole: 1,
+                roleTag: (workspaceData.roleTag || "Admin").trim(),
                 workspaceStatus: "Active",
                 
                 // Creation Metadata
@@ -379,8 +379,8 @@ export const firestoreService = {
                     name: adminNameResolved,
                     email: email.toLowerCase(),
                     role: "ADMIN",
-                    workspaceRole: 0,
-                    roleTag: (workspaceData.roleTag || "Administrator").trim(),
+                    workspaceRole: 1,
+                    roleTag: (workspaceData.roleTag || "Admin").trim(),
                     isCreator: true,
                     canViewProfit: true,
                     isRestricted: false,
@@ -420,8 +420,8 @@ export const firestoreService = {
             await setDoc(userRef, {
                 email: email,
                 role: 'CREATOR_ADMIN',
-                workspaceRole: 0,
-                roleTag: (workspaceData.roleTag || "Administrator").trim(),
+                workspaceRole: 1,
+                roleTag: (workspaceData.roleTag || "Admin").trim(),
                 createdAt: serverTimestamp()
             }, { merge: true });
             
@@ -519,6 +519,25 @@ export const firestoreService = {
     
     acceptWorkspaceInvite: async (invite, user) => {
         try {
+            // Hardcoded Security Guard: A Head Administrator cannot join another workspace
+            const ownWsSnap = await getDoc(doc(db, 'Workspaces', user.uid)).catch(() => null);
+            if (ownWsSnap && ownWsSnap.exists()) {
+                throw new Error("You are the Head Administrator of an active workspace. You cannot join another workspace without first deleting your own organization.");
+            }
+
+            // Security Guard: Clean up any old connection if user was in a different workspace
+            const existingConnSnap = await getDoc(doc(db, 'Connections', user.uid)).catch(() => null);
+            if (existingConnSnap && existingConnSnap.exists()) {
+                const connData = existingConnSnap.data();
+                if (connData && connData.adminUid && connData.adminUid !== invite.adminUid) {
+                    try {
+                        await firestoreService.leaveWorkspace(connData.adminUid, user);
+                    } catch (leaveErr) {
+                        console.warn("Auto leave previous workspace error:", leaveErr);
+                    }
+                }
+            }
+
             const workerId = user.uid.substring(0, 8); // Simple worker ID generation
             const roleLevel = invite.workspaceRole !== undefined ? Number(invite.workspaceRole) : getRoleLevel(invite.role || 'WORKER');
             const roleMeta = getRoleMeta(roleLevel);
@@ -562,6 +581,13 @@ export const firestoreService = {
 
             // 4. Delete the invite
             await deleteDoc(doc(db, 'Invites', invite.id));
+
+            // 5. Update local session storage
+            try {
+                localStorage.setItem('pricelister_active_ws', invite.adminUid);
+                localStorage.removeItem('pricelister_last_workspace_id');
+                sessionStorage.removeItem('pricelister_stay_on_home');
+            } catch (e) {}
             
         } catch (error) {
             console.error("Error accepting invite:", error);
@@ -1021,8 +1047,8 @@ export const firestoreService = {
                     email: 'developer@local.test',
                     name: 'Demo Admin (Testing)',
                     role: 'ADMIN',
-                    workspaceRole: 0,
-                    roleTag: 'Founder',
+                    workspaceRole: 1,
+                    roleTag: 'Admin',
                     status: 'Joined',
                     isCreator: true,
                     canViewProfit: true,
@@ -1036,8 +1062,8 @@ export const firestoreService = {
                     email: 'sarah.coadmin@pricelister.app',
                     name: 'Sarah Jenkins',
                     role: 'CO_ADMIN',
-                    workspaceRole: 1,
-                    roleTag: 'Co-Founder',
+                    workspaceRole: 2,
+                    roleTag: 'Co-Admin',
                     status: 'Joined',
                     isCreator: false,
                     canViewProfit: true,
@@ -1050,9 +1076,9 @@ export const firestoreService = {
                 {
                     email: 'marcus.manager@pricelister.app',
                     name: 'Marcus Vance',
-                    role: 'MANAGER',
-                    workspaceRole: 2,
-                    roleTag: 'Store Manager',
+                    role: 'WORKER',
+                    workspaceRole: 3,
+                    roleTag: 'Worker',
                     status: 'Joined',
                     isCreator: false,
                     canViewProfit: false,
@@ -1067,7 +1093,7 @@ export const firestoreService = {
                     name: 'Alex Taylor',
                     role: 'WORKER',
                     workspaceRole: 3,
-                    roleTag: 'Staff',
+                    roleTag: 'Worker',
                     status: 'Joined',
                     isCreator: false,
                     canViewProfit: false,
@@ -1138,20 +1164,34 @@ export const firestoreService = {
             const memberRef = doc(db, `Workspaces/${workspaceDocUid}/Members`, cleanEmail);
             await setDoc(memberRef, updates, { merge: true });
 
-            // ONLY sync root Workspace doc IF the member is genuinely the Creator/Admin
-            const isCurrentAdmin = (auth.currentUser && auth.currentUser.uid === workspaceDocUid) || updates.isAdmin === true;
-            if (isCurrentAdmin) {
-                const rootWsUpdates = {};
-                if (updates.roleTag) rootWsUpdates.adminRoleTag = updates.roleTag;
-                if (updates.photoURL) rootWsUpdates.adminPhotoURL = updates.photoURL;
-                if (updates.name) rootWsUpdates.adminName = updates.name;
+            // ONLY sync root Workspace doc IF the member being updated IS genuinely the Admin!
+            // Non-admin workers and invited team members can NEVER overwrite the workspace adminName or AdminUri!
+            try {
+                const wsRef = doc(db, 'Workspaces', workspaceDocUid);
+                const wsSnap = await getDoc(wsRef);
+                if (wsSnap.exists()) {
+                    const wsData = wsSnap.data();
+                    const adminEmail = (wsData.adminEmail || wsData.email || '').toLowerCase().trim();
+                    const isTargetAdmin = (adminEmail && cleanEmail === adminEmail) || updates.isAdmin === true || updates.isCreator === true;
+                    const isCallerAdmin = auth.currentUser && (auth.currentUser.uid === workspaceDocUid || (auth.currentUser.email || '').toLowerCase() === adminEmail);
 
-                if (Object.keys(rootWsUpdates).length > 0) {
-                    try {
-                        const wsRef = doc(db, 'Workspaces', workspaceDocUid);
-                        await setDoc(wsRef, rootWsUpdates, { merge: true });
-                    } catch (e) {}
+                    if (isTargetAdmin && isCallerAdmin) {
+                        const rootWsUpdates = {};
+                        if (updates.roleTag) rootWsUpdates.adminRoleTag = updates.roleTag;
+                        if (updates.photoURL) {
+                            rootWsUpdates.adminPhotoURL = updates.photoURL;
+                            rootWsUpdates.adminUri = updates.photoURL;
+                            rootWsUpdates.AdminUri = updates.photoURL;
+                        }
+                        if (updates.name) rootWsUpdates.adminName = updates.name;
+
+                        if (Object.keys(rootWsUpdates).length > 0) {
+                            await setDoc(wsRef, rootWsUpdates, { merge: true });
+                        }
+                    }
                 }
+            } catch (e) {
+                console.warn("Could not sync admin details to workspace doc:", e);
             }
             return true;
         } catch (err) {

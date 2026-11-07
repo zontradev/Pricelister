@@ -120,8 +120,8 @@ export const renderProfile = async (container, workspaceId) => {
         );
 
         const rawRole = String(myMember?.role || wsData?.role || (isPrimaryAdmin ? 'CREATOR_ADMIN' : 'WORKER')).toUpperCase().replace(/[-\s]/g, '_');
-        const isAdmin = isPrimaryAdmin || rawRole === 'CREATOR_ADMIN' || rawRole === 'ADMIN' || rawRole === 'CREATOR' || rawRole === 'OWNER';
-        const isCoAdmin = !isAdmin && (rawRole === 'CO_ADMIN' || rawRole === 'COADMIN' || myMember?.workspaceRole === 1);
+        const isAdmin = isPrimaryAdmin || rawRole === 'CREATOR_ADMIN' || rawRole === 'ADMIN' || rawRole === 'CREATOR' || rawRole === 'OWNER' || myMember?.workspaceRole === 1;
+        const isCoAdmin = !isAdmin && (rawRole === 'CO_ADMIN' || rawRole === 'COADMIN' || myMember?.workspaceRole === 2);
         const canAccessSettings = isAdmin || isCoAdmin;
 
         // Clean user-facing role title
@@ -129,14 +129,14 @@ export const renderProfile = async (container, workspaceId) => {
 
         // Workspace-specific role tag (displayed in My Profile & Members Activity only)
         const currentRoleTag = (isPrimaryAdmin 
-            ? (wsData?.adminRoleTag || wsData?.roleTag || 'Administrator') 
-            : (myMember?.roleTag || myMember?.tag || (isAdmin ? 'Admin' : (isCoAdmin ? 'Manager' : 'Staff')))).trim();
+            ? (wsData?.adminRoleTag || wsData?.roleTag || 'Admin') 
+            : (myMember?.roleTag || myMember?.tag || (isAdmin ? 'Admin' : (isCoAdmin ? 'Co-Admin' : 'Worker')))).trim();
 
         const allowedTags = isAdmin 
-            ? ['Owner', 'Leader', 'Author', 'Administrator', 'Boss', 'Founder', 'Director']
+            ? ['Admin', 'Owner', 'Leader', 'Author', 'Administrator', 'Boss', 'Founder', 'Director']
             : (isCoAdmin 
-                ? ['Manager', 'Assistant', 'Co-Operator', 'Supervisor', 'Coordinator', 'Director', 'Deputy']
-                : ['Staff', 'Employee', 'Member', 'Associate', 'Specialist', 'Operator']);
+                ? ['Co-Admin', 'Manager', 'Assistant', 'Co-Operator', 'Supervisor', 'Coordinator', 'Director', 'Deputy']
+                : ['Worker', 'Staff', 'Employee', 'Member', 'Associate', 'Specialist', 'Operator']);
 
         // 1. Resolve User ID (appWorkerId for workers, adminId for admin)
         const displayUserId = isPrimaryAdmin

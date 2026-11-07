@@ -29,17 +29,17 @@ export const INDUSTRY_OPTIONS = [
     'General Commercial',
     'Retail & Supermarket',
     'Wholesale & Distribution',
-    'Electronics & Technology',
-    'Fashion, Apparel & Footwear',
+    'Electronics & Gadget',
+    'Fashion & Apparel',
     'Food, Beverage & Restaurant',
-    'Healthcare, Pharmacy & Medical',
+    'Pharmacy & Healthcare',
     'Manufacturing & Industrial',
-    'Automotive & Spare Parts',
+    'Automotive & Parts',
     'Beauty, Cosmetics & Salon',
-    'Home, Furniture & Hardware',
+    'Hardware & Constrution',
     'Bookstore & Stationery',
     'Professional Services',
-    'E-Commerce & Online Store',
+    'E-Commerce',
     'Other'
 ];
 

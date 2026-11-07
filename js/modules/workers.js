@@ -331,7 +331,7 @@ export const renderWorkers = async (container, workspaceId) => {
             <!-- ======================================================== -->
             <!-- 4. CORE TWO-COLUMN ARCHITECTURE (EXPANDED ENTERPRISE CONSOLE) -->
             <!-- ======================================================== -->
-            <div style="display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 2rem; align-items: start;">
+            <div style="display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 2rem; align-items: start; margin-bottom: 2.25rem;">
                 
                 <!-- ======================== LEFT COLUMN ======================== -->
                 <div style="display: flex; flex-direction: column; gap: 1.75rem;">
@@ -577,7 +577,7 @@ export const renderWorkers = async (container, workspaceId) => {
 
                     ${canManageWorkers ? `
                         <!-- PENDING JOIN REQUESTS CARD (Admin & Co-Admin only) -->
-                        <div id="join-requests-section" class="card" style="display:none; background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
+                        <div id="join-requests-section" class="card" style="display:none; background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.5rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">Join Requests</h3>
@@ -591,39 +591,50 @@ export const renderWorkers = async (container, workspaceId) => {
                         </div>
                     ` : ''}
 
-                    <!-- MEMBERS LIST SECTION -->
-                    <div class="card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03);">
-                        
-                        <!-- Members Header -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">Members</h3>
-                                <span id="members-count-badge" class="members-count-badge" style="background: var(--surface-100); color: var(--text-secondary); border: 1px solid var(--border-color); font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px;">...</span>
+                </div>
+
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 5. FULL-WIDTH ENTERPRISE MEMBERS DIRECTORY & MANAGEMENT  -->
+            <!-- ======================================================== -->
+            <div class="card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 20px; padding: 1.85rem 2rem; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.03); width: 100%; margin-top: 2rem; margin-bottom: 2.5rem; box-sizing: border-box;">
+                
+                <!-- Members Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        </div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.55rem;">
+                                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em;">Members</h3>
+                                <span id="members-count-badge" class="members-count-badge" style="background: var(--surface-100); color: var(--text-secondary); border: 1.5px solid var(--border-color); font-size: 0.78rem; font-weight: 800; padding: 0.15rem 0.65rem; border-radius: 999px;">...</span>
                             </div>
-                            
-                            ${canManageWorkers ? `
-                                <button type="button" id="btn-quick-invite-member" class="btn btn-sm btn-primary" style="font-weight: 700; font-size: 0.78rem; padding: 0.45rem 1rem; border-radius: 8px;">
-                                    Invite Member
-                                </button>
-                            ` : ''}
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem;">Manage workspace team members, role assignments, staff permissions, and usage</div>
                         </div>
-
-                        <!-- Search Member Filter -->
-                        <div style="position: relative; margin-bottom: 1rem;">
-                            <input type="text" id="member-search-input" class="form-control" placeholder="Search members by email or role..." style="padding-left: 2.2rem; font-size: 0.84rem; height: 36px; border-radius: 8px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        </div>
-
-                        <!-- Members Cards Container -->
-                        <div id="members-cards-container" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 520px; overflow-y: auto; padding-right: 0.25rem;">
-                            <!-- Dynamic Member Cards Rendered by Snapshot -->
-                            <div style="padding: 1.25rem; text-align:center; color: var(--text-muted); font-size: 0.85rem;">
-                                Loading workspace members...
-                            </div>
-                        </div>
-
                     </div>
+                    
+                    ${canManageWorkers ? `
+                        <button type="button" id="btn-quick-invite-member" class="btn btn-sm btn-primary" style="font-weight: 700; font-size: 0.82rem; padding: 0.5rem 1.15rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.45rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                            <span>Invite Member</span>
+                        </button>
+                    ` : ''}
+                </div>
 
+                <!-- Search Member Filter -->
+                <div style="position: relative; margin-bottom: 1.35rem;">
+                    <input type="text" id="member-search-input" class="form-control" placeholder="Search members by name, email, role, or ID..." style="padding-left: 2.4rem; font-size: 0.86rem; height: 42px; border-radius: 10px; width: 100%;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </div>
+
+                <!-- Members Cards Container (NO FIXED HEIGHT! Dynamic growth as members increase!) -->
+                <div id="members-cards-container" style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+                    <!-- Dynamic Member Cards Rendered by Snapshot -->
+                    <div style="padding: 2.5rem; text-align:center; color: var(--text-muted); font-size: 0.88rem;">
+                        Loading workspace members...
+                    </div>
                 </div>
 
             </div>
@@ -1004,8 +1015,8 @@ export const renderWorkers = async (container, workspaceId) => {
                 workspaceName: wsName,
                 workspaceId: wsInfo.workspaceId || wsInfo.id || workspaceId,
                 role: 'WORKER',
-                workspaceRole: 1,
-                roleTag: 'Staff',
+                workspaceRole: 3,
+                roleTag: 'Worker',
                 status: 'PENDING'
             };
 
@@ -1018,8 +1029,8 @@ export const renderWorkers = async (container, workspaceId) => {
             const pendingMemberPayload = {
                 email: cleanEmail,
                 role: 'WORKER',
-                workspaceRole: 1,
-                roleTag: 'Staff',
+                workspaceRole: 3,
+                roleTag: 'Worker',
                 status: 'PENDING',
                 invitedAt: nowMs,
                 invitedBy: adminEmail,
@@ -1536,92 +1547,205 @@ export const renderWorkers = async (container, workspaceId) => {
         const query = (memberSearchInput?.value || '').trim().toLowerCase();
         const filtered = query ? members.filter(m => {
             const em = (m.email || '').toLowerCase();
+            const nm = (m.name || m.displayName || '').toLowerCase();
             const r = (m.role || '').toLowerCase();
-            return em.includes(query) || r.includes(query);
+            const rTag = (m.roleTag || '').toLowerCase();
+            const wId = (m.appWorkerId || m.workerUid || '').toLowerCase();
+            return em.includes(query) || nm.includes(query) || r.includes(query) || rTag.includes(query) || wId.includes(query);
         }) : members;
 
         if (filtered.length === 0) {
             membersCardsContainer.innerHTML = `
-                <div style="padding: 1.5rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                <div style="padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.88rem; background: var(--surface-50); border: 1.5px dashed var(--border-color); border-radius: 14px;">
                     No members found matching "${escapeHtml(query)}"
                 </div>
             `;
             return;
         }
 
-        membersCardsContainer.innerHTML = filtered.map(m => {
-            const isCreator = Boolean(m.isCreator || m.role === 'CREATOR_ADMIN');
-            const rUpper = (m.role || 'WORKER').toUpperCase();
+        // Strict 3-Tier Sorting Rule:
+        // Tier 1: Creator Admin on the very top (highlighted with green outline)
+        // Tier 2: My Card (You) directly after creator admin
+        // Tier 3: Other members (Co-Admins -> Workers -> Visitors)
+        const sortedMembers = [...filtered].sort((a, b) => {
+            const aCreator = Boolean(a.isCreator || a.role === 'CREATOR_ADMIN' || (wsInfo.adminEmail && (a.email || '').toLowerCase() === (wsInfo.adminEmail || '').toLowerCase()) || (wsInfo.email && (a.email || '').toLowerCase() === (wsInfo.email || '').toLowerCase()));
+            const bCreator = Boolean(b.isCreator || b.role === 'CREATOR_ADMIN' || (wsInfo.adminEmail && (b.email || '').toLowerCase() === (wsInfo.adminEmail || '').toLowerCase()) || (wsInfo.email && (b.email || '').toLowerCase() === (wsInfo.email || '').toLowerCase()));
+            if (aCreator && !bCreator) return -1;
+            if (!aCreator && bCreator) return 1;
+
+            const aSelf = currentUser && (a.email || '').toLowerCase() === (currentUser.email || '').toLowerCase();
+            const bSelf = currentUser && (b.email || '').toLowerCase() === (currentUser.email || '').toLowerCase();
+            if (aSelf && !bSelf) return -1;
+            if (!aSelf && bSelf) return 1;
+
+            const roleWeight = { 'CREATOR_ADMIN': 1, 'ADMIN': 1, 'CO_ADMIN': 2, 'CO-ADMIN': 2, 'WORKER': 3, 'VISITOR': 4 };
+            const aWeight = Number(a.workspaceRole) || roleWeight[(a.role || 'WORKER').toUpperCase()] || 99;
+            const bWeight = Number(b.workspaceRole) || roleWeight[(b.role || 'WORKER').toUpperCase()] || 99;
+            if (aWeight !== bWeight) return aWeight - bWeight;
+
+            return (a.email || '').localeCompare(b.email || '');
+        });
+
+        membersCardsContainer.innerHTML = sortedMembers.map(m => {
+            const isCreator = Boolean(m.isCreator || m.role === 'CREATOR_ADMIN' || (wsInfo.adminEmail && (m.email || '').toLowerCase() === (wsInfo.adminEmail || '').toLowerCase()) || (wsInfo.email && (m.email || '').toLowerCase() === (wsInfo.email || '').toLowerCase()));
+            const rUpper = (m.role || (isCreator ? 'CREATOR_ADMIN' : 'WORKER')).toUpperCase();
             const statusUpper = (m.status || 'JOINED').toUpperCase();
             const isPending = statusUpper === 'PENDING';
-            const isRestrictedWorker = !isPending && m.isRestricted && (m.disableAdd || m.disableUpdate || m.disableDelete);
+            const isBlocked = Boolean(m.accessRevoked || m.isAccessBlocked);
+            
+            const hasRestrictions = !isPending && !isCreator && Boolean(
+                m.isRestricted || m.cannotSeeCost || m.cannotSeeProfit || 
+                m.disableAdd || m.disableDeleteOthers || m.disableDelete || 
+                m.disableUpdateOthers || m.disableUpdate || isBlocked
+            );
 
-            const isSelf = (m.email || '').toLowerCase() === (currentUser.email || '').toLowerCase();
-            const nameInitial = ((m.name || m.email || 'M').trim().charAt(0) || 'M').toUpperCase();
-            const memberPhoto = m.photoURL || m.photo || (isCreator ? (window.__activeWorkspace?.adminPhotoURL || (isSelf ? currentUser.photoURL : '')) : (isSelf ? currentUser.photoURL : ''));
+            const isSelf = currentUser && (m.email || '').toLowerCase() === (currentUser.email || '').toLowerCase();
+            
+            // Member Display Name & Initial
+            let displayName = (m.name || m.displayName || '').trim();
+            if (!displayName) {
+                if (isCreator && wsInfo.adminName) {
+                    displayName = wsInfo.adminName;
+                } else if (m.email) {
+                    displayName = m.email.split('@')[0];
+                } else {
+                    displayName = 'Member';
+                }
+            }
+            const nameInitial = (displayName.charAt(0) || 'M').toUpperCase();
+            
+            // Member Photo
+            const memberPhoto = m.photoURL || m.photo || (isCreator ? (wsInfo.adminPhotoURL || (isSelf ? currentUser.photoURL : '')) : (isSelf ? currentUser.photoURL : ''));
+
+            // App Worker ID Resolution
+            let rawWorkerId = m.appWorkerId || m.workerUid || m.workerId || m.id;
+            if (!rawWorkerId || rawWorkerId.length > 20) {
+                if (isCreator) {
+                    rawWorkerId = wsInfo.adminId || 'ADMIN-HEAD';
+                } else if (m.workerUid) {
+                    rawWorkerId = m.workerUid.substring(0, 10).toUpperCase();
+                } else {
+                    rawWorkerId = 'WRK-' + (m.email ? Math.abs(m.email.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)).toString(36).toUpperCase().substring(0, 6) : '01');
+                }
+            }
+            const cleanWorkerId = String(rawWorkerId).replace(/^#/, '');
+
+            // Combined AssetsUsage: Product + Cat + Invoice + Client + Business + Barcode + Everything used inside workspace
+            const pAdded = Number(isCreator ? (wsInfo.adminProductCount ?? m.productAdded ?? 0) : (m.productAdded ?? m.productCount ?? 0));
+            const invAdded = Number(isCreator ? (wsInfo.adminInvoiceCount ?? m.invoiceAdded ?? 0) : (m.invoiceAdded ?? m.invoiceCount ?? 0));
+            const catAdded = Number(isCreator ? (wsInfo.adminCategoryCount ?? m.categoryAdded ?? 0) : (m.categoryAdded ?? m.categoryCount ?? 0));
+            const clientAdded = Number(isCreator ? (wsInfo.adminClientCount ?? m.clientAdded ?? 0) : (m.clientAdded ?? m.clientCount ?? 0));
+            const busAdded = Number(isCreator ? (wsInfo.adminBusinessCount ?? m.businessAdded ?? 0) : (m.businessAdded ?? m.businessCount ?? 0));
+            const barcodeAdded = Number(isCreator ? (wsInfo.adminBarcodeCount ?? m.barcodesCreated ?? 0) : (m.barcodesCreated ?? m.barcodeAdded ?? 0));
+            const explicitUsage = Number(m.assetsUsage ?? m.totalUsage ?? 0);
+
+            // Cross-reference live items in memory created by this worker ID or email
+            const wIdLower = cleanWorkerId.toLowerCase();
+            const emailLower = (m.email || '').toLowerCase();
+            let liveTouchedCount = 0;
+            if (Array.isArray(productsList) && (wIdLower || emailLower)) {
+                liveTouchedCount += productsList.filter(p => {
+                    const c = String(p.creatorId || p.createdBy || p.creator || '').toLowerCase();
+                    return (wIdLower && c === wIdLower) || (emailLower && c === emailLower);
+                }).length;
+            }
+            if (Array.isArray(categoriesList) && (wIdLower || emailLower)) {
+                liveTouchedCount += categoriesList.filter(c => {
+                    const cr = String(c.creatorId || c.createdBy || c.creator || '').toLowerCase();
+                    return (wIdLower && cr === wIdLower) || (emailLower && cr === emailLower);
+                }).length;
+            }
+
+            const totalAssetsUsage = Math.max(pAdded + invAdded + catAdded + clientAdded + busAdded + barcodeAdded + explicitUsage, liveTouchedCount);
+
+            // Card Border and Background Styling (Spacious Full-Width Enterprise Architecture)
+            let cardStyle = 'background: #FFFFFF; border: 1.5px solid #E4E4E7; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); width: 100%; box-sizing: border-box;';
+            
+            if (isCreator) {
+                // Creator in very top Green outlined highlighted
+                cardStyle = 'background: #FFFFFF; border: 2px solid #10B981 !important; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 6px 25px -4px rgba(16, 185, 129, 0.18); position: relative; width: 100%; box-sizing: border-box;';
+            } else if (isBlocked) {
+                // Access Suspended / Blocked
+                cardStyle = 'background: #FFFFFF; border: 1.5px solid #E4E4E7; border-bottom: 4px solid #EF4444 !important; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 2px 10px rgba(239, 68, 68, 0.08); width: 100%; box-sizing: border-box;';
+            } else if (hasRestrictions) {
+                // Restricted worker: yellow/amber bottom border
+                cardStyle = 'background: #FFFFFF; border: 1.5px solid #E4E4E7; border-bottom: 4px solid #F59E0B !important; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 2px 10px rgba(245, 158, 11, 0.08); width: 100%; box-sizing: border-box;';
+            }
 
             // Role Badge styling
-            let rolePillBg = '#FFFFFF';
-            let rolePillColor = '#71717A';
-            let rolePillBorder = '#E4E4E7';
+            let rolePillHtml = '';
             if (isCreator) {
-                rolePillBg = '#18181B';
-                rolePillColor = '#FFFFFF';
-                rolePillBorder = '#18181B';
-            } else if (rUpper === 'ADMIN') {
-                rolePillBg = '#27272A';
-                rolePillColor = '#FFFFFF';
-                rolePillBorder = '#27272A';
+                rolePillHtml = `
+                    <span style="font-size: 0.74rem; font-weight: 800; padding: 0.22rem 0.65rem; border-radius: 6px; background: #ECFDF5; color: #047857; border: 1.5px solid #10B981; display: inline-flex; align-items: center; gap: 4px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <span>Creator Admin</span>
+                    </span>
+                `;
             } else if (rUpper === 'CO_ADMIN' || rUpper === 'CO-ADMIN') {
-                rolePillBg = '#3F3F46';
-                rolePillColor = '#FFFFFF';
-                rolePillBorder = '#3F3F46';
+                rolePillHtml = `
+                    <span style="font-size: 0.74rem; font-weight: 800; padding: 0.22rem 0.65rem; border-radius: 6px; background: #18181B; color: #FFFFFF; border: 1px solid #18181B; display: inline-flex; align-items: center; gap: 4px;">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <span>${escapeHtml(m.roleTag || 'Co-Admin')}</span>
+                    </span>
+                `;
+            } else {
+                rolePillHtml = `
+                    <span style="font-size: 0.74rem; font-weight: 700; padding: 0.22rem 0.6rem; border-radius: 6px; background: #F4F4F5; color: #18181B; border: 1px solid #E4E4E7;">
+                        ${escapeHtml(m.roleTag || 'Worker')}
+                    </span>
+                `;
             }
 
             // Status Indicator styling
-            let statusDotColor = '#18181B';
+            let statusDotColor = isBlocked ? '#EF4444' : (isPending ? '#71717A' : (hasRestrictions ? '#F59E0B' : '#10B981'));
             let statusBadgeHtml = `
-                <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #FAFAFA; color: #09090B; border: 1px solid #E4E4E7;">
+                <span style="font-size: 0.72rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 6px; background: #F4F4F5; color: #18181B; border: 1px solid #E4E4E7; display: inline-flex; align-items: center; gap: 4px;">
+                    <span style="width: 7px; height: 7px; border-radius: 50%; background: ${statusDotColor};"></span>
                     Joined
                 </span>
             `;
             if (isPending) {
-                statusDotColor = '#71717A';
                 statusBadgeHtml = `
-                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #FAFAFA; color: #71717A; border: 1px solid #E4E4E7;">
-                        Pending
+                    <span style="font-size: 0.72rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 6px; background: #F4F4F5; color: #71717A; border: 1px solid #E4E4E7; display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #71717A;"></span>
+                        Pending Invite
                     </span>
-                    ${m.hasExistingWorkspace ? `
-                        <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #FAFAFA; color: #71717A; border: 1px solid #E4E4E7;">
-                            Connected in Workspace
-                        </span>
-                    ` : ''}
                 `;
-            } else if (isRestrictedWorker) {
-                statusDotColor = '#71717A';
+            } else if (isBlocked) {
                 statusBadgeHtml = `
-                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #FAFAFA; color: #71717A; border: 1px solid #E4E4E7;">
+                    <span style="font-size: 0.72rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 6px; background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #EF4444;"></span>
+                        Access Blocked
+                    </span>
+                `;
+            } else if (hasRestrictions) {
+                statusBadgeHtml = `
+                    <span style="font-size: 0.72rem; font-weight: 700; padding: 0.18rem 0.55rem; border-radius: 6px; background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #F59E0B;"></span>
                         Restricted
                     </span>
                 `;
             }
 
-            if (m.accessRevoked || m.isAccessBlocked) {
-                statusDotColor = '#18181B';
-                statusBadgeHtml += `
-                    <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; background: #18181B; color: #FFFFFF; border: 1px solid #18181B; display:inline-flex; align-items:center; gap:3px;">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> Access Blocked
-                    </span>
-                `;
+            // Joined date resolution
+            let joinedDateFormatted = 'Active Member';
+            const rawJoined = m.joinedAt || m.timestamp || m.createdAt;
+            if (rawJoined) {
+                try {
+                    const jd = typeof rawJoined === 'number' ? new Date(rawJoined) : (rawJoined.toDate ? rawJoined.toDate() : new Date(rawJoined));
+                    if (!isNaN(jd.getTime())) {
+                        joinedDateFormatted = jd.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                    }
+                } catch (e) {}
             }
 
-            // Action button
+            // Action button (Manage button outlined grey)
             let actionBtnHtml = '';
             if (canManageWorkers && !isSelf) {
                 if (isPending) {
                     actionBtnHtml = `
-                        <button type="button" class="btn btn-sm btn-cancel-invite" data-email="${escapeHtml(m.email)}" style="font-size:0.75rem; padding:0.25rem 0.6rem; color:#09090B; background:#FFFFFF; border:1px solid #E4E4E7; border-radius:6px; font-weight:600; cursor:pointer;">
-                            Cancel
+                        <button type="button" class="btn btn-sm btn-cancel-invite" data-email="${escapeHtml(m.email)}" style="font-size:0.82rem; padding:0.5rem 1.15rem; color:#09090B; background:#FFFFFF; border:1.5px solid #E4E4E7; border-radius:10px; font-weight:700; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='#F4F4F5'; this.style.borderColor='#D4D4D8';" onmouseout="this.style.background='#FFFFFF'; this.style.borderColor='#E4E4E7';">
+                            Cancel Invite
                         </button>
                     `;
                 } else if ((isAdmin && !isCreator) || (isCoAdmin && !isCreator && rUpper === 'WORKER')) {
@@ -1641,49 +1765,125 @@ export const renderWorkers = async (container, workspaceId) => {
                             data-revoke-end="${m.revokeEnd || ''}"
                             data-revoke-start-fmt="${escapeHtml(m.revokeStartFormatted || '')}"
                             data-revoke-end-fmt="${escapeHtml(m.revokeEndFormatted || '')}"
-                            style="font-size:0.78rem; padding:0.35rem 0.85rem; font-weight:700; border-radius:8px; border:1.5px solid #E4E4E7; background:#FFFFFF; color:#09090B; cursor:pointer; display:inline-flex; align-items:center; gap:0.35rem; box-shadow:0 1px 2px rgba(0,0,0,0.04); transition:all 0.15s ease;" onmouseover="this.style.background='#F4F4F5'; this.style.borderColor='#D4D4D8';" onmouseout="this.style.background='#FFFFFF'; this.style.borderColor='#E4E4E7';">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            style="font-size:0.84rem; padding:0.55rem 1.25rem; font-weight:700; border-radius:10px; border:1.5px solid #D4D4D8; background:#FFFFFF; color:#09090B; cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.15s ease;" onmouseover="this.style.background='#F4F4F5'; this.style.borderColor='#A1A1AA';" onmouseout="this.style.background='#FFFFFF'; this.style.borderColor='#D4D4D8';">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                             <span>Manage</span>
                         </button>
                     `;
                 }
             }
 
+            // Dedicated Bottom Restriction Strip (error/yellow for visibility)
+            let restrictionBottomBarHtml = '';
+            if (isBlocked) {
+                restrictionBottomBarHtml = `
+                    <div style="margin-top: 1rem; padding: 0.75rem 1.15rem; background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #B91C1C; font-size: 0.82rem; font-weight: 800;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                            <span>WORKSPACE ACCESS SUSPENDED</span>
+                        </div>
+                        <div style="font-size: 0.78rem; color: #991B1B; font-weight: 600;">
+                            Worker is blocked from accessing workspace operations & data
+                        </div>
+                    </div>
+                `;
+            } else if (hasRestrictions) {
+                const tags = [];
+                if (m.cannotSeeCost) tags.push('Hide Cost Price');
+                if (m.cannotSeeProfit) tags.push('Hide Profit Margin');
+                if (m.disableAdd) tags.push('Disable Add');
+                if (m.disableUpdateOthers) tags.push('No Edit Others');
+                if (m.disableDeleteOthers) tags.push('No Delete Others');
+                if (m.disableDelete && !m.disableDeleteOthers) tags.push('No Delete');
+
+                restrictionBottomBarHtml = `
+                    <div style="margin-top: 1rem; padding: 0.75rem 1.15rem; background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: #B45309; font-size: 0.82rem; font-weight: 800;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <span>Active Restrictions & Visibility Limits:</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                            ${tags.map(t => `<span style="font-size: 0.74rem; font-weight: 800; background: #FEF3C7; color: #92400E; padding: 0.2rem 0.55rem; border-radius: 6px; border: 1px solid #FCD34D;">${escapeHtml(t)}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
             return `
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0.85rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 12px; transition: all 0.15s ease;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem; overflow: hidden;">
+                <div class="member-large-card" style="${cardStyle}">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
                         
-                        <!-- Avatar / Initial -->
-                        <div style="width: 38px; height: 38px; border-radius: 50%; background: var(--surface-100); color: var(--text-primary); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.88rem; flex-shrink: 0; position: relative; overflow: hidden;">
-                            ${memberPhoto ? `
-                                <img src="${escapeHtml(memberPhoto)}" alt="${escapeHtml(m.name || m.email || 'Member')}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <span style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">${nameInitial}</span>
-                            ` : nameInitial}
-                            <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; border-radius: 50%; background: ${statusDotColor}; border: 2px solid #ffffff; z-index: 2;"></span>
-                        </div>
+                        <!-- Left Details: Avatar + Info -->
+                        <div style="display: flex; align-items: center; gap: 1.25rem; min-width: 280px; flex: 1;">
+                            
+                            <!-- Large Avatar (56px) -->
+                            <div style="width: 56px; height: 56px; border-radius: 16px; background: var(--surface-100); color: var(--text-primary); border: 1.5px solid ${isCreator ? '#10B981' : 'var(--border-color)'}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem; flex-shrink: 0; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                ${memberPhoto ? `
+                                    <img src="${escapeHtml(memberPhoto)}" alt="${escapeHtml(displayName)}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <span style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">${nameInitial}</span>
+                                ` : nameInitial}
+                                <span style="position: absolute; bottom: 3px; right: 3px; width: 12px; height: 12px; border-radius: 50%; background: ${statusDotColor}; border: 2.5px solid #FFFFFF; z-index: 2;"></span>
+                            </div>
 
-                        <!-- Email & Role -->
-                        <div style="overflow: hidden;">
-                            <div style="display: flex; align-items: center; gap: 0.4rem;">
-                                <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;">
-                                    ${escapeHtml(m.email || 'Member')}
+                            <!-- Name, Email & Metadata Badges -->
+                            <div style="display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; flex: 1;">
+                                
+                                <!-- Row 1: Name + (You) + Role Pill + Status -->
+                                <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
+                                    <span style="font-weight: 800; font-size: 1.05rem; color: #09090B; letter-spacing: -0.01em;">
+                                        ${escapeHtml(displayName)}
+                                    </span>
+                                    ${isSelf ? '<span style="font-size: 0.74rem; font-weight: 800; color: #18181B; background: #F4F4F5; padding: 0.18rem 0.55rem; border-radius: 6px; border: 1px solid #E4E4E7;">(You)</span>' : ''}
+                                    ${rolePillHtml}
+                                    ${statusBadgeHtml}
                                 </div>
-                                ${isSelf ? '<span style="font-size:0.7rem; color: #18181B; font-weight:700;">(You)</span>' : ''}
+
+                                <!-- Row 2: Full Email -->
+                                <div style="font-size: 0.88rem; color: #52525B; font-weight: 500; word-break: break-all;">
+                                    ${escapeHtml(m.email || 'No email')}
+                                </div>
+
+                                <!-- Row 3: ID (#appWorkerId) + AssetsUsage + Joined Date -->
+                                <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                                    
+                                    <!-- ID Badge -->
+                                    <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.78rem; font-weight: 700; background: #F4F4F5; color: #09090B; padding: 0.22rem 0.65rem; border-radius: 6px; border: 1px solid #E4E4E7; display: inline-flex; align-items: center; gap: 5px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                        ID: #${escapeHtml(cleanWorkerId)}
+                                    </span>
+
+                                    <!-- AssetsUsage Badge -->
+                                    <span style="font-size: 0.78rem; font-weight: 700; background: #F4F4F5; color: #18181B; padding: 0.22rem 0.7rem; border-radius: 6px; border: 1px solid #E4E4E7; display: inline-flex; align-items: center; gap: 5px;" title="Combined workspace footprint (products, invoices, categories, clients, businesses, barcodes)">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                        <span>AssetsUsage: <strong style="color: #09090B; font-weight: 800; font-size: 0.84rem;">${totalAssetsUsage}</strong></span>
+                                    </span>
+
+                                    <!-- Joined Date Badge -->
+                                    <span style="font-size: 0.76rem; font-weight: 600; color: #71717A; background: #FAFAFA; border: 1px solid #E4E4E7; padding: 0.22rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <span>Joined: ${escapeHtml(joinedDateFormatted)}</span>
+                                    </span>
+
+                                    ${isCreator ? `
+                                        <span style="font-size: 0.74rem; font-weight: 700; color: #047857; background: #ECFDF5; border: 1.5px solid #A7F3D0; padding: 0.2rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                                            Head Administrator
+                                        </span>
+                                    ` : ''}
+                                </div>
+
                             </div>
-                            <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.15rem; flex-wrap: wrap;">
-                                <span style="font-size: 0.68rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 4px; background: ${rolePillBg}; color: ${rolePillColor}; border: 1px solid ${rolePillBorder};">
-                                    ${escapeHtml(isCreator ? 'Creator Admin' : (rUpper === 'CO_ADMIN' ? 'Co-Admin' : rUpper))}
-                                </span>
-                                ${statusBadgeHtml}
-                            </div>
+                        </div>
+
+                        <!-- Right Details: Action Button -->
+                        <div style="flex-shrink: 0;">
+                            ${actionBtnHtml}
                         </div>
 
                     </div>
 
-                    <!-- Action Column -->
-                    <div>
-                        ${actionBtnHtml}
-                    </div>
+                    <!-- Bottom Restriction / Visibility Bar -->
+                    ${restrictionBottomBarHtml}
                 </div>
             `;
         }).join('');
@@ -2016,12 +2216,24 @@ export const renderWorkers = async (container, workspaceId) => {
         const isPromoted = (prevRole === 'WORKER' && newRole === 'CO_ADMIN');
         const isDemoted = (prevRole === 'CO_ADMIN' && newRole === 'WORKER');
 
+        // New System Role Rule: Promote resets tag to 'Co-Admin', Demote resets tag to 'Worker'
+        let finalRoleTag;
+        if (isPromoted) {
+            finalRoleTag = 'Co-Admin';
+        } else if (isDemoted) {
+            finalRoleTag = 'Worker';
+        } else {
+            finalRoleTag = memberData?.roleTag || (isCoAdmin ? 'Co-Admin' : 'Worker');
+        }
+
+        const targetWorkspaceRole = isCoAdmin ? 2 : 3;
+
         try {
             const memberRef = doc(db, 'Workspaces/' + workspaceId + '/Members', email);
             const updatePayload = {
                 role: newRole,
-                workspaceRole: isCoAdmin ? 2 : 1,
-                roleTag: isCoAdmin ? 'Co-Admin' : 'Staff',
+                workspaceRole: targetWorkspaceRole,
+                roleTag: finalRoleTag,
                 cannotSeeCost: cannotSeeCost,
                 cannotSeeProfit: cannotSeeProfit,
                 isRestricted: isRestricted,
@@ -2084,8 +2296,8 @@ export const renderWorkers = async (container, workspaceId) => {
                         const connRef = doc(db, 'Connections', workerUid);
                         await setDoc(connRef, {
                             role: newRole,
-                            workspaceRole: isCoAdmin ? 2 : 1,
-                            roleTag: isCoAdmin ? 'Co-Admin' : 'Staff',
+                            workspaceRole: targetWorkspaceRole,
+                            roleTag: finalRoleTag,
                             isAccessBlocked: isAccessBlocked,
                             accessRevoked: accessRevoked,
                             updatedAt: Date.now()

@@ -9,6 +9,7 @@
 
 import { getAutomationService } from '../services/automationService.js';
 import { showAlert } from '../alert-handler.js';
+import { authService } from '../../firebase/auth.js';
 
 let currentWorkspaceId = null;
 let activeTab = 'notifications'; // 'notifications' | 'rules' | 'reports' | 'tasks' | 'settings'
@@ -165,6 +166,28 @@ const renderNotificationsTab = async (target, headerActions) => {
     const autoService = getAutomationService(currentWorkspaceId);
     const notifications = await autoService.getAllNotifications(notifStatusFilter === 'archived');
 
+    const currentUser = authService.getCurrentUser();
+    const userEmail = (currentUser?.email || '').toLowerCase().trim();
+    const ws = (typeof window !== 'undefined' && window.__activeWorkspace) ? window.__activeWorkspace : {};
+    const rawRole = String(ws.role || currentUser?.role || 'WORKER').toUpperCase();
+    const isAdmin = rawRole === 'CREATOR_ADMIN' || rawRole === 'ADMIN' || rawRole === 'CREATOR' || ws.workspaceRole === 1;
+    const isCoAdmin = !isAdmin && (rawRole === 'CO_ADMIN' || rawRole === 'COADMIN' || ws.workspaceRole === 2);
+    const isPrivileged = isAdmin || isCoAdmin;
+
+    const isUserRelated = (n) => {
+        if (!n) return false;
+        const target = (n.targetEmail || n.workerEmail || n.recipient || '').toLowerCase().trim();
+        if (userEmail && target === userEmail) return true;
+        const t = String(n.type || '').toUpperCase();
+        if (t === 'ROLE_PROMOTION' || t === 'ROLE_DEMOTION' || t === 'INVITATION' || t === 'INVITE') {
+            if (!target || target === userEmail) return true;
+        }
+        const msg = String(n.message || '').toLowerCase();
+        const title = String(n.title || '').toLowerCase();
+        if (userEmail && (msg.includes(userEmail) || title.includes(userEmail))) return true;
+        return false;
+    };
+
     // Header actions
     if (headerActions) {
         headerActions.innerHTML = `
@@ -176,17 +199,48 @@ const renderNotificationsTab = async (target, headerActions) => {
         `;
 
         headerActions.querySelector('#btn-mark-all-read')?.addEventListener('click', async () => {
-            await autoService.markAllAsRead();
-            showAlert.success("All notifications marked as read.");
+            if (isPrivileged) {
+                await autoService.markAllAsRead();
+                showAlert.success("All workspace notifications marked as read.");
+            } else {
+                let updatedCount = 0;
+                for (const n of notifications) {
+                    if (!n.read && isUserRelated(n)) {
+                        await autoService.markAsRead(n.id);
+                        updatedCount++;
+                    }
+                }
+                if (updatedCount > 0) {
+                    showAlert.success(`${updatedCount} personal notifications marked as read.`);
+                } else {
+                    showAlert.info("Workspace alerts cannot be marked as read by workers (use Archive to clear from inbox).");
+                }
+            }
             renderNotificationsTab(target, headerActions);
         });
 
         headerActions.querySelector('#btn-clear-read')?.addEventListener('click', async () => {
-            const all = await autoService.getAllNotifications(true);
-            for (const n of all) {
-                if (n.read) await autoService.deleteNotification(n.id);
+            if (isPrivileged) {
+                const all = await autoService.getAllNotifications(true);
+                for (const n of all) {
+                    if (n.read) await autoService.deleteNotification(n.id);
+                }
+                showAlert.info("Read notifications cleared.");
+            } else {
+                const all = await autoService.getAllNotifications(true);
+                let clearedCount = 0;
+                for (const n of all) {
+                    if (n.read && isUserRelated(n)) {
+                        await autoService.deleteNotification(n.id);
+                        clearedCount++;
+                    }
+                }
+                if (clearedCount > 0) {
+                    showAlert.info(`${clearedCount} read personal notifications cleared.`);
+                } else {
+                    showAlert.info("Workspace alerts can only be deleted by an Administrator.");
+                }
             }
-            showAlert.info("Read notifications cleared.");
             renderNotificationsTab(target, headerActions);
         });
     }
@@ -284,9 +338,37 @@ const renderFilteredNotifList = (target, allNotifications) => {
         failed_task: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
     };
 
+    const currentUser = authService.getCurrentUser();
+    const userEmail = (currentUser?.email || '').toLowerCase().trim();
+    const ws = (typeof window !== 'undefined' && window.__activeWorkspace) ? window.__activeWorkspace : {};
+    const rawRole = String(ws.role || currentUser?.role || 'WORKER').toUpperCase();
+    const isAdmin = rawRole === 'CREATOR_ADMIN' || rawRole === 'ADMIN' || rawRole === 'CREATOR' || ws.workspaceRole === 1;
+    const isCoAdmin = !isAdmin && (rawRole === 'CO_ADMIN' || rawRole === 'COADMIN' || ws.workspaceRole === 2);
+    const isPrivileged = isAdmin || isCoAdmin;
+
+    const isUserRelated = (n) => {
+        if (!n) return false;
+        const target = (n.targetEmail || n.workerEmail || n.recipient || '').toLowerCase().trim();
+        if (userEmail && target === userEmail) return true;
+        const t = String(n.type || '').toUpperCase();
+        if (t === 'ROLE_PROMOTION' || t === 'ROLE_DEMOTION' || t === 'INVITATION' || t === 'INVITE') {
+            if (!target || target === userEmail) return true;
+        }
+        const msg = String(n.message || '').toLowerCase();
+        const title = String(n.title || '').toLowerCase();
+        if (userEmail && (msg.includes(userEmail) || title.includes(userEmail))) return true;
+        return false;
+    };
+
     listContainer.innerHTML = `
         <div style="display:flex; flex-direction:column; gap:0.65rem;">
-            ${filtered.map(n => `
+            ${filtered.map(n => {
+                const isPersonal = isUserRelated(n);
+                const canDelete = isPrivileged || isPersonal;
+                const canMarkRead = isPrivileged || isPersonal;
+                const canArchive = true;
+
+                return `
                 <div class="card notif-row" data-id="${n.id}" style="padding: 1.15rem 1.4rem; background: ${n.read ? '#FFFFFF' : '#FAFAFA'}; border: 1px solid ${n.read ? '#E4E4E7' : '#18181B'}; border-radius: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; transition: background 0.15s ease;">
                     <div style="display:flex; gap:0.85rem; align-items:flex-start; flex:1;">
                         <div style="width:34px; height:34px; border-radius:8px; background:#F4F4F5; border:1px solid #E4E4E7; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#18181B; margin-top:2px;">
@@ -297,7 +379,8 @@ const renderFilteredNotifList = (target, allNotifications) => {
                                 <strong style="color:#18181B; font-size:0.92rem;">${escapeHtml(n.title)}</strong>
                                 ${!n.read ? `<span class="badge" style="background:#18181B; color:#FFFFFF; font-size:0.65rem; padding:0.1rem 0.45rem; border-radius:999px;">UNREAD</span>` : ''}
                                 ${n.severity === 'critical' ? `<span class="badge" style="background:#F4F4F5; color:#18181B; border:1.5px solid #18181B; font-size:0.65rem; padding:0.1rem 0.45rem; border-radius:999px; font-weight:800;">CRITICAL</span>` : ''}
-                                <span class="badge" style="background:#F4F4F5; color:#71717A; border:1px solid #E4E4E7; font-size:0.65rem; padding:0.1rem 0.45rem; border-radius:4px; text-transform:uppercase;">${n.type.replace(/_/g, ' ')}</span>
+                                <span class="badge" style="background:#F4F4F5; color:#71717A; border:1px solid #E4E4E7; font-size:0.65rem; padding:0.1rem 0.45rem; border-radius:4px; text-transform:uppercase;">${String(n.type || '').replace(/_/g, ' ')}</span>
+                                ${isPersonal ? `<span class="badge" style="background:rgba(16,185,129,0.1); color:#059669; border:1px solid rgba(16,185,129,0.25); font-size:0.65rem; padding:0.1rem 0.45rem; border-radius:4px; font-weight:700;">Personal</span>` : ''}
                             </div>
                             <p style="margin: 0.35rem 0 0.25rem; font-size: 0.85rem; color: #71717A; line-height: 1.45;">${escapeHtml(n.message)}</p>
                             <span style="font-size: 0.74rem; color: #A1A1AA; font-family: monospace;">${new Date(n.timestamp).toLocaleString()}</span>
@@ -312,12 +395,13 @@ const renderFilteredNotifList = (target, allNotifications) => {
                         </div>
                     </div>
                     <div style="display:flex; gap:0.35rem; align-items:center; flex-shrink:0;">
-                        ${!n.read ? `<button class="btn btn-sm btn-secondary btn-action-read" data-id="${n.id}" title="Mark as Read">Read</button>` : ''}
-                        ${!n.archived ? `<button class="btn btn-sm btn-secondary btn-action-archive" data-id="${n.id}" title="Archive">Archive</button>` : ''}
-                        <button class="btn btn-sm btn-outline btn-action-del" data-id="${n.id}" style="color:#71717A; border-color:#E4E4E7;" title="Delete">&times;</button>
+                        ${!n.read && canMarkRead ? `<button class="btn btn-sm btn-secondary btn-action-read" data-id="${n.id}" title="Mark as Read">Read</button>` : ''}
+                        ${canArchive && !n.archived ? `<button class="btn btn-sm btn-secondary btn-action-archive" data-id="${n.id}" title="Archive">Archive</button>` : ''}
+                        ${canDelete ? `<button class="btn btn-sm btn-outline btn-action-del" data-id="${n.id}" style="color:#71717A; border-color:#E4E4E7;" title="Delete">&times;</button>` : ''}
                     </div>
                 </div>
-            `).join('')}
+            `;
+            }).join('')}
         </div>
     `;
 
@@ -345,7 +429,13 @@ const renderFilteredNotifList = (target, allNotifications) => {
     listContainer.querySelectorAll('.btn-action-del').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            await autoService.deleteNotification(btn.dataset.id);
+            const id = btn.dataset.id;
+            const targetNotif = allNotifications.find(x => x.id === id);
+            if (!isPrivileged && !isUserRelated(targetNotif)) {
+                showAlert.error("Workspace notifications can only be deleted by an Administrator or Co-Admin. You may use Archive instead.");
+                return;
+            }
+            await autoService.deleteNotification(id);
             const updated = await autoService.getAllNotifications(notifStatusFilter === 'archived');
             renderFilteredNotifList(target, updated);
         });

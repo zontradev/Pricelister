@@ -363,42 +363,50 @@ export const renderProducts = async (container, workspaceId) => {
         const totalDays = Math.max(1, Math.round(totalDuration / (1000 * 60 * 60 * 24)));
         const daysRemaining = Math.round((expTime - now) / (1000 * 60 * 60 * 24));
 
-        // 0 - 30% = Excellent
-        // 30% - 50% = Good
-        // 50% - 70% = Fair
-        // 70% - 90% = Poor
-        // 90% - 95% = Unusable
-        // 95% - 100% (or above) = Expired
+        // Health status, color & assessment:
+        // 0 - 30% = Excellent (Green)
+        // 30% - 50% = Good (Light Green / Emerald-Lime)
+        // 50% - 70% = Fair (Yellow / Amber)
+        // 70% - 90% = Poor (Orange)
+        // 90% - 95% = Unusable (Deep Orange / Red-Orange)
+        // 95% - 100% = Expired (Red)
         let statusLabel = 'Excellent';
         let statusDesc = 'Freshly manufactured with peak shelf-life vitality.';
-        let badgeStyle = 'background:#18181B; color:#FFFFFF; border:1px solid #18181B;';
+        let barColor = '#10B981'; // Green
+        let badgeStyle = 'background:#ECFDF5; color:#047857; border:1.5px solid #10B981;';
 
         if (ratio >= 95 || daysRemaining <= 0) {
             statusLabel = 'Expired';
             statusDesc = daysRemaining < 0 
                 ? `Product expired ${Math.abs(daysRemaining)} day(s) ago. Discontinue sale and remove from active shelves.`
                 : 'Product has reached terminal shelf life. Discontinue sale.';
-            badgeStyle = 'background:#18181B; color:#FFFFFF; border:1px solid #18181B;';
+            barColor = '#EF4444'; // Red
+            badgeStyle = 'background:#FEF2F2; color:#B91C1C; border:1.5px solid #EF4444;';
         } else if (ratio >= 90) {
             statusLabel = 'Unusable';
             statusDesc = `Critical shelf life alert: Only ${Math.max(0, daysRemaining)} day(s) remaining before expiration. Immediate removal recommended.`;
-            badgeStyle = 'background:#27272A; color:#FFFFFF; border:1px solid #3F3F46;';
+            barColor = '#F97316'; // Deep Orange / Red-Orange
+            badgeStyle = 'background:#FFF7ED; color:#C2410C; border:1.5px solid #F97316;';
         } else if (ratio >= 70) {
             statusLabel = 'Poor';
             statusDesc = `Late shelf life stage (${daysRemaining} day(s) remaining). Prioritize dispatch, inventory clearance, or discount.`;
-            badgeStyle = 'background:#3F3F46; color:#FFFFFF; border:1px solid #52525B;';
+            barColor = '#FB923C'; // Orange
+            badgeStyle = 'background:#FFF7ED; color:#EA580C; border:1.5px solid #FB923C;';
         } else if (ratio >= 50) {
             statusLabel = 'Fair';
             statusDesc = `Mid-lifecycle stage with ${daysRemaining} day(s) remaining of stable shelf life.`;
-            badgeStyle = 'background:#F4F4F5; color:#18181B; border:1.5px solid #D4D4D8;';
+            barColor = '#EAB308'; // Yellow / Amber
+            badgeStyle = 'background:#FEFCE8; color:#A16207; border:1.5px solid #EAB308;';
         } else if (ratio >= 30) {
             statusLabel = 'Good';
             statusDesc = `Optimal commercial window with ${daysRemaining} day(s) remaining in prime condition.`;
-            badgeStyle = 'background:#F4F4F5; color:#18181B; border:1.5px solid #18181B;';
+            barColor = '#22C55E'; // Light Green
+            badgeStyle = 'background:#F0FDF4; color:#15803D; border:1.5px solid #22C55E;';
         } else {
             statusLabel = 'Excellent';
             statusDesc = `Peak product vitality with ${daysRemaining} day(s) remaining (${100 - clampedRatio}% shelf life remaining).`;
-            badgeStyle = 'background:#18181B; color:#FFFFFF; border:1px solid #18181B;';
+            barColor = '#10B981'; // Green
+            badgeStyle = 'background:#ECFDF5; color:#047857; border:1.5px solid #10B981;';
         }
 
         const mfgFormatted = mfgTime ? new Date(mfgTime).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not Set';
@@ -410,6 +418,7 @@ export const renderProducts = async (container, workspaceId) => {
             clampedRatio,
             statusLabel,
             statusDesc,
+            barColor,
             mfgFormatted,
             expFormatted,
             totalDays: `${totalDays} Days`,
@@ -855,23 +864,29 @@ export const renderProducts = async (container, workspaceId) => {
                     <div style="margin-bottom:1.25rem; background:#FAFAFA; padding:1.15rem; border-radius:12px; border:1px solid #E4E4E7;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; font-size:0.82rem; font-weight:700;">
                             <span style="color:#71717A;">Shelf Life Consumed</span>
-                            <span style="color:#18181B; font-family:monospace; font-size:0.9rem;">${health.clampedRatio}% Ratio</span>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${health.barColor || '#10B981'};"></span>
+                                <span style="color:#18181B; font-family:monospace; font-size:0.9rem;">${health.clampedRatio}% Ratio</span>
+                            </div>
                         </div>
                         
-                        <!-- 100% Progress Track -->
+                        <!-- 100% Progress Track with Dynamic Health Color -->
                         <div style="position:relative; width:100%; height:12px; background:#E4E4E7; border-radius:999px; overflow:hidden;">
-                            <div style="position:absolute; left:0; top:0; bottom:0; width:${health.clampedRatio}%; background:#18181B; border-radius:999px; transition:width 0.4s ease;"></div>
+                            <div style="position:absolute; left:0; top:0; bottom:0; width:${health.clampedRatio}%; background:${health.barColor || '#10B981'}; border-radius:999px; transition:width 0.4s ease, background 0.3s ease;"></div>
+                            
+                            <!-- Current ratio indicator pin if between 0 and 100 -->
+                            <div style="position:absolute; left:${health.clampedRatio}%; top:0; bottom:0; width:2px; background:#FFFFFF; box-shadow:0 0 3px rgba(0,0,0,0.5); transform:translateX(-50%);"></div>
                         </div>
 
-                        <!-- Milestone Scale Legend -->
-                        <div style="display:flex; justify-content:space-between; margin-top:0.6rem; font-size:0.72rem; color:#71717A; font-weight:600; flex-wrap:wrap; gap:0.35rem;">
-                            <span>0% (MFG)</span>
-                            <span>30% Excellent</span>
-                            <span>50% Good</span>
-                            <span>70% Fair</span>
-                            <span>90% Poor</span>
-                            <span>95% Unusable</span>
-                            <span>100% Expired</span>
+                        <!-- Milestone Scale Legend with Dynamic Indicator -->
+                        <div style="display:flex; justify-content:space-between; margin-top:0.6rem; font-size:0.72rem; color:#71717A; font-weight:600; flex-wrap:wrap; gap:0.35rem; position:relative;">
+                            <span style="${health.clampedRatio < 30 ? 'color:#047857; font-weight:800;' : ''}">0% (MFG)</span>
+                            <span style="${health.clampedRatio >= 30 && health.clampedRatio < 50 ? 'color:#15803D; font-weight:800;' : ''}">30% Excellent</span>
+                            <span style="${health.clampedRatio >= 50 && health.clampedRatio < 70 ? 'color:#A16207; font-weight:800;' : ''}">50% Good</span>
+                            <span style="${health.clampedRatio >= 70 && health.clampedRatio < 90 ? 'color:#EA580C; font-weight:800;' : ''}">70% Fair</span>
+                            <span style="${health.clampedRatio >= 90 && health.clampedRatio < 95 ? 'color:#C2410C; font-weight:800;' : ''}">90% Poor</span>
+                            <span style="${health.clampedRatio >= 95 && health.clampedRatio < 100 ? 'color:#B91C1C; font-weight:800;' : ''}">95% Unusable</span>
+                            <span style="${health.clampedRatio >= 100 ? 'color:#B91C1C; font-weight:800;' : ''}">100% Expired</span>
                         </div>
                     </div>
 

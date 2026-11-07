@@ -16,6 +16,7 @@ if (typeof window !== 'undefined') {
 import { CURRENCY_LIST, getCurrencyByCode } from './utils/currencyData.js';
 import { COUNTRIES_LIST, WORKSPACE_ROLES, getRoleLevel, getRoleMeta } from '../DataModel.js';
 import { userDataSafetyService } from './services/userDataSafetyService.js';
+import { getAutomationService } from './services/automationService.js';
 
 let routerInitialized = false;
 let roleListenerUnsub = null;
@@ -95,21 +96,21 @@ export const getRoleBadgeConfig = (role, customTag = null) => {
             return {
                 level: 0,
                 text: label,
-                className: 'badge-role badge-role-admin',
-                style: 'background: #FAFAFA !important; color: #18181B !important; border: 1px solid #E4E4E7 !important; font-weight: 700;'
+                className: 'badge-role badge-role-market-admin',
+                style: 'background: #FAFAFA !important; color: #18181B !important; border: 1px solid #E4E4E7 !important; font-weight: 800;'
             };
         case 1:
             return {
                 level: 1,
                 text: label,
-                className: 'badge-role badge-role-coadmin',
+                className: 'badge-role badge-role-admin',
                 style: 'background: #FAFAFA !important; color: #18181B !important; border: 1px solid #E4E4E7 !important; font-weight: 700;'
             };
         case 2:
             return {
                 level: 2,
                 text: label,
-                className: 'badge-role badge-role-manager',
+                className: 'badge-role badge-role-coadmin',
                 style: 'background: #FAFAFA !important; color: #18181B !important; border: 1px solid #E4E4E7 !important; font-weight: 700;'
             };
         case 3:
@@ -147,6 +148,324 @@ export const formatRoleBadge = (role, element, customTag = null) => {
 export const getRoleBadgeHtml = (role, customTag = null) => {
     const config = getRoleBadgeConfig(role, customTag);
     return `<span class="${config.className}" style="${config.style}">${config.text}</span>`;
+};
+
+const escapeHtml = (str) => {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
+/**
+ * Head Administrator Cannot Join Modal
+ * Informs organization admins that they must dismantle their existing workspace
+ * (remove members -> delete workspace) before they can join another workspace.
+ */
+export const showHeadAdminCannotJoinModal = (currentWs, invite) => {
+    const existing = document.getElementById('head-admin-cannot-join-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'head-admin-cannot-join-modal';
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(9, 9, 11, 0.75);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        z-index: 100050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        animation: fadeIn 0.18s ease-out;
+    `;
+
+    const wsName = currentWs?.name || 'your workspace';
+
+    overlay.innerHTML = `
+        <div class="card" role="dialog" aria-modal="true" style="
+            background: #ffffff;
+            border: 1.5px solid #e4e4e7;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 520px;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        ">
+            <!-- Header -->
+            <div style="padding: 1.5rem 1.75rem 1rem; display: flex; align-items: flex-start; gap: 0.85rem; border-bottom: 1px solid #f1f5f9;">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: #fafafa; border: 1.5px solid #e4e4e7; color: #18181b; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #18181b; letter-spacing: -0.02em;">Cannot Join Workspace</h3>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.84rem; color: #71717a;">Head Administrator permission restriction</p>
+                </div>
+                <button type="button" id="close-cannot-join-modal" aria-label="Close" style="background: none; border: none; font-size: 1.4rem; color: #71717a; cursor: pointer; padding: 2px 6px; line-height: 1;">&times;</button>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 1.5rem 1.75rem; display: flex; flex-direction: column; gap: 1.15rem;">
+                <div style="background: #fafafa; border: 1.5px solid #e4e4e7; border-radius: 14px; padding: 1.15rem;">
+                    <p style="margin: 0; font-size: 0.9rem; color: #18181b; line-height: 1.5;">
+                        You are a <strong>Head Administrator</strong> of <strong>"${escapeHtml(wsName)}"</strong>.
+                    </p>
+                    <p style="margin: 0.65rem 0 0 0; font-size: 0.82rem; color: #71717a; line-height: 1.5;">
+                        If you need to join another workspace, some required actions must be completed first:
+                    </p>
+                    <div style="margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.55rem; font-size: 0.82rem; color: #18181b; font-weight: 600;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">1</span>
+                            <span>Enter Workspace</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">2</span>
+                            <span>Remove all of your Members from Workers Activity</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">3</span>
+                            <span>Delete your Workspace permanently in Settings</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 1.15rem 1.75rem; background: #fafafa; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 0.65rem;">
+                <button type="button" id="btn-cancel-head-admin" class="btn" style="padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.85rem; border-radius: 10px; background: #ffffff; color: #18181b; border: 1.5px solid #d4d4d8; cursor: pointer;">Cancel</button>
+                <button type="button" id="btn-enter-head-admin-ws" class="btn" style="padding: 0.6rem 1.25rem; font-weight: 700; font-size: 0.85rem; border-radius: 10px; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; cursor: pointer;">Enter Workspace &rarr;</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    overlay.querySelector('#close-cannot-join-modal').onclick = close;
+    overlay.querySelector('#btn-cancel-head-admin').onclick = close;
+    overlay.querySelector('#btn-enter-head-admin-ws').onclick = () => {
+        close();
+        window.location.href = '/app.html';
+    };
+    overlay.onclick = (e) => {
+        if (e.target === overlay) close();
+    };
+};
+
+/**
+ * Worker / Co-Admin Leave & Join Confirmation Modal
+ * Shows side-by-side comparison cards for current workspace vs new workspace.
+ * Requires user confirmation to leave current workspace before joining target workspace.
+ */
+export const showWorkerLeaveAndJoinModal = (currentWs, invite, user, onSuccess = null) => {
+    const existing = document.getElementById('worker-leave-and-join-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'worker-leave-and-join-modal';
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(9, 9, 11, 0.75);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        z-index: 100050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        animation: fadeIn 0.18s ease-out;
+    `;
+
+    const currentName = currentWs?.name || 'Current Workspace';
+    const currentRole = currentWs?.role || currentWs?.userRole || 'Worker';
+    const currentAdmin = currentWs?.adminEmail || 'Owner';
+
+    const newName = invite?.workspaceName || 'New Workspace';
+    const newRole = invite?.role || 'Worker';
+    const newAdmin = invite?.adminEmail || 'Organization Admin';
+
+    overlay.innerHTML = `
+        <div class="card" role="dialog" aria-modal="true" style="
+            background: #ffffff;
+            border: 1.5px solid #e4e4e7;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 580px;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        ">
+            <!-- Header -->
+            <div style="padding: 1.5rem 1.75rem 1rem; display: flex; align-items: flex-start; gap: 0.85rem; border-bottom: 1px solid #f1f5f9;">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: #fafafa; border: 1.5px solid #e4e4e7; color: #18181b; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #18181b; letter-spacing: -0.02em;">Action Required</h3>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.84rem; color: #71717a;">Workspace transition verification</p>
+                </div>
+                <button type="button" id="close-leave-join-modal" aria-label="Close" style="background: none; border: none; font-size: 1.4rem; color: #71717a; cursor: pointer; padding: 2px 6px; line-height: 1;">&times;</button>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 1.5rem 1.75rem; display: flex; flex-direction: column; gap: 1.25rem; max-height: 70vh; overflow-y: auto;">
+                <div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; padding: 0.95rem 1.15rem;">
+                    <p style="margin: 0; font-size: 0.88rem; color: #18181b; line-height: 1.5;">
+                        Before entering a new workspace, you need to <strong>leave your current workspace</strong>. You will lose all access, permissions, and historical data associations in the current workspace.
+                    </p>
+                </div>
+
+                <!-- 2 Comparison Cards (Current vs New) -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                    <!-- Card 1: Current Workspace Info -->
+                    <div style="background: #ffffff; border: 1.5px solid #e4e4e7; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">Current Workspace</span>
+                            <span style="font-size: 0.7rem; font-weight: 700; background: #f4f4f5; color: #18181b; padding: 0.15rem 0.5rem; border-radius: 6px; border: 1px solid #e4e4e7;">Active</span>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.98rem; color: #18181b; word-break: break-word;">${escapeHtml(currentName)}</div>
+                            <div style="font-size: 0.76rem; color: #71717a; margin-top: 2px;">Admin: <strong style="color: #18181b;">${escapeHtml(currentAdmin)}</strong></div>
+                        </div>
+                        <div style="margin-top: auto; padding-top: 0.5rem; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem;">
+                            <span style="color: #71717a;">Role:</span>
+                            <span style="font-weight: 700; color: #18181b;">${escapeHtml(currentRole)}</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: New Workspace Info -->
+                    <div style="background: #fafafa; border: 1.5px solid #18181b; border-radius: 14px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #18181b; text-transform: uppercase; letter-spacing: 0.05em;">New Workspace</span>
+                            <span style="font-size: 0.7rem; font-weight: 800; background: #18181b; color: #ffffff; padding: 0.15rem 0.5rem; border-radius: 6px;">Target</span>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.98rem; color: #18181b; word-break: break-word;">${escapeHtml(newName)}</div>
+                            <div style="font-size: 0.76rem; color: #71717a; margin-top: 2px;">Invited by: <strong style="color: #18181b;">${escapeHtml(newAdmin)}</strong></div>
+                        </div>
+                        <div style="margin-top: auto; padding-top: 0.5rem; border-top: 1px solid #e4e4e7; display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem;">
+                            <span style="color: #71717a;">New Role:</span>
+                            <span style="font-weight: 700; color: #18181b;">${escapeHtml(newRole)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer: Cancel and Leave Current & Join New -->
+            <div style="padding: 1.15rem 1.75rem; background: #fafafa; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 0.65rem; flex-wrap: wrap;">
+                <button type="button" id="btn-cancel-leave-join" class="btn" style="padding: 0.65rem 1.25rem; font-weight: 700; font-size: 0.85rem; border-radius: 10px; background: #ffffff; color: #18181b; border: 1.5px solid #d4d4d8; cursor: pointer;">Cancel</button>
+                <button type="button" id="btn-confirm-leave-and-join" class="btn" style="padding: 0.65rem 1.35rem; font-weight: 800; font-size: 0.85rem; border-radius: 10px; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; cursor: pointer; display: inline-flex; align-items: center; gap: 0.45rem;">
+                    <span>Leave Current &amp; Join New</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    overlay.querySelector('#close-leave-join-modal').onclick = close;
+    overlay.querySelector('#btn-cancel-leave-join').onclick = close;
+
+    const confirmBtn = overlay.querySelector('#btn-confirm-leave-and-join');
+    confirmBtn.onclick = async () => {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = `
+            <div class="spinner-border spinner-border-sm" style="width: 14px; height: 14px; border: 2px solid #FFFFFF; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin 0.75s linear infinite;"></div>
+            <span>Switching Workspaces...</span>
+        `;
+        try {
+            // 1. Leave current workspace
+            await firestoreService.leaveWorkspace(currentWs.id, user);
+
+            // 2. Accept invite to new workspace
+            await firestoreService.acceptWorkspaceInvite(invite, user);
+
+            close();
+            showAlert.success(`Left "${currentName}" and joined "${newName}" successfully!`);
+
+            if (typeof onSuccess === 'function') {
+                onSuccess();
+            } else {
+                window.location.href = '/app.html';
+            }
+        } catch (err) {
+            console.error("Leave and join error:", err);
+            showAlert.error("Failed to switch workspace: " + (err.message || 'Unknown error'));
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = `<span>Leave Current &amp; Join New</span>`;
+        }
+    };
+
+    overlay.onclick = (e) => {
+        if (e.target === overlay) close();
+    };
+};
+
+/**
+ * Universal Secure Join Invite Handler
+ * Verifies if user is an administrator (cannot join), already in a workspace (requires leaving current),
+ * or free/unconnected (auto-joins immediately without friction).
+ */
+export const handleSecureJoinInvite = async (invite, user, onSuccess = null) => {
+    if (!invite || !user) return;
+
+    let currentWs = null;
+    try {
+        currentWs = await firestoreService.checkWorkspaceExists(user.uid, user.email);
+    } catch (e) {
+        console.warn("Could not check existing workspace before join:", e);
+    }
+
+    // Condition 1: User is already Head Administrator of an active workspace
+    const isHeadAdmin = currentWs && (
+        currentWs.id === user.uid ||
+        currentWs.role === 'CREATOR_ADMIN' ||
+        currentWs.isCreator ||
+        (currentWs.adminEmail && user.email && currentWs.adminEmail.toLowerCase() === user.email.toLowerCase())
+    );
+
+    if (isHeadAdmin) {
+        showHeadAdminCannotJoinModal(currentWs, invite);
+        return;
+    }
+
+    // Condition 2: User is already in a workspace as Worker or Co-Admin
+    if (currentWs && currentWs.id !== invite.adminUid) {
+        showWorkerLeaveAndJoinModal(currentWs, invite, user, onSuccess);
+        return;
+    }
+
+    // Condition 3: User is NOT in any workspace (e.g. from Create Workspace screen)
+    // Directly accept and auto enter without friction!
+    try {
+        await firestoreService.acceptWorkspaceInvite(invite, user);
+        showAlert.success(`Joined "${invite.workspaceName || 'Workspace'}" successfully!`);
+        if (typeof onSuccess === 'function') {
+            onSuccess();
+        } else {
+            window.location.href = '/app.html';
+        }
+    } catch (err) {
+        console.error("Direct accept invite error:", err);
+        showAlert.error("Failed to join workspace: " + (err.message || 'Unknown error'));
+    }
 };
 
 /**
@@ -1422,17 +1741,14 @@ export const initAuthHandler = (pageType) => {
                                             const id = btn.getAttribute('data-id');
                                             const inv = lInvites.find(i => i.id === id);
                                             if (!inv) return;
-                                            try {
-                                                btn.disabled = true;
-                                                btn.textContent = 'Joining...';
-                                                await firestoreService.acceptWorkspaceInvite(inv, user);
+                                            btn.disabled = true;
+                                            btn.textContent = '...';
+                                            await handleSecureJoinInvite(inv, user, () => {
                                                 showAlert.success('Workspace invite accepted!');
                                                 setTimeout(() => window.location.reload(), 400);
-                                            } catch(err) {
-                                                btn.disabled = false;
-                                                btn.textContent = 'Join';
-                                                showAlert.error('Failed to join workspace.');
-                                            }
+                                            });
+                                            btn.disabled = false;
+                                            btn.textContent = 'Join';
                                         };
                                     });
 
@@ -1551,16 +1867,14 @@ export const initAuthHandler = (pageType) => {
                                     btn.addEventListener('click', async (e) => {
                                         const id = btn.getAttribute('data-id');
                                         const invite = invites.find(i => i.id === id);
-                                        try {
-                                            btn.disabled = true;
-                                            btn.textContent = 'Joining...';
-                                            await firestoreService.acceptWorkspaceInvite(invite, user);
+                                        if (!invite) return;
+                                        btn.disabled = true;
+                                        btn.textContent = '...';
+                                        await handleSecureJoinInvite(invite, user, () => {
                                             window.location.href = '/app.html';
-                                        } catch (err) {
-                                            btn.disabled = false;
-                                            btn.textContent = 'Join Workspace';
-                                            showAlert.error("Failed to join workspace.");
-                                        }
+                                        });
+                                        btn.disabled = false;
+                                        btn.textContent = 'Join Workspace';
                                     });
                                 });
 
@@ -2011,7 +2325,7 @@ export const initAuthHandler = (pageType) => {
             <!-- Notification Bell Button -->
             <button type="button" class="topbar-icon-action-btn" id="topbar-btn-notif" title="Workspace Mailbox & Notifications">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                <span class="topbar-icon-badge-dot"></span>
+                <span class="topbar-icon-badge-dot" id="topbar-notif-badge" style="display: none;"></span>
             </button>
 
             <!-- Admin / Workspace Profile Pill Trigger -->
@@ -2266,6 +2580,71 @@ export const initAuthHandler = (pageType) => {
             btnNotif.addEventListener('click', () => {
                 window.location.hash = '#/mailbox';
             });
+        }
+
+        // Setup Real-time Notification & Mailbox Counter Badge (Red dot with white text)
+        const notifBadge = group.querySelector('#topbar-notif-badge');
+        let pendingInvitesCount = 0;
+        let unreadNotifsCount = 0;
+
+        const refreshBadgeUI = () => {
+            const total = pendingInvitesCount + unreadNotifsCount;
+            if (notifBadge) {
+                if (total > 0) {
+                    notifBadge.textContent = total > 99 ? '99+' : String(total);
+                    notifBadge.style.display = 'inline-flex';
+                } else {
+                    notifBadge.textContent = '';
+                    notifBadge.style.display = 'none';
+                }
+            }
+        };
+
+        const activeWsId = workspace.id || workspace.workspaceId || localStorage.getItem('pricelister_active_ws') || 'ws_dev_mock';
+        const userEmail = (user.email || '').toLowerCase().trim();
+
+        // 1. Invites Real-time Listener
+        if (window.__topbarInvitesUnsub && typeof window.__topbarInvitesUnsub === 'function') {
+            try { window.__topbarInvitesUnsub(); } catch(e) {}
+            window.__topbarInvitesUnsub = null;
+        }
+        if (userEmail) {
+            try {
+                window.__topbarInvitesUnsub = firestoreService.listenUserInvites(userEmail, (invs) => {
+                    pendingInvitesCount = (invs || []).filter(i => (i.status || 'PENDING').toUpperCase() === 'PENDING').length;
+                    refreshBadgeUI();
+                });
+            } catch (e) {}
+        }
+
+        // 2. Notifications Real-time Listener
+        if (window.__topbarNotifsUnsub && typeof window.__topbarNotifsUnsub === 'function') {
+            try { window.__topbarNotifsUnsub(); } catch(e) {}
+            window.__topbarNotifsUnsub = null;
+        }
+        try {
+            const autoService = getAutomationService(activeWsId);
+            window.__topbarNotifsUnsub = autoService.listenNotifications((notifs) => {
+                unreadNotifsCount = (notifs || []).filter(n => !n.read && !n.archived).length;
+                refreshBadgeUI();
+            });
+        } catch (e) {}
+
+        // 3. Custom DOM Event Dispatch Listener
+        if (!window.__notifBadgeEventAttached) {
+            window.__notifBadgeEventAttached = true;
+            const handleNotifEvent = () => {
+                const curWsId = (window.__activeWorkspace && (window.__activeWorkspace.id || window.__activeWorkspace.workspaceId)) || activeWsId;
+                try {
+                    const autoService = getAutomationService(curWsId);
+                    autoService.getUnreadCount().then(cnt => {
+                        unreadNotifsCount = cnt;
+                        refreshBadgeUI();
+                    }).catch(() => {});
+                } catch(e) {}
+            };
+            window.addEventListener('pricelister-new-notification', handleNotifEvent);
+            window.addEventListener('notification-count-changed', handleNotifEvent);
         }
 
         if (copyWsBtn) {
@@ -2884,10 +3263,10 @@ export const initAuthHandler = (pageType) => {
                 currencySymbol: chosenSymbol,
                 currency: chosenSymbol,
 
-                // Authority System: Role 0 ADMIN
-                workspaceRole: 0,
+                // Authority System: Role 1 Administrator
+                workspaceRole: 1,
                 role: 'CREATOR_ADMIN',
-                roleTag: 'Founder',
+                roleTag: 'Admin',
                 workspaceStatus: 'Active',
 
                 logoUrl: finalLogoUrl,
