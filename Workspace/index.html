@@ -5,19 +5,22 @@
     <title>PriceLister Workspace</title>
     <script>
         (function() {
-            var path = window.location.pathname || '';
-                if (!localStorage.getItem('pricelister_active_ws')) {
-                    localStorage.setItem('pricelister_active_ws', 'ws_dev_mock');
+            try {
+                var path = window.location.pathname || '';
+                var isExplicitSignedOut = sessionStorage.getItem('pricelister_signed_out') === 'true';
+                if (isExplicitSignedOut) {
+                    window.location.replace('/index.html');
+                    return;
                 }
-                var subroute = path.replace(/^\/workspace\/?/i, '');
-                if (subroute && subroute !== 'index.html') {
+                var subroute = path.replace(/^\/workspace\/?/i, '').replace(/index\.html$/i, '').trim();
+                if (subroute && subroute !== '/') {
                     try {
                         sessionStorage.setItem('pricelister_last_route', '/' + subroute.replace(/^\//, ''));
                     } catch(e) {}
                 }
                 window.location.replace('/app.html');
             } catch(e) {
-                window.location.replace('/app.html');
+                window.location.replace('/index.html');
             }
         })();
     </script>

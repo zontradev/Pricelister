@@ -537,6 +537,7 @@ export class BusinessProfile {
 export class ClientProfile {
     constructor(data = {}) {
         this.id = data.id || null;
+        this.workspaceId = data.workspaceId || "";
         this.uniqueId = data.uniqueId || generateInvoiceUniqueId();
         this.isClient = data.isClient !== undefined ? data.isClient : true;
         this.name = data.name || "";
@@ -556,6 +557,7 @@ export class ClientProfile {
 export class CustomerProfile {
     constructor(data = {}) {
         this.id = data.id || null;
+        this.workspaceId = data.workspaceId || "";
         this.uniqueId = data.uniqueId || generateInvoiceUniqueId();
         this.isClient = data.isClient !== undefined ? data.isClient : false; // Required by Android
         this.name = data.name || "";
