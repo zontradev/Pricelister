@@ -2560,6 +2560,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const reloadBusinesses = async (selectedId = null) => {
         try {
             allBusinesses = (await peopleService.getAllBusinesses()) || [];
+            if (typeof window !== 'undefined') window.__cachedBusinesses = allBusinesses;
         } catch (e) {
             console.warn("reloadBusinesses error:", e);
             allBusinesses = [];
@@ -2586,6 +2587,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const reloadClients = async (selectedId = null) => {
         try {
             allClients = (await peopleService.getAllClients()) || [];
+            if (typeof window !== 'undefined') window.__cachedClients = allClients;
         } catch (e) {
             console.warn("reloadClients error:", e);
             allClients = [];
@@ -2607,6 +2609,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const reloadCustomers = async (selectedId = null) => {
         try {
             allCustomers = (await peopleService.getAllCustomers()) || [];
+            if (typeof window !== 'undefined') window.__cachedCustomers = allCustomers;
         } catch (e) {
             console.warn("reloadCustomers error:", e);
             allCustomers = [];

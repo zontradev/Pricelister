@@ -254,30 +254,48 @@ export const userDataSafetyService = {
 
     /**
      * Record workspace connection or leave in Workspace History tree list
+     * Strictly stores the business field ID (e.g. "102ZM5J72FNB99"), NEVER the Firestore document ID (UID).
      */
-    recordWorkspaceConnection: async (user, workspaceId, role, action = 'join') => {
-        if (!user || !workspaceId) return;
+    recordWorkspaceConnection: async (user, rawWorkspaceId, role, action = 'join') => {
+        if (!user || !rawWorkspaceId) return;
         const uid = user.uid || 'usr_unknown';
         const email = (user.email || '').trim().toLowerCase();
 
+        // Resolve clean business field ID:
+        let resolvedWsId = rawWorkspaceId;
+        if (typeof window !== 'undefined' && window.__activeWorkspace) {
+            resolvedWsId = window.__activeWorkspace.workspaceId || window.__activeWorkspace.id || rawWorkspaceId;
+        }
+
         const existing = await userDataSafetyService.getUserDataSafety(user);
-        let history = existing?.WorkspaceHistory ? [...existing.WorkspaceHistory] : [];
+        let history = existing?.WorkspaceHistory && Array.isArray(existing.WorkspaceHistory) ? [...existing.WorkspaceHistory] : [];
 
         if (action === 'join') {
             // Check if already active in this workspace
-            const existingEntry = history.find(h => h.workspaceId === workspaceId && h.status === 'active');
+            const existingEntry = history.find(h => (h.workspaceId === resolvedWsId || h.workspaceId === rawWorkspaceId) && h.status === 'active');
             if (!existingEntry) {
-                history.push({
-                    workspaceId: workspaceId,
+                // If there are other active entries, close them cleanly
+                history.forEach(h => {
+                    if (h.status === 'active') {
+                        h.status = 'leaved';
+                        if (!h.leaveDate) h.leaveDate = new Date().toISOString();
+                    }
+                });
+                history.unshift({
+                    workspaceId: resolvedWsId,
                     connectionDate: new Date().toISOString(),
                     leaveDate: null,
                     workspaceRole: role || 'WORKER',
                     status: 'active'
                 });
+            } else {
+                existingEntry.workspaceId = resolvedWsId;
+                if (role) existingEntry.workspaceRole = role;
+                existingEntry.status = 'active';
             }
         } else if (action === 'leave') {
             history.forEach(h => {
-                if (h.workspaceId === workspaceId && h.status === 'active') {
+                if ((h.workspaceId === resolvedWsId || h.workspaceId === rawWorkspaceId) && h.status === 'active') {
                     h.status = 'leaved';
                     h.leaveDate = new Date().toISOString();
                 }
@@ -285,16 +303,18 @@ export const userDataSafetyService = {
         }
 
         const updates = {
-            connectedWorkspace: action === 'join' ? workspaceId : 'Leaved',
+            connectedWorkspace: action === 'join' ? resolvedWsId : 'Leaved',
             WorkspaceHistory: history
         };
 
-        const cacheKey = 'pricelister_userdata_safety_' + (uid || email);
+        const cacheKey = 'pricelister_usercollection_' + (uid || email);
+        const legacyCacheKey = 'pricelister_userdata_safety_' + (uid || email);
         if (existing) {
             Object.assign(existing, updates);
             try {
                 localStorage.setItem(cacheKey, JSON.stringify(existing));
-                if (email) localStorage.setItem('pricelister_userdata_safety_' + email, JSON.stringify(existing));
+                localStorage.setItem(legacyCacheKey, JSON.stringify(existing));
+                if (email) localStorage.setItem('pricelister_usercollection_' + email, JSON.stringify(existing));
             } catch (e) {}
         }
 
@@ -306,6 +326,16 @@ export const userDataSafetyService = {
                 console.warn("Could not sync workspace history to Firestore:", err.message);
             }
         }
+    },
+
+    /**
+     * Start/sync Workspace History from current active workspace
+     */
+    syncCurrentWorkspaceHistory: async (user, workspace) => {
+        if (!user || !workspace) return;
+        const wsId = workspace.workspaceId || workspace.id;
+        const role = workspace.role || 'WORKER';
+        return await userDataSafetyService.recordWorkspaceConnection(user, wsId, role, 'join');
     },
 
     /**

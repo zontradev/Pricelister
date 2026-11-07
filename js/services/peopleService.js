@@ -9,6 +9,25 @@ export const getPeopleService = (workspaceId) => {
     const businessRepo = createRepository('BusinessProfiles', workspaceId);
     const clientRepo = createRepository('ClientProfiles', workspaceId);
 
+    // Resolve clean business field workspaceId (never leak Firestore doc UID)
+    const resolveBusinessWorkspaceId = () => {
+        if (typeof window !== 'undefined' && window.__activeWorkspace?.workspaceId) {
+            return window.__activeWorkspace.workspaceId;
+        }
+        return workspaceId;
+    };
+
+    // Resolve clean creator worker ID (appWorkerId or adminId from workspace)
+    const resolveCreatorWorkerId = (explicitCreator) => {
+        if (explicitCreator && explicitCreator !== 'system' && !explicitCreator.startsWith('usr_') && explicitCreator.length <= 16) {
+            return explicitCreator;
+        }
+        if (typeof window !== 'undefined' && window.__activeWorkspace) {
+            return window.__activeWorkspace.myAppWorkerId || window.__activeWorkspace.adminId || explicitCreator || 'MUI4JS8S83F33A';
+        }
+        return explicitCreator || 'MUI4JS8S83F33A';
+    };
+
     return {
         // --- CUSTOMERS (Stored in ClientProfiles with isClient: false) ---
         getAllCustomers: async () => {
@@ -30,7 +49,8 @@ export const getPeopleService = (workspaceId) => {
             validateCustomer(data);
             const customer = new CustomerProfile({
                 ...data,
-                creatorId: creatorId,
+                workspaceId: resolveBusinessWorkspaceId(),
+                creatorId: resolveCreatorWorkerId(creatorId),
                 uniqueId: generateUniqueId(),
                 timestamp: Date.now()
             });
@@ -201,7 +221,8 @@ export const getPeopleService = (workspaceId) => {
             validateClient(data);
             const client = new ClientProfile({
                 ...data,
-                creatorId: creatorId,
+                workspaceId: resolveBusinessWorkspaceId(),
+                creatorId: resolveCreatorWorkerId(creatorId),
                 uniqueId: generateUniqueId(),
                 isClient: true, // Preserve specific source mapping distinction
                 timestamp: Date.now()

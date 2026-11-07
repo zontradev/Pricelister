@@ -9,6 +9,25 @@ import { getSupplierService } from './supplierService.js';
 export const getProductService = (workspaceId) => {
     const repo = createRepository('Products', workspaceId);
 
+    // Resolve clean business field workspaceId (never leak Firestore doc UID)
+    const resolveBusinessWorkspaceId = () => {
+        if (typeof window !== 'undefined' && window.__activeWorkspace?.workspaceId) {
+            return window.__activeWorkspace.workspaceId;
+        }
+        return workspaceId;
+    };
+
+    // Resolve clean creator worker ID (appWorkerId or adminId from workspace)
+    const resolveCreatorWorkerId = (explicitCreator) => {
+        if (explicitCreator && explicitCreator !== 'system' && !explicitCreator.startsWith('usr_') && explicitCreator.length <= 16) {
+            return explicitCreator;
+        }
+        if (typeof window !== 'undefined' && window.__activeWorkspace) {
+            return window.__activeWorkspace.myAppWorkerId || window.__activeWorkspace.adminId || explicitCreator || 'MUI4JS8S83F33A';
+        }
+        return explicitCreator || 'MUI4JS8S83F33A';
+    };
+
     return {
         getAllActiveProducts: async () => {
             const all = await repo.getAll();
@@ -36,11 +55,14 @@ export const getProductService = (workspaceId) => {
             }
             validateProduct(productData);
 
+            const safeWsId = resolveBusinessWorkspaceId();
+            const safeCreatorId = resolveCreatorWorkerId(creatorId);
+
             const newProduct = new Product({
                 ...productData,
-                workspaceId: workspaceId,
+                workspaceId: safeWsId,
                 uniqueId: generateUniqueId(),
-                creatorId: creatorId,
+                creatorId: safeCreatorId,
                 timestamp: Date.now(),
                 updatedTimestamp: Date.now(),
                 isArchive: false
@@ -106,9 +128,9 @@ export const getProductService = (workspaceId) => {
                     imageUri: finalImageUri,
                     variations: Array.isArray(item.variations) ? item.variations : [],
                     labelColor: item.labelColor || "",
-                    workspaceId: workspaceId,
+                    workspaceId: resolveBusinessWorkspaceId(),
                     uniqueId: item.uniqueId || generateUniqueId(),
-                    creatorId: creatorId,
+                    creatorId: resolveCreatorWorkerId(creatorId),
                     timestamp: item.timestamp || Date.now(),
                     updatedTimestamp: Date.now(),
                     isArchive: false
@@ -273,10 +295,10 @@ export const getProductService = (workspaceId) => {
             const duplicate = new Product({
                 ...originalProductData,
                 id: null, // Reset Firestore ID
-                workspaceId: workspaceId,
+                workspaceId: resolveBusinessWorkspaceId(),
                 uniqueId: generateUniqueId(), // Generate new identity
                 name: `${originalProductData.name} (Copy)`,
-                creatorId: creatorId,
+                creatorId: resolveCreatorWorkerId(creatorId),
                 timestamp: Date.now(),
                 updatedTimestamp: Date.now(),
                 isArchive: false

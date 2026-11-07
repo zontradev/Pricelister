@@ -16,7 +16,7 @@ export const initWorkspace = () => {
     if (typeof window !== 'undefined' && window.__activeWorkspace?.isAccessBlocked) {
         console.warn("[PriceLister Security] Direct access attempt by blocked worker. Ejecting.");
         showAlert.error(`Access Blocked: Your access is suspended until ${window.__activeWorkspace.revokeEndFormatted || 'the duration expires'}.`);
-        window.location.href = 'index.html';
+        window.location.replace('/index.html?view=connection');
         return;
     }
 

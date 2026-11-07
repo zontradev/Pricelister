@@ -99,36 +99,49 @@ export const renderProfile = async (container, workspaceId) => {
         const workspaceName = wsData?.name || wsData?.businessName || 'My Workspace';
         const initial = displayName.charAt(0).toUpperCase();
 
-        const isAdmin = role === 'CREATOR_ADMIN' || role === 'ADMIN' || role === 'CREATOR' || wsData?.id === currentUser.uid;
-        const isCoAdmin = role === 'CO_ADMIN' || role === 'CO-ADMIN';
-        const canAccessSettings = isAdmin || isCoAdmin;
-
         // Fetch member specifics if Worker/Co-Admin
         let myMember = null;
-        if (!isAdmin) {
+        if (wsData?.id !== currentUser.uid) {
             try {
                 const members = await firestoreService.getWorkspaceMembers(adminUid);
-                myMember = members.find(m => m.email?.toLowerCase() === email.toLowerCase());
+                myMember = members.find(m => (m.email || '').toLowerCase() === email.toLowerCase());
             } catch (err) {
                 console.warn("Could not load worker member doc:", err);
             }
         }
 
+        // Canonical Normalized Role Detection
+        const isPrimaryAdmin = Boolean(
+            (wsData?.id && wsData.id === currentUser.uid) ||
+            (wsData?.adminUid && wsData.adminUid === currentUser.uid) ||
+            (wsData?.creatorUid && wsData.creatorUid === currentUser.uid) ||
+            (wsData?.adminEmail && (wsData.adminEmail || '').toLowerCase() === (currentUser.email || '').toLowerCase()) ||
+            (wsData?.email && (wsData.email || '').toLowerCase() === (currentUser.email || '').toLowerCase() && !myMember)
+        );
+
+        const rawRole = String(myMember?.role || wsData?.role || (isPrimaryAdmin ? 'CREATOR_ADMIN' : 'WORKER')).toUpperCase().replace(/[-\s]/g, '_');
+        const isAdmin = isPrimaryAdmin || rawRole === 'CREATOR_ADMIN' || rawRole === 'ADMIN' || rawRole === 'CREATOR' || rawRole === 'OWNER';
+        const isCoAdmin = !isAdmin && (rawRole === 'CO_ADMIN' || rawRole === 'COADMIN' || myMember?.workspaceRole === 1);
+        const canAccessSettings = isAdmin || isCoAdmin;
+
+        // Clean user-facing role title
+        const displayRole = isPrimaryAdmin ? 'Creator Admin' : (isAdmin ? 'Admin' : (isCoAdmin ? 'Co-Admin' : 'Worker'));
+
         // Workspace-specific role tag (displayed in My Profile & Members Activity only)
-        const currentRoleTag = (isAdmin 
+        const currentRoleTag = (isPrimaryAdmin 
             ? (wsData?.adminRoleTag || wsData?.roleTag || 'Administrator') 
-            : (myMember?.roleTag || myMember?.tag || (isCoAdmin ? 'Manager' : 'Staff'))).trim();
+            : (myMember?.roleTag || myMember?.tag || (isAdmin ? 'Admin' : (isCoAdmin ? 'Manager' : 'Staff')))).trim();
 
         const allowedTags = isAdmin 
             ? ['Owner', 'Leader', 'Author', 'Administrator', 'Boss', 'Founder', 'Director']
             : (isCoAdmin 
-                ? ['Manager', 'Assistant', 'Co-Operator', 'Supervisor', 'Coordinator']
+                ? ['Manager', 'Assistant', 'Co-Operator', 'Supervisor', 'Coordinator', 'Director', 'Deputy']
                 : ['Staff', 'Employee', 'Member', 'Associate', 'Specialist', 'Operator']);
 
         // 1. Resolve User ID (appWorkerId for workers, adminId for admin)
-        const displayUserId = isAdmin
-            ? (wsData?.adminId || wsData?.workspaceId || currentUser.uid.substring(0, 14))
-            : (myMember?.appWorkerId || myMember?.workerId || myMember?.uniqueId || myMember?.id || currentUser.uid.substring(0, 14));
+        const displayUserId = isPrimaryAdmin
+            ? (wsData?.adminId || 'MUI4JS8S83F33A')
+            : (myMember?.appWorkerId || myMember?.appWorkerID || myMember?.workerId || myMember?.id || (currentUser.uid ? currentUser.uid.substring(0, 14) : 'PL-WORKER-01'));
 
         // 2. Resolve Workspace ID (14-character workspaceId, NOT the Firestore document uid)
         const displayWorkspaceId = wsData?.workspaceId 
@@ -1222,12 +1235,27 @@ export const renderProfile = async (container, workspaceId) => {
                         photoURL: finalPhotoUrl
                     });
 
-                    // If Admin, also update root workspace doc
-                    if (isAdmin) {
+                    // 4. Update root workspace doc ONLY IF current user is the true Workspace Admin/Creator!
+                    // Non-admin workers and invited admins can NEVER overwrite the workspace admin's profile or adminName.
+                    if (isPrimaryAdmin) {
                         try {
                             const wsRef = doc(db, 'Workspaces', adminUid);
-                            await setDoc(wsRef, { adminName: cleanName, adminRoleTag: selectedTag }, { merge: true });
-                        } catch (e) {}
+                            const wsAdminUpdate = {
+                                adminName: cleanName,
+                                adminRoleTag: selectedTag
+                            };
+                            if (finalPhotoUrl) {
+                                wsAdminUpdate.adminPhotoURL = finalPhotoUrl;
+                                wsAdminUpdate.adminUri = finalPhotoUrl;
+                                wsAdminUpdate.AdminUri = finalPhotoUrl;
+                            }
+                            await setDoc(wsRef, wsAdminUpdate, { merge: true });
+                            if (window.__activeWorkspace) {
+                                Object.assign(window.__activeWorkspace, wsAdminUpdate);
+                            }
+                        } catch (e) {
+                            console.warn("Could not sync adminName/adminUri to workspace doc:", e);
+                        }
                     }
 
                     // Update memory state
@@ -1285,7 +1313,7 @@ export const renderProfile = async (container, workspaceId) => {
                 try {
                     await firestoreService.leaveWorkspace(workspaceId, currentUser);
                     showAlert.success("You have left the workspace.");
-                    window.location.href = 'index.html';
+                    window.location.replace('/index.html?view=connection');
                 } catch (err) {
                     showAlert.error("Failed to leave workspace: " + (err.message || 'Unknown error'));
                 }
@@ -1295,7 +1323,7 @@ export const renderProfile = async (container, workspaceId) => {
         container.querySelector('#btn-profile-logout')?.addEventListener('click', async () => {
             if (await showAlert.confirm('Are you sure you want to sign out?')) {
                 await authService.logout();
-                window.location.href = 'index.html';
+                window.location.href = '/index.html';
             }
         });
 

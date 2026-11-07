@@ -15,6 +15,7 @@ if (typeof window !== 'undefined') {
 }
 import { CURRENCY_LIST, getCurrencyByCode } from './utils/currencyData.js';
 import { COUNTRIES_LIST, WORKSPACE_ROLES, getRoleLevel, getRoleMeta } from '../DataModel.js';
+import { userDataSafetyService } from './services/userDataSafetyService.js';
 
 let routerInitialized = false;
 let roleListenerUnsub = null;
@@ -149,8 +150,516 @@ export const getRoleBadgeHtml = (role, customTag = null) => {
 };
 
 /**
+ * Rapid Multi-Account Switcher Modal & Custom Authentication Alert Dialog
+ * Supports Google OAuth and Email/Password switching, OTP password reset, and Add Account flow.
+ */
+export const openAuthModal = ({ mode = 'full', prefillEmail = '', returnToSwitcher = null } = {}) => {
+    const existing = document.getElementById('auth-modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'auth-modal-overlay';
+    overlay.className = 'auth-modal-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(9, 9, 11, 0.78);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        z-index: 9999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        animation: fadeIn 0.18s ease-out;
+    `;
+
+    const isSwitchEmail = mode === 'switch_email';
+
+    overlay.innerHTML = `
+        <div class="auth-dialog-card" role="dialog" aria-modal="true" style="
+            background: #ffffff;
+            border: 1px solid #e4e4e7;
+            border-radius: 22px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0,0,0,0.06);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            position: relative;
+        ">
+            <!-- Modal Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; background: #fafafa;">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(24, 24, 27, 0.08); display: flex; align-items: center; justify-content: center; color: #18181b;">
+                        ${isSwitchEmail 
+                            ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`
+                            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>`
+                        }
+                    </div>
+                    <div>
+                        <h3 id="auth-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #18181b; letter-spacing: -0.02em;">
+                            ${isSwitchEmail ? 'Sign In to Switch' : 'Add Account'}
+                        </h3>
+                        <p id="auth-modal-subtitle" style="margin: 0.1rem 0 0 0; font-size: 0.78rem; color: #71717a;">
+                            ${isSwitchEmail ? `Enter password for ${prefillEmail}` : 'Select Google or enter PriceLister credentials'}
+                        </p>
+                    </div>
+                </div>
+                <button type="button" id="close-auth-modal" aria-label="Close" style="font-size: 1.35rem; cursor: pointer; background: none; border: none; color: #71717a; line-height: 1; padding: 4px 8px; border-radius: 6px; transition: background 0.15s ease;">&times;</button>
+            </div>
+
+            <!-- Tab Switcher (Only in full Add Account mode) -->
+            ${!isSwitchEmail ? `
+                <div style="display: flex; gap: 0.35rem; padding: 0.85rem 1.5rem 0; background: #ffffff;">
+                    <button type="button" id="tab-btn-signin" class="btn" style="flex: 1; padding: 0.55rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #18181b; background: #18181b; color: #ffffff; cursor: pointer;">Sign In</button>
+                    <button type="button" id="tab-btn-signup" class="btn" style="flex: 1; padding: 0.55rem; font-size: 0.82rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #e4e4e7; background: #ffffff; color: #71717a; cursor: pointer;">Create Account</button>
+                </div>
+            ` : ''}
+
+            <!-- Modal Content Views -->
+            <div style="padding: 1.25rem 1.5rem; max-height: 480px; overflow-y: auto;">
+                
+                <!-- VIEW 1: SIGN IN / SWITCH VIEW -->
+                <div id="view-auth-signin" style="display: block;">
+                    ${!isSwitchEmail ? `
+                        <!-- Google OAuth Button -->
+                        <button type="button" id="modal-btn-google-login" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.65rem; padding: 0.75rem 1rem; border-radius: 12px; border: 1.5px solid #d4d4d8; background: #ffffff; color: #18181b; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                            <svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+                            <span>Continue with Google</span>
+                        </button>
+
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin: 1rem 0;">
+                            <div style="flex: 1; height: 1px; background: #e4e4e7;"></div>
+                            <span style="font-size: 0.7rem; font-weight: 700; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.05em;">or with email</span>
+                            <div style="flex: 1; height: 1px; background: #e4e4e7;"></div>
+                        </div>
+                    ` : ''}
+
+                    <form id="modal-form-signin" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #3f3f46; margin-bottom: 0.35rem;">Email Address</label>
+                            <input type="email" id="modal-signin-email" value="${prefillEmail || ''}" ${isSwitchEmail ? 'readonly' : 'required'} style="width: 100%; box-sizing: border-box; padding: 0.7rem 0.85rem; border-radius: 10px; border: 1.5px solid #e4e4e7; font-size: 0.88rem; outline: none; background: ${isSwitchEmail ? '#f4f4f5' : '#ffffff'}; color: ${isSwitchEmail ? '#71717a' : '#18181b'};">
+                        </div>
+
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                <label style="font-size: 0.78rem; font-weight: 700; color: #3f3f46;">Password</label>
+                                <button type="button" id="modal-btn-to-forgot" style="background: none; border: none; padding: 0; color: #0284c7; font-size: 0.76rem; font-weight: 700; cursor: pointer;">Forgot Password?</button>
+                            </div>
+                            <div style="position: relative;">
+                                <input type="password" id="modal-signin-password" required placeholder="Enter account password" style="width: 100%; box-sizing: border-box; padding: 0.7rem 2.5rem 0.7rem 0.85rem; border-radius: 10px; border: 1.5px solid #e4e4e7; font-size: 0.88rem; outline: none;">
+                                <button type="button" id="modal-toggle-signin-pwd" style="position: absolute; right: 0.65rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: #a1a1aa; cursor: pointer; padding: 2px;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="modal-btn-submit-signin" class="btn" style="width: 100%; margin-top: 0.35rem; padding: 0.75rem; border-radius: 12px; border: none; background: #18181b; color: #ffffff; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
+                            <span>${isSwitchEmail ? 'Sign In & Switch' : 'Sign In'}</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                    </form>
+
+                    ${!isSwitchEmail ? `
+                        <div style="text-align: center; margin-top: 0.85rem;">
+                            <span style="font-size: 0.78rem; color: #71717a;">Don't have an account?</span>
+                            <button type="button" id="modal-link-to-signup" style="background: none; border: none; padding: 0 0 0 4px; color: #18181b; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-decoration: underline;">Create one</button>
+                        </div>
+                    ` : `
+                        <div style="text-align: center; margin-top: 0.85rem;">
+                            <button type="button" id="modal-btn-back-to-switcher" style="background: none; border: none; padding: 0; color: #71717a; font-size: 0.78rem; font-weight: 700; cursor: pointer;">&larr; Back to Accounts</button>
+                        </div>
+                    `}
+                </div>
+
+                <!-- VIEW 2: SIGN UP VIEW -->
+                <div id="view-auth-signup" style="display: none;">
+                    <form id="modal-form-signup" style="display: flex; flex-direction: column; gap: 0.8rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #3f3f46; margin-bottom: 0.35rem;">Full Name</label>
+                            <input type="text" id="modal-signup-fullname" required placeholder="Alex Turner" style="width: 100%; box-sizing: border-box; padding: 0.7rem 0.85rem; border-radius: 10px; border: 1.5px solid #e4e4e7; font-size: 0.88rem; outline: none;">
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #3f3f46; margin-bottom: 0.35rem;">Email Address</label>
+                            <input type="email" id="modal-signup-email" required placeholder="name@business.com" style="width: 100%; box-sizing: border-box; padding: 0.7rem 0.85rem; border-radius: 10px; border: 1.5px solid #e4e4e7; font-size: 0.88rem; outline: none;">
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #3f3f46; margin-bottom: 0.35rem;">Password</label>
+                            <input type="password" id="modal-signup-password" required placeholder="At least 6 characters" style="width: 100%; box-sizing: border-box; padding: 0.7rem 0.85rem; border-radius: 10px; border: 1.5px solid #e4e4e7; font-size: 0.88rem; outline: none;">
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #3f3f46; margin-bottom: 0.35rem;">Confirm Password</label>
+                            <input type="password" id="modal-signup-confirm" required placeholder="Re-enter password" style="width: 100%; box-sizing: border-box; padding: 0.7rem 0.85rem; border-radius: 10px; border: 1.5px solid #e4e4e7; font-size: 0.88rem; outline: none;">
+                        </div>
+
+                        <button type="submit" id="modal-btn-submit-signup" class="btn" style="width: 100%; margin-top: 0.35rem; padding: 0.75rem; border-radius: 12px; border: none; background: #18181b; color: #ffffff; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
+                            <span>Create Account</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                    </form>
+
+                    <div style="text-align: center; margin-top: 0.85rem;">
+                        <span style="font-size: 0.78rem; color: #71717a;">Already have an account?</span>
+                        <button type="button" id="modal-link-to-signin" style="background: none; border: none; padding: 0 0 0 4px; color: #18181b; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-decoration: underline;">Sign In</button>
+                    </div>
+                </div>
+
+                <!-- VIEW 3: FORGOT PASSWORD (OTP VERIFICATION) VIEW -->
+                <div id="view-auth-forgot" style="display: none;">
+                    
+                    <!-- Step A: Send OTP -->
+                    <form id="modal-form-send-otp" style="display: block; display: flex; flex-direction: column; gap: 0.85rem;">
+                        <p style="font-size: 0.82rem; color: #71717a; margin: 0 0 0.5rem 0;">Enter your account email to receive a 6-digit verification OTP code.</p>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #3f3f46; margin-bottom: 0.35rem;">Account Email</label>
+                            <input type="email" id="modal-forgot-email" value="${prefillEmail || ''}" required placeholder="user@company.com" style="width: 100%; box-sizing: border-box; padding: 0.7rem 0.85rem; border-radius: 10px; border: 1.5px solid #e4e4e7; font-size: 0.88rem; outline: none;">
+                        </div>
+
+                        <button type="submit" id="modal-btn-send-otp" class="btn" style="width: 100%; padding: 0.75rem; border-radius: 12px; border: none; background: #18181b; color: #ffffff; font-weight: 700; font-size: 0.88rem; cursor: pointer;">
+                            Send 6-Digit OTP &rarr;
+                        </button>
+                    </form>
+
+                    <!-- Step B: Enter & Verify OTP -->
+                    <div id="modal-step-verify-otp" style="display: none;">
+                        <p id="modal-otp-status-hint" style="font-size: 0.82rem; color: #71717a; margin: 0 0 0.75rem 0;">Verification code sent! Enter the 6-digit OTP code:</p>
+                        
+                        <div style="display: flex; justify-content: space-between; gap: 0.45rem; margin-bottom: 1.15rem;">
+                            <input type="text" maxlength="1" class="modal-otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 1.25rem; font-weight: 800; border-radius: 10px; border: 1.5px solid #d4d4d8; outline: none;">
+                            <input type="text" maxlength="1" class="modal-otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 1.25rem; font-weight: 800; border-radius: 10px; border: 1.5px solid #d4d4d8; outline: none;">
+                            <input type="text" maxlength="1" class="modal-otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 1.25rem; font-weight: 800; border-radius: 10px; border: 1.5px solid #d4d4d8; outline: none;">
+                            <input type="text" maxlength="1" class="modal-otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 1.25rem; font-weight: 800; border-radius: 10px; border: 1.5px solid #d4d4d8; outline: none;">
+                            <input type="text" maxlength="1" class="modal-otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 1.25rem; font-weight: 800; border-radius: 10px; border: 1.5px solid #d4d4d8; outline: none;">
+                            <input type="text" maxlength="1" class="modal-otp-digit" style="width: 44px; height: 50px; text-align: center; font-size: 1.25rem; font-weight: 800; border-radius: 10px; border: 1.5px solid #d4d4d8; outline: none;">
+                        </div>
+
+                        <button type="button" id="modal-btn-verify-otp" class="btn" style="width: 100%; padding: 0.75rem; border-radius: 12px; border: none; background: #18181b; color: #ffffff; font-weight: 700; font-size: 0.88rem; cursor: pointer;">
+                            Verify Code &rarr;
+                        </button>
+                    </div>
+
+                    <!-- Step C: Enter New Password -->
+                    <form id="modal-form-new-password" style="display: none; display: flex; flex-direction: column; gap: 0.85rem;">
+                        <p style="font-size: 0.82rem; color: #059669; font-weight: 700; margin: 0 0 0.5rem 0;">OTP verified! Set a new password for your account:</p>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #3f3f46; margin-bottom: 0.35rem;">New Password</label>
+                            <input type="password" id="modal-reset-new-pwd" required placeholder="At least 6 characters" style="width: 100%; box-sizing: border-box; padding: 0.7rem 0.85rem; border-radius: 10px; border: 1.5px solid #e4e4e7; font-size: 0.88rem; outline: none;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #3f3f46; margin-bottom: 0.35rem;">Confirm New Password</label>
+                            <input type="password" id="modal-reset-confirm-pwd" required placeholder="Re-enter new password" style="width: 100%; box-sizing: border-box; padding: 0.7rem 0.85rem; border-radius: 10px; border: 1.5px solid #e4e4e7; font-size: 0.88rem; outline: none;">
+                        </div>
+
+                        <button type="submit" id="modal-btn-save-new-pwd" class="btn" style="width: 100%; padding: 0.75rem; border-radius: 12px; border: none; background: #18181b; color: #ffffff; font-weight: 700; font-size: 0.88rem; cursor: pointer;">
+                            Confirm &amp; Reset Password
+                        </button>
+                    </form>
+
+                    <div style="text-align: center; margin-top: 0.85rem;">
+                        <button type="button" id="modal-btn-forgot-to-signin" style="background: none; border: none; padding: 0; color: #71717a; font-size: 0.78rem; font-weight: 700; cursor: pointer;">&larr; Back to Sign In</button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Close logic
+    const closeBtn = overlay.querySelector('#close-auth-modal');
+    const handleClose = () => {
+        overlay.remove();
+        if (returnToSwitcher && typeof returnToSwitcher === 'function') {
+            returnToSwitcher();
+        }
+    };
+    if (closeBtn) closeBtn.onclick = handleClose;
+    overlay.onclick = (e) => {
+        if (e.target === overlay) handleClose();
+    };
+
+    // Sub-view toggles
+    const viewSignIn = overlay.querySelector('#view-auth-signin');
+    const viewSignUp = overlay.querySelector('#view-auth-signup');
+    const viewForgot = overlay.querySelector('#view-auth-forgot');
+    const tabSignIn = overlay.querySelector('#tab-btn-signin');
+    const tabSignUp = overlay.querySelector('#tab-btn-signup');
+    const titleEl = overlay.querySelector('#auth-modal-title');
+    const subtitleEl = overlay.querySelector('#auth-modal-subtitle');
+
+    const switchView = (target) => {
+        if (viewSignIn) viewSignIn.style.display = target === 'signin' ? 'block' : 'none';
+        if (viewSignUp) viewSignUp.style.display = target === 'signup' ? 'block' : 'none';
+        if (viewForgot) viewForgot.style.display = target === 'forgot' ? 'block' : 'none';
+
+        if (tabSignIn && tabSignUp) {
+            if (target === 'signin') {
+                tabSignIn.style.background = '#18181b';
+                tabSignIn.style.color = '#ffffff';
+                tabSignIn.style.borderColor = '#18181b';
+                tabSignUp.style.background = '#ffffff';
+                tabSignUp.style.color = '#71717a';
+                tabSignUp.style.borderColor = '#e4e4e7';
+                if (titleEl) titleEl.textContent = 'Add Account';
+                if (subtitleEl) subtitleEl.textContent = 'Select Google or enter PriceLister credentials';
+            } else if (target === 'signup') {
+                tabSignUp.style.background = '#18181b';
+                tabSignUp.style.color = '#ffffff';
+                tabSignUp.style.borderColor = '#18181b';
+                tabSignIn.style.background = '#ffffff';
+                tabSignIn.style.color = '#71717a';
+                tabSignIn.style.borderColor = '#e4e4e7';
+                if (titleEl) titleEl.textContent = 'Create Account';
+                if (subtitleEl) subtitleEl.textContent = 'Register a new PriceLister business account';
+            } else if (target === 'forgot') {
+                if (titleEl) titleEl.textContent = 'Reset Password';
+                if (subtitleEl) subtitleEl.textContent = 'Verify your account using a 6-digit OTP code';
+            }
+        }
+    };
+
+    if (tabSignIn) tabSignIn.onclick = () => switchView('signin');
+    if (tabSignUp) tabSignUp.onclick = () => switchView('signup');
+    overlay.querySelector('#modal-link-to-signup')?.addEventListener('click', () => switchView('signup'));
+    overlay.querySelector('#modal-link-to-signin')?.addEventListener('click', () => switchView('signin'));
+    overlay.querySelector('#modal-btn-to-forgot')?.addEventListener('click', () => switchView('forgot'));
+    overlay.querySelector('#modal-btn-forgot-to-signin')?.addEventListener('click', () => switchView('signin'));
+    overlay.querySelector('#modal-btn-back-to-switcher')?.addEventListener('click', handleClose);
+
+    // Password Visibility Toggle
+    const pwdInput = overlay.querySelector('#modal-signin-password');
+    const pwdToggle = overlay.querySelector('#modal-toggle-signin-pwd');
+    if (pwdToggle && pwdInput) {
+        pwdToggle.onclick = () => {
+            const isText = pwdInput.type === 'text';
+            pwdInput.type = isText ? 'password' : 'text';
+            pwdToggle.style.color = isText ? '#a1a1aa' : '#18181b';
+        };
+    }
+
+    // Google Sign In inside Modal
+    const googleBtn = overlay.querySelector('#modal-btn-google-login');
+    if (googleBtn) {
+        googleBtn.onclick = async () => {
+            googleBtn.disabled = true;
+            googleBtn.innerHTML = '<span>Connecting to Google...</span>';
+            try {
+                const user = await authService.loginWithGoogle(true);
+                authService.saveAccountToRegistry(user, 'Google');
+                try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(e) {}
+                overlay.remove();
+                showAlert.success('Signed in with Google successfully!');
+                setTimeout(() => {
+                    window.location.href = '/index.html?view=connection';
+                }, 250);
+            } catch (err) {
+                console.error("Google modal login error:", err);
+                showAlert.error(err.message || 'Google authentication failed.');
+                googleBtn.disabled = false;
+                googleBtn.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg><span>Continue with Google</span>';
+            }
+        };
+    }
+
+    // Email/Password Sign In inside Modal
+    const formSignIn = overlay.querySelector('#modal-form-signin');
+    if (formSignIn) {
+        formSignIn.onsubmit = async (e) => {
+            e.preventDefault();
+            const email = overlay.querySelector('#modal-signin-email').value;
+            const password = overlay.querySelector('#modal-signin-password').value;
+            const btn = overlay.querySelector('#modal-btn-submit-signin');
+
+            try {
+                btn.disabled = true;
+                btn.textContent = 'Authenticating...';
+                const appUser = await authService.loginWithEmail(email, password);
+                authService.saveAccountToRegistry(appUser, 'Email & Password');
+                try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(e) {}
+                overlay.remove();
+                showAlert.success('Signed in successfully!');
+                setTimeout(() => {
+                    window.location.href = '/index.html?view=connection';
+                }, 250);
+            } catch (err) {
+                console.error("Email login modal error:", err);
+                showAlert.error(err.message || 'Incorrect email or password.');
+                btn.disabled = false;
+                btn.innerHTML = `<span>${isSwitchEmail ? 'Sign In & Switch' : 'Sign In'}</span> &rarr;`;
+            }
+        };
+    }
+
+    // Sign Up inside Modal
+    const formSignUp = overlay.querySelector('#modal-form-signup');
+    if (formSignUp) {
+        formSignUp.onsubmit = async (e) => {
+            e.preventDefault();
+            const fullName = overlay.querySelector('#modal-signup-fullname').value;
+            const email = overlay.querySelector('#modal-signup-email').value;
+            const password = overlay.querySelector('#modal-signup-password').value;
+            const confirm = overlay.querySelector('#modal-signup-confirm').value;
+            const btn = overlay.querySelector('#modal-btn-submit-signup');
+
+            if (password !== confirm) {
+                showAlert.error('Passwords do not match. Please verify.');
+                return;
+            }
+            if (password.length < 6) {
+                showAlert.error('Password must be at least 6 characters.');
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                btn.textContent = 'Creating account...';
+                const appUser = await authService.signupWithEmail(fullName, email, password);
+                authService.saveAccountToRegistry(appUser, 'Email & Password');
+                try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(e) {}
+                overlay.remove();
+                showAlert.success('Account created successfully!');
+                setTimeout(() => {
+                    window.location.href = '/index.html?view=connection';
+                }, 250);
+            } catch (err) {
+                console.error("Signup modal error:", err);
+                showAlert.error(err.message || 'Failed to create account.');
+                btn.disabled = false;
+                btn.innerHTML = '<span>Create Account</span> &rarr;';
+            }
+        };
+    }
+
+    // Forgot Password Flow
+    let pendingResetEmail = prefillEmail || '';
+    let verifiedOtpCode = '';
+
+    const formSendOtp = overlay.querySelector('#modal-form-send-otp');
+    const stepVerifyOtp = overlay.querySelector('#modal-step-verify-otp');
+    const formNewPwd = overlay.querySelector('#modal-form-new-password');
+    const btnSendOtp = overlay.querySelector('#modal-btn-send-otp');
+    const btnVerifyOtp = overlay.querySelector('#modal-btn-verify-otp');
+    const otpBoxes = Array.from(overlay.querySelectorAll('.modal-otp-digit'));
+
+    if (formSendOtp) {
+        formSendOtp.onsubmit = async (e) => {
+            e.preventDefault();
+            const email = overlay.querySelector('#modal-forgot-email').value;
+            try {
+                btnSendOtp.disabled = true;
+                btnSendOtp.textContent = 'Sending OTP...';
+                const res = await authService.sendPasswordResetOTP(email);
+                pendingResetEmail = res.email || email;
+                showAlert.success('Verification code dispatched to your email!');
+                formSendOtp.style.display = 'none';
+                stepVerifyOtp.style.display = 'block';
+                if (otpBoxes[0]) otpBoxes[0].focus();
+            } catch (err) {
+                showAlert.error(err.message || 'Failed to dispatch verification code.');
+                btnSendOtp.disabled = false;
+                btnSendOtp.textContent = 'Send 6-Digit OTP \u2192';
+            }
+        };
+    }
+
+    otpBoxes.forEach((box, idx) => {
+        box.addEventListener('input', (e) => {
+            const val = e.target.value.replace(/[^0-9]/g, '');
+            e.target.value = val ? val[0] : '';
+            if (e.target.value && idx < 5) otpBoxes[idx + 1].focus();
+        });
+        box.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !box.value && idx > 0) {
+                otpBoxes[idx - 1].focus();
+                otpBoxes[idx - 1].value = '';
+            }
+        });
+        box.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const data = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+            if (data) {
+                data.slice(0, 6).split('').forEach((d, i) => {
+                    if (otpBoxes[i]) otpBoxes[i].value = d;
+                });
+                const next = Math.min(data.length, 5);
+                otpBoxes[next].focus();
+            }
+        });
+    });
+
+    if (btnVerifyOtp) {
+        btnVerifyOtp.onclick = async () => {
+            const code = otpBoxes.map(b => b.value.trim()).join('');
+            if (!code || code.length !== 6) {
+                showAlert.error('Please enter the full 6-digit OTP code.');
+                return;
+            }
+            try {
+                btnVerifyOtp.disabled = true;
+                btnVerifyOtp.textContent = 'Verifying...';
+                await authService.verifyOTPCode(pendingResetEmail, code);
+                verifiedOtpCode = code;
+                showAlert.success('OTP code verified! Enter new password.');
+                stepVerifyOtp.style.display = 'none';
+                formNewPwd.style.display = 'block';
+            } catch (err) {
+                showAlert.error(err.message || 'Invalid or expired OTP code.');
+                btnVerifyOtp.disabled = false;
+                btnVerifyOtp.textContent = 'Verify Code \u2192';
+            }
+        };
+    }
+
+    if (formNewPwd) {
+        formNewPwd.onsubmit = async (e) => {
+            e.preventDefault();
+            const newPwd = overlay.querySelector('#modal-reset-new-pwd').value;
+            const confirmPwd = overlay.querySelector('#modal-reset-confirm-pwd').value;
+            const btn = overlay.querySelector('#modal-btn-save-new-pwd');
+
+            if (newPwd !== confirmPwd) {
+                showAlert.error('Passwords do not match.');
+                return;
+            }
+            if (newPwd.length < 6) {
+                showAlert.error('Password must be at least 6 characters.');
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                btn.textContent = 'Saving password...';
+                await authService.verifyOTPAndResetPassword(pendingResetEmail, verifiedOtpCode, newPwd);
+                showAlert.success('Password updated! Signing in...');
+                const appUser = await authService.loginWithEmail(pendingResetEmail, newPwd);
+                authService.saveAccountToRegistry(appUser, 'Email & Password');
+                overlay.remove();
+                try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(e) {}
+                setTimeout(() => {
+                    window.location.href = '/index.html?view=connection';
+                }, 250);
+            } catch (err) {
+                showAlert.error(err.message || 'Failed to update password.');
+                btn.disabled = false;
+                btn.textContent = 'Confirm & Reset Password';
+            }
+        };
+    }
+};
+
+/**
  * Rapid Multi-Account Switcher Modal
- * Enables instantaneous switching between saved accounts and adding new Google accounts.
+ * Enables instantaneous switching between saved accounts and adding new Google or Email accounts.
  */
 export const openAccountSwitcherModal = (currentUser) => {
     const existing = document.getElementById('account-switcher-overlay');
@@ -216,8 +725,9 @@ export const openAccountSwitcherModal = (currentUser) => {
                         const accEmail = (acc.email || '').toLowerCase();
                         const isActive = accEmail && accEmail === currentEmail;
                         const initial = (acc.displayName || acc.email || 'U').charAt(0).toUpperCase();
+                        const isGoogle = acc.authType === 'Google';
                         return `
-                            <div class="account-card-item ${isActive ? 'active' : ''}" data-email="${acc.email}" style="
+                            <div class="account-card-item ${isActive ? 'active' : ''}" data-email="${acc.email}" data-type="${acc.authType || 'Email & Password'}" style="
                                 display: flex;
                                 align-items: center;
                                 justify-content: space-between;
@@ -233,8 +743,20 @@ export const openAccountSwitcherModal = (currentUser) => {
                                         : `<div style="width: 38px; height: 38px; min-width: 38px; border-radius: 50%; background: linear-gradient(135deg, #27272a 0%, #18181b 100%); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem;">${initial}</div>`
                                     }
                                     <div style="overflow: hidden; flex: 1;">
-                                        <div style="font-weight: 700; font-size: 0.9rem; color: #18181b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${acc.displayName || acc.email}</div>
-                                        <div style="font-size: 0.78rem; color: #71717a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${acc.email}</div>
+                                        <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                                            <span style="font-weight: 700; font-size: 0.9rem; color: #18181b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${acc.displayName || acc.email}</span>
+                                            ${isGoogle 
+                                                ? `<span style="font-size: 0.66rem; font-weight: 700; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 999px; padding: 1.5px 6px; display: inline-flex; align-items: center; gap: 3px;">
+                                                    <svg width="9" height="9" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+                                                    Google
+                                                   </span>`
+                                                : `<span style="font-size: 0.66rem; font-weight: 700; color: #374151; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; padding: 1.5px 6px; display: inline-flex; align-items: center; gap: 3px;">
+                                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                                    Email &amp; Password
+                                                   </span>`
+                                            }
+                                        </div>
+                                        <div style="font-size: 0.78rem; color: #71717a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">${acc.email}</div>
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 0.45rem;">
@@ -242,7 +764,7 @@ export const openAccountSwitcherModal = (currentUser) => {
                                         ? `<span style="font-size: 0.72rem; font-weight: 800; color: #059669; background: rgba(16, 185, 129, 0.15); padding: 0.25rem 0.6rem; border-radius: 999px; display: inline-flex; align-items: center; gap: 3px;">
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Active
                                            </span>` 
-                                        : `<button type="button" class="btn btn-xs switch-to-acc-btn" data-email="${acc.email}" style="padding: 0.35rem 0.75rem; font-weight: 700; font-size: 0.78rem; border-radius: 8px; background: #18181b; color: #ffffff; border: none; cursor: pointer;">Switch</button>
+                                        : `<button type="button" class="btn btn-xs switch-to-acc-btn" data-email="${acc.email}" data-type="${acc.authType || 'Email & Password'}" style="padding: 0.35rem 0.75rem; font-weight: 700; font-size: 0.78rem; border-radius: 8px; background: #ffffff; color: #18181b; border: 1.5px solid #18181b; cursor: pointer; transition: all 0.15s ease;">Switch</button>
                                            <button type="button" class="btn-remove-acc" data-email="${acc.email}" title="Remove from this device" style="background: none; border: none; color: #a1a1aa; cursor: pointer; padding: 4px; font-size: 1rem; line-height: 1; transition: color 0.15s ease;">&times;</button>`
                                     }
                                 </div>
@@ -265,7 +787,8 @@ export const openAccountSwitcherModal = (currentUser) => {
 
             <!-- Modal Footer: Actions -->
             <div style="padding: 1.25rem 1.5rem; border-top: 1px solid #f1f5f9; background: #fafafa; display: flex; flex-direction: column; gap: 0.75rem;">
-                <button type="button" id="btn-add-new-account" class="btn btn-block" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; font-weight: 700; font-size: 0.88rem; background: linear-gradient(180deg, #27272a 0%, #18181b 100%); color: #ffffff; border-radius: 12px; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.12);">
+                <!-- Outlined Add Account Button (Replaces solid black) -->
+                <button type="button" id="btn-add-new-account" class="btn btn-block" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; font-weight: 700; font-size: 0.88rem; background: #ffffff; color: #18181b; border: 1.5px solid #18181b; border-radius: 12px; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     <span>Add / Switch Account</span>
                 </button>
@@ -279,6 +802,17 @@ export const openAccountSwitcherModal = (currentUser) => {
 
     document.body.appendChild(overlay);
 
+    // Hover effect for outlined button
+    const addBtn = overlay.querySelector('#btn-add-new-account');
+    if (addBtn) {
+        addBtn.onmouseenter = () => { addBtn.style.background = '#f4f4f5'; };
+        addBtn.onmouseleave = () => { addBtn.style.background = '#ffffff'; };
+        addBtn.onclick = () => {
+            overlay.remove();
+            openAuthModal({ mode: 'full', returnToSwitcher: () => openAccountSwitcherModal(currentUser) });
+        };
+    }
+
     // Close Actions
     const closeBtn = overlay.querySelector('#close-account-switcher');
     if (closeBtn) closeBtn.onclick = () => overlay.remove();
@@ -286,47 +820,49 @@ export const openAccountSwitcherModal = (currentUser) => {
         if (e.target === overlay) overlay.remove();
     };
 
-    // Add new account button
-    const addBtn = overlay.querySelector('#btn-add-new-account');
-    if (addBtn) {
-        addBtn.onclick = async () => {
-            addBtn.disabled = true;
-            addBtn.innerHTML = '<span>Connecting to Google...</span>';
-            try {
-                await authService.loginWithGoogle(true);
-                overlay.remove();
-                window.location.reload();
-            } catch (err) {
-                console.error("Account switch failed:", err);
-                showAlert.error('Could not connect to the selected Google account. Please try again.');
-                addBtn.disabled = false;
-                addBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>Add / Switch Account</span>';
-            }
-        };
-    }
-
-    // Switch account item clicks with custom confirmation dialog
+    // Switch account item clicks
     overlay.querySelectorAll('.switch-to-acc-btn').forEach(btn => {
+        btn.onmouseenter = () => { btn.style.background = '#18181b'; btn.style.color = '#ffffff'; };
+        btn.onmouseleave = () => { btn.style.background = '#ffffff'; btn.style.color = '#18181b'; };
         btn.onclick = async (e) => {
             e.stopPropagation();
             const targetEmail = btn.getAttribute('data-email') || '';
-            const confirmed = await showAlert.confirm(
-                `Would you like to switch your active session to ${targetEmail}?`,
-                'Switch Account Session',
-                { confirmText: 'Switch Session', cancelText: 'Cancel', isDestructive: false }
-            );
-            if (!confirmed) return;
+            const accType = btn.getAttribute('data-type') || 'Email & Password';
 
-            btn.disabled = true;
-            btn.textContent = 'Switching...';
-            try {
-                await authService.loginWithGoogle(true);
+            if (accType === 'Google') {
+                // Google Account: Trigger Google OAuth
+                const confirmed = await showAlert.confirm(
+                    `Switch active session to Google account ${targetEmail}?`,
+                    'Switch Google Account',
+                    { confirmText: 'Switch with Google', cancelText: 'Cancel', isDestructive: false }
+                );
+                if (!confirmed) return;
+
+                btn.disabled = true;
+                btn.textContent = 'Switching...';
+                try {
+                    const u = await authService.loginWithGoogle(true);
+                    authService.saveAccountToRegistry(u, 'Google');
+                    overlay.remove();
+                    try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(e) {}
+                    showAlert.success('Switched to Google account successfully!');
+                    setTimeout(() => {
+                        window.location.href = '/index.html?view=connection';
+                    }, 250);
+                } catch (err) {
+                    console.error("Google switch error:", err);
+                    showAlert.error('Google switch failed. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = 'Switch';
+                }
+            } else {
+                // Email & Password Account: Open dedicated password prompt dialog with prefilled email
                 overlay.remove();
-                window.location.reload();
-            } catch (err) {
-                showAlert.error('Account switch failed. Please try again.');
-                btn.disabled = false;
-                btn.textContent = 'Switch';
+                openAuthModal({
+                    mode: 'switch_email',
+                    prefillEmail: targetEmail,
+                    returnToSwitcher: () => openAccountSwitcherModal(currentUser)
+                });
             }
         };
     });
@@ -362,6 +898,7 @@ export const openAccountSwitcherModal = (currentUser) => {
             if (confirmed) {
                 overlay.remove();
                 await authService.logout();
+                window.location.href = '/index.html';
             }
         };
     }
@@ -379,6 +916,7 @@ export const openAccountSwitcherModal = (currentUser) => {
                 overlay.remove();
                 localStorage.removeItem('pricelister_saved_accounts');
                 await authService.logout();
+                window.location.href = '/index.html';
             }
         };
     }
@@ -463,12 +1001,11 @@ export const updateLandingHeaderAuthState = async (user, cachedWorkspace = null)
  * Initialize Landing Page Header Interactive Triggers
  */
 export const initLandingHeaderActions = () => {
-    // 1. (Login) button: logs in with Google, stays on index.html
+    // 1. (Login) button: navigates to dedicated login page
     const loginBtn = document.getElementById('header-btn-login');
     if (loginBtn) {
         loginBtn.onclick = (e) => {
-            // Allow direct navigation to dedicated login page
-            window.location.href = 'login.html';
+            window.location.href = '/login.html';
         };
     }
 
@@ -481,16 +1018,16 @@ export const initLandingHeaderActions = () => {
             if (currentUser) {
                 const ws = await firestoreService.checkWorkspaceExists(currentUser.uid, currentUser.email);
                 if (ws) {
-                    window.location.href = 'app.html';
+                    window.location.href = '/app.html';
                 } else {
                     if (typeof window.showLandingView === 'function') {
                         window.showLandingView('connection', true);
                     } else {
-                        window.location.href = 'index.html?view=connection';
+                        window.location.href = '/index.html?view=connection';
                     }
                 }
             } else {
-                window.location.href = 'login.html';
+                window.location.href = '/login.html';
             }
         };
     }
@@ -502,13 +1039,13 @@ export const initLandingHeaderActions = () => {
             e.preventDefault();
             const currentUser = authService.getCurrentUser();
             if (!currentUser) {
-                window.location.href = 'login.html';
+                window.location.href = '/login.html';
                 return;
             }
             if (typeof window.showLandingView === 'function') {
                 window.showLandingView('connection', true);
             } else {
-                window.location.href = 'index.html?view=connection';
+                window.location.href = '/index.html?view=connection';
             }
         };
     }
@@ -593,16 +1130,24 @@ export const initAuthHandler = (pageType) => {
                                 if (topPhoto) topPhoto.style.display = 'none';
                             }
 
-                            // Banner: Default Architectural Illustration (no pitch black banner) or Custom Uploaded Banner
+                            // Banner: Edge-to-edge Backdrop Banner or Default Architectural Illustration
                             const defaultBannerSvg = document.getElementById('launcher-default-banner-svg');
                             const customBannerImg = document.getElementById('launcher-custom-banner-img');
+                            const bannerOverlay = document.getElementById('launcher-banner-overlay');
                             if (workspace.bannerUrl && customBannerImg) {
                                 customBannerImg.src = workspace.bannerUrl;
                                 customBannerImg.style.display = 'block';
                                 if (defaultBannerSvg) defaultBannerSvg.style.display = 'none';
+                                if (bannerOverlay) {
+                                    // Minimal subtle vignette for rich banner visibility without washing it out
+                                    bannerOverlay.style.background = 'linear-gradient(90deg, rgba(9,9,11,0.72) 0%, rgba(9,9,11,0.48) 42%, rgba(9,9,11,0.06) 78%, rgba(9,9,11,0.02) 100%)';
+                                }
                             } else {
                                 if (defaultBannerSvg) defaultBannerSvg.style.display = 'block';
                                 if (customBannerImg) customBannerImg.style.display = 'none';
+                                if (bannerOverlay) {
+                                    bannerOverlay.style.background = 'linear-gradient(90deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.5) 45%, rgba(255,255,255,0.1) 100%)';
+                                }
                             }
 
                             // Tagline / Subtitle
@@ -611,12 +1156,13 @@ export const initAuthHandler = (pageType) => {
                                 taglineEl.textContent = workspace.tagline || workspace.description || 'Professional product management workspace';
                             }
 
-                            // Workspace Logo & Fallback
+                            // Workspace Logo & Fallback (Cropped Max Square-Round Cover)
                             const logoImg = document.getElementById('launcher-workspace-logo');
                             const logoFallback = document.getElementById('launcher-workspace-logo-fallback');
                             if (workspace.logoUrl && logoImg) {
                                 logoImg.src = workspace.logoUrl;
                                 logoImg.style.display = 'block';
+                                logoImg.style.objectFit = 'cover';
                                 if (logoFallback) logoFallback.style.display = 'none';
                             } else if (logoFallback) {
                                 logoFallback.textContent = ((workspace.name || 'W').charAt(0)).toUpperCase();
@@ -759,7 +1305,7 @@ export const initAuthHandler = (pageType) => {
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
                                     `;
                                     enterBtn.onclick = () => {
-                                        window.location.href = 'app.html';
+                                        window.location.href = '/app.html';
                                     };
                                 }
                             }
@@ -769,10 +1315,11 @@ export const initAuthHandler = (pageType) => {
                             if (launcherBackHomeBtn) {
                                 launcherBackHomeBtn.onclick = (e) => {
                                     e.preventDefault();
+                                    try { sessionStorage.setItem('pricelister_stay_on_home', 'true'); } catch(err) {}
                                     if (typeof window.showLandingView === 'function') {
                                         window.showLandingView('home', true);
                                     } else {
-                                        window.location.href = 'index.html?view=home';
+                                        window.location.href = '/index.html?view=home';
                                     }
                                 };
                             }
@@ -782,6 +1329,7 @@ export const initAuthHandler = (pageType) => {
                             if (launcherChangeAccBtn) {
                                 launcherChangeAccBtn.onclick = (e) => {
                                     e.preventDefault();
+                                    try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(err) {}
                                     openAccountSwitcherModal(user);
                                 };
                             }
@@ -796,8 +1344,126 @@ export const initAuthHandler = (pageType) => {
                                         { confirmText: 'Logout', cancelText: 'Cancel', isDestructive: true }
                                     );
                                     if (confirmed) {
+                                        try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(err) {}
                                         await authService.logout();
+                                        window.location.href = '/index.html';
                                     }
+                                };
+                            }
+
+                            // Temporary Block Banner in Launcher Card
+                            const launcherBlockedBanner = document.getElementById('launcher-blocked-banner');
+                            const launcherBlockedDuration = document.getElementById('launcher-blocked-duration-text');
+                            if (workspace.isAccessBlocked) {
+                                if (launcherBlockedBanner) launcherBlockedBanner.style.display = 'flex';
+                                if (launcherBlockedDuration) {
+                                    launcherBlockedDuration.textContent = `${workspace.revokeStartFormatted || 'Immediate'} — ${workspace.revokeEndFormatted || 'Indefinite'}`;
+                                }
+                            } else {
+                                if (launcherBlockedBanner) launcherBlockedBanner.style.display = 'none';
+                            }
+
+                            // Dedicated Mailbox & Invitations Area in Launcher Card
+                            const renderLauncherMailbox = async () => {
+                                const listEl = document.getElementById('launcher-invites-list');
+                                const emptyEl = document.getElementById('launcher-mailbox-empty');
+                                const badgeEl = document.getElementById('launcher-mailbox-badge-count');
+                                if (!listEl) return;
+
+                                let lInvites = [];
+                                let lMessages = [];
+                                try {
+                                    if (user.email) {
+                                        lInvites = await firestoreService.getPendingInvites(user.email);
+                                        lMessages = await firestoreService.getUserMailboxMessages(user.email);
+                                    }
+                                } catch (e) {
+                                    console.warn("Launcher mailbox fetch warning:", e);
+                                }
+
+                                const totalCount = (lInvites?.length || 0) + (lMessages?.length || 0);
+                                if (badgeEl) badgeEl.textContent = `(${totalCount})`;
+
+                                if (totalCount > 0) {
+                                    let html = '';
+                                    if (lInvites && lInvites.length > 0) {
+                                        html += lInvites.map(inv => `
+                                            <div style="background: #ffffff; border: 1.5px solid #e4e4e7; border-radius: 12px; padding: 0.85rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                                <div>
+                                                    <div style="font-weight: 800; font-size: 0.92rem; color: #18181b;">${inv.workspaceName || 'PriceLister Workspace'}</div>
+                                                    <div style="font-size: 0.76rem; color: #71717a; margin-top: 2px;">
+                                                        Invited by <strong>${inv.adminEmail}</strong> &bull; Role: <span class="badge-role badge-role-worker" style="padding: 1px 6px; border-radius: 999px; font-size: 0.72rem;">${inv.role || 'Worker'}</span>
+                                                    </div>
+                                                </div>
+                                                <div style="display: flex; gap: 0.45rem; align-items: center;">
+                                                    <button type="button" class="btn btn-xs launcher-accept-invite-btn" data-id="${inv.id}" style="font-weight: 700; padding: 0.35rem 0.75rem; background: #18181b; color: #ffffff; border-radius: 6px; border: none; cursor: pointer;">Join</button>
+                                                    <button type="button" class="btn btn-xs launcher-reject-invite-btn" data-id="${inv.id}" style="font-weight: 600; padding: 0.35rem 0.65rem; background: #ffffff; border: 1px solid #d4d4d8; color: #71717a; border-radius: 6px; cursor: pointer;">Decline</button>
+                                                </div>
+                                            </div>
+                                        `).join('');
+                                    }
+                                    if (lMessages && lMessages.length > 0) {
+                                        html += lMessages.slice(0, 3).map(msg => `
+                                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.78rem;">
+                                                <div style="font-weight: 700; color: #1e293b; display: flex; align-items: center; justify-content: space-between;">
+                                                    <span>${msg.subject || 'Security Notification'}</span>
+                                                    <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 500;">${msg.dateFormatted || ''}</span>
+                                                </div>
+                                                <div style="color: #64748b; margin-top: 2px;">${msg.body || ''}</div>
+                                            </div>
+                                        `).join('');
+                                    }
+                                    listEl.innerHTML = html;
+                                    listEl.style.display = 'flex';
+                                    if (emptyEl) emptyEl.style.display = 'none';
+
+                                    listEl.querySelectorAll('.launcher-accept-invite-btn').forEach(btn => {
+                                        btn.onclick = async () => {
+                                            const id = btn.getAttribute('data-id');
+                                            const inv = lInvites.find(i => i.id === id);
+                                            if (!inv) return;
+                                            try {
+                                                btn.disabled = true;
+                                                btn.textContent = 'Joining...';
+                                                await firestoreService.acceptWorkspaceInvite(inv, user);
+                                                showAlert.success('Workspace invite accepted!');
+                                                setTimeout(() => window.location.reload(), 400);
+                                            } catch(err) {
+                                                btn.disabled = false;
+                                                btn.textContent = 'Join';
+                                                showAlert.error('Failed to join workspace.');
+                                            }
+                                        };
+                                    });
+
+                                    listEl.querySelectorAll('.launcher-reject-invite-btn').forEach(btn => {
+                                        btn.onclick = async () => {
+                                            const id = btn.getAttribute('data-id');
+                                            try {
+                                                btn.disabled = true;
+                                                await firestoreService.rejectWorkspaceInvite(id);
+                                                renderLauncherMailbox();
+                                            } catch(e) {
+                                                btn.disabled = false;
+                                            }
+                                        };
+                                    });
+                                } else {
+                                    listEl.style.display = 'none';
+                                    listEl.innerHTML = '';
+                                    if (emptyEl) emptyEl.style.display = 'block';
+                                }
+                            };
+                            renderLauncherMailbox();
+
+                            const refreshMailboxBtn = document.getElementById('launcher-refresh-mailbox-btn');
+                            if (refreshMailboxBtn) {
+                                refreshMailboxBtn.onclick = async () => {
+                                    const svg = refreshMailboxBtn.querySelector('svg');
+                                    if (svg) svg.style.animation = 'spin 0.6s linear';
+                                    await renderLauncherMailbox();
+                                    setTimeout(() => { if (svg) svg.style.animation = ''; }, 600);
+                                    showAlert.success('Mailbox refreshed.');
                                 };
                             }
 
@@ -806,10 +1472,14 @@ export const initAuthHandler = (pageType) => {
                             launcherContainer.style.display = 'flex';
                             if (setupContainer) setupContainer.style.display = 'none';
 
-                            // When entering index.html, if a workspace is found, automatically show "Workspace Found" connection screen
-                            // unless the user explicitly requested a different view in the query param (e.g. ?view=pricing or ?view=explore)
-                            const explicitNonConnectionView = urlParams.has('view') && urlParams.get('view') !== 'connection';
-                            if (!explicitNonConnectionView && typeof window.showLandingView === 'function') {
+                            // Transfer returning logged-in users with a workspace directly to connection view
+                            const userChoseHome = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_stay_on_home') === 'true');
+                            const explicitOtherView = (urlParams.get('view') && !['connection', 'home'].includes(urlParams.get('view').toLowerCase())) ||
+                                                      (window.location.hash && !['#connection', '#home', ''].includes(window.location.hash.toLowerCase()));
+
+                            if (!userChoseHome && !explicitOtherView && typeof window.showLandingView === 'function') {
+                                window.showLandingView('connection', false);
+                            } else if ((urlParams.get('view') === 'connection' || window.location.hash === '#connection' || window.location.pathname.endsWith('/connection')) && typeof window.showLandingView === 'function') {
                                 window.showLandingView('connection', false);
                             }
                         }
@@ -885,7 +1555,7 @@ export const initAuthHandler = (pageType) => {
                                             btn.disabled = true;
                                             btn.textContent = 'Joining...';
                                             await firestoreService.acceptWorkspaceInvite(invite, user);
-                                            window.location.href = 'app.html';
+                                            window.location.href = '/app.html';
                                         } catch (err) {
                                             btn.disabled = false;
                                             btn.textContent = 'Join Workspace';
@@ -934,15 +1604,48 @@ export const initAuthHandler = (pageType) => {
                             launcherContainer.style.display = 'none';
                         }
 
+                        // Setup Account Actions: Recheck Email & Invites
+                        const setupRefreshEmailBtn = document.getElementById('setup-refresh-email-btn');
+                        if (setupRefreshEmailBtn) {
+                            setupRefreshEmailBtn.onclick = async () => {
+                                const svg = setupRefreshEmailBtn.querySelector('svg');
+                                if (svg) svg.style.animation = 'spin 0.6s linear';
+                                try {
+                                    const recheckWs = await firestoreService.checkWorkspaceExists(user.uid, user.email);
+                                    if (recheckWs) {
+                                        showAlert.success('Workspace found! Connecting...');
+                                        setTimeout(() => window.location.reload(), 300);
+                                        return;
+                                    }
+                                    let refreshedInvites = [];
+                                    if (user.email) {
+                                        refreshedInvites = await firestoreService.getPendingInvites(user.email);
+                                        if (badgeCount) badgeCount.textContent = `(${refreshedInvites.length})`;
+                                        if (refreshedInvites.length > 0) {
+                                            showAlert.success(`Found ${refreshedInvites.length} pending invite(s) for ${user.email}!`);
+                                            setTimeout(() => window.location.reload(), 400);
+                                            return;
+                                        }
+                                    }
+                                    showAlert.success(`Email verified (${user.email}). No pending invitations.`);
+                                } catch (e) {
+                                    showAlert.info('Email rechecked.');
+                                } finally {
+                                    setTimeout(() => { if (svg) svg.style.animation = ''; }, 600);
+                                }
+                            };
+                        }
+
                         // Setup Account Actions: Back Home
                         const setupBackHomeBtn = document.getElementById('setup-back-home-btn');
                         if (setupBackHomeBtn) {
                             setupBackHomeBtn.onclick = (e) => {
                                 e.preventDefault();
+                                try { sessionStorage.setItem('pricelister_stay_on_home', 'true'); } catch(err) {}
                                 if (typeof window.showLandingView === 'function') {
                                     window.showLandingView('home', true);
                                 } else {
-                                    window.location.href = 'index.html?view=home';
+                                    window.location.href = '/index.html?view=home';
                                 }
                             };
                         }
@@ -952,6 +1655,7 @@ export const initAuthHandler = (pageType) => {
                         if (setupChangeAccBtn) {
                             setupChangeAccBtn.onclick = (e) => {
                                 e.preventDefault();
+                                try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(err) {}
                                 openAccountSwitcherModal(user);
                             };
                         }
@@ -965,12 +1669,20 @@ export const initAuthHandler = (pageType) => {
                                     { confirmText: 'Logout', cancelText: 'Cancel', isDestructive: true }
                                 );
                                 if (confirmed) {
+                                    try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(err) {}
                                     await authService.logout();
+                                    window.location.href = '/index.html';
                                 }
                             };
                         }
 
+                        const userChoseHomeSetup = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_stay_on_home') === 'true');
+                        const explicitOtherViewSetup = (urlParams.get('view') && !['connection', 'home'].includes(urlParams.get('view').toLowerCase())) ||
+                                                       (window.location.hash && !['#connection', '#home', ''].includes(window.location.hash.toLowerCase()));
+
                         if (isConnectionRoute && typeof window.showLandingView === 'function') {
+                            window.showLandingView('connection', false);
+                        } else if (!userChoseHomeSetup && !explicitOtherViewSetup && typeof window.showLandingView === 'function') {
                             window.showLandingView('connection', false);
                         }
                     }
@@ -995,7 +1707,7 @@ export const initAuthHandler = (pageType) => {
             } else {
                 // If attempting to visit connection view while unauthenticated -> login barrier
                 if (isConnectionRoute) {
-                    window.location.href = 'login.html';
+                    window.location.replace('/login.html');
                     return;
                 }
                 // Not logged in -> show landing page content & logged-out header actions
@@ -1028,8 +1740,11 @@ export const initAuthHandler = (pageType) => {
             }
 
             if (!activeUser) {
-                // Real user is not logged in -> redirect to login.html
-                window.location.href = 'login.html';
+                // Real user is not logged in -> redirect to /index.html
+                window.__isRedirecting = true;
+                document.body.classList.remove('app-loading');
+                if (loader) loader.style.display = 'none';
+                window.location.replace('/index.html');
                 return;
             }
 
@@ -1056,22 +1771,24 @@ export const initAuthHandler = (pageType) => {
                     if (!workspace) {
                         // Verification Barrier: Cannot be in app without verified workspace as admin/worker -> redirect to connection alone panel
                         console.warn("[PriceLister Barrier] No verified workspace found. Redirecting to connection gateway.");
+                        window.__isRedirecting = true;
                         document.body.classList.remove('app-loading');
                         if (loader) loader.style.display = 'none';
                         if (typeof window.__dismissWorkspaceLoader === 'function') window.__dismissWorkspaceLoader('no_workspace');
-                        window.location.href = 'index.html?view=connection';
+                        window.location.replace('/index.html?view=connection');
                         return;
                     }
 
                     // Maximum Protection Security Guard: Temporary Access Blocked
                     if (workspace.isAccessBlocked) {
                         console.warn("[PriceLister Security] User access is temporarily blocked. Ejecting to connection launcher.");
+                        window.__isRedirecting = true;
                         document.body.classList.remove('app-loading');
                         if (loader) loader.style.display = 'none';
                         if (typeof window.__dismissWorkspaceLoader === 'function') window.__dismissWorkspaceLoader('access_blocked');
                         showAlert.error(`Access Blocked: Your access is suspended until ${workspace.revokeEndFormatted || 'the duration expires'}. Please contact ${workspace.adminEmail || 'the workspace admin'}.`);
                         setTimeout(() => {
-                            window.location.href = 'index.html?view=connection';
+                            window.location.replace('/index.html?view=connection');
                         }, 450);
                         return;
                     }
@@ -1104,13 +1821,61 @@ export const initAuthHandler = (pageType) => {
                         if (userPhoto) userPhoto.style.display = 'none';
                     }
 
-                    // Setup Realtime Role Listener
+                    // Setup Continuous Realtime Role & Connection Watcher
                     if (roleListenerUnsub) roleListenerUnsub();
-                    roleListenerUnsub = firestoreService.listenToUserRole(activeUser.uid, activeUser.email, (newRole) => {
+                    roleListenerUnsub = firestoreService.listenToUserRole(activeUser.uid, activeUser.email, (newRole, roleData) => {
                         if (newRole) {
                             formatRoleBadge(newRole, document.getElementById('user-role'));
+                            if (roleData && (roleData.isAccessBlocked || roleData.status === 'revoked' || roleData.status === 'blocked')) {
+                                console.warn("[PriceLister Continuous Security] User access revoked in realtime. Pushing back to connection gateway.");
+                                window.__isRedirecting = true;
+                                showAlert.error(`Access Blocked: Your access to this workspace has been suspended.`);
+                                setTimeout(() => {
+                                    window.location.replace('/index.html?view=connection');
+                                }, 400);
+                            }
+                        } else {
+                            // User removed from workspace, connection doc deleted, or forget connection
+                            console.warn("[PriceLister Continuous Security] Workspace connection lost or removed. Ejecting to connection gateway.");
+                            window.__isRedirecting = true;
+                            localStorage.removeItem('pricelister_active_ws');
+                            showAlert.error("Workspace Disconnected: You have been removed from this workspace or your connection was forgotten.");
+                            setTimeout(() => {
+                                window.location.replace('/index.html?view=connection');
+                            }, 400);
                         }
                     });
+
+                    // Periodic & visibilitychange re-verification
+                    if (!window.__connectionWatchdogAttached) {
+                        window.__connectionWatchdogAttached = true;
+                        const recheckConnectionState = async () => {
+                            if (window.__isRedirecting) return;
+                            const curUser = authService.getCurrentUser();
+                            if (!curUser) {
+                                window.__isRedirecting = true;
+                                window.location.replace('/index.html');
+                                return;
+                            }
+                            try {
+                                const ws = await firestoreService.checkWorkspaceExists(curUser.uid, curUser.email);
+                                if (!ws) {
+                                    window.__isRedirecting = true;
+                                    localStorage.removeItem('pricelister_active_ws');
+                                    showAlert.error("Workspace connection lost. Returning to connection gateway.");
+                                    setTimeout(() => window.location.replace('/index.html?view=connection'), 400);
+                                } else if (ws.isAccessBlocked) {
+                                    window.__isRedirecting = true;
+                                    showAlert.error("Access Suspended: Your access to this workspace is blocked.");
+                                    setTimeout(() => window.location.replace('/index.html?view=connection'), 400);
+                                }
+                            } catch(e) {}
+                        };
+                        document.addEventListener('visibilitychange', () => {
+                            if (document.visibilityState === 'visible') recheckConnectionState();
+                        });
+                        setInterval(recheckConnectionState, 30000);
+                    }
 
                     // Manage permissions
                     const roleUpper = (workspace.role || 'WORKER').toUpperCase();
@@ -1137,6 +1902,13 @@ export const initAuthHandler = (pageType) => {
 
                     window.__activeWorkspace = workspace;
                     window.__activeWorkspaceId = workspace.id;
+
+                    // Sync current active workspace into User Collection Workspace History
+                    try {
+                        userDataSafetyService.syncCurrentWorkspaceHistory(activeUser, workspace);
+                    } catch (e) {
+                        console.warn("Could not sync active workspace to history:", e);
+                    }
 
                     // If in Demo Sandbox mode, inject indicator and reset helper into topbar
                     if (activeUser.uid === 'dev-mock-uid') {
@@ -1199,7 +1971,8 @@ export const initAuthHandler = (pageType) => {
                 if (typeof window.__dismissWorkspaceLoader === 'function') {
                     window.__dismissWorkspaceLoader('unauthenticated_redirect');
                 }
-                window.location.href = 'index.html';
+                window.__isRedirecting = true;
+                window.location.replace('/index.html');
             }
         }
     });
@@ -1520,7 +2293,7 @@ export const initAuthHandler = (pageType) => {
             logoutBtn.addEventListener('click', async () => {
                 if (await showAlert.confirm('Are you sure you want to log out?<br>You will need to sign in again to access your account.', 'Log Out')) {
                     await authService.logout();
-                    window.location.href = 'index.html';
+                    window.location.href = '/index.html';
                 }
             });
         }
@@ -1609,8 +2382,9 @@ export const initAuthHandler = (pageType) => {
                 await authService.loginWithEmail(email, password);
                 showAlert.success('Signed in successfully.');
                 if (loginModal) loginModal.style.display = 'none';
+                try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(e) {}
                 setTimeout(() => {
-                    window.location.href = 'app.html';
+                    window.location.href = '/index.html?view=connection';
                 }, 200);
             } catch (err) {
                 console.error("Modal email sign-in error:", err);
@@ -1654,6 +2428,10 @@ export const initAuthHandler = (pageType) => {
                 await authService.loginWithGoogle(true);
                 showAlert.success('Google sign-in successful.');
                 if (loginModal) loginModal.style.display = 'none';
+                try { sessionStorage.removeItem('pricelister_stay_on_home'); } catch(e) {}
+                setTimeout(() => {
+                    window.location.href = '/index.html?view=connection';
+                }, 200);
             } catch (error) {
                 showAlert.error('Sign-in couldn\'t be completed. Please try again.');
                 modalGoogleBtn.disabled = false;
@@ -1675,7 +2453,7 @@ export const initAuthHandler = (pageType) => {
                 showAlert.success('Entering Demo UI Sandbox with complete test data.');
                 if (loginModal) loginModal.style.display = 'none';
                 setTimeout(() => {
-                    window.location.href = 'app.html';
+                    window.location.href = '/app.html';
                 }, 150);
             } catch (error) {
                 console.error("Test Entry Error:", error);
@@ -2123,7 +2901,7 @@ export const initAuthHandler = (pageType) => {
                 setAppCurrencySymbol(chosenSymbol);
                 await firestoreService.createWorkspace(currentUser.uid, currentUser.email, workspaceData);
                 showAlert.success('Workspace created successfully!');
-                window.location.href = 'app.html';
+                window.location.href = '/app.html';
             } catch (error) {
                 console.error("Create Workspace Error:", error);
                 showAlert.error('Failed to create workspace. Please try again.');
@@ -2145,6 +2923,7 @@ export const initAuthHandler = (pageType) => {
             if (confirmed) {
                 try {
                     await authService.logout();
+                    window.location.href = '/index.html';
                 } catch (error) {
                     showAlert.error('An error occurred while logging out.');
                 }

@@ -444,6 +444,9 @@ export const firestoreService = {
             return () => {};
         }
         
+        let unsubMember = null;
+        let unsubConn = null;
+
         // Check if Admin
         const wsRef = doc(db, 'Workspaces', uid);
         const unsubWs = onSnapshot(wsRef, (snap) => {
@@ -452,34 +455,51 @@ export const firestoreService = {
             } else {
                 // If not admin, listen to Connections doc
                 const connRef = doc(db, 'Connections', uid);
-                const unsubConn = onSnapshot(connRef, async (connSnap) => {
+                if (unsubConn) unsubConn();
+                unsubConn = onSnapshot(connRef, async (connSnap) => {
                     if (connSnap.exists()) {
                         const connData = connSnap.data();
                         const adminUid = connData.adminUid;
                         let role = connData.role || 'WORKER';
                         
                         if (email && adminUid) {
-                            try {
-                                const memberRef = doc(db, `Workspaces/${adminUid}/Members`, email.toLowerCase());
-                                const memberSnap = await getDoc(memberRef);
-                                if (memberSnap.exists() && memberSnap.data().role) {
-                                    role = memberSnap.data().role;
+                            const cleanEmail = email.toLowerCase().trim();
+                            const memberRef = doc(db, `Workspaces/${adminUid}/Members`, cleanEmail);
+                            
+                            if (unsubMember) unsubMember();
+                            unsubMember = onSnapshot(memberRef, (memberSnap) => {
+                                if (!memberSnap.exists()) {
+                                    // Member was removed from workspace
+                                    console.warn("[Realtime Security] Member document removed from workspace");
+                                    onRoleChange(null, null);
+                                } else {
+                                    const mData = memberSnap.data();
+                                    const isBlocked = Boolean(mData.isAccessBlocked || mData.accessRevoked || mData.status === 'revoked' || mData.status === 'blocked');
+                                    onRoleChange(mData.role || role, {
+                                        ...connData,
+                                        ...mData,
+                                        isAccessBlocked: isBlocked
+                                    });
                                 }
-                            } catch (e) {
-                                console.warn("Member role read error:", e);
-                            }
+                            }, (mErr) => {
+                                console.warn("Member snapshot error:", mErr);
+                                onRoleChange(role, connData);
+                            });
+                        } else {
+                            onRoleChange(role, connData);
                         }
-                        onRoleChange(role, connData);
                     } else {
                         onRoleChange(null, null);
                     }
                 }, (err) => console.warn("Conn listen error:", err));
-                
-                return unsubConn;
             }
         }, (err) => console.warn("Ws listen error:", err));
 
-        return unsubWs;
+        return () => {
+            if (unsubWs) unsubWs();
+            if (unsubConn) unsubConn();
+            if (unsubMember) unsubMember();
+        };
     },
 
     // ---------------------------------------------
@@ -898,6 +918,94 @@ export const firestoreService = {
         } catch(e) {}
     },
 
+    // ---------------------------------------------
+    // EMAIL SENDER & USER MAILBOX NOTIFICATIONS
+    // ---------------------------------------------
+    sendEmailNotification: async ({ to, subject, html, text, type = 'general', metadata = {} }) => {
+        if (!to) return;
+        try {
+            const cleanEmail = to.trim().toLowerCase();
+            const emailDoc = {
+                to: [cleanEmail],
+                message: {
+                    subject: subject,
+                    html: html || '',
+                    text: text || (html ? html.replace(/<[^>]*>/g, '') : '')
+                },
+                type: type,
+                metadata: metadata,
+                createdAt: Date.now(),
+                createdIso: new Date().toISOString()
+            };
+
+            // 1. Standard Firebase Trigger Email collection ('mail')
+            await addDoc(collection(db, 'mail'), emailDoc).catch(e => console.warn("Firestore mail write warning:", e));
+
+            // 2. User Mailbox Notifications subcollection for immediate in-app visibility
+            await addDoc(collection(db, `userMailbox/${cleanEmail}/messages`), {
+                subject,
+                body: text || (html ? html.replace(/<[^>]*>/g, '') : ''),
+                html: html || '',
+                type,
+                metadata,
+                read: false,
+                timestamp: Date.now(),
+                dateFormatted: new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            }).catch(e => console.warn("userMailbox write warning:", e));
+        } catch (err) {
+            console.warn("sendEmailNotification error:", err);
+        }
+    },
+
+    notifyWorkerRemoved: async (workspaceName, workerEmail, adminEmail) => {
+        const wsName = workspaceName || 'PriceLister Workspace';
+        const subject = `"${wsName}" Administrator removed you from their Workspace`;
+        const html = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1.5px solid #e4e4e7; border-radius: 16px; background: #ffffff;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;">&times;</div>
+                    <h2 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #09090b;">Workspace Removal Notice</h2>
+                </div>
+                <p style="color: #27272a; font-size: 0.95rem; line-height: 1.5; margin-bottom: 14px;">
+                    This is an automated notification to inform you that the administrator of <strong>${wsName}</strong> (${adminEmail || 'Administrator'}) has removed you from their workspace.
+                </p>
+                <div style="background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">Status</div>
+                    <div style="font-size: 0.88rem; font-weight: 800; color: #dc2626; margin-top: 2px;">Session Terminated &amp; Privileges Revoked</div>
+                </div>
+                <p style="color: #71717a; font-size: 0.82rem; line-height: 1.5; margin-bottom: 0;">
+                    Your workspace membership and active session have been cleared. If you believe this action was made in error, please contact the workspace administrator directly.
+                </p>
+                <div style="margin-top: 24px; padding-top: 14px; border-top: 1px solid #f1f5f9; font-size: 0.76rem; color: #a1a1aa; display: flex; justify-content: space-between;">
+                    <span>PriceLister Security System</span>
+                    <span>${new Date().toLocaleDateString()}</span>
+                </div>
+            </div>
+        `;
+        return firestoreService.sendEmailNotification({
+            to: workerEmail,
+            subject,
+            html,
+            text: `"${wsName}" Administrator removed you from their Workspace. Your access has been revoked.`,
+            type: 'worker_removed',
+            metadata: { workspaceName: wsName, adminEmail, removedAt: Date.now() }
+        });
+    },
+
+    getUserMailboxMessages: async (email) => {
+        if (!email || email === 'developer@local.test') return [];
+        try {
+            const cleanEmail = email.trim().toLowerCase();
+            const coll = collection(db, `userMailbox/${cleanEmail}/messages`);
+            const snap = await getDocs(coll);
+            const messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            return messages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        } catch (e) {
+            console.warn("getUserMailboxMessages error:", e);
+            return [];
+        }
+    },
+
     getWorkspaceMembers: async (adminUid) => {
         if (adminUid === 'ws_dev_mock' || adminUid === 'dev-mock-uid' || !adminUid) {
             try {
@@ -1030,17 +1138,20 @@ export const firestoreService = {
             const memberRef = doc(db, `Workspaces/${workspaceDocUid}/Members`, cleanEmail);
             await setDoc(memberRef, updates, { merge: true });
 
-            // If updating roleTag or photoURL on Admin, also sync root Workspace doc
-            const rootWsUpdates = {};
-            if (updates.roleTag) rootWsUpdates.adminRoleTag = updates.roleTag;
-            if (updates.photoURL) rootWsUpdates.adminPhotoURL = updates.photoURL;
-            if (updates.name) rootWsUpdates.adminName = updates.name;
+            // ONLY sync root Workspace doc IF the member is genuinely the Creator/Admin
+            const isCurrentAdmin = (auth.currentUser && auth.currentUser.uid === workspaceDocUid) || updates.isAdmin === true;
+            if (isCurrentAdmin) {
+                const rootWsUpdates = {};
+                if (updates.roleTag) rootWsUpdates.adminRoleTag = updates.roleTag;
+                if (updates.photoURL) rootWsUpdates.adminPhotoURL = updates.photoURL;
+                if (updates.name) rootWsUpdates.adminName = updates.name;
 
-            if (Object.keys(rootWsUpdates).length > 0) {
-                try {
-                    const wsRef = doc(db, 'Workspaces', workspaceDocUid);
-                    await setDoc(wsRef, rootWsUpdates, { merge: true });
-                } catch (e) {}
+                if (Object.keys(rootWsUpdates).length > 0) {
+                    try {
+                        const wsRef = doc(db, 'Workspaces', workspaceDocUid);
+                        await setDoc(wsRef, rootWsUpdates, { merge: true });
+                    } catch (e) {}
+                }
             }
             return true;
         } catch (err) {

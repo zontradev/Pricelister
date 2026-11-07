@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <base href="/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>PriceLister Workspace</title>
     
@@ -9,9 +10,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="./css/modern-ui.css">
-    <link rel="stylesheet" href="./css/app.css">
-    <link rel="stylesheet" href="./css/responsive.css">
+    <link rel="stylesheet" href="/css/modern-ui.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/responsive.css">
     
     <!-- Cloud Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -24,8 +25,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     
     <!-- Barcode & QR Code Engines (CDN + Local Vendor Fallbacks) -->
-    <script src="js/libs/jsbarcode.min.js"></script>
-    <script src="js/libs/qrcode.min.js"></script>
+    <script src="/js/libs/jsbarcode.min.js"></script>
+    <script src="/js/libs/qrcode.min.js"></script>
     <script>
         if (!window.JsBarcode) {
             const s1 = document.createElement('script');
@@ -39,8 +40,8 @@
         }
     </script>
     
-    <script type="module" src="./config.js"></script>
-    <script type="module" src="./DataModel.js"></script>
+    <script type="module" src="/config.js"></script>
+    <script type="module" src="/DataModel.js"></script>
 
     <!-- Immediate Color Mode, Theme, Custom Font & Layout Initializer: Prevents white flash and sets Enterprise Minimal -->
     <script>
@@ -162,6 +163,15 @@
     <script>
         (function() {
             try {
+                var path = window.location.pathname || '';
+                var hash = window.location.hash || '';
+
+                // Bulletproof crash protection: If URL has index.html attached after /Workspace/... (e.g. from relative signout link), immediately bounce to root /index.html
+                if (path.toLowerCase().indexOf('index.html') !== -1) {
+                    window.location.replace('/index.html');
+                    return;
+                }
+
                 // Register Service Worker for seamless SPA reload routing on static/live servers
                 if ('serviceWorker' in navigator && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
                     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(e) {
@@ -169,8 +179,6 @@
                     });
                 }
 
-                var path = window.location.pathname || '';
-                var hash = window.location.hash || '';
                 var savedRoute = '';
                 try {
                     savedRoute = sessionStorage.getItem('pricelister_last_route') || '';
@@ -186,6 +194,7 @@
                     route = savedRoute.replace(/^\//, '');
                 }
 
+                route = route.replace(/\/index\.html$/i, '').trim();
                 if (!route.startsWith('/')) route = '/' + route;
                 if (route === '/workers') route = '/workspace';
                 if (route === '/customer-invoices') route = '/invoices/customer';
@@ -695,9 +704,11 @@
 
             // Safety Watchdog: Prevent permanent "Loading Workspace..." lock
             setTimeout(async () => {
+                if (window.__isRedirecting) return;
                 const loader = document.getElementById('app-loader');
                 const shell = document.getElementById('app-shell');
                 if (loader && loader.style.display !== 'none' && !document.getElementById('loader-error')?.innerHTML) {
+                    if (!window.__activeWorkspaceId) return;
                     console.warn("Loader watchdog triggered: auto-dismissing stalled loader state.");
                     document.body.classList.remove('app-loading');
                     loader.style.display = 'none';
@@ -707,7 +718,7 @@
                     if (container && !container.hasChildNodes()) {
                         try {
                             const { initRouter } = await import('./js/router.js');
-                            initRouter();
+                            initRouter(window.__activeWorkspaceId);
                         } catch (e) {
                             console.error("Watchdog router initialization fallback failed:", e);
                         }

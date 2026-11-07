@@ -4,7 +4,7 @@
  * and serves the respective HTML file (app.html or index.html or login.html) without server 404 crashes.
  */
 
-const CACHE_NAME = 'pricelister-spa-v3';
+const CACHE_NAME = 'pricelister-spa-v4';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -48,7 +48,18 @@ self.addEventListener('fetch', (event) => {
     }
 
     if (event.request.mode === 'navigate') {
-        // 1. Dedicated Login Route -> serve /login.html
+        // 1. Root / Landing Index.html redirect or navigation
+        if (path === '/index.html' || path === '/' || path === '') {
+            event.respondWith(
+                fetch('/index.html')
+                    .then(res => res.ok ? res : fetch(event.request))
+                    .catch(() => caches.match('/index.html'))
+                    .catch(() => fetch(event.request))
+            );
+            return;
+        }
+
+        // 2. Dedicated Login Route -> serve /login.html
         if (path.endsWith('/login.html') || path.endsWith('/login') || path === '/login') {
             event.respondWith(
                 fetch('/login.html')
@@ -59,7 +70,20 @@ self.addEventListener('fetch', (event) => {
             return;
         }
 
-        // 2. App / Workspace Routes -> serve /app.html
+        // 3. Landing views (/home, /explore, /pricing, /find, /terms, /privacy, /connection) -> serve /index.html
+        const landingViews = ['/home', '/explore', '/pricing', '/find', '/terms', '/privacy', '/connection'];
+        const isLandingView = landingViews.some(v => path.endsWith(v) || path === v || path === v + '/');
+        if (isLandingView) {
+            event.respondWith(
+                fetch('/index.html')
+                    .then(res => res.ok ? res : fetch(event.request))
+                    .catch(() => caches.match('/index.html'))
+                    .catch(() => fetch(event.request))
+            );
+            return;
+        }
+
+        // 4. App / Workspace Routes -> serve /app.html
         if (
             path.includes('/workspace') || 
             path.endsWith('/app.html') || 
@@ -76,20 +100,7 @@ self.addEventListener('fetch', (event) => {
             return;
         }
 
-        // 3. Landing views (/home, /explore, /pricing, /find, /terms, /privacy) -> serve /index.html
-        const landingViews = ['/home', '/explore', '/pricing', '/find', '/terms', '/privacy'];
-        const isLandingView = landingViews.some(v => path.endsWith(v) || path === v || path === v + '/');
-        if (isLandingView || path === '/' || path === '' || path.endsWith('/index.html')) {
-            event.respondWith(
-                fetch('/index.html')
-                    .then(res => res.ok ? res : fetch(event.request))
-                    .catch(() => caches.match('/index.html'))
-                    .catch(() => fetch(event.request))
-            );
-            return;
-        }
-
-        // 4. Default: passthrough to real network, fallback to index.html if offline/404
+        // 5. Default: passthrough to real network, fallback to /index.html if offline/404
         event.respondWith(
             fetch(event.request).catch(() => fetch('/index.html'))
         );

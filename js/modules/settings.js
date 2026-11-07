@@ -45,10 +45,18 @@ export const INDUSTRY_OPTIONS = [
 
 export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => {
     let currentUser = authService.getCurrentUser();
+    const isExplicitDemo = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pricelister_explicit_demo') === 'true') ||
+                           (typeof localStorage !== 'undefined' && localStorage.getItem('pricelister_demo_mode') === 'true') ||
+                           (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo=true'));
+
     const isMock = workspaceId === 'ws_dev_mock' || 
                    !workspaceId || 
                    workspaceId === 'demo' || 
-                   (currentUser?.uid === 'dev-mock-uid' && (!workspaceId || workspaceId === 'ws_dev_mock'));
+                   workspaceId === 'dev-mock-uid' ||
+                   workspaceId === 'DEMO-SANDBOX-01' ||
+                   currentUser?.uid === 'dev-mock-uid' ||
+                   Boolean(currentUser?.isDemo) ||
+                   isExplicitDemo;
 
     if (!currentUser) {
         if (isMock) {
@@ -74,7 +82,8 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         let userRole = 'WORKER';
         let isAdmin = false;
         let isCoAdmin = false;
-        let wsData = {};
+        let wsData = (typeof window !== 'undefined' && window.__activeWorkspace) ? { ...window.__activeWorkspace } : {};
+        let resolvedWsDocId = (typeof window !== 'undefined' && window.__activeWorkspace?.id) || workspaceId;
 
         if (isMock) {
             userRole = 'CREATOR_ADMIN';
@@ -85,31 +94,69 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             } catch (e) {}
         } else {
             try {
-                const wsRef = doc(db, 'Workspaces', workspaceId);
+                const wsRef = doc(db, 'Workspaces', resolvedWsDocId);
                 const wsSnap = await getDoc(wsRef);
-                wsData = wsSnap.exists() ? wsSnap.data() : {};
+                if (wsSnap && wsSnap.exists()) {
+                    wsData = { ...wsData, ...wsSnap.data() };
+                    resolvedWsDocId = wsSnap.id;
+                } else if (workspaceId && workspaceId !== resolvedWsDocId) {
+                    const fallbackRef = doc(db, 'Workspaces', workspaceId);
+                    const fallbackSnap = await getDoc(fallbackRef);
+                    if (fallbackSnap && fallbackSnap.exists()) {
+                        wsData = { ...wsData, ...fallbackSnap.data() };
+                        resolvedWsDocId = fallbackSnap.id;
+                    } else {
+                        const qWs = query(collection(db, 'Workspaces'), where('workspaceId', '==', workspaceId));
+                        const qSnap = await getDocs(qWs);
+                        if (!qSnap.empty) {
+                            wsData = { ...wsData, ...qSnap.docs[0].data() };
+                            resolvedWsDocId = qSnap.docs[0].id;
+                        }
+                    }
+                }
             } catch (err) {
                 console.warn("Could not load workspace doc from Firestore:", err);
                 try {
                     const rawOff = localStorage.getItem(`pricelister_offline_settings_${workspaceId}`);
-                    if (rawOff) wsData = JSON.parse(rawOff) || {};
+                    if (rawOff) wsData = { ...wsData, ...(JSON.parse(rawOff) || {}) };
                 } catch (e) {}
             }
 
-            if (wsData.adminId === currentUser.uid || workspaceId === currentUser.uid || (wsData.email && currentUser.email === wsData.email)) {
+            const isCreator = Boolean(
+                wsData.adminId === currentUser?.uid || 
+                wsData.adminUid === currentUser?.uid || 
+                resolvedWsDocId === currentUser?.uid || 
+                (wsData.email && currentUser?.email && currentUser.email.toLowerCase() === wsData.email.toLowerCase()) ||
+                (wsData.adminEmail && currentUser?.email && currentUser.email.toLowerCase() === wsData.adminEmail.toLowerCase())
+            );
+
+            if (isCreator) {
                 userRole = 'CREATOR_ADMIN';
                 isAdmin = true;
+            } else if (wsData.role === 'CREATOR_ADMIN' || wsData.role === 'ADMIN' || wsData.role === 'CREATOR' || wsData.role === 'OWNER') {
+                isAdmin = true;
+                userRole = wsData.role;
+            } else if (wsData.role === 'CO_ADMIN' || wsData.role === 'COADMIN') {
+                isCoAdmin = true;
+                userRole = wsData.role;
             } else {
                 for (const sub of ['Members', 'members']) {
                     try {
-                        const mRef = doc(db, 'Workspaces', workspaceId, sub, currentUser.uid);
+                        const mRef = doc(db, 'Workspaces', resolvedWsDocId, sub, currentUser.uid);
                         const mSnap = await getDoc(mRef);
                         if (mSnap.exists()) {
                             userRole = (mSnap.data().role || 'WORKER').toUpperCase();
                             break;
                         }
                         if (currentUser.email) {
-                            const qMem = query(collection(db, 'Workspaces', workspaceId, sub), where('email', '==', currentUser.email));
+                            const cleanEmail = currentUser.email.toLowerCase();
+                            const mEmailRef = doc(db, 'Workspaces', resolvedWsDocId, sub, cleanEmail);
+                            const mEmailSnap = await getDoc(mEmailRef);
+                            if (mEmailSnap.exists()) {
+                                userRole = (mEmailSnap.data().role || 'WORKER').toUpperCase();
+                                break;
+                            }
+                            const qMem = query(collection(db, 'Workspaces', resolvedWsDocId, sub), where('email', '==', currentUser.email));
                             const qSnap = await getDocs(qMem);
                             if (!qSnap.empty) {
                                 userRole = (qSnap.docs[0].data().role || 'WORKER').toUpperCase();
@@ -153,7 +200,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                     try {
                         await firestoreService.leaveWorkspace(workspaceId, currentUser);
                         showAlert.success("You have left the workspace.");
-                        window.location.href = 'index.html';
+                        window.location.replace('/index.html?view=connection');
                     } catch (e) {
                         showAlert.error("Failed to leave workspace: " + (e.message || 'Unknown error'));
                     }
@@ -164,7 +211,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
 
         // 2. LOAD SERVER SETTINGS
         const settingsService = getSettingsService(workspaceId);
-        const currentSettings = await settingsService.getWorkspaceSettings();
+        let currentSettings = await settingsService.getWorkspaceSettings();
 
         const wsDisplayName = currentSettings.name || wsData.name || 'PriceLister Workspace';
         const wsTradeName = currentSettings.tradeName || currentSettings.shopName || wsDisplayName;
@@ -193,12 +240,28 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         const logoUrl = currentSettings.logoUrl || wsData.logoUrl || wsData.logo || '';
         const bannerUrl = currentSettings.bannerUrl || wsData.bannerUrl || wsData.banner || '';
 
-        const wsCreatedDate = currentSettings.createdDate || (wsData.createdAt ? new Date(wsData.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent');
-        const wsCreatedTimestamp = currentSettings.createdTimestamp || (wsData.createdAt ? new Date(wsData.createdAt).toISOString() : '');
+        const parseDateSafe = (val) => {
+            if (!val) return null;
+            if (typeof val?.toDate === 'function') {
+                try { return val.toDate(); } catch (e) {}
+            }
+            if (val?.seconds) return new Date(val.seconds * 1000);
+            try {
+                const d = new Date(val);
+                return isNaN(d.getTime()) ? null : d;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const createdDateObj = parseDateSafe(wsData.createdAt);
+        const wsCreatedDate = currentSettings.createdDate || (createdDateObj ? createdDateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent');
+        const wsCreatedTimestamp = currentSettings.createdTimestamp || (createdDateObj ? createdDateObj.toISOString() : '');
         const wsCreatorEmail = currentSettings.creatorEmail || wsData.creatorEmail || wsData.adminEmail || currentUser.email || '';
 
-        const wsUpdatedDate = currentSettings.updatedDate || (wsData.updatedAt ? new Date(wsData.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent');
-        const wsUpdateTimestamp = currentSettings.updateTimestamp || (wsData.updatedAt ? new Date(wsData.updatedAt).toISOString() : '');
+        const updatedDateObj = parseDateSafe(wsData.updatedAt);
+        const wsUpdatedDate = currentSettings.updatedDate || (updatedDateObj ? updatedDateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent');
+        const wsUpdateTimestamp = currentSettings.updateTimestamp || (updatedDateObj ? updatedDateObj.toISOString() : '');
         const wsUpdatorEmail = currentSettings.updatorEmail || wsData.updatorEmail || wsCreatorEmail;
         const currentColorMode = localStorage.getItem('pricelister_color_mode') || 'light';
 
@@ -1012,9 +1075,177 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
 
         // Theme Mode removed from workspace settings per theme rules
 
-        // Vending Switch
+        // 1. Query all form input controls
         const vendingInput = container.querySelector('#set-vending');
         const vendingLabel = container.querySelector('#vending-status-text');
+
+        const setShopName = container.querySelector('#set-shop-name');
+        const setEndMsg = container.querySelector('#set-end-msg');
+        const setCustName = container.querySelector('#set-show-cust-name');
+        const setCustNum = container.querySelector('#set-show-cust-num');
+        const previewShopTitle = container.querySelector('#preview-shop-title');
+        const previewCustMeta = container.querySelector('#preview-cust-meta');
+        const previewFooterNote = container.querySelector('#preview-footer-note');
+
+        const countrySelect = container.querySelector('#set-country');
+        const regionInput = container.querySelector('#set-region');
+        const currencyCodeSelect = container.querySelector('#set-currency-code');
+        const currencyNameInput = container.querySelector('#set-currency-name');
+        const currencyInput = container.querySelector('#set-currency');
+        const currencyPreview = container.querySelector('#currency-live-preview');
+        const previewTicketTotal = container.querySelector('#preview-ticket-total');
+        const btnFindCurrency = container.querySelector('#btn-find-currency');
+        const heroLiveCurrency = container.querySelector('#hero-live-currency');
+        const heroLiveCountry = container.querySelector('#hero-live-country');
+        const heroLiveRegion = container.querySelector('#hero-live-region');
+
+        let selectedWsLogoFile = null;
+        let selectedWsBannerFile = null;
+
+        const logoFileInput = container.querySelector('#set-logo-file');
+        const logoUrlInput = container.querySelector('#set-logo-url');
+        const btnUploadLogo = container.querySelector('#btn-upload-ws-logo');
+        const btnClearLogo = container.querySelector('#btn-clear-ws-logo');
+        const logoPreviewImg = container.querySelector('#ws-logo-preview-img');
+        const logoPlaceholder = container.querySelector('#ws-logo-placeholder');
+        const logoDropzone = container.querySelector('#ws-logo-dropzone');
+        const logoOverlayHint = container.querySelector('#ws-logo-overlay-hint');
+        const heroLiveLogoImg = container.querySelector('#hero-live-logo-img');
+        const heroLiveLogoFallback = container.querySelector('#hero-live-logo-fallback');
+
+        const bannerFileInput = container.querySelector('#set-banner-file');
+        const bannerUrlInput = container.querySelector('#set-banner-url');
+        const btnUploadBanner = container.querySelector('#btn-upload-ws-banner');
+        const btnClearBanner = container.querySelector('#btn-clear-ws-banner');
+        const bannerDropzone = container.querySelector('#ws-banner-dropzone');
+        const btnPickInternetBanner = container.querySelector('#btn-pick-internet-banner');
+        const btnHeroChangeBanner = container.querySelector('#btn-hero-change-banner');
+        const heroBrandCard = container.querySelector('#settings-live-brand-hero');
+
+        const nameInput = container.querySelector('#set-name');
+        const taglineInput = container.querySelector('#set-tagline');
+        const industrySelect = container.querySelector('#set-industry');
+        const emailInput = container.querySelector('#set-email');
+        const tradeNameInput = container.querySelector('#set-trade-name');
+        const websiteInput = container.querySelector('#set-website');
+        const taxIdInput = container.querySelector('#set-tax-id');
+        const phoneInput = container.querySelector('#set-phone');
+        const supportPhoneInput = container.querySelector('#set-support-phone');
+        const addressInput = container.querySelector('#set-address');
+
+        const btnHeaderSave = container.querySelector('#btn-header-save-settings');
+        const btnTopSave = container.querySelector('#btn-top-save-settings');
+        const headerUnsavedDot = container.querySelector('#header-unsaved-dot');
+        const railUnsavedPill = container.querySelector('#rail-unsaved-pill');
+
+        const getAllSaveButtons = () => [btnHeaderSave, btnTopSave].filter(Boolean);
+        const getAllDiscardButtons = () => [];
+
+        // 2. Snapshot & Dirty Checking for All Save Buttons
+        const captureFormState = () => ({
+            enableVending: Boolean(vendingInput?.checked),
+            currencySymbol: (currencyInput ? currencyInput.value.trim().substring(0, 3) : (wsCurrency || '$')),
+            currencyCode: (currencyCodeSelect ? currencyCodeSelect.value.toUpperCase() : (wsCurrencyCode || 'USD')),
+            currencyName: (currencyNameInput ? currencyNameInput.value.trim() : (wsCurrencyName || '')),
+            country: (countrySelect ? countrySelect.value.trim() : (wsCountry || '')),
+            countryCode: (countrySelect?.selectedOptions?.[0]?.getAttribute('data-code') || wsCountryCode || '').trim(),
+            region: (regionInput ? regionInput.value.trim() : (wsRegion || '')),
+            name: (nameInput ? nameInput.value.trim() : (wsDisplayName || '')),
+            tradeName: (tradeNameInput ? tradeNameInput.value.trim() : (wsTradeName || '')),
+            industry: industrySelect ? industrySelect.value : (wsIndustry || 'General Commercial'),
+            tagline: (taglineInput ? taglineInput.value.trim() : (wsTagline || '')),
+            website: (websiteInput ? websiteInput.value.trim() : (wsWebsite || '')),
+            taxId: (taxIdInput ? taxIdInput.value.trim() : (wsTaxId || '')),
+            email: (emailInput ? emailInput.value.trim() : (wsEmail || '')),
+            phone: (phoneInput ? phoneInput.value.trim() : (wsPhone || '')),
+            supportPhone: (supportPhoneInput ? supportPhoneInput.value.trim() : (wsSupportPhone || '')),
+            address: (addressInput ? addressInput.value.trim() : (wsAddress || '')),
+            shopName: (setShopName ? setShopName.value.trim() : (wsShopName || '')),
+            endMessage: (setEndMsg ? setEndMsg.value.trim() : (wsEndMsg || '')),
+            customerName: Boolean(setCustName?.checked),
+            customerNumber: Boolean(setCustNum?.checked),
+            logoUrl: (logoUrlInput ? logoUrlInput.value.trim() : (logoUrl || '')),
+            bannerUrl: (bannerUrlInput ? bannerUrlInput.value.trim() : (bannerUrl || '')),
+            hasLogoFile: Boolean(selectedWsLogoFile),
+            hasBannerFile: Boolean(selectedWsBannerFile)
+        });
+
+        let savedSnapshot = captureFormState();
+
+        function checkDirty() {
+            const current = captureFormState();
+            const isDirty = (
+                current.enableVending !== savedSnapshot.enableVending ||
+                current.currencySymbol !== savedSnapshot.currencySymbol ||
+                current.currencyCode !== savedSnapshot.currencyCode ||
+                current.currencyName !== savedSnapshot.currencyName ||
+                current.country !== savedSnapshot.country ||
+                current.region !== savedSnapshot.region ||
+                current.name !== savedSnapshot.name ||
+                current.tradeName !== savedSnapshot.tradeName ||
+                current.industry !== savedSnapshot.industry ||
+                current.tagline !== savedSnapshot.tagline ||
+                current.website !== savedSnapshot.website ||
+                current.taxId !== savedSnapshot.taxId ||
+                current.email !== savedSnapshot.email ||
+                current.phone !== savedSnapshot.phone ||
+                current.supportPhone !== savedSnapshot.supportPhone ||
+                current.address !== savedSnapshot.address ||
+                current.shopName !== savedSnapshot.shopName ||
+                current.endMessage !== savedSnapshot.endMessage ||
+                current.customerName !== savedSnapshot.customerName ||
+                current.customerNumber !== savedSnapshot.customerNumber ||
+                current.logoUrl !== savedSnapshot.logoUrl ||
+                current.bannerUrl !== savedSnapshot.bannerUrl ||
+                current.hasLogoFile ||
+                current.hasBannerFile
+            );
+
+            const allSaveBtns = getAllSaveButtons();
+            allSaveBtns.forEach(btn => {
+                if (isDirty) {
+                    btn.removeAttribute('disabled');
+                    btn.disabled = false;
+                    btn.classList.add('btn-save-dirty');
+                    btn.classList.remove('btn-save-clean', 'btn-disabled');
+                    btn.style.setProperty('background', '#18181b', 'important');
+                    btn.style.setProperty('color', '#ffffff', 'important');
+                    btn.style.setProperty('border', '1.5px solid #18181b', 'important');
+                    btn.style.setProperty('opacity', '1', 'important');
+                    btn.style.setProperty('cursor', 'pointer', 'important');
+                    btn.style.setProperty('pointer-events', 'auto', 'important');
+                    btn.style.setProperty('box-shadow', '0 4px 14px rgba(0, 0, 0, 0.25)', 'important');
+                } else {
+                    btn.setAttribute('disabled', 'true');
+                    btn.disabled = true;
+                    btn.classList.remove('btn-save-dirty');
+                    btn.classList.add('btn-save-clean');
+                    btn.style.setProperty('background', '#f4f4f5', 'important');
+                    btn.style.setProperty('color', '#a1a1aa', 'important');
+                    btn.style.setProperty('border', '1px solid #e4e4e7', 'important');
+                    btn.style.setProperty('opacity', '0.5', 'important');
+                    btn.style.setProperty('cursor', 'not-allowed', 'important');
+                    btn.style.setProperty('pointer-events', 'none', 'important');
+                    btn.style.setProperty('box-shadow', 'none', 'important');
+                }
+            });
+
+            // Discard Buttons: only shown when changes occurred
+            const allDiscardBtns = getAllDiscardButtons();
+            allDiscardBtns.forEach(btn => {
+                btn.style.display = isDirty ? 'inline-flex' : 'none';
+                btn.disabled = !isDirty;
+            });
+
+            if (headerUnsavedDot) {
+                headerUnsavedDot.style.display = isDirty ? 'inline-block' : 'none';
+            }
+            if (railUnsavedPill) {
+                railUnsavedPill.style.display = isDirty ? 'inline-block' : 'none';
+            }
+        }
+
+        // 3. Attach Form Event Listeners
         if (vendingInput && vendingLabel) {
             vendingInput.addEventListener('change', () => {
                 const checked = vendingInput.checked;
@@ -1023,15 +1254,6 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 checkDirty();
             });
         }
-
-        // Receipt Live Preview Syncer
-        const setShopName = container.querySelector('#set-shop-name');
-        const setEndMsg = container.querySelector('#set-end-msg');
-        const setCustName = container.querySelector('#set-show-cust-name');
-        const setCustNum = container.querySelector('#set-show-cust-num');
-        const previewShopTitle = container.querySelector('#preview-shop-title');
-        const previewCustMeta = container.querySelector('#preview-cust-meta');
-        const previewFooterNote = container.querySelector('#preview-footer-note');
 
         const updateTicketPreview = () => {
             if (previewShopTitle) previewShopTitle.textContent = (setShopName?.value || wsShopName || 'STORE').toUpperCase();
@@ -1048,20 +1270,6 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         if (setEndMsg) setEndMsg.addEventListener('input', () => { updateTicketPreview(); checkDirty(); });
         if (setCustName) setCustName.addEventListener('change', () => { updateTicketPreview(); checkDirty(); });
         if (setCustNum) setCustNum.addEventListener('change', () => { updateTicketPreview(); checkDirty(); });
-
-        // Currency Picker & Quick Presets
-        // Country & Currency Preferences Controls
-        const countrySelect = container.querySelector('#set-country');
-        const regionInput = container.querySelector('#set-region');
-        const currencyCodeSelect = container.querySelector('#set-currency-code');
-        const currencyNameInput = container.querySelector('#set-currency-name');
-        const currencyInput = container.querySelector('#set-currency');
-        const currencyPreview = container.querySelector('#currency-live-preview');
-        const previewTicketTotal = container.querySelector('#preview-ticket-total');
-        const btnFindCurrency = container.querySelector('#btn-find-currency');
-        const heroLiveCurrency = container.querySelector('#hero-live-currency');
-        const heroLiveCountry = container.querySelector('#hero-live-country');
-        const heroLiveRegion = container.querySelector('#hero-live-region');
 
         const updateCurrencyPreview = () => {
             const sym = (currencyInput?.value || '$').trim().substring(0, 3) || '$';
@@ -1166,21 +1374,6 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         // =============================================================
         // LOGO & BANNER MEDIA CONTROLS & LIVE HERO PREVIEW SYNC
         // =============================================================
-        let selectedWsLogoFile = null;
-        let selectedWsBannerFile = null;
-
-        // Logo Controls
-        const logoFileInput = container.querySelector('#set-logo-file');
-        const logoUrlInput = container.querySelector('#set-logo-url');
-        const btnUploadLogo = container.querySelector('#btn-upload-ws-logo');
-        const btnClearLogo = container.querySelector('#btn-clear-ws-logo');
-        const logoPreviewImg = container.querySelector('#ws-logo-preview-img');
-        const logoPlaceholder = container.querySelector('#ws-logo-placeholder');
-        const logoDropzone = container.querySelector('#ws-logo-dropzone');
-        const logoOverlayHint = container.querySelector('#ws-logo-overlay-hint');
-        const heroLiveLogoImg = container.querySelector('#hero-live-logo-img');
-        const heroLiveLogoFallback = container.querySelector('#hero-live-logo-fallback');
-
         const updateLogoDisplay = (srcUrl) => {
             if (srcUrl) {
                 if (logoPreviewImg) {
@@ -1267,16 +1460,6 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             checkDirty();
         });
 
-        // Banner Controls
-        const bannerFileInput = container.querySelector('#set-banner-file');
-        const bannerUrlInput = container.querySelector('#set-banner-url');
-        const btnUploadBanner = container.querySelector('#btn-upload-ws-banner');
-        const btnClearBanner = container.querySelector('#btn-clear-ws-banner');
-        const bannerDropzone = container.querySelector('#ws-banner-dropzone');
-        const btnPickInternetBanner = container.querySelector('#btn-pick-internet-banner');
-        const btnHeroChangeBanner = container.querySelector('#btn-hero-change-banner');
-        const heroBrandCard = container.querySelector('#settings-live-brand-hero');
-
         const updateBannerDisplay = (bannerSrc) => {
             if (bannerSrc) {
                 if (bannerDropzone) {
@@ -1358,17 +1541,6 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         btnHeroChangeBanner?.addEventListener('click', triggerBannerModal);
 
         // Live Brand Title, Tagline, Industry, and Email Sync
-        const nameInput = container.querySelector('#set-name');
-        const taglineInput = container.querySelector('#set-tagline');
-        const industrySelect = container.querySelector('#set-industry');
-        const emailInput = container.querySelector('#set-email');
-        const tradeNameInput = container.querySelector('#set-trade-name');
-        const websiteInput = container.querySelector('#set-website');
-        const taxIdInput = container.querySelector('#set-tax-id');
-        const phoneInput = container.querySelector('#set-phone');
-        const supportPhoneInput = container.querySelector('#set-support-phone');
-        const addressInput = container.querySelector('#set-address');
-
         nameInput?.addEventListener('input', (e) => {
             const val = e.target.value.trim() || 'Workspace';
             const heroTitle = container.querySelector('#hero-live-title');
@@ -1404,120 +1576,6 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         [tradeNameInput, websiteInput, taxIdInput, phoneInput, supportPhoneInput, addressInput].forEach(inp => {
             inp?.addEventListener('input', checkDirty);
         });
-
-        // Snapshot & Dirty Checking for All Save Buttons & Floating Bar
-        const captureFormState = () => ({
-            enableVending: Boolean(vendingInput?.checked),
-            currencySymbol: (currencyInput?.value || '$').trim().substring(0, 3) || '$',
-            currencyCode: (currencyCodeSelect?.value || wsCurrencyCode || 'USD').toUpperCase(),
-            currencyName: (currencyNameInput?.value || wsCurrencyName || '').trim(),
-            country: (countrySelect?.value || wsCountry || '').trim(),
-            countryCode: (countrySelect?.selectedOptions?.[0]?.getAttribute('data-code') || wsCountryCode || '').trim(),
-            region: (regionInput?.value || wsRegion || '').trim(),
-            name: (nameInput?.value || wsDisplayName || '').trim(),
-            tradeName: (tradeNameInput?.value || wsTradeName || '').trim(),
-            industry: industrySelect?.value || wsIndustry || 'General Commercial',
-            tagline: (taglineInput?.value || wsTagline || '').trim(),
-            website: (websiteInput?.value || wsWebsite || '').trim(),
-            taxId: (taxIdInput?.value || wsTaxId || '').trim(),
-            email: (emailInput?.value || wsEmail || '').trim(),
-            phone: (phoneInput?.value || wsPhone || '').trim(),
-            supportPhone: (supportPhoneInput?.value || wsSupportPhone || '').trim(),
-            address: (addressInput?.value || wsAddress || '').trim(),
-            shopName: (setShopName?.value || wsShopName || '').trim(),
-            endMessage: (setEndMsg?.value || wsEndMsg || '').trim(),
-            customerName: Boolean(setCustName?.checked),
-            customerNumber: Boolean(setCustNum?.checked),
-            logoUrl: (logoUrlInput?.value || logoUrl || '').trim(),
-            bannerUrl: (bannerUrlInput?.value || bannerUrl || '').trim(),
-            hasLogoFile: Boolean(selectedWsLogoFile),
-            hasBannerFile: Boolean(selectedWsBannerFile)
-        });
-
-        let savedSnapshot = captureFormState();
-
-        const btnHeaderSave = container.querySelector('#btn-header-save-settings');
-        const btnTopSave = container.querySelector('#btn-top-save-settings');
-        const headerUnsavedDot = container.querySelector('#header-unsaved-dot');
-        const railUnsavedPill = container.querySelector('#rail-unsaved-pill');
-
-        const getAllSaveButtons = () => {
-            return [btnHeaderSave, btnTopSave].filter(Boolean);
-        };
-
-        const getAllDiscardButtons = () => {
-            return [];
-        };
-
-        const checkDirty = () => {
-            const current = captureFormState();
-            const isDirty = (
-                current.enableVending !== savedSnapshot.enableVending ||
-                current.currencySymbol !== savedSnapshot.currencySymbol ||
-                current.currencyCode !== savedSnapshot.currencyCode ||
-                current.currencyName !== savedSnapshot.currencyName ||
-                current.country !== savedSnapshot.country ||
-                current.region !== savedSnapshot.region ||
-                current.name !== savedSnapshot.name ||
-                current.tradeName !== savedSnapshot.tradeName ||
-                current.industry !== savedSnapshot.industry ||
-                current.tagline !== savedSnapshot.tagline ||
-                current.website !== savedSnapshot.website ||
-                current.taxId !== savedSnapshot.taxId ||
-                current.email !== savedSnapshot.email ||
-                current.phone !== savedSnapshot.phone ||
-                current.supportPhone !== savedSnapshot.supportPhone ||
-                current.address !== savedSnapshot.address ||
-                current.shopName !== savedSnapshot.shopName ||
-                current.endMessage !== savedSnapshot.endMessage ||
-                current.customerName !== savedSnapshot.customerName ||
-                current.customerNumber !== savedSnapshot.customerNumber ||
-                current.logoUrl !== savedSnapshot.logoUrl ||
-                current.bannerUrl !== savedSnapshot.bannerUrl ||
-                current.hasLogoFile ||
-                current.hasBannerFile
-            );
-
-            // Save Buttons: always active and responsive; highlighted when unsaved changes exist
-            const allSaveBtns = getAllSaveButtons();
-            allSaveBtns.forEach(btn => {
-                btn.removeAttribute('disabled');
-                btn.style.setProperty('pointer-events', 'auto', 'important');
-                btn.style.setProperty('cursor', 'pointer', 'important');
-                if (isDirty) {
-                    btn.classList.add('btn-save-dirty');
-                    btn.classList.remove('btn-save-clean', 'btn-disabled');
-                    btn.style.setProperty('background', '#18181b', 'important');
-                    btn.style.setProperty('color', '#ffffff', 'important');
-                    btn.style.setProperty('border', '1.5px solid #18181b', 'important');
-                    btn.style.setProperty('opacity', '1', 'important');
-                    btn.style.setProperty('box-shadow', '0 4px 14px rgba(0, 0, 0, 0.25)', 'important');
-                } else {
-                    btn.classList.remove('btn-save-dirty');
-                    btn.classList.add('btn-save-clean');
-                    btn.style.setProperty('background', '#ffffff', 'important');
-                    btn.style.setProperty('color', '#18181b', 'important');
-                    btn.style.setProperty('border', '1.5px solid #d4d4d8', 'important');
-                    btn.style.setProperty('opacity', '1', 'important');
-                    btn.style.setProperty('box-shadow', 'none', 'important');
-                }
-            });
-
-            // Discard Buttons: only shown when changes occurred
-            const allDiscardBtns = getAllDiscardButtons();
-            allDiscardBtns.forEach(btn => {
-                btn.style.display = isDirty ? 'inline-flex' : 'none';
-                btn.disabled = !isDirty;
-            });
-
-            // Unsaved status badges
-            if (headerUnsavedDot) {
-                headerUnsavedDot.style.display = isDirty ? 'inline-block' : 'none';
-            }
-            if (railUnsavedPill) {
-                railUnsavedPill.style.display = isDirty ? 'inline-block' : 'none';
-            }
-        };
 
         // Unified Discard Handler with Modal Safety
         const performDiscard = async () => {
@@ -1677,13 +1735,6 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 const settingsSvc = getSettingsService(workspaceId);
                 await settingsSvc.saveWorkspaceSettings(updatedPayload);
 
-                if (!isMock) {
-                    try {
-                        await firestoreService.updateWorkspaceSettings(workspaceId, updatedPayload);
-                    } catch (fsErr) {
-                        console.warn("Direct firestore update notice:", fsErr);
-                    }
-                }
 
                 // Cache in localStorage so local demo & offline always work flawlessly
                 try {
@@ -1727,13 +1778,21 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
         container.querySelector('#btn-settings-market-inserter')?.addEventListener('click', () => {
             window.location.hash = '#/market-inserter';
         });
-        container.querySelector('#btn-settings-headers-template')?.addEventListener('click', () => downloadHeadersOnlyTemplate());
-        container.querySelector('#btn-settings-sample-template')?.addEventListener('click', () => downloadExampleDataTemplate());
+        container.querySelector('#btn-settings-headers-template')?.addEventListener('click', () => {
+            try { downloadHeadersOnlyTemplate(); } catch (e) { console.warn("Template download notice:", e); }
+        });
+        container.querySelector('#btn-settings-sample-template')?.addEventListener('click', () => {
+            try { downloadExampleDataTemplate(); } catch (e) { console.warn("Template download notice:", e); }
+        });
         container.querySelector('#btn-settings-import-excel')?.addEventListener('click', () => {
-            openExcelImportModal(workspaceId, () => showAlert.success("Spreadsheet data successfully imported!"));
+            try {
+                openExcelImportModal(workspaceId, () => showAlert.success("Spreadsheet data successfully imported!"));
+            } catch (e) { console.warn("Import modal notice:", e); }
         });
         container.querySelector('#btn-settings-export-data')?.addEventListener('click', () => {
-            openExportModal(workspaceId, { workspaceInfo: wsData });
+            try {
+                openExportModal(workspaceId, { workspaceInfo: wsData });
+            } catch (e) { console.warn("Export modal notice:", e); }
         });
 
         // Delete Workspace Handler (Admin Only)
@@ -1766,7 +1825,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 btnDel.textContent = 'Deleting all server data...';
                 await firestoreService.deleteEntireWorkspace(workspaceId, currentUser);
                 showAlert.success("Workspace and all associated server data successfully deleted.");
-                window.location.href = 'index.html';
+                window.location.replace('/index.html?view=connection');
             } catch (err) {
                 console.error("Delete workspace error:", err);
                 showAlert.error(err.message || "Failed to delete workspace.");
@@ -1783,15 +1842,16 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 try {
                     await firestoreService.leaveWorkspace(workspaceId, currentUser);
                     showAlert.success("You have successfully left the workspace.");
-                    window.location.href = 'index.html';
+                    window.location.replace('/index.html?view=connection');
                 } catch (err) {
                     showAlert.error("Failed to leave workspace: " + (err.message || 'Unknown error'));
                 }
             }
         });
 
-        } catch (err) {
+    } catch (err) {
         console.error("Render settings error:", err);
         showAlert.error("Failed to load workspace settings.");
     }
 };
+

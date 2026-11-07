@@ -6,7 +6,7 @@
  * Pure Enterprise Monochrome (Grey / Black combo) - WhatsApp icon emerald green.
  */
 
-import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
+import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { showAlert } from '../alert-handler.js';
 
@@ -21,7 +21,7 @@ function escapeHtml(str) {
 
 function formatDateDisplay(inv) {
     if (!inv) return 'N/A';
-    const ts = inv.timestamp || inv.createdAt || inv.updatedTimestamp;
+    const ts = inv.timestamp || inv.createdAt || inv.updatedTimestamp || inv.invoiceDate || inv.date || inv.issueDate;
     if (!ts) return 'N/A';
     let dateObj;
     if (typeof ts === 'number') {
@@ -33,13 +33,11 @@ function formatDateDisplay(inv) {
     } else {
         dateObj = new Date(ts);
     }
-    if (isNaN(dateObj.getTime())) return 'N/A';
+    if (isNaN(dateObj.getTime())) return String(ts);
     return dateObj.toLocaleDateString(undefined, { 
         year: 'numeric', 
         month: 'short', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: 'numeric'
     });
 }
 
@@ -55,58 +53,88 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
     const displayInvNumber = invoice.busInvNumber || invoice.invoiceNumber || invoice.uniqueId || invoice.id || 'INV-001';
     
     // Resolve Issuer Business
-    let busImage = invoice.businessImageUrl || invoice.businessImage || '';
+    let busImage = invoice.businessImageUrl || invoice.businessImage || invoice.businessLogo || invoice.issuerLogo || invoice.logoUrl || invoice.logo || '';
     const busName = invoice.businessName || window.__activeWorkspace?.name || 'Your Business';
     const busPhone = invoice.businessPhone || window.__activeWorkspace?.phone || '';
     const busEmail = invoice.businessEmail || window.__activeWorkspace?.email || '';
     const busAddress = invoice.businessAddress || window.__activeWorkspace?.address || '';
 
-    // Fallback image lookup from passed options or demo store
-    if (!busImage) {
-        let bList = options.allBusinesses || window.__cachedBusinesses;
-        if (!bList && typeof localStorage !== 'undefined') {
-            try {
-                const db = JSON.parse(localStorage.getItem('pricelister_demo_db_v2') || '{}');
-                bList = db.Businesses || db.BusinessProfiles || [];
-            } catch(e) {}
-        }
-        if (Array.isArray(bList)) {
-            const foundBus = bList.find(b => 
-                (invoice.businessId && (b.id === invoice.businessId || b.uniqueId === invoice.businessId)) ||
-                (busName && b.name && b.name.toLowerCase() === busName.toLowerCase())
-            );
-            if (foundBus) {
-                busImage = foundBus.imageUrl || foundBus.imageUri || foundBus.image || '';
-            }
+    // Fallback business image lookup from passed options, global cache, or active workspace
+    let busPool = [];
+    if (Array.isArray(options.allBusinesses)) busPool.push(...options.allBusinesses);
+    if (typeof window !== 'undefined' && Array.isArray(window.__cachedBusinesses)) busPool.push(...window.__cachedBusinesses);
+    if (typeof localStorage !== 'undefined') {
+        try {
+            const db = JSON.parse(localStorage.getItem('pricelister_demo_db_v2') || '{}');
+            const demoBus = db.Businesses || db.BusinessProfiles || [];
+            if (Array.isArray(demoBus)) busPool.push(...demoBus);
+        } catch(e) {}
+    }
+
+    if (!busImage && busPool.length > 0) {
+        const targetBusId = invoice.businessId || invoice.issuerId;
+        const targetBusName = (busName || '').trim().toLowerCase();
+        const foundBus = busPool.find(b => {
+            if (!b) return false;
+            if (targetBusId && (b.id === targetBusId || b.uniqueId === targetBusId || b.businessId === targetBusId)) return true;
+            const bName = (b.name || '').trim().toLowerCase();
+            if (targetBusName && bName && (bName === targetBusName || bName.includes(targetBusName) || targetBusName.includes(bName))) return true;
+            return false;
+        });
+        if (foundBus) {
+            busImage = foundBus.imageUrl || foundBus.imageUri || foundBus.logoUrl || foundBus.logo || foundBus.photoUrl || foundBus.photoURL || foundBus.image || '';
         }
     }
 
+    // Still no business logo? Fallback to active workspace logo or banner
+    if (!busImage && typeof window !== 'undefined' && window.__activeWorkspace) {
+        busImage = window.__activeWorkspace.logoUrl || window.__activeWorkspace.logo || window.__activeWorkspace.bannerUrl || window.__activeWorkspace.banner || '';
+    }
+
     // Resolve Recipient (Customer or Client)
-    let custImage = invoice.customerImageUrl || invoice.clientImageUrl || invoice.customerImage || invoice.clientImage || '';
+    let custImage = invoice.customerImageUrl || invoice.customerPhoto || invoice.customerPhotoURL || invoice.clientImageUrl || invoice.clientPhoto || invoice.customerImage || invoice.clientImage || invoice.photoURL || invoice.photoUrl || invoice.avatar || invoice.imageUrl || invoice.imageUri || '';
     const custName = invoice.customerName || invoice.clientName || 'Walk-in Customer';
-    const custPhone = invoice.customerNumber || invoice.clientPhone || '';
+    const custPhone = invoice.customerNumber || invoice.customerPhone || invoice.clientPhone || '';
     const custEmail = invoice.clientEmail || invoice.customerEmail || '';
     const custAddress = invoice.clientAddress || invoice.customerAddress || '';
-    const isClientRecipient = Boolean(invoice.clientId || invoice.clientEmail || invoice.clientAddress);
+    const isClientRecipient = Boolean(invoice.clientId || invoice.isBusinessInvoice);
 
-    // Fallback recipient image lookup from passed options or demo store
+    // Fallback recipient image lookup from customer/client pools
     if (!custImage) {
-        let recList = isClientRecipient ? (options.allClients || window.__cachedClients) : (options.allCustomers || window.__cachedCustomers);
-        if (!recList && typeof localStorage !== 'undefined') {
+        let recPool = [];
+        if (Array.isArray(options.allCustomers)) recPool.push(...options.allCustomers);
+        if (Array.isArray(options.allClients)) recPool.push(...options.allClients);
+        if (typeof window !== 'undefined' && Array.isArray(window.__cachedCustomers)) recPool.push(...window.__cachedCustomers);
+        if (typeof window !== 'undefined' && Array.isArray(window.__cachedClients)) recPool.push(...window.__cachedClients);
+        if (typeof localStorage !== 'undefined') {
             try {
                 const db = JSON.parse(localStorage.getItem('pricelister_demo_db_v2') || '{}');
-                recList = isClientRecipient ? (db.Clients || db.ClientProfiles || []) : (db.Customers || db.CustomerProfiles || []);
+                const demoCust = db.Customers || db.CustomerProfiles || [];
+                const demoCli = db.Clients || db.ClientProfiles || [];
+                if (Array.isArray(demoCust)) recPool.push(...demoCust);
+                if (Array.isArray(demoCli)) recPool.push(...demoCli);
             } catch(e) {}
         }
-        if (Array.isArray(recList)) {
-            const foundRec = recList.find(r => 
-                (invoice.customerId && (r.id === invoice.customerId || r.uniqueId === invoice.customerId)) ||
-                (invoice.clientId && (r.id === invoice.clientId || r.uniqueId === invoice.clientId)) ||
-                (custName && r.name && r.name.toLowerCase() === custName.toLowerCase())
-            );
-            if (foundRec) {
-                custImage = foundRec.imageUrl || foundRec.imageUri || foundRec.image || '';
-            }
+
+        const targetId = invoice.customerId || invoice.clientId || invoice.recipientId;
+        const targetName = (custName || '').trim().toLowerCase();
+        const targetPhone = (custPhone || '').trim();
+        const targetEmail = (custEmail || '').trim().toLowerCase();
+
+        const foundRec = recPool.find(r => {
+            if (!r) return false;
+            if (targetId && (r.id === targetId || r.uniqueId === targetId || r.customerId === targetId || r.clientId === targetId)) return true;
+            const rName = (r.name || r.customerName || r.clientName || '').trim().toLowerCase();
+            if (targetName && rName && (rName === targetName || rName.includes(targetName) || targetName.includes(rName))) return true;
+            const rPhone = (r.phone || r.customerPhone || r.clientPhone || '').trim();
+            if (targetPhone && rPhone && rPhone === targetPhone) return true;
+            const rEmail = (r.email || r.customerEmail || r.clientEmail || '').trim().toLowerCase();
+            if (targetEmail && rEmail && rEmail === targetEmail) return true;
+            return false;
+        });
+
+        if (foundRec) {
+            custImage = foundRec.imageUrl || foundRec.imageUri || foundRec.photoUrl || foundRec.photoURL || foundRec.photo || foundRec.avatar || foundRec.picture || foundRec.image || '';
         }
     }
 
@@ -176,7 +204,7 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
                             <div style="font-size:0.78rem; color:#71717A; display:flex; align-items:center; gap:6px;">
                                 <span>ID: <code style="font-family:monospace; font-size:0.75rem; color:#18181B;">${escapeHtml(invoice.uniqueId || invoice.id || displayInvNumber)}</code></span>
                                 <span>•</span>
-                                <span>Created: ${escapeHtml(invoice.createdAt ? new Date(invoice.createdAt.toDate ? invoice.createdAt.toDate() : invoice.createdAt).toLocaleDateString() : (invoice.invoiceDate || 'N/A'))}</span>
+                                <span>Created: ${escapeHtml(formatDateDisplay(invoice))}</span>
                             </div>
                         </div>
                     </div>
@@ -210,7 +238,10 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
                     </div>
                     <div style="display:flex; align-items:center; gap:0.85rem;">
                         ${busImage ? `
-                            <img src="${escapeHtml(busImage)}" alt="${escapeHtml(busName)}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1.5px solid #E4E4E7; flex-shrink:0;">
+                            <img src="${escapeHtml(busImage)}" alt="${escapeHtml(busName)}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1.5px solid #E4E4E7; flex-shrink:0;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                            <div style="display:none; width:44px; height:44px; border-radius:50%; background:#18181B; color:#FFFFFF; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; flex-shrink:0;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 11h2M6 15h2M10 11h2M10 15h2M14 11h2M14 15h2M18 11h2M18 15h2M9 3h6v4H9z"></path></svg>
+                            </div>
                         ` : `
                             <div style="width:44px; height:44px; border-radius:50%; background:#18181B; color:#FFFFFF; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; flex-shrink:0;">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 11h2M6 15h2M10 11h2M10 15h2M14 11h2M14 15h2M18 11h2M18 15h2M9 3h6v4H9z"></path></svg>
@@ -240,7 +271,10 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
                     </div>
                     <div style="display:flex; align-items:center; gap:0.85rem;">
                         ${custImage ? `
-                            <img src="${escapeHtml(custImage)}" alt="${escapeHtml(custName)}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1.5px solid #E4E4E7; flex-shrink:0;">
+                            <img src="${escapeHtml(custImage)}" alt="${escapeHtml(custName)}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1.5px solid #E4E4E7; flex-shrink:0;" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                            <div style="display:none; width:44px; height:44px; border-radius:50%; background:#18181B; color:#FFFFFF; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; flex-shrink:0;">
+                                ${escapeHtml(custName.charAt(0).toUpperCase())}
+                            </div>
                         ` : `
                             <div style="width:44px; height:44px; border-radius:50%; background:#18181B; color:#FFFFFF; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; flex-shrink:0;">
                                 ${escapeHtml(custName.charAt(0).toUpperCase())}
@@ -396,6 +430,44 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
                     </div>
                 </div>
 
+            </div>
+
+            <!-- ROW 4: INVOICE ORIGIN (Mirroring Product Origin) -->
+            <div class="card origin-divider-card" style="margin-top:0.25rem; padding:1.25rem 1.5rem; border-radius:14px; background:#FFFFFF; border:1.5px solid #E4E4E7; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem; padding-bottom:0.65rem; border-bottom:1px solid #E4E4E7;">
+                    <div style="width:28px; height:28px; border-radius:7px; background:#F4F4F5; color:#18181B; display:flex; align-items:center; justify-content:center; border:1px solid #E4E4E7;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                    <h3 style="margin:0; font-size:1.05rem; font-weight:800; color:#18181B;">Invoice Origin</h3>
+                </div>
+                <div class="origin-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
+                    <div class="origin-field-box">
+                        <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Invoice ID:</span>
+                        <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${escapeHtml(invoice.uniqueId || invoice.id || displayInvNumber)}</code>
+                    </div>
+                    <div class="origin-field-box">
+                        <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Creator ID:</span>
+                        <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${escapeHtml(invoice.creatorId || invoice.createdBy || invoice.appWorkerId || window.__activeWorkspace?.myAppWorkerId || window.__activeWorkspace?.adminId || 'System / Admin')}</code>
+                    </div>
+                    <div class="origin-field-box">
+                        <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Workspace ID:</span>
+                        <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${escapeHtml(invoice.workspaceId || window.__activeWorkspace?.workspaceId || 'Default Workspace')}</code>
+                    </div>
+                    <div class="origin-field-box">
+                        <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Created at:</span>
+                        <span class="origin-value" style="font-size:0.88rem; font-weight:600; color:#18181B;">${escapeHtml(formatDateDisplay(invoice))}</span>
+                    </div>
+                    ${(invoice.updatedAt || invoice.updatedTimestamp) && (invoice.updatedAt !== (invoice.createdAt || invoice.timestamp)) ? `
+                    <div class="origin-field-box">
+                        <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Updated at:</span>
+                        <span class="origin-value" style="font-size:0.88rem; font-weight:600; color:#18181B;">${escapeHtml(formatExactTimestamp(invoice.updatedAt || invoice.updatedTimestamp))}</span>
+                    </div>
+                    ` : ''}
+                    <div class="origin-field-box">
+                        <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Invoice Status:</span>
+                        <span class="origin-value" style="font-size:0.88rem; font-weight:800; color:${isPaid ? '#059669' : '#D97706'};">${isPaid ? 'PAID' : (escapeHtml(invoice.status) || 'UNPAID')}</span>
+                    </div>
+                </div>
             </div>
 
         </div>

@@ -6,6 +6,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/index.html/(home|explore|pricing|find|privacy|terms|connection)",
+      "destination": "/index.html"
+    },
+    {
       "source": "/Workspace/(.*)",
       "destination": "/app.html"
     },

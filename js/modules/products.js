@@ -301,7 +301,124 @@ export const renderProducts = async (container, workspaceId) => {
         };
     };
 
-    // Helper: Generate Smooth Interactive SVG Curve Area Chart
+    // Helper: Compute Product Health (Lifecycle longevity index between MFG and EXP)
+    const calculateProductHealth = (prd) => {
+        let mfgStr = prd.mfgDate || '';
+        let expStr = prd.expDate || '';
+
+        // Fallback for manufacturing date (creation timestamp or fallback)
+        let mfgTime = null;
+        if (mfgStr) {
+            const mDate = new Date(mfgStr);
+            if (!isNaN(mDate.getTime())) mfgTime = mDate.getTime();
+        }
+        if (!mfgTime && (prd.createdAt || prd.timestamp)) {
+            const num = Number(prd.createdAt || prd.timestamp);
+            if (!isNaN(num) && num > 0) mfgTime = num;
+            else {
+                const parsed = new Date(prd.createdAt || prd.timestamp).getTime();
+                if (!isNaN(parsed)) mfgTime = parsed;
+            }
+        }
+
+        let expTime = null;
+        if (expStr) {
+            const eDate = new Date(expStr);
+            if (!isNaN(eDate.getTime())) expTime = eDate.getTime();
+        }
+
+        if (!mfgTime && !expTime) {
+            return {
+                hasDates: false,
+                ratio: 0,
+                clampedRatio: 0,
+                statusLabel: 'Not Set',
+                statusDesc: 'Manufacturing (MFG) and Expiry (EXP) dates have not been recorded for this product. Edit the product to enable live shelf-life tracking.',
+                mfgFormatted: 'Not Set',
+                expFormatted: 'Not Set',
+                totalDays: 'N/A',
+                daysRemaining: 'N/A',
+                badgeStyle: 'background:#F4F4F5; color:#71717A; border:1px solid #E4E4E7;'
+            };
+        }
+
+        const now = Date.now();
+
+        // If only EXP date is provided, assume standard 365-day shelf life backwards
+        if (!mfgTime && expTime) {
+            mfgTime = expTime - (365 * 24 * 60 * 60 * 1000);
+        }
+        // If only MFG date is provided, assume standard 365-day shelf life forwards
+        if (mfgTime && !expTime) {
+            expTime = mfgTime + (365 * 24 * 60 * 60 * 1000);
+        }
+
+        const totalDuration = Math.max(1, expTime - mfgTime);
+        const elapsedDuration = now - mfgTime;
+        let ratio = Math.round((elapsedDuration / totalDuration) * 100);
+
+        if (isNaN(ratio) || ratio < 0) ratio = 0;
+        const clampedRatio = Math.min(100, Math.max(0, ratio));
+
+        const totalDays = Math.max(1, Math.round(totalDuration / (1000 * 60 * 60 * 24)));
+        const daysRemaining = Math.round((expTime - now) / (1000 * 60 * 60 * 24));
+
+        // 0 - 30% = Excellent
+        // 30% - 50% = Good
+        // 50% - 70% = Fair
+        // 70% - 90% = Poor
+        // 90% - 95% = Unusable
+        // 95% - 100% (or above) = Expired
+        let statusLabel = 'Excellent';
+        let statusDesc = 'Freshly manufactured with peak shelf-life vitality.';
+        let badgeStyle = 'background:#18181B; color:#FFFFFF; border:1px solid #18181B;';
+
+        if (ratio >= 95 || daysRemaining <= 0) {
+            statusLabel = 'Expired';
+            statusDesc = daysRemaining < 0 
+                ? `Product expired ${Math.abs(daysRemaining)} day(s) ago. Discontinue sale and remove from active shelves.`
+                : 'Product has reached terminal shelf life. Discontinue sale.';
+            badgeStyle = 'background:#18181B; color:#FFFFFF; border:1px solid #18181B;';
+        } else if (ratio >= 90) {
+            statusLabel = 'Unusable';
+            statusDesc = `Critical shelf life alert: Only ${Math.max(0, daysRemaining)} day(s) remaining before expiration. Immediate removal recommended.`;
+            badgeStyle = 'background:#27272A; color:#FFFFFF; border:1px solid #3F3F46;';
+        } else if (ratio >= 70) {
+            statusLabel = 'Poor';
+            statusDesc = `Late shelf life stage (${daysRemaining} day(s) remaining). Prioritize dispatch, inventory clearance, or discount.`;
+            badgeStyle = 'background:#3F3F46; color:#FFFFFF; border:1px solid #52525B;';
+        } else if (ratio >= 50) {
+            statusLabel = 'Fair';
+            statusDesc = `Mid-lifecycle stage with ${daysRemaining} day(s) remaining of stable shelf life.`;
+            badgeStyle = 'background:#F4F4F5; color:#18181B; border:1.5px solid #D4D4D8;';
+        } else if (ratio >= 30) {
+            statusLabel = 'Good';
+            statusDesc = `Optimal commercial window with ${daysRemaining} day(s) remaining in prime condition.`;
+            badgeStyle = 'background:#F4F4F5; color:#18181B; border:1.5px solid #18181B;';
+        } else {
+            statusLabel = 'Excellent';
+            statusDesc = `Peak product vitality with ${daysRemaining} day(s) remaining (${100 - clampedRatio}% shelf life remaining).`;
+            badgeStyle = 'background:#18181B; color:#FFFFFF; border:1px solid #18181B;';
+        }
+
+        const mfgFormatted = mfgTime ? new Date(mfgTime).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not Set';
+        const expFormatted = expTime ? new Date(expTime).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not Set';
+
+        return {
+            hasDates: true,
+            ratio: ratio > 100 ? 100 : ratio,
+            clampedRatio,
+            statusLabel,
+            statusDesc,
+            mfgFormatted,
+            expFormatted,
+            totalDays: `${totalDays} Days`,
+            daysRemaining: daysRemaining < 0 ? `Expired ${Math.abs(daysRemaining)}d ago` : `${daysRemaining} Days`,
+            badgeStyle
+        };
+    };
+
+    // Helper: Generate Smooth Interactive SVG Curve Area Chart (Pure Enterprise Monochrome)
     const generateProductTrendSvg = (monthlyTrend) => {
         const width = 640;
         const height = 200;
@@ -333,8 +450,8 @@ export const renderProducts = async (container, workspaceId) => {
             <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; display:block;">
                 <defs>
                     <linearGradient id="prdGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="var(--theme-primary, #18181B)" stop-opacity="0.32" />
-                        <stop offset="100%" stop-color="var(--theme-primary, #18181B)" stop-opacity="0.01" />
+                        <stop offset="0%" stop-color="#18181B" stop-opacity="0.22" />
+                        <stop offset="100%" stop-color="#18181B" stop-opacity="0.01" />
                     </linearGradient>
                 </defs>
                 
@@ -344,21 +461,21 @@ export const renderProducts = async (container, workspaceId) => {
                 <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="rgba(0,0,0,0.12)" />
 
                 <!-- Y-Axis Values -->
-                <text x="${padding.left - 8}" y="${padding.top + 4}" font-size="10" fill="#94a3b8" text-anchor="end" font-weight="600">${formatCurrency(maxRev)}</text>
-                <text x="${padding.left - 8}" y="${padding.top + chartH / 2 + 4}" font-size="10" fill="#94a3b8" text-anchor="end">${formatCurrency(maxRev / 2)}</text>
-                <text x="${padding.left - 8}" y="${height - padding.bottom + 4}" font-size="10" fill="#94a3b8" text-anchor="end">0</text>
+                <text x="${padding.left - 8}" y="${padding.top + 4}" font-size="10" fill="#71717A" text-anchor="end" font-weight="600">${formatCurrency(maxRev)}</text>
+                <text x="${padding.left - 8}" y="${padding.top + chartH / 2 + 4}" font-size="10" fill="#71717A" text-anchor="end">${formatCurrency(maxRev / 2)}</text>
+                <text x="${padding.left - 8}" y="${height - padding.bottom + 4}" font-size="10" fill="#71717A" text-anchor="end">0</text>
 
-                <!-- Area Fill with Animated Fade -->
-                <path d="${areaD}" fill="url(#prdGrad)" class="trend-area-animated" />
+                <!-- Area Fill (Pure Monochrome Fade) -->
+                <path d="${areaD}" fill="url(#prdGrad)" />
 
-                <!-- Line Curve with Animated Draw -->
-                <path d="${lineD}" fill="none" stroke="var(--theme-primary, #18181B)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="trend-curve-animated" />
+                <!-- Line Curve (Crisp Enterprise Black/Charcoal) -->
+                <path d="${lineD}" fill="none" stroke="#18181B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
 
                 <!-- Data Dots & X-Labels -->
                 ${points.map((p) => `
                     <g class="chart-point-group" style="cursor:pointer;">
-                        <circle cx="${p.x}" cy="${p.y}" r="5" fill="#ffffff" stroke="var(--theme-primary, #18181B)" stroke-width="2.5" />
-                        <text x="${p.x}" y="${height - 10}" font-size="11" fill="#64748b" text-anchor="middle" font-weight="600">${p.label}</text>
+                        <circle cx="${p.x}" cy="${p.y}" r="4.5" fill="#ffffff" stroke="#18181B" stroke-width="2.5" />
+                        <text x="${p.x}" y="${height - 10}" font-size="11" fill="#71717A" text-anchor="middle" font-weight="600">${p.label}</text>
                         <title>${p.label}: ${formatCurrency(p.revenue)} (${p.units} units sold, ${formatCurrency(p.profit)} profit)</title>
                     </g>
                 `).join('')}
@@ -371,48 +488,49 @@ export const renderProducts = async (container, workspaceId) => {
         activeProductDetail = prd;
         const userRestrictions = getUserRestrictions();
         const analytics = calculateProductAnalytics(prd, activeTrendRange);
+        const health = calculateProductHealth(prd);
         const catName = categoriesList.find(c => c.uniqueId === prd.category || c.id === prd.category || c.name === prd.category)?.name || prd.category || 'General';
 
         container.innerHTML = `
             <div class="detail-view-container">
                 <!-- Top Navigation & Action Bar -->
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom: 0.5rem;">
-                    <button type="button" id="btn-back-to-products" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:600; padding:0.55rem 1.1rem;">
+                    <button type="button" id="btn-back-to-products" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:700; padding:0.55rem 1.1rem; border:1px solid #E4E4E7; border-radius:8px; background:#FFFFFF; color:#18181B;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                         Back to Products List
                     </button>
                     <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
-                        <button type="button" id="btn-detail-adjust-stock" class="btn btn-secondary" style="font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
+                        <button type="button" id="btn-detail-adjust-stock" class="btn btn-secondary" style="font-weight:700; display:inline-flex; align-items:center; gap:0.35rem; border:1px solid #E4E4E7; border-radius:8px; background:#FFFFFF; color:#18181B;">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
                             Adjust Stock
                         </button>
-                        <button type="button" id="btn-detail-duplicate" class="btn btn-secondary" style="font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
+                        <button type="button" id="btn-detail-duplicate" class="btn btn-secondary" style="font-weight:700; display:inline-flex; align-items:center; gap:0.35rem; border:1px solid #E4E4E7; border-radius:8px; background:#FFFFFF; color:#18181B;">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             Duplicate
                         </button>
-                        <button type="button" id="btn-detail-schema-analyze" class="btn btn-secondary" style="font-weight:600; display:inline-flex; align-items:center; gap:0.35rem; border-color:#6366f1; color:#4f46e5; background:rgba(99,102,241,0.06);" title="Analyze connections, demand velocity & affinity in Schema Analyzer">
+                        <button type="button" id="btn-detail-schema-analyze" class="btn btn-secondary" style="font-weight:700; display:inline-flex; align-items:center; gap:0.35rem; border:1px solid #E4E4E7; color:#18181B; background:#FFFFFF; border-radius:8px;" title="Analyze connections, demand velocity & affinity in Schema Analyzer">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
                             Schema Analysis
                         </button>
-                        <button type="button" id="btn-detail-edit" class="btn btn-primary" style="font-weight:700; display:inline-flex; align-items:center; gap:0.4rem; background: linear-gradient(135deg, #ff3366 0%, #18181B 55%, #27272A 100%); box-shadow:0 4px 14px rgba(225,29,72,0.35);">
+                        <button type="button" id="btn-detail-edit" class="btn btn-primary" style="font-weight:700; display:inline-flex; align-items:center; gap:0.4rem; background:#18181B; color:#FFFFFF; border:1px solid #18181B; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             Edit Product
                         </button>
                     </div>
                 </div>
 
-                <!-- HERO PRODUCT CARD -->
-                <div class="detail-hero-card">
+                <!-- HERO PRODUCT CARD (Crisp Grey/Black Monochrome) -->
+                <div class="detail-hero-card" style="border:1.5px solid #E4E4E7; border-radius:14px; background:#FFFFFF; padding:1.5rem; margin-bottom:1.5rem;">
                     <div style="display:flex; gap:1.5rem; align-items:flex-start; flex-wrap:wrap;">
                         <!-- Product Image Box + Instant Upload Button -->
                         <div style="position:relative; width:115px; height:115px; flex-shrink:0;">
                             ${prd.imageUri
-                ? `<img id="detail-prd-avatar" src="${prd.imageUri}" style="width:100%; height:100%; object-fit:cover; border-radius:14px; border:2px solid var(--border-color); box-shadow:0 4px 12px rgba(0,0,0,0.06);">`
-                : `<div id="detail-prd-avatar-placeholder" style="width:100%; height:100%; border-radius:14px; background:linear-gradient(135deg, #fce7f3 0%, #F4F4F5 100%); color:#18181B; display:flex; align-items:center; justify-content:center; font-weight:800; border:2px solid rgba(225,29,72,0.15);">
+                ? `<img id="detail-prd-avatar" src="${prd.imageUri}" style="width:100%; height:100%; object-fit:cover; border-radius:14px; border:1.5px solid #E4E4E7; box-shadow:0 2px 8px rgba(0,0,0,0.04);">`
+                : `<div id="detail-prd-avatar-placeholder" style="width:100%; height:100%; border-radius:14px; background:#F4F4F5; color:#18181B; display:flex; align-items:center; justify-content:center; font-weight:800; border:1.5px solid #E4E4E7;">
                                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                                    </div>`
             }
-                            <label for="detail-img-file-input" style="position:absolute; bottom:-6px; right:-6px; width:34px; height:34px; border-radius:50%; background:#18181B; color:#ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 3px 8px rgba(225,29,72,0.4); border:2px solid #ffffff; transition:transform 0.2s;" title="Upload or change product photo">
+                            <label for="detail-img-file-input" style="position:absolute; bottom:-6px; right:-6px; width:34px; height:34px; border-radius:50%; background:#18181B; color:#ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.15); border:2px solid #ffffff; transition:transform 0.2s;" title="Upload or change product photo">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                                 <input type="file" id="detail-img-file-input" accept="image/*" style="display:none;">
                             </label>
@@ -421,31 +539,31 @@ export const renderProducts = async (container, workspaceId) => {
                         <!-- Product Identity & Meta Information -->
                         <div style="flex:1; min-width:260px;">
                             <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.4rem;">
-                                <h1 style="margin:0; font-size:1.65rem; font-weight:800; color:var(--text-primary); letter-spacing:-0.02em;">${prd.name}</h1>
-                                <span class="badge" style="background:rgba(225,29,72,0.1); color:#18181B; font-weight:700; padding:0.25rem 0.65rem; border-radius:6px;">${catName}</span>
+                                <h1 style="margin:0; font-size:1.65rem; font-weight:800; color:#18181B; letter-spacing:-0.02em;">${prd.name}</h1>
+                                <span class="badge" style="background:#F4F4F5; color:#18181B; font-weight:700; padding:0.25rem 0.65rem; border-radius:6px; border:1px solid #E4E4E7;">${catName}</span>
                                 <span class="${analytics.demandBadgeClass}">${analytics.demandRating}</span>
                             </div>
 
-                            <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem; font-size:0.85rem; color:var(--text-secondary);">
-                                ${prd.sizeWeight ? `<span style="background:var(--surface-100); padding:0.2rem 0.5rem; border-radius:5px; font-weight:600; display:inline-flex; align-items:center; gap:3px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg> ${prd.sizeWeight}</span>` : ''}
-                                ${prd.upcCode ? `<span style="background:var(--surface-100); padding:0.2rem 0.5rem; border-radius:5px; font-family:monospace; font-weight:700;">Barcode: ${prd.upcCode}</span>` : ''}
-                                <span style="background:var(--surface-100); padding:0.2rem 0.5rem; border-radius:5px;">ID: <code style="font-family:monospace; font-size:0.8rem;">${prd.uniqueId || prd.id}</code></span>
-                                ${prd.expDate ? `<span style="color:#d97706; font-weight:600; display:inline-flex; align-items:center; gap:3px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Exp: ${prd.expDate}</span>` : ''}
+                            <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem; font-size:0.85rem; color:#71717A;">
+                                ${prd.sizeWeight ? `<span style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; padding:0.2rem 0.5rem; border-radius:5px; font-weight:600; display:inline-flex; align-items:center; gap:3px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg> ${prd.sizeWeight}</span>` : ''}
+                                ${prd.upcCode ? `<span style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; padding:0.2rem 0.5rem; border-radius:5px; font-family:monospace; font-weight:700;">Barcode: ${prd.upcCode}</span>` : ''}
+                                <span style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; padding:0.2rem 0.5rem; border-radius:5px;">ID: <code style="font-family:monospace; font-size:0.8rem; color:#18181B;">${prd.uniqueId || prd.id}</code></span>
+                                ${prd.expDate ? `<span style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; padding:0.2rem 0.5rem; border-radius:5px; font-weight:600; display:inline-flex; align-items:center; gap:3px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Exp: ${prd.expDate}</span>` : ''}
                             </div>
 
-                            <p style="margin:0; font-size:0.88rem; color:var(--text-secondary); max-width:750px;">
-                                ${prd.note ? `<strong>Note:</strong> ${prd.note}` : '<em style="color:var(--text-muted)">No description note provided.</em>'}
+                            <p style="margin:0; font-size:0.88rem; color:#71717A; max-width:750px;">
+                                ${prd.note ? `<strong style="color:#18181B;">Note:</strong> ${prd.note}` : '<em style="color:#A1A1AA">No description note provided.</em>'}
                             </p>
                         </div>
 
                         <!-- Quick Inventory & Price Summary Tag -->
-                        <div style="text-align:right; min-width:180px; padding:0.85rem 1.15rem; background:var(--surface-50); border-radius:12px; border:1px solid var(--border-color);">
-                            <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Selling Price</div>
-                            <div style="font-size:1.6rem; font-weight:800; color:var(--primary); line-height:1.1;">${formatCurrency(prd.salePrice)}</div>
-                            <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.2rem;">
-                                Cost: <strong>${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(prd.price || 0)}</strong> &bull; Profit: <strong style="color:var(--text-primary);">${userRestrictions.cannotSeeProfit ? '••••' : '+' + formatCurrency(analytics.unitGrossProfit)}</strong>
+                        <div style="text-align:right; min-width:180px; padding:0.85rem 1.15rem; background:#FAFAFA; border-radius:12px; border:1.5px solid #E4E4E7;">
+                            <div style="font-size:0.75rem; font-weight:700; color:#71717A; text-transform:uppercase;">Selling Price</div>
+                            <div style="font-size:1.6rem; font-weight:800; color:#18181B; line-height:1.1;">${formatCurrency(prd.salePrice)}</div>
+                            <div style="font-size:0.8rem; color:#71717A; margin-top:0.2rem;">
+                                Cost: <strong style="color:#18181B;">${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(prd.price || 0)}</strong> &bull; Profit: <strong style="color:#18181B;">${userRestrictions.cannotSeeProfit ? '••••' : '+' + formatCurrency(analytics.unitGrossProfit)}</strong>
                             </div>
-                            <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border-color); font-size:0.82rem; font-weight:700; color:${(prd.quantity || 0) > 5 ? '#059669' : '#dc2626'}; display:flex; align-items:center; justify-content:flex-end; gap:4px;">
+                            <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid #E4E4E7; font-size:0.82rem; font-weight:700; color:#18181B; display:flex; align-items:center; justify-content:flex-end; gap:4px;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                                 ${(prd.quantity || 0) > 0 ? `${prd.quantity} Units in Stock` : 'Out of Stock (0 Units)'}
                             </div>
@@ -453,69 +571,69 @@ export const renderProducts = async (container, workspaceId) => {
                     </div>
 
                     <!-- 6 ANALYTICAL KPI METRIC CARDS -->
-                    <div class="detail-kpi-grid">
+                    <div class="detail-kpi-grid" style="margin-top:1.5rem; display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:0.85rem;">
                         <!-- KPI 1: Invoices Made -->
-                        <div class="detail-kpi-card highlight-red">
-                            <div class="detail-kpi-label">
+                        <div class="detail-kpi-card" style="background:#FAFAFA; border:1px solid #E4E4E7; border-radius:12px; padding:1rem;">
+                            <div class="detail-kpi-label" style="display:flex; justify-content:space-between; align-items:center; color:#71717A; font-size:0.8rem; font-weight:600;">
                                 <span>Invoices Generated</span>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                             </div>
-                            <div class="detail-kpi-value" style="color:#18181B;">${analytics.invoiceCount}</div>
-                            <div class="detail-kpi-sub">Total sales receipts issued</div>
+                            <div class="detail-kpi-value" style="color:#18181B; font-size:1.45rem; font-weight:800; margin:0.35rem 0 0.15rem 0;">${analytics.invoiceCount}</div>
+                            <div class="detail-kpi-sub" style="font-size:0.75rem; color:#71717A;">Total sales receipts issued</div>
                         </div>
 
                         <!-- KPI 2: Total Revenue -->
-                        <div class="detail-kpi-card">
-                            <div class="detail-kpi-label">
+                        <div class="detail-kpi-card" style="background:#FAFAFA; border:1px solid #E4E4E7; border-radius:12px; padding:1rem;">
+                            <div class="detail-kpi-label" style="display:flex; justify-content:space-between; align-items:center; color:#71717A; font-size:0.8rem; font-weight:600;">
                                 <span>Total Revenue</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                             </div>
-                            <div class="detail-kpi-value">${formatCurrency(analytics.totalRevenue)}</div>
-                            <div class="detail-kpi-sub">Gross sales from this item</div>
+                            <div class="detail-kpi-value" style="color:#18181B; font-size:1.45rem; font-weight:800; margin:0.35rem 0 0.15rem 0;">${formatCurrency(analytics.totalRevenue)}</div>
+                            <div class="detail-kpi-sub" style="font-size:0.75rem; color:#71717A;">Gross sales from this item</div>
                         </div>
 
                         <!-- KPI 3: Total Gross Profit -->
-                        <div class="detail-kpi-card">
-                            <div class="detail-kpi-label">
+                        <div class="detail-kpi-card" style="background:#FAFAFA; border:1px solid #E4E4E7; border-radius:12px; padding:1rem;">
+                            <div class="detail-kpi-label" style="display:flex; justify-content:space-between; align-items:center; color:#71717A; font-size:0.8rem; font-weight:600;">
                                 <span>Gross Profit</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
                             </div>
-                            <div class="detail-kpi-value" style="color:var(--text-primary);">${userRestrictions.cannotSeeProfit ? '••••' : formatCurrency(analytics.totalProfit)}</div>
-                            <div class="detail-kpi-sub">${userRestrictions.cannotSeeProfit ? '•••• margin' : `${Math.round(analytics.overallMarginPercent)}% net gross margin`}</div>
+                            <div class="detail-kpi-value" style="color:#18181B; font-size:1.45rem; font-weight:800; margin:0.35rem 0 0.15rem 0;">${userRestrictions.cannotSeeProfit ? '••••' : formatCurrency(analytics.totalProfit)}</div>
+                            <div class="detail-kpi-sub" style="font-size:0.75rem; color:#71717A;">${userRestrictions.cannotSeeProfit ? '•••• margin' : `${Math.round(analytics.overallMarginPercent)}% net gross margin`}</div>
                         </div>
 
                         <!-- KPI 4: Total Units Sold -->
-                        <div class="detail-kpi-card">
-                            <div class="detail-kpi-label">
+                        <div class="detail-kpi-card" style="background:#FAFAFA; border:1px solid #E4E4E7; border-radius:12px; padding:1rem;">
+                            <div class="detail-kpi-label" style="display:flex; justify-content:space-between; align-items:center; color:#71717A; font-size:0.8rem; font-weight:600;">
                                 <span>Total Units Sold</span>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                             </div>
-                            <div class="detail-kpi-value">${analytics.totalUnitsSold}</div>
-                            <div class="detail-kpi-sub">${analytics.monthlyVelocity} units / mo velocity</div>
+                            <div class="detail-kpi-value" style="color:#18181B; font-size:1.45rem; font-weight:800; margin:0.35rem 0 0.15rem 0;">${analytics.totalUnitsSold}</div>
+                            <div class="detail-kpi-sub" style="font-size:0.75rem; color:#71717A;">${analytics.monthlyVelocity} units / mo velocity</div>
                         </div>
 
                         <!-- KPI 5: Last Sale Report -->
-                        <div class="detail-kpi-card">
-                            <div class="detail-kpi-label">
+                        <div class="detail-kpi-card" style="background:#FAFAFA; border:1px solid #E4E4E7; border-radius:12px; padding:1rem;">
+                            <div class="detail-kpi-label" style="display:flex; justify-content:space-between; align-items:center; color:#71717A; font-size:0.8rem; font-weight:600;">
                                 <span>Last Sale Report</span>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                             </div>
-                            <div class="detail-kpi-value" style="font-size:1.15rem; font-weight:700;">
+                            <div class="detail-kpi-value" style="color:#18181B; font-size:1.15rem; font-weight:800; margin:0.35rem 0 0.15rem 0;">
                                 ${analytics.lastSale ? (analytics.lastSale.timestamp ? new Date(analytics.lastSale.timestamp).toLocaleDateString() : 'Recent') : 'No Sales Yet'}
                             </div>
-                            <div class="detail-kpi-sub">
+                            <div class="detail-kpi-sub" style="font-size:0.75rem; color:#71717A;">
                                 ${analytics.lastSale ? `Buyer: ${analytics.lastSale.invoice.customerName || 'Customer'} (${analytics.lastSale.unitsSold} pcs)` : 'Awaiting first order'}
                             </div>
                         </div>
 
                         <!-- KPI 6: Stock Runout Forecast -->
-                        <div class="detail-kpi-card">
-                            <div class="detail-kpi-label">
+                        <div class="detail-kpi-card" style="background:#FAFAFA; border:1px solid #E4E4E7; border-radius:12px; padding:1rem;">
+                            <div class="detail-kpi-label" style="display:flex; justify-content:space-between; align-items:center; color:#71717A; font-size:0.8rem; font-weight:600;">
                                 <span>Stock Runout</span>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                             </div>
-                            <div class="detail-kpi-value">${analytics.stockRunoutDays}</div>
-                            <div class="detail-kpi-sub">${analytics.stockRunoutMsg}</div>
+                            <div class="detail-kpi-value" style="color:#18181B; font-size:1.45rem; font-weight:800; margin:0.35rem 0 0.15rem 0;">${analytics.stockRunoutDays}</div>
+                            <div class="detail-kpi-sub" style="font-size:0.75rem; color:#71717A;">${analytics.stockRunoutMsg}</div>
                         </div>
                     </div>
                 </div>
@@ -527,14 +645,14 @@ export const renderProducts = async (container, workspaceId) => {
                     <div style="display:flex; flex-direction:column; gap:1.5rem;">
                         
                         <!-- Sales & Revenue Trend Chart with Time Filter -->
-                        <div class="card" style="padding:1.5rem; border-radius:var(--radius-card); box-shadow:var(--shadow-float);">
+                        <div class="card" style="padding:1.5rem; border-radius:14px; background:#FFFFFF; border:1.5px solid #E4E4E7;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
                                 <div>
-                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700;">Sales & Revenue Trend</h3>
-                                    <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">Revenue, sales volume, and demand fluctuations over time</p>
+                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:800; color:#18181B;">Sales & Revenue Trend</h3>
+                                    <p style="margin:0; font-size:0.82rem; color:#71717A;">Revenue, sales volume, and demand fluctuations over time</p>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:0.6rem;">
-                                    <select id="prd-detail-trend-range" class="form-control" style="width:auto; padding:0.35rem 0.75rem; border-radius:var(--radius-pill); font-size:0.8rem; height:34px; font-weight:600;">
+                                    <select id="prd-detail-trend-range" class="form-control" style="width:auto; padding:0.35rem 0.75rem; border-radius:8px; font-size:0.8rem; height:34px; font-weight:700; border:1px solid #E4E4E7; background:#F4F4F5; color:#18181B;">
                                         <option value="6_MONTHS" ${activeTrendRange === '6_MONTHS' ? 'selected' : ''}>Last 6 Months</option>
                                         <option value="1_YEAR" ${activeTrendRange === '1_YEAR' ? 'selected' : ''}>Last 1 Year</option>
                                         <option value="THIS_WEEK" ${activeTrendRange === 'THIS_WEEK' ? 'selected' : ''}>This Week (7 Days)</option>
@@ -543,20 +661,20 @@ export const renderProducts = async (container, workspaceId) => {
                                 </div>
                             </div>
                             
-                            <!-- Dynamic SVG Trend Curve -->
-                            <div style="background:var(--surface-50); padding:1rem; border-radius:12px; border:1px solid var(--border-color);">
+                            <!-- Dynamic SVG Trend Curve (Crisp Charcoal/Grey) -->
+                            <div style="background:#FAFAFA; padding:1rem; border-radius:12px; border:1px solid #E4E4E7;">
                                 ${generateProductTrendSvg(analytics.monthlyTrend)}
                             </div>
                         </div>
 
                         <!-- Invoices History Table for this Product -->
-                        <div class="card" style="padding:0; overflow:hidden; border-radius:var(--radius-card); box-shadow:var(--shadow-float);">
-                            <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                        <div class="card" style="padding:0; overflow:hidden; border-radius:14px; background:#FFFFFF; border:1.5px solid #E4E4E7;">
+                            <div style="padding:1.25rem 1.5rem; border-bottom:1px solid #E4E4E7; display:flex; justify-content:space-between; align-items:center;">
                                 <div>
-                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700;">Invoices History</h3>
-                                    <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">All invoices containing <strong>${prd.name}</strong></p>
+                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:800; color:#18181B;">Invoices History</h3>
+                                    <p style="margin:0; font-size:0.82rem; color:#71717A;">All invoices containing <strong style="color:#18181B;">${prd.name}</strong></p>
                                 </div>
-                                <span class="badge" style="background:var(--surface-100); color:var(--text-primary); font-weight:700;">
+                                <span class="badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-weight:800; padding:0.25rem 0.65rem; border-radius:6px;">
                                     ${analytics.invoicesList.length} Records
                                 </span>
                             </div>
@@ -564,7 +682,7 @@ export const renderProducts = async (container, workspaceId) => {
                             <div class="table-container">
                                 <table style="width:100%; border-collapse:collapse; text-align:left;">
                                     <thead>
-                                        <tr style="background:var(--surface-50); border-bottom:2px solid var(--border-color); color:var(--text-muted); font-size:0.82rem;">
+                                        <tr style="background:#FAFAFA; border-bottom:1px solid #E4E4E7; color:#71717A; font-size:0.75rem; text-transform:uppercase;">
                                             <th style="padding:0.75rem 1.25rem;">Invoice #</th>
                                             <th style="padding:0.75rem;">Date</th>
                                             <th style="padding:0.75rem;">Customer / Client</th>
@@ -576,29 +694,29 @@ export const renderProducts = async (container, workspaceId) => {
                                     <tbody>
                                         ${analytics.invoicesList.length === 0 ? `
                                             <tr>
-                                                <td colspan="6" style="padding:2.5rem; text-align:center; color:var(--text-muted);">
+                                                <td colspan="6" style="padding:2.5rem; text-align:center; color:#71717A;">
                                                     No invoices have included this product yet.
                                                 </td>
                                             </tr>
                                         ` : analytics.invoicesList.slice(0, 15).map(item => `
-                                            <tr style="border-bottom:1px solid var(--border-color); font-size:0.88rem;">
+                                            <tr style="border-bottom:1px solid #E4E4E7; font-size:0.88rem;">
                                                 <td style="padding:0.85rem 1.25rem;">
-                                                    <code style="font-weight:700; color:var(--text-primary); font-size:0.82rem;">${item.invoice.invoiceNumber || item.invoice.busInvNumber || item.invoice.uniqueId || 'INV'}</code>
+                                                    <code style="font-weight:800; color:#18181B; font-size:0.82rem; font-family:monospace;">${item.invoice.invoiceNumber || item.invoice.busInvNumber || item.invoice.uniqueId || 'INV'}</code>
                                                 </td>
-                                                <td style="padding:0.85rem; color:var(--text-secondary);">
+                                                <td style="padding:0.85rem; color:#71717A;">
                                                     ${item.timestamp ? new Date(item.timestamp).toLocaleDateString() : 'Recent'}
                                                 </td>
                                                 <td style="padding:0.85rem;">
-                                                    <strong>${item.invoice.customerName || item.invoice.clientName || item.invoice.businessName || 'Customer'}</strong>
+                                                    <strong style="color:#18181B;">${item.invoice.customerName || item.invoice.clientName || item.invoice.businessName || 'Customer'}</strong>
                                                 </td>
-                                                <td style="padding:0.85rem; text-align:center; font-weight:700; color:var(--primary);">
+                                                <td style="padding:0.85rem; text-align:center; font-weight:800; color:#18181B;">
                                                     ${item.unitsSold}
                                                 </td>
-                                                <td style="padding:0.85rem; font-weight:700;">
+                                                <td style="padding:0.85rem; font-weight:800; color:#18181B;">
                                                     ${formatCurrency(item.revenue)}
                                                 </td>
                                                 <td style="padding:0.85rem 1.25rem; text-align:right;">
-                                                    <button type="button" class="btn btn-sm btn-secondary view-inv-from-prd" data-invid="${item.invoice.id}" style="padding:0.25rem 0.65rem; font-size:0.78rem;">
+                                                    <button type="button" class="btn btn-sm btn-secondary view-inv-from-prd" data-invid="${item.invoice.id}" style="padding:0.25rem 0.65rem; font-size:0.78rem; font-weight:700; border:1px solid #E4E4E7; border-radius:6px; background:#FFFFFF; color:#18181B;">
                                                         View Invoice
                                                     </button>
                                                 </td>
@@ -615,39 +733,39 @@ export const renderProducts = async (container, workspaceId) => {
                     <div style="display:flex; flex-direction:column; gap:1.5rem;">
                         
                         <!-- FAVORITE CUSTOMERS ("WHICH CUSTOMER LIKES MORE") -->
-                        <div class="card" style="padding:1.5rem; border-radius:var(--radius-card); box-shadow:var(--shadow-float);">
+                        <div class="card" style="padding:1.5rem; border-radius:14px; background:#FFFFFF; border:1.5px solid #E4E4E7;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.15rem;">
                                 <div>
-                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:6px;">
+                                    <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:800; color:#18181B; display:flex; align-items:center; gap:6px;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                                         Favorite Customers
                                     </h3>
-                                    <p style="margin:0; font-size:0.82rem; color:var(--text-secondary);">Top buyers ranked by purchase volume & demand</p>
+                                    <p style="margin:0; font-size:0.82rem; color:#71717A;">Top buyers ranked by purchase volume & demand</p>
                                 </div>
-                                <span class="badge" style="background:rgba(225,29,72,0.1); color:#18181B; font-weight:700;">
+                                <span class="badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-weight:800; padding:0.25rem 0.65rem; border-radius:6px;">
                                     ${analytics.topCustomers.length} Buyers
                                 </span>
                             </div>
 
                             <div style="display:flex; flex-direction:column; gap:0.65rem;">
                                 ${analytics.topCustomers.length === 0 ? `
-                                    <div style="padding:1.5rem; text-align:center; color:var(--text-muted); font-size:0.85rem; background:var(--surface-50); border-radius:10px;">
+                                    <div style="padding:1.5rem; text-align:center; color:#71717A; font-size:0.85rem; background:#FAFAFA; border-radius:10px; border:1px solid #E4E4E7;">
                                         No customer purchase history available for this product.
                                     </div>
                                 ` : analytics.topCustomers.slice(0, 6).map((cust, idx) => `
-                                    <div class="fav-customer-item">
+                                    <div class="fav-customer-item" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 1rem; background:#FAFAFA; border-radius:10px; border:1px solid #E4E4E7;">
                                         <div style="display:flex; align-items:center; gap:0.75rem;">
-                                            <div style="width:36px; height:36px; border-radius:50%; background:${idx === 0 ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' : 'var(--surface-200)'}; color:${idx === 0 ? '#ffffff' : 'var(--text-primary)'}; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
-                                                ${idx === 0 ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>' : (idx + 1)}
+                                            <div style="width:34px; height:34px; border-radius:50%; background:${idx === 0 ? '#18181B' : '#F4F4F5'}; color:${idx === 0 ? '#FFFFFF' : '#18181B'}; border:1px solid #E4E4E7; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.82rem;">
+                                                ${idx === 0 ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>' : (idx + 1)}
                                             </div>
                                             <div>
-                                                <div style="font-weight:700; font-size:0.9rem; color:var(--text-primary);">${cust.name}</div>
-                                                <div style="font-size:0.75rem; color:var(--text-muted);">${cust.contact || `${cust.invoicesCount} orders`} &bull; Last: ${new Date(cust.lastTimestamp).toLocaleDateString()}</div>
+                                                <div style="font-weight:800; font-size:0.9rem; color:#18181B;">${cust.name}</div>
+                                                <div style="font-size:0.75rem; color:#71717A;">${cust.contact || `${cust.invoicesCount} orders`} &bull; Last: ${new Date(cust.lastTimestamp).toLocaleDateString()}</div>
                                             </div>
                                         </div>
                                         <div style="text-align:right;">
-                                            <div style="font-weight:800; color:var(--primary); font-size:0.95rem;">${cust.totalUnits} Units</div>
-                                            <div style="font-size:0.78rem; font-weight:600; color:var(--text-secondary);">${formatCurrency(cust.totalSpent)}</div>
+                                            <div style="font-weight:800; color:#18181B; font-size:0.95rem;">${cust.totalUnits} Units</div>
+                                            <div style="font-size:0.78rem; font-weight:600; color:#71717A;">${formatCurrency(cust.totalSpent)}</div>
                                         </div>
                                     </div>
                                 `).join('')}
@@ -655,53 +773,53 @@ export const renderProducts = async (container, workspaceId) => {
                         </div>
 
                         <!-- MARKET DEMAND & PRICING INTELLIGENCE -->
-                        <div class="card" style="padding:1.5rem; border-radius:var(--radius-card); box-shadow:var(--shadow-float);">
-                            <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:6px;">
+                        <div class="card" style="padding:1.5rem; border-radius:14px; background:#FFFFFF; border:1.5px solid #E4E4E7;">
+                            <h3 style="margin:0 0 0.2rem 0; font-size:1.15rem; font-weight:800; color:#18181B; display:flex; align-items:center; gap:6px;">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                                 Market Demand & Pricing
                             </h3>
-                            <p style="margin:0 0 1.25rem 0; font-size:0.82rem; color:var(--text-secondary);">Demand velocity, price margins, and restocking analysis</p>
+                            <p style="margin:0 0 1.25rem 0; font-size:0.82rem; color:#71717A;">Demand velocity, price margins, and restocking analysis</p>
 
                             <div style="display:flex; flex-direction:column; gap:1rem;">
                                 <!-- Demand Velocity Rating -->
-                                <div style="background:var(--surface-50); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
+                                <div style="background:#FAFAFA; padding:1rem; border-radius:10px; border:1px solid #E4E4E7;">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-                                        <span style="font-size:0.82rem; font-weight:700; color:var(--text-secondary);">Sales Velocity</span>
+                                        <span style="font-size:0.82rem; font-weight:700; color:#71717A;">Sales Velocity</span>
                                         <span class="${analytics.demandBadgeClass}">${analytics.demandRating}</span>
                                     </div>
-                                    <div style="font-size:1.25rem; font-weight:800; color:var(--text-primary);">${analytics.monthlyVelocity} <span style="font-size:0.85rem; font-weight:500; color:var(--text-muted);">units / month</span></div>
-                                    <div class="perf-bar-wrap">
-                                        <div class="perf-bar-fill" style="width:${Math.min(100, (analytics.monthlyVelocity / 30) * 100)}%;"></div>
+                                    <div style="font-size:1.25rem; font-weight:800; color:#18181B;">${analytics.monthlyVelocity} <span style="font-size:0.85rem; font-weight:500; color:#71717A;">units / month</span></div>
+                                    <div class="perf-bar-wrap" style="height:8px; background:#E4E4E7; border-radius:999px; overflow:hidden; margin-top:0.4rem;">
+                                        <div class="perf-bar-fill" style="width:${Math.min(100, (analytics.monthlyVelocity / 30) * 100)}%; height:100%; background:#18181B; border-radius:999px;"></div>
                                     </div>
                                 </div>
 
                                 <!-- Restock Recommendation -->
-                                <div style="background:var(--surface-50); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
-                                    <div style="font-size:0.82rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.25rem;">Smart Restock Recommendation</div>
+                                <div style="background:#FAFAFA; padding:1rem; border-radius:10px; border:1px solid #E4E4E7;">
+                                    <div style="font-size:0.82rem; font-weight:700; color:#71717A; margin-bottom:0.25rem;">Smart Restock Recommendation</div>
                                     <div style="font-size:1.15rem; font-weight:800; color:#18181B;">Order +${analytics.recommendedReorder} Units</div>
-                                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.2rem;">Maintains a healthy 45-day supply buffer based on current burn rate.</div>
+                                    <div style="font-size:0.78rem; color:#71717A; margin-top:0.2rem;">Maintains a healthy 45-day supply buffer based on current burn rate.</div>
                                 </div>
 
                                 <!-- Pricing & Profit Breakdown -->
-                                <div style="background:var(--surface-50); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
-                                    <div style="font-size:0.82rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.6rem;">Unit Profitability Breakdown</div>
+                                <div style="background:#FAFAFA; padding:1rem; border-radius:10px; border:1px solid #E4E4E7;">
+                                    <div style="font-size:0.82rem; font-weight:700; color:#71717A; margin-bottom:0.6rem;">Unit Profitability Breakdown</div>
                                     <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; font-size:0.85rem;">
-                                        <span style="color:var(--text-secondary);">Unit Cost Price:</span>
-                                        <strong>${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(prd.price || 0)}</strong>
+                                        <span style="color:#71717A;">Unit Cost Price:</span>
+                                        <strong style="color:#18181B;">${userRestrictions.cannotSeeCost ? '••••' : formatCurrency(prd.price || 0)}</strong>
                                     </div>
                                     <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; font-size:0.85rem;">
-                                        <span style="color:var(--text-secondary);">Unit Selling Price:</span>
-                                        <strong>${formatCurrency(prd.salePrice || 0)}</strong>
+                                        <span style="color:#71717A;">Unit Selling Price:</span>
+                                        <strong style="color:#18181B;">${formatCurrency(prd.salePrice || 0)}</strong>
                                     </div>
                                     ${prd.mrp ? `
                                         <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; font-size:0.85rem;">
-                                            <span style="color:var(--text-secondary);">MRP (Max Retail):</span>
-                                            <strong>${formatCurrency(prd.mrp)}</strong>
+                                            <span style="color:#71717A;">MRP (Max Retail):</span>
+                                            <strong style="color:#18181B;">${formatCurrency(prd.mrp)}</strong>
                                         </div>
                                     ` : ''}
-                                    <div style="display:flex; justify-content:space-between; padding-top:0.5rem; margin-top:0.5rem; border-top:1px solid var(--border-color); font-size:0.9rem;">
-                                        <span style="font-weight:700; color:var(--text-primary);">Net Markup Margin:</span>
-                                        <strong style="color:var(--text-primary);">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurrency(analytics.unitGrossProfit)} (${Math.round(analytics.unitMarginPercent)}%)`}</strong>
+                                    <div style="display:flex; justify-content:space-between; padding-top:0.5rem; margin-top:0.5rem; border-top:1px solid #E4E4E7; font-size:0.9rem;">
+                                        <span style="font-weight:800; color:#18181B;">Net Markup Margin:</span>
+                                        <strong style="color:#18181B;">${userRestrictions.cannotSeeProfit ? '••••' : `+${formatCurrency(analytics.unitGrossProfit)} (${Math.round(analytics.unitMarginPercent)}%)`}</strong>
                                     </div>
                                 </div>
 
@@ -712,35 +830,105 @@ export const renderProducts = async (container, workspaceId) => {
 
                 </div>
 
+                <!-- Product Health Section (MFG - EXP Lifecycle & Health Ratio) -->
+                <div class="card origin-divider-card" style="margin-top:1.5rem; padding:1.5rem; border-radius:14px; background:#FFFFFF; border:1.5px solid #E4E4E7;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.15rem; padding-bottom:0.75rem; border-bottom:1px solid #E4E4E7; flex-wrap:wrap; gap:0.75rem;">
+                        <div style="display:flex; align-items:center; gap:0.6rem;">
+                            <div style="width:30px; height:30px; border-radius:7px; background:#F4F4F5; color:#18181B; display:flex; align-items:center; justify-content:center; border:1px solid #E4E4E7;">
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                            </div>
+                            <div>
+                                <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#18181B; display:flex; align-items:center; gap:0.5rem;">
+                                    Product Health
+                                </h3>
+                                <p style="margin:0; font-size:0.8rem; color:#71717A;">Shelf life longevity and decay ratio between Manufacturing (MFG) and Expiry (EXP)</p>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <span style="font-size:0.78rem; font-weight:800; padding:0.25rem 0.75rem; border-radius:6px; ${health.badgeStyle}">
+                                ${health.statusLabel} (${health.clampedRatio}%)
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar & Ratio Visualization -->
+                    <div style="margin-bottom:1.25rem; background:#FAFAFA; padding:1.15rem; border-radius:12px; border:1px solid #E4E4E7;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; font-size:0.82rem; font-weight:700;">
+                            <span style="color:#71717A;">Shelf Life Consumed</span>
+                            <span style="color:#18181B; font-family:monospace; font-size:0.9rem;">${health.clampedRatio}% Ratio</span>
+                        </div>
+                        
+                        <!-- 100% Progress Track -->
+                        <div style="position:relative; width:100%; height:12px; background:#E4E4E7; border-radius:999px; overflow:hidden;">
+                            <div style="position:absolute; left:0; top:0; bottom:0; width:${health.clampedRatio}%; background:#18181B; border-radius:999px; transition:width 0.4s ease;"></div>
+                        </div>
+
+                        <!-- Milestone Scale Legend -->
+                        <div style="display:flex; justify-content:space-between; margin-top:0.6rem; font-size:0.72rem; color:#71717A; font-weight:600; flex-wrap:wrap; gap:0.35rem;">
+                            <span>0% (MFG)</span>
+                            <span>30% Excellent</span>
+                            <span>50% Good</span>
+                            <span>70% Fair</span>
+                            <span>90% Poor</span>
+                            <span>95% Unusable</span>
+                            <span>100% Expired</span>
+                        </div>
+                    </div>
+
+                    <!-- 4 Metadata Boxes (MFG, EXP, Total Span, Days Remaining) -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.85rem;">
+                        <div style="background:#FAFAFA; padding:0.85rem 1rem; border-radius:10px; border:1px solid #E4E4E7;">
+                            <span style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Manufacturing (MFG):</span>
+                            <code style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${health.mfgFormatted}</code>
+                        </div>
+                        <div style="background:#FAFAFA; padding:0.85rem 1rem; border-radius:10px; border:1px solid #E4E4E7;">
+                            <span style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Expiration (EXP):</span>
+                            <code style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${health.expFormatted}</code>
+                        </div>
+                        <div style="background:#FAFAFA; padding:0.85rem 1rem; border-radius:10px; border:1px solid #E4E4E7;">
+                            <span style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Total Shelf Span:</span>
+                            <span style="font-size:0.88rem; font-weight:800; color:#18181B;">${health.totalDays}</span>
+                        </div>
+                        <div style="background:#FAFAFA; padding:0.85rem 1rem; border-radius:10px; border:1px solid #E4E4E7;">
+                            <span style="font-size:0.72rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Remaining Buffer:</span>
+                            <span style="font-size:0.88rem; font-weight:800; color:#18181B;">${health.daysRemaining}</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:0.85rem; padding:0.75rem 1rem; background:#FAFAFA; border-radius:8px; border:1px solid #E4E4E7; font-size:0.82rem; color:#71717A;">
+                        <strong style="color:#18181B;">Health Assessment:</strong> ${health.statusDesc}
+                    </div>
+                </div>
+
                 <!-- Product Origin Section Divider -->
-                <div class="card origin-divider-card" style="margin-top:1.5rem; padding:1.5rem; border-radius:var(--radius-card); background:var(--bg-card); border:1px solid var(--border-color); box-shadow:var(--shadow-float);">
-                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding-bottom:0.6rem; border-bottom:1px solid var(--border-color);">
-                        <div style="width:28px; height:28px; border-radius:6px; background:var(--theme-subtle, rgba(225,29,72,0.1)); color:var(--theme-primary, #18181B); display:flex; align-items:center; justify-content:center;">
+                <div class="card origin-divider-card" style="margin-top:1.5rem; padding:1.5rem; border-radius:14px; background:#FFFFFF; border:1.5px solid #E4E4E7;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding-bottom:0.6rem; border-bottom:1px solid #E4E4E7;">
+                        <div style="width:28px; height:28px; border-radius:6px; background:#F4F4F5; color:#18181B; display:flex; align-items:center; justify-content:center; border:1px solid #E4E4E7;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                         </div>
-                        <h3 style="margin:0; font-size:1.1rem; font-weight:700; color:var(--text-primary);">Product Origin</h3>
+                        <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:#18181B;">Product Origin</h3>
                     </div>
                     <div class="origin-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
                         <div class="origin-field-box">
-                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Product ID:</span>
-                            <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:700; color:var(--text-primary);">${prd.uniqueId || prd.id || 'N/A'}</code>
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Product ID:</span>
+                            <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${prd.uniqueId || prd.id || 'N/A'}</code>
                         </div>
                         <div class="origin-field-box">
-                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Creator ID:</span>
-                            <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:700; color:var(--text-primary);">${prd.creatorId || prd.createdBy || 'System / Admin'}</code>
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Creator ID:</span>
+                            <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${prd.creatorId || prd.createdBy || 'System / Admin'}</code>
                         </div>
                         <div class="origin-field-box">
-                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Workspace ID:</span>
-                            <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:700; color:var(--text-primary);">${workspaceId || 'Default Workspace'}</code>
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Workspace ID:</span>
+                            <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${workspaceId || 'Default Workspace'}</code>
                         </div>
                         <div class="origin-field-box">
-                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Created at:</span>
-                            <span class="origin-value" style="font-size:0.88rem; font-weight:600; color:var(--text-primary);">${formatExactTimestamp(prd.createdAt || prd.timestamp)}</span>
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Created at:</span>
+                            <span class="origin-value" style="font-size:0.88rem; font-weight:600; color:#18181B;">${formatExactTimestamp(prd.createdAt || prd.timestamp)}</span>
                         </div>
                         ${(prd.updatedAt || prd.updatedTimestamp) && (prd.updatedAt !== prd.createdAt) ? `
                         <div class="origin-field-box">
-                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); display:block; margin-bottom:0.25rem;">Updated at:</span>
-                            <span class="origin-value" style="font-size:0.88rem; font-weight:600; color:var(--text-primary);">${formatExactTimestamp(prd.updatedAt || prd.updatedTimestamp)}</span>
+                            <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Updated at:</span>
+                            <span class="origin-value" style="font-size:0.88rem; font-weight:600; color:#18181B;">${formatExactTimestamp(prd.updatedAt || prd.updatedTimestamp)}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -1438,7 +1626,7 @@ export const renderProducts = async (container, workspaceId) => {
                 </div>
 
                 <!-- GRID / LARGE-LIST CARDS VIEW (for all 6 finding layouts) -->
-                <div id="prd-grid-card-container" style="${currentLayout !== 'list' ? 'display:block;' : 'display:none;'}">
+                <div id="prd-grid-card-container" style="${currentLayout !== 'list' ? (currentLayout === 'large_list' ? 'display:flex; flex-direction:column;' : 'display:grid;') : 'display:none;'} overflow-x:auto; max-width:100%; padding-bottom:1rem;">
                     <!-- Injected dynamically -->
                 </div>
             </div>
@@ -1701,9 +1889,8 @@ export const renderProducts = async (container, workspaceId) => {
         } else {
             if (tableCardContainer) tableCardContainer.style.setProperty('display', 'none', 'important');
             if (gridCardContainer) {
-                gridCardContainer.style.setProperty('display', 'grid', 'important');
                 const gridClassMap = {
-                    'large_list': 'prd-large-list',
+                    'large_list': 'prd-large-list-container',
                     'grid_4': 'prd-grid prd-grid-4',
                     'hexa': 'prd-grid prd-grid-hexa',
                     'octa': 'prd-grid prd-grid-octa',
@@ -1711,6 +1898,12 @@ export const renderProducts = async (container, workspaceId) => {
                     'hexa_octa': 'prd-grid prd-grid-hexa-octa'
                 };
                 gridCardContainer.className = gridClassMap[currentLayout] || 'prd-grid prd-grid-4';
+                if (currentLayout === 'large_list') {
+                    gridCardContainer.style.setProperty('display', 'flex', 'important');
+                    gridCardContainer.style.setProperty('flex-direction', 'column', 'important');
+                } else {
+                    gridCardContainer.style.setProperty('display', 'grid', 'important');
+                }
             }
         }
 
@@ -1776,7 +1969,7 @@ export const renderProducts = async (container, workspaceId) => {
                 : '';
 
             return `
-                <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;">
+                <tr class="prd-item-row" data-id="${prd.id}" style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease; cursor:pointer; ${selectedProductIds.has(prd.id) ? 'background: rgba(0,0,0,0.035);' : ''}">
                     <td style="width:40px; text-align:center; padding:0.95rem 0.5rem 0.95rem 1.15rem;">
                         <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px; accent-color:var(--text-primary); border-radius:4px;">
                     </td>
@@ -1819,29 +2012,29 @@ export const renderProducts = async (container, workspaceId) => {
                     </td>
                     <td style="padding:0.95rem 1.5rem 0.95rem 1.15rem; text-align:right;">
                         <div style="display:inline-flex; gap:0.35rem; align-items:center; justify-content:flex-end;">
-                            <button class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:0.32rem 0.65rem; font-size:0.8rem; font-weight:700; background:var(--surface-50); color:var(--text-primary); border:1px solid var(--border-color); border-radius:8px;" title="View Product Analytics">
+                            <button class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:0.32rem 0.65rem; font-size:0.8rem; font-weight:700; ${selectedProductIds.size > 0 ? 'display:none;' : 'background:var(--surface-50); color:var(--text-primary); border:1px solid var(--border-color);'} border-radius:8px;" title="View Product Analytics">
                                 View &rsaquo;
                             </button>
                             ${canEdit ? `
-                                <button class="btn btn-sm btn-secondary edit-prd" data-id="${prd.id}" style="padding:0.32rem 0.55rem; font-size:0.8rem; border-radius:8px;" title="Edit Product">
+                                <button class="btn btn-sm btn-secondary edit-prd" data-id="${prd.id}" style="padding:0.32rem 0.55rem; font-size:0.8rem; border-radius:8px; ${selectedProductIds.size > 0 ? 'display:none;' : ''}" title="Edit Product">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
                             ` : (userRestrictions.disableUpdateOthers && !isCreatorSelf ? `
-                                <button class="btn btn-sm btn-secondary restricted-action" disabled style="opacity:0.4; cursor:not-allowed; padding:0.32rem 0.55rem; border-radius:8px;" title="Restricted: Cannot edit data created by others">
+                                <button class="btn btn-sm btn-secondary restricted-action" disabled style="opacity:0.4; cursor:not-allowed; padding:0.32rem 0.55rem; border-radius:8px; ${selectedProductIds.size > 0 ? 'display:none;' : ''}" title="Restricted: Cannot edit data created by others">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                                 </button>
                             ` : '')}
                             ${canDuplicate ? `
-                                <button class="btn btn-sm btn-secondary dup-prd" data-id="${prd.id}" style="padding:0.32rem 0.55rem; font-size:0.8rem; border-radius:8px;" title="Duplicate Product">
+                                <button class="btn btn-sm btn-secondary dup-prd" data-id="${prd.id}" style="padding:0.32rem 0.55rem; font-size:0.8rem; border-radius:8px; ${selectedProductIds.size > 0 ? 'display:none;' : ''}" title="Duplicate Product">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                 </button>
                             ` : ''}
                             ${canDelete ? `
-                                <button class="btn btn-sm btn-outline del-prd" data-id="${prd.id}" style="padding:0.32rem 0.55rem; font-size:0.8rem; border-radius:8px; color:var(--danger); border-color:rgba(239,68,68,0.3);" title="Delete Product">
+                                <button class="btn btn-sm btn-outline del-prd" data-id="${prd.id}" style="padding:0.32rem 0.55rem; font-size:0.8rem; border-radius:8px; color:var(--danger); border-color:rgba(239,68,68,0.3); ${selectedProductIds.size > 0 ? 'display:none;' : ''}" title="Delete Product">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                 </button>
                             ` : (userRestrictions.disableDeleteOthers && !isCreatorSelf ? `
-                                <button class="btn btn-sm btn-secondary restricted-action" disabled style="opacity:0.4; cursor:not-allowed; padding:0.32rem 0.55rem; border-radius:8px; color:var(--text-muted);" title="Restricted: Cannot delete data created by others">
+                                <button class="btn btn-sm btn-secondary restricted-action" disabled style="opacity:0.4; cursor:not-allowed; padding:0.32rem 0.55rem; border-radius:8px; color:var(--text-muted); ${selectedProductIds.size > 0 ? 'display:none;' : ''}" title="Restricted: Cannot delete data created by others">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                                 </button>
                             ` : '')}
@@ -1862,7 +2055,7 @@ export const renderProducts = async (container, workspaceId) => {
                     const skuCode = prd.upcCode ? `UPC: ${prd.upcCode}` : (prd.uniqueId ? `#${prd.uniqueId.substring(0, 8)}` : `#${prd.id.substring(0, 8)}`);
 
                     return `
-                        <div class="prd-large-list-card" data-id="${prd.id}">
+                        <div class="prd-large-list-card prd-item-row" data-id="${prd.id}" style="cursor:pointer; ${selectedProductIds.has(prd.id) ? 'border-color:#18181B; background:rgba(0,0,0,0.02);' : ''}">
                             <div style="display:flex; align-items:center; padding-right:0.65rem;" onclick="event.stopPropagation();">
                                 <input type="checkbox" class="prd-select-chk" data-id="${prd.id}" ${selectedProductIds.has(prd.id) ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px; accent-color:#0f172a; border-radius:4px;">
                             </div>
@@ -1887,7 +2080,7 @@ export const renderProducts = async (container, workspaceId) => {
                                     <div style="font-weight:800; font-size:1.25rem; color:var(--text-primary);">${salePriceFormatted}</div>
                                     <div style="font-size:0.8rem; font-weight:700; color:${qty > 0 ? '#059669' : '#dc2626'};">${qty > 0 ? `${qty} in stock` : 'Out of stock'}</div>
                                 </div>
-                                <button type="button" class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:0.4rem 0.85rem; font-size:0.85rem; font-weight:700; background:var(--surface-50); color:var(--text-primary); border:1px solid var(--border-color); border-radius:8px;">
+                                <button type="button" class="btn btn-sm view-prd" data-id="${prd.id}" style="padding:0.4rem 0.85rem; font-size:0.85rem; font-weight:700; ${selectedProductIds.size > 0 ? 'display:none;' : 'background:var(--surface-50); color:var(--text-primary); border:1px solid var(--border-color);'} border-radius:8px;">
                                     View &rsaquo;
                                 </button>
                             </div>
@@ -1955,9 +2148,10 @@ export const renderProducts = async (container, workspaceId) => {
         const invertBtn = bar ? bar.querySelector('#btn-batch-invert') : null;
         const selectAllBtn = bar ? bar.querySelector('#btn-batch-select-all') : null;
         const count = selectedProductIds.size;
+        const isMulti = count > 0;
 
         if (bar) {
-            if (count > 0) {
+            if (isMulti) {
                 bar.style.display = 'flex';
                 setTimeout(() => bar.classList.add('visible'), 10);
                 if (countEl) countEl.textContent = `${count} selected`;
@@ -1982,6 +2176,27 @@ export const renderProducts = async (container, workspaceId) => {
                 selectAll.checked = false;
             }
         }
+
+        // Real-time synchronization of rows and action buttons across all layouts
+        container.querySelectorAll('.prd-item-row, .prd-large-list-card, .prd-find-card').forEach(row => {
+            const rowId = row.getAttribute('data-id');
+            const isSel = rowId && selectedProductIds.has(rowId);
+            if (row.tagName === 'TR') {
+                row.style.background = isSel ? 'rgba(0,0,0,0.035)' : '';
+            } else {
+                row.style.borderColor = isSel ? '#18181B' : '';
+                row.style.background = isSel ? 'rgba(0,0,0,0.02)' : '';
+            }
+        });
+
+        // During multi-select mode: Hide individual row action buttons (View, Edit, Duplicate, Delete) in table & large list to keep focus on batch operations!
+        container.querySelectorAll('button.view-prd, .edit-prd, .dup-prd, .del-prd, .restricted-action').forEach(btn => {
+            if (isMulti) {
+                btn.style.display = 'none';
+            } else {
+                btn.style.display = 'inline-flex';
+            }
+        });
     }
 
     function attachListEvents() {
@@ -2183,7 +2398,22 @@ export const renderProducts = async (container, workspaceId) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const id = el.getAttribute('data-id') || el.closest('[data-id]')?.getAttribute('data-id');
-                if (id) openDetail(id);
+                if (!id) return;
+
+                // In multiselect mode: user CANNOT view product. Tap/click on View/title/img toggles selection instead!
+                if (selectedProductIds.size > 0) {
+                    if (selectedProductIds.has(id)) {
+                        selectedProductIds.delete(id);
+                    } else {
+                        selectedProductIds.add(id);
+                    }
+                    const chk = container.querySelector(`.prd-select-chk[data-id="${id}"]`);
+                    if (chk) chk.checked = selectedProductIds.has(id);
+                    updateBatchBar();
+                    return;
+                }
+
+                openDetail(id);
             });
         });
 
@@ -2703,6 +2933,25 @@ export const renderProducts = async (container, workspaceId) => {
         const gridContainer = modal.querySelector('#tmpl-items-grid');
         const searchInput = modal.querySelector('#tmpl-search-input');
 
+        document.body.appendChild(modal);
+
+        const closeModal = () => {
+            modal.remove();
+            document.removeEventListener('keydown', handleEscape);
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') closeModal();
+        };
+        document.addEventListener('keydown', handleEscape);
+
+        const closeBtn = modal.querySelector('#btn-close-picker-modal');
+        if (closeBtn) closeBtn.onclick = closeModal;
+
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
+
         const renderTemplateCards = (filterText = '') => {
             const query = filterText.trim().toLowerCase();
             const filtered = templates.filter(t => {
@@ -2760,7 +3009,7 @@ export const renderProducts = async (container, workspaceId) => {
                     if (!tmpl) {
                         tmpl = templates.find(t => t.id === targetId);
                     }
-                    close();
+                    closeModal();
                     if (tmpl && typeof onSelected === 'function') {
                         onSelected(tmpl);
                     }

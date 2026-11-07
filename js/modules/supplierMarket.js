@@ -20,7 +20,7 @@ let supplierStatusFilter = 'all'; // 'all' | 'Active' | 'Inactive' | 'Restricted
 let searchQuery = '';
 
 export const renderSupplierMarket = async (container, workspaceId, subView = null) => {
-    currentWorkspaceId = workspaceId || localStorage.getItem('pricelister_active_ws') || 'ws_dev_mock';
+    currentWorkspaceId = workspaceId || (window.__activeWorkspace?.workspaceId) || (window.__activeWorkspace?.id) || localStorage.getItem('pricelister_active_ws') || 'ws_dev_mock';
 
     // Route mapping
     if (subView) {

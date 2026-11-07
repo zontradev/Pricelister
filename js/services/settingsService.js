@@ -1,4 +1,4 @@
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 import { setAppCurrencySymbol } from '../utilities.js';
 import { authService } from '../../firebase/auth.js';
@@ -10,8 +10,30 @@ export const getSettingsService = (workspaceId) => {
                            (typeof localStorage !== 'undefined' && localStorage.getItem('pricelister_demo_mode') === 'true') ||
                            (typeof window !== 'undefined' && window.location.href.toLowerCase().includes('demo=true'));
 
-    // Only mock if this is explicitly the demo workspace or demo user in explicit demo mode
-    const isMock = (workspaceId === 'ws_dev_mock' || workspaceId === 'demo' || workspaceId === 'dev-mock-uid' || workspaceId === 'DEMO-SANDBOX-01') && isExplicitDemo;
+    const currentUser = typeof authService !== 'undefined' && authService.getCurrentUser ? authService.getCurrentUser() : null;
+
+    // Recognize demo testing if explicitly in demo, using demo workspace id, or logged in as dev-mock-uid
+    const isMock = workspaceId === 'ws_dev_mock' || 
+                   workspaceId === 'demo' || 
+                   workspaceId === 'dev-mock-uid' || 
+                   workspaceId === 'DEMO-SANDBOX-01' ||
+                   currentUser?.uid === 'dev-mock-uid' ||
+                   Boolean(currentUser?.isDemo) ||
+                   isExplicitDemo;
+
+    const parseDateSafe = (val) => {
+        if (!val) return null;
+        if (typeof val?.toDate === 'function') {
+            try { return val.toDate(); } catch (e) {}
+        }
+        if (val?.seconds) return new Date(val.seconds * 1000);
+        try {
+            const d = new Date(val);
+            return isNaN(d.getTime()) ? null : d;
+        } catch (e) {
+            return null;
+        }
+    };
 
     return {
         getWorkspaceSettings: async () => {
@@ -73,16 +95,52 @@ export const getSettingsService = (workspaceId) => {
             }
 
             try {
-                const receiptRef = doc(db, 'ReceiptData', workspaceId);
-                const wsRef = doc(db, 'Workspaces', workspaceId);
+                let receiptSnap = null;
+                let wsSnap = null;
+                // Priority 1: Check in-memory active workspace to resolve the true Firestore doc ID
+                let targetDocId = (typeof window !== 'undefined' && window.__activeWorkspace?.id) || workspaceId;
+                let wsData = (typeof window !== 'undefined' && window.__activeWorkspace) ? { ...window.__activeWorkspace } : {};
 
-                const [receiptSnap, wsSnap] = await Promise.all([
-                    getDoc(receiptRef).catch(() => null),
-                    getDoc(wsRef).catch(() => null)
-                ]);
+                try {
+                    const wsRef = doc(db, 'Workspaces', targetDocId);
+                    wsSnap = await getDoc(wsRef);
+                    if (wsSnap && wsSnap.exists()) {
+                        wsData = { ...wsData, ...wsSnap.data() };
+                        targetDocId = wsSnap.id;
+                    }
+                } catch (e) {}
+
+                // If not found by direct doc id, search by workspaceId field
+                if ((!wsSnap || !wsSnap.exists()) && workspaceId && workspaceId !== targetDocId) {
+                    try {
+                        const wsRef = doc(db, 'Workspaces', workspaceId);
+                        const directSnap = await getDoc(wsRef);
+                        if (directSnap && directSnap.exists()) {
+                            wsSnap = directSnap;
+                            wsData = { ...wsData, ...directSnap.data() };
+                            targetDocId = directSnap.id;
+                        } else {
+                            const qWs = query(collection(db, 'Workspaces'), where('workspaceId', '==', workspaceId));
+                            const qSnap = await getDocs(qWs);
+                            if (!qSnap.empty) {
+                                wsSnap = qSnap.docs[0];
+                                wsData = { ...wsData, ...wsSnap.data() };
+                                targetDocId = wsSnap.id;
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                try {
+                    receiptSnap = await getDoc(doc(db, 'ReceiptData', targetDocId));
+                } catch (e) {}
+                if (!receiptSnap || !receiptSnap.exists()) {
+                    try {
+                        receiptSnap = await getDoc(doc(db, 'ReceiptData', workspaceId));
+                    } catch (e) {}
+                }
 
                 const receiptData = receiptSnap && receiptSnap.exists() ? receiptSnap.data() : {};
-                const wsData = wsSnap && wsSnap.exists() ? wsSnap.data() : {};
 
                 // Check local offline fallback if Firestore had no data
                 let localOffline = {};
@@ -94,6 +152,9 @@ export const getSettingsService = (workspaceId) => {
                 const localCurrency = localStorage.getItem('pricelister_currency_symbol') || '$';
                 const resolvedCurrency = receiptData["Currency"] || wsData.currency || wsData.currencySymbol || localCurrency;
                 setAppCurrencySymbol(resolvedCurrency);
+
+                const cDate = parseDateSafe(wsData.createdAt);
+                const uDate = parseDateSafe(wsData.updatedAt);
 
                 return {
                     enableVending: receiptData["Vending"] !== undefined ? Boolean(receiptData["Vending"]) : (wsData.enableVending !== undefined ? Boolean(wsData.enableVending) : false),
@@ -124,16 +185,16 @@ export const getSettingsService = (workspaceId) => {
                     logoUrl: wsData.logoUrl || wsData.logo || receiptData["Logo Url"] || '',
                     bannerUrl: wsData.bannerUrl || wsData.banner || receiptData["Banner Url"] || '',
 
-                    // Creation & Audit Trail Data Model
+                    // Creation & Audit Trail Data Model (Safe timestamps)
                     createdAt: wsData.createdAt || null,
-                    createdTimestamp: wsData.createdTimestamp || receiptData["created_timestamp"] || (wsData.createdAt ? new Date(wsData.createdAt).toISOString() : ''),
-                    createdDate: wsData.createdDate || receiptData["created_date"] || '',
+                    createdTimestamp: wsData.createdTimestamp || receiptData["created_timestamp"] || (cDate ? cDate.toISOString() : ''),
+                    createdDate: wsData.createdDate || receiptData["created_date"] || (cDate ? cDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''),
                     creatorEmail: wsData.creatorEmail || wsData.adminEmail || '',
                     creatorName: wsData.creatorName || wsData.adminName || '',
                     
                     updatedAt: wsData.updatedAt || null,
-                    updateTimestamp: wsData.updateTimestamp || receiptData["updated_timestamp"] || '',
-                    updatedDate: wsData.updatedDate || (wsData.updatedAt ? new Date(wsData.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''),
+                    updateTimestamp: wsData.updateTimestamp || receiptData["updated_timestamp"] || (uDate ? uDate.toISOString() : ''),
+                    updatedDate: wsData.updatedDate || (uDate ? uDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''),
                     updatorEmail: wsData.updatorEmail || receiptData["updated_by_email"] || '',
                     updatorName: wsData.updatorName || '',
                     updatorRole: wsData.updatorRole || ''
@@ -228,8 +289,28 @@ export const getSettingsService = (workspaceId) => {
             const updatorUid = currentUser?.uid || '';
             const updatorName = currentUser?.displayName || (updatorEmail ? updatorEmail.split('@')[0] : 'Admin');
 
-            const receiptRef = doc(db, 'ReceiptData', workspaceId);
-            const wsRef = doc(db, 'Workspaces', workspaceId);
+            // Resolve document ID: Priority 1 is window.__activeWorkspace.id
+            let targetWsDocId = (typeof window !== 'undefined' && window.__activeWorkspace?.id) || workspaceId;
+            try {
+                const directCheck = await getDoc(doc(db, 'Workspaces', targetWsDocId));
+                if (directCheck.exists()) {
+                    targetWsDocId = directCheck.id;
+                } else if (workspaceId && workspaceId !== targetWsDocId) {
+                    const fallbackCheck = await getDoc(doc(db, 'Workspaces', workspaceId));
+                    if (fallbackCheck.exists()) {
+                        targetWsDocId = fallbackCheck.id;
+                    } else {
+                        const qWs = query(collection(db, 'Workspaces'), where('workspaceId', '==', workspaceId));
+                        const qSnap = await getDocs(qWs);
+                        if (!qSnap.empty) {
+                            targetWsDocId = qSnap.docs[0].id;
+                        }
+                    }
+                }
+            } catch (e) {}
+
+            const receiptRef = doc(db, 'ReceiptData', targetWsDocId);
+            const wsRef = doc(db, 'Workspaces', targetWsDocId);
 
             const receiptPayload = {
                 "Vending": Boolean(settings.enableVending),
@@ -329,16 +410,22 @@ export const getSettingsService = (workspaceId) => {
             const cleanWsPayload = cleanFirestorePayload(wsPayload);
 
             try {
-                await Promise.all([
-                    setDoc(receiptRef, cleanReceiptPayload, { merge: true }),
-                    setDoc(wsRef, cleanWsPayload, { merge: true })
-                ]);
+                // Authoritative workspace settings write
+                await setDoc(wsRef, cleanWsPayload, { merge: true });
+
+                // Supplementary ReceiptData write (gracefully swallowed if blocked by security rules)
+                try {
+                    await setDoc(receiptRef, cleanReceiptPayload, { merge: true });
+                } catch (recErr) {
+                    console.warn("ReceiptData write notice:", recErr.message);
+                }
+
                 localStorage.setItem('pricelister_active_ws', workspaceId);
                 return { success: true, syncedWithServer: true };
             } catch (cloudErr) {
                 console.error("Firestore settings cloud write error:", cloudErr);
                 // Throw so caller knows server sync status
-                throw new Error("Local cache updated, but cloud server sync failed: " + (cloudErr.message || 'Network/Permission error'));
+                throw new Error("Cloud server sync failed: " + (cloudErr.message || 'Network/Permission error'));
             }
         },
 

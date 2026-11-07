@@ -371,21 +371,34 @@ export const authService = {
     /**
      * Account Switcher & Saved Accounts Registry
      */
-    saveAccountToRegistry: (user) => {
+    saveAccountToRegistry: (user, explicitType = null) => {
         if (!user || !user.email) return;
         try {
             const key = 'pricelister_saved_accounts';
             const raw = localStorage.getItem(key);
             let list = raw ? JSON.parse(raw) : [];
             list = list.filter(acc => acc.email.toLowerCase() !== user.email.toLowerCase());
+
+            let authType = explicitType || user.authType;
+            if (!authType) {
+                if (user.photoURL && user.photoURL.includes('googleusercontent.com')) {
+                    authType = 'Google';
+                } else if (user.providerData && user.providerData.some(p => p.providerId === 'google.com')) {
+                    authType = 'Google';
+                } else {
+                    authType = 'Email & Password';
+                }
+            }
+
             list.unshift({
                 uid: user.uid,
                 email: user.email,
                 displayName: user.displayName || user.email.split('@')[0],
                 photoURL: user.photoURL || null,
+                authType: authType,
                 lastActive: Date.now()
             });
-            localStorage.setItem(key, JSON.stringify(list.slice(0, 6)));
+            localStorage.setItem(key, JSON.stringify(list.slice(0, 10)));
         } catch (e) {
             console.warn("Account registry save error:", e);
         }
@@ -394,7 +407,13 @@ export const authService = {
     getSavedAccounts: () => {
         try {
             const raw = localStorage.getItem('pricelister_saved_accounts');
-            return raw ? JSON.parse(raw) : [];
+            let list = raw ? JSON.parse(raw) : [];
+            return list.map(acc => {
+                if (!acc.authType) {
+                    acc.authType = (acc.photoURL && acc.photoURL.includes('googleusercontent.com')) ? 'Google' : 'Email & Password';
+                }
+                return acc;
+            });
         } catch (e) {
             return [];
         }
@@ -431,10 +450,11 @@ export const authService = {
             displayName: 'Demo Admin (Testing)',
             photoURL: null,
             role: 'CREATOR_ADMIN',
+            authType: 'Demo',
             isDemo: true
         };
         localStorage.setItem('mock_dev_session', JSON.stringify(mockUser));
-        authService.saveAccountToRegistry(mockUser);
+        authService.saveAccountToRegistry(mockUser, 'Demo');
         return mockUser;
     },
 
@@ -447,6 +467,7 @@ export const authService = {
                 sessionStorage.setItem('pricelister_signed_out', 'true');
                 sessionStorage.removeItem('pricelister_explicit_demo');
                 sessionStorage.removeItem('pricelister_last_landing_view');
+                sessionStorage.removeItem('pricelister_last_route');
             }
             localStorage.removeItem('mock_dev_session');
             localStorage.removeItem('pricelister_demo_mode');
@@ -456,22 +477,18 @@ export const authService = {
             } catch (e) {}
             
             if (typeof window !== 'undefined') {
-                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 const isGitHubPages = window.location.hostname.endsWith('github.io');
-                if (isLocal) {
-                    window.location.href = 'index.html';
-                } else if (isGitHubPages) {
+                if (isGitHubPages) {
                     const basePath = window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/(home|explore|pricing|find|privacy|terms|connection)\/?$/i, '').replace(/\/$/, '');
-                    window.location.href = (basePath || '') + '/home';
+                    window.location.href = (basePath || '') + '/index.html';
                 } else {
-                    window.location.href = '/home';
+                    window.location.href = '/index.html';
                 }
             }
         } catch (error) {
             console.error("Logout Error:", error);
             if (typeof window !== 'undefined') {
-                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                window.location.href = isLocal ? 'index.html' : '/home';
+                window.location.href = '/index.html';
             }
         }
     },

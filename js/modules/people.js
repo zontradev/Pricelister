@@ -215,6 +215,203 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     }
 
     // -------------------------------------------------------------
+    // DEDICATED PERSON EDITOR PANEL (Modeled after Add Product)
+    // -------------------------------------------------------------
+    function getPersonFormMarkup() {
+        const typeLabel = isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer');
+        return `
+            <!-- DEDICATED PERSON ADD / EDIT PANEL (Custom standalone screen like Add Product) -->
+            <div id="person-form-container" class="prd-form-wrapper" style="display:none; animation: fadeIn 0.2s ease;">
+                <!-- Form Top Header Bar -->
+                <div class="prd-form-header-bar" style="padding:1.25rem 1.75rem; border-bottom:1px solid #E4E4E7; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; background:linear-gradient(135deg, rgba(24, 24, 27, 0.03) 0%, rgba(24, 24, 27, 0.01) 100%);">
+                    <div style="display:flex; align-items:center; gap:0.85rem;">
+                        <div id="person-form-header-avatar" style="width:46px; height:46px; border-radius:50%; background:#18181B; display:flex; align-items:center; justify-content:center; color:#FFFFFF; overflow:hidden; border:2px solid #E4E4E7; flex-shrink:0;">
+                            <span id="person-form-header-svg">${currentTab === 'clients' ? ICONS.client : (isBusinessMode ? ICONS.business : ICONS.person)}</span>
+                        </div>
+                        <div>
+                            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                                <span class="badge" id="person-form-badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; padding:2px 8px; border-radius:999px;">
+                                    New Profile
+                                </span>
+                                <h3 id="person-form-title" style="margin:0; font-size:1.25rem; font-weight:800; color:#18181B; letter-spacing:-0.02em;">
+                                    Add ${typeLabel}
+                                </h3>
+                            </div>
+                            <p id="person-form-subtitle" style="margin:0.2rem 0 0 0; font-size:0.82rem; color:#71717A;">
+                                Configure directory profile parameters, contact channels, and transaction terms
+                            </p>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <button type="button" class="btn btn-secondary person-cancel-trigger" style="display:inline-flex; align-items:center; gap:0.45rem; font-weight:700; font-size:0.85rem; padding:0.45rem 1rem; border-radius:8px; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; cursor:pointer;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                            Back to Directory
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Content -->
+                <form id="person-form" style="padding:1.75rem; display:flex; flex-direction:column; gap:1.5rem;" novalidate>
+                    <input type="hidden" id="person-id">
+
+                    <div class="prd-form-grid" style="padding:0;">
+                        <!-- Left Column: Core Info & Contact Details -->
+                        <div style="display:flex; flex-direction:column; gap:1.25rem;">
+                            
+                            <!-- Section 1: Profile Identification -->
+                            <div class="prd-card-section" style="background:#FFFFFF; border:1px solid #E4E4E7; border-radius:12px; padding:1.25rem 1.4rem;">
+                                <div class="prd-card-title" style="font-size:0.92rem; font-weight:700; color:#18181B; display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #E4E4E7;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    <span>Profile Information</span>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1rem; margin-bottom:1rem;">
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:#18181B;">Full Name / Company Title <span style="color:#ef4444;">*</span></label>
+                                        <input type="text" id="person-name" required class="form-control" placeholder="e.g. Acme Corporation or Alexander Wright" style="width:100%; padding:0.55rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.88rem;">
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:#18181B;">Status</label>
+                                        <select id="person-status" class="form-control" style="width:100%; padding:0.55rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.88rem; font-weight:600; background:#FFFFFF;">
+                                            <option value="Active">Active</option>
+                                            <option value="Pending">Pending</option>
+                                            <option value="Inactive">Inactive</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:#18181B;">Tags & Categories</label>
+                                    <input type="text" id="person-tags" class="form-control" placeholder="e.g. Retail, Wholesale, VIP, Regular Customer" style="width:100%; padding:0.55rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.88rem;">
+                                    <small style="color:#71717A; font-size:0.75rem; margin-top:3px; display:block;">Comma-separated values to group and filter records</small>
+                                </div>
+                            </div>
+
+                            <!-- Section 2: Contact Coordinates & Address -->
+                            <div class="prd-card-section" style="background:#FFFFFF; border:1px solid #E4E4E7; border-radius:12px; padding:1.25rem 1.4rem;">
+                                <div class="prd-card-title" style="font-size:0.92rem; font-weight:700; color:#18181B; display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #E4E4E7;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                    <span>Contact & Address</span>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:#18181B;">Phone Number</label>
+                                        <input type="text" id="person-phone" class="form-control" placeholder="e.g. +1 (555) 000-0000" style="width:100%; padding:0.55rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.88rem;">
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:#18181B;">Email Address</label>
+                                        <input type="email" id="person-email" class="form-control" placeholder="e.g. contact@domain.com" style="width:100%; padding:0.55rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.88rem;">
+                                    </div>
+                                </div>
+
+                                <div style="margin-bottom:1rem;">
+                                    <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:#18181B;">Physical Address / Billing Street</label>
+                                    <input type="text" id="person-address" class="form-control" placeholder="e.g. 124 Maple Drive, Boston, MA 02115" style="width:100%; padding:0.55rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.88rem;">
+                                </div>
+
+                                <div>
+                                    <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:#18181B;">Contact Person / Liaison</label>
+                                    <input type="text" id="person-contact-liaison" class="form-control" placeholder="e.g. Operations Director or Account Rep" style="width:100%; padding:0.55rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.88rem;">
+                                </div>
+                            </div>
+
+                            <!-- Section 3: Entity-Specific Information -->
+                            <div class="prd-card-section" id="person-business-section" style="background:#FFFFFF; border:1px solid #E4E4E7; border-radius:12px; padding:1.25rem 1.4rem;">
+                                <div class="prd-card-title" style="font-size:0.92rem; font-weight:700; color:#18181B; display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #E4E4E7;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                                    <span>Business & Billing Details</span>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:#18181B;">Tax ID / BIN / VAT No.</label>
+                                        <input type="text" id="person-tax-id" class="form-control" placeholder="e.g. US-EIN-9481204" style="width:100%; padding:0.55rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.88rem;">
+                                    </div>
+                                    <div>
+                                        <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; color:#18181B;">Website / Portal URL</label>
+                                        <input type="url" id="person-website" class="form-control" placeholder="https://..." style="width:100%; padding:0.55rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.88rem;">
+                                    </div>
+                                </div>
+
+                                <div id="person-primary-business-wrap" style="display:${isBusinessMode ? 'flex' : 'none'}; align-items:center; gap:0.6rem; background:#F4F4F5; padding:0.75rem 1rem; border-radius:8px; border:1px solid #E4E4E7;">
+                                    <input type="checkbox" id="person-primary" style="width:16px; height:16px; accent-color:#18181B; cursor:pointer;">
+                                    <div>
+                                        <label for="person-primary" style="font-size:0.85rem; font-weight:700; color:#18181B; cursor:pointer; margin:0;">Set as Primary Business</label>
+                                        <small style="color:#71717A; font-size:0.75rem; display:block;">Use as default company header & issuer details for newly issued invoices.</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Right Column: Avatar Upload & Remarks -->
+                        <div style="display:flex; flex-direction:column; gap:1.25rem;">
+                            
+                            <!-- Section 4: Profile Photo / Logo Card -->
+                            <div class="prd-card-section" style="background:#FFFFFF; border:1px solid #E4E4E7; border-radius:12px; padding:1.25rem 1.4rem;">
+                                <div class="prd-card-title" style="font-size:0.92rem; font-weight:700; color:#18181B; display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #E4E4E7;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                                    <span>Profile Photo / Logo</span>
+                                </div>
+
+                                <!-- Avatar Dropzone Area -->
+                                <div id="person-avatar-dropzone" style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:1.5rem 1rem; border:2px dashed #E4E4E7; border-radius:12px; background:#FAFAFA; cursor:pointer; transition:all 0.2s ease;">
+                                    <div style="position:relative; width:88px; height:88px; border-radius:50%; background:#FFFFFF; border:2px solid #E4E4E7; overflow:hidden; display:flex; align-items:center; justify-content:center; margin-bottom:1rem; box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+                                        <img id="person-avatar-preview" src="" alt="Avatar" style="width:100%; height:100%; object-fit:cover; display:none;">
+                                        <div id="person-avatar-placeholder" style="color:#71717A; display:flex; align-items:center; justify-content:center;">
+                                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                        </div>
+                                    </div>
+
+                                    <p style="margin:0 0 0.5rem; font-weight:700; font-size:0.85rem; color:#18181B;">Drag & drop photo here</p>
+                                    <p style="margin:0 0 1rem; font-size:0.75rem; color:#71717A;">Supports JPG, PNG, WebP (auto-compressed)</p>
+
+                                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; justify-content:center;">
+                                        <label class="btn btn-secondary" style="margin:0; font-size:0.8rem; font-weight:700; padding:0.4rem 0.85rem; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                            Browse File
+                                            <input type="file" id="person-image-file" accept="image/*" style="display:none;">
+                                        </label>
+                                        <button type="button" id="person-remove-avatar-btn" class="btn btn-secondary" style="font-size:0.8rem; font-weight:600; padding:0.4rem 0.75rem; border:1px solid #E4E4E7; background:#FFFFFF; color:#71717A; border-radius:8px; display:none;">
+                                            Remove
+                                        </button>
+                                    </div>
+
+                                    <div style="margin-top:1rem; width:100%;">
+                                        <input type="url" id="person-image-url" placeholder="Or paste public image URL (https://...)" class="form-control" style="width:100%; font-size:0.78rem; padding:0.45rem 0.65rem; border:1px solid #E4E4E7; border-radius:6px; background:#FFFFFF;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 5: Internal Remarks & Notes -->
+                            <div class="prd-card-section" style="background:#FFFFFF; border:1px solid #E4E4E7; border-radius:12px; padding:1.25rem 1.4rem;">
+                                <div class="prd-card-title" style="font-size:0.92rem; font-weight:700; color:#18181B; display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #E4E4E7;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                    <span>Internal Notes & Remarks</span>
+                                </div>
+
+                                <textarea id="person-notes" rows="4" class="form-control" placeholder="Add customer notes, credit limits, special payment agreements, or delivery preferences..." style="width:100%; padding:0.6rem 0.75rem; border:1px solid #E4E4E7; border-radius:8px; font-size:0.85rem; font-family:inherit; resize:vertical;"></textarea>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Action Footer -->
+                    <div style="display:flex; justify-content:flex-end; align-items:center; padding:1.25rem 0 0 0; border-top:1px solid #E4E4E7; margin-top:0.5rem; gap:0.75rem;">
+                        <button type="button" class="btn btn-secondary person-cancel-trigger" style="padding:0.55rem 1.5rem; font-size:0.88rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; cursor:pointer;">
+                            Cancel
+                        </button>
+                        <button type="submit" id="person-submit-btn" class="btn btn-primary" style="padding:0.55rem 1.75rem; font-size:0.88rem; font-weight:700; background:#18181B; border:1px solid #18181B; color:#FFFFFF; border-radius:8px; cursor:pointer;">
+                            Save Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+    }
+
+    // -------------------------------------------------------------
     // LIST VIEW
     // -------------------------------------------------------------
     function renderListView() {
@@ -226,234 +423,156 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
         container.innerHTML = `
             <div class="people-module-container" style="animation: fadeIn 0.25s ease;">
-                <!-- HEADER -->
-                <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem; flex-wrap:wrap; gap:1rem;">
-                    <div>
-                        <div style="display:flex; align-items:center; gap:0.6rem;">
-                            <h2 style="margin:0; font-size:1.75rem; font-weight:800; color:var(--text-primary);">${typeTitle}</h2>
-                            <span class="badge" id="people-count-badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-weight:700; font-size:0.8rem; padding:0.25rem 0.65rem; border-radius:999px;">
-                                ${count} ${countLabel}
-                            </span>
+                <div id="people-list-view">
+                    <!-- HEADER -->
+                    <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem; flex-wrap:wrap; gap:1rem;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:0.6rem;">
+                                <h2 style="margin:0; font-size:1.75rem; font-weight:800; color:var(--text-primary);">${typeTitle}</h2>
+                                <span class="badge" id="people-count-badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-weight:700; font-size:0.8rem; padding:0.25rem 0.65rem; border-radius:999px;">
+                                    ${count} ${countLabel}
+                                </span>
+                            </div>
+                            <p style="margin:0.25rem 0 0 0; font-size:0.88rem; color:var(--text-secondary);">
+                                Manage directory profiles, track transactions, outstanding balances, and customer history.
+                            </p>
                         </div>
-                        <p style="margin:0.25rem 0 0 0; font-size:0.88rem; color:var(--text-secondary);">
-                            Manage directory profiles, track transactions, outstanding balances, and customer history.
-                        </p>
+                        
+                        <div style="display:flex; gap:0.6rem; align-items:center;">
+                            ${userRestrictions.disableAdd ? '' : `
+                            <button id="btn-add-person" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; font-weight:700; background:#18181B; border:1px solid #18181B; color:#ffffff; padding:0.55rem 1.25rem;">
+                                ${ICONS.plus}
+                                Add ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}
+                            </button>
+                            `}
+                        </div>
                     </div>
                     
-                    <div style="display:flex; gap:0.6rem; align-items:center;">
-                        ${userRestrictions.disableAdd ? '' : `
-                        <button id="btn-add-person" class="btn btn-primary" style="display:flex; align-items:center; gap:0.5rem; font-weight:700; background:#18181B; border:1px solid #18181B; color:#ffffff; padding:0.55rem 1.25rem;">
-                            ${ICONS.plus}
-                            Add ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}
-                        </button>
-                        `}
-                    </div>
-                </div>
-                
-                <!-- TABS (Customers vs Clients vs Businesses) -->
-                ${!isBusinessMode ? `
-                    <div style="display:flex; gap:0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;" id="people-tab-group">
-                        <button class="people-tab-btn ${currentTab === 'customers' ? 'active-people-tab' : ''}" data-tab="customers" style="display:inline-flex; align-items:center; gap:6px;">
-                            ${ICONS.person}
-                            <span>Customers</span>
-                        </button>
-                        <button class="people-tab-btn ${currentTab === 'clients' ? 'active-people-tab' : ''}" data-tab="clients" style="display:inline-flex; align-items:center; gap:6px;">
-                            ${ICONS.client}
-                            <span>Clients</span>
-                        </button>
-                    </div>
-                ` : ''}
+                    <!-- TABS (Customers vs Clients vs Businesses) -->
+                    ${!isBusinessMode ? `
+                        <div style="display:flex; gap:0.5rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;" id="people-tab-group">
+                            <button class="people-tab-btn ${currentTab === 'customers' ? 'active-people-tab' : ''}" data-tab="customers" style="display:inline-flex; align-items:center; gap:6px;">
+                                ${ICONS.person}
+                                <span>Customers</span>
+                            </button>
+                            <button class="people-tab-btn ${currentTab === 'clients' ? 'active-people-tab' : ''}" data-tab="clients" style="display:inline-flex; align-items:center; gap:6px;">
+                                ${ICONS.client}
+                                <span>Clients</span>
+                            </button>
+                        </div>
+                    ` : ''}
 
-                <!-- ADD / EDIT PERSON MODAL FORM -->
-                <div id="person-form-container" class="card" style="display:none; margin-bottom: 2rem; padding: 1.5rem; border:1px solid #E4E4E7; background:#ffffff; box-shadow:0 10px 25px rgba(0,0,0,0.05);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
-                        <h3 id="person-form-title" style="margin:0; font-size:1.2rem; font-weight:700; color:var(--text-primary);">New Entry</h3>
-                        <button type="button" id="person-cancel-x" style="background:none; border:none; cursor:pointer; color:var(--text-muted); display:flex; align-items:center;">${ICONS.close}</button>
-                    </div>
+                    <!-- SEARCH, QUERY FILTER & SORT TOOLBAR -->
+                    <div id="people-search-toolbar" style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap;">
+                        <div style="position:relative; flex:1; min-width:240px; max-width:440px;">
+                            <input type="text" id="people-search-input" placeholder="Search by name, phone, email, address, ID..." value="${escapeHtml(peopleSearchTerm)}" style="width:100%; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.85rem 0 2.25rem; font-size:0.85rem; background:#FFFFFF; color:#18181B; outline:none; transition:border-color 0.2s ease;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" style="position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:0.35rem;">
+                                <label style="font-size:0.78rem; font-weight:700; color:#71717A; text-transform:uppercase;">Filter:</label>
+                                <select id="people-filter-query" style="height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.75rem; font-size:0.82rem; font-weight:600; background:#FFFFFF; color:#18181B; outline:none; cursor:pointer;">
+                                    <option value="all" ${peopleFilterQuery === 'all' ? 'selected' : ''}>All Profiles</option>
+                                    <option value="unused" ${peopleFilterQuery === 'unused' ? 'selected' : ''}>Unused (0 Invoices)</option>
+                                    <option value="custom_count" ${peopleFilterQuery === 'custom_count' ? 'selected' : ''}>Custom Invoice Count</option>
+                                    <option value="count_range" ${peopleFilterQuery === 'count_range' ? 'selected' : ''}>Invoice Count Range</option>
+                                    <option value="spent_range" ${peopleFilterQuery === 'spent_range' ? 'selected' : ''}>Spent Range ($ Min - Max)</option>
+                                    <option value="high_spent" ${peopleFilterQuery === 'high_spent' ? 'selected' : ''}>High Spent (&gt; $500)</option>
+                                </select>
+                                <input type="number" id="people-custom-count" min="0" placeholder="Count..." value="${escapeHtml(customInvoiceCountVal)}" style="width:85px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.65rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none; display:${peopleFilterQuery === 'custom_count' ? 'inline-block' : 'none'};" title="Filter by exact invoice count">
+                                
+                                <!-- Invoice Count Range Inputs -->
+                                <div id="people-count-range-wrap" style="display:${peopleFilterQuery === 'count_range' ? 'inline-flex' : 'none'}; align-items:center; gap:4px;">
+                                    <input type="number" id="people-count-min" min="0" placeholder="Min" value="${escapeHtml(peopleCountMin)}" style="width:65px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Minimum invoice count">
+                                    <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
+                                    <input type="number" id="people-count-max" min="0" placeholder="Max" value="${escapeHtml(peopleCountMax)}" style="width:65px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Maximum invoice count">
+                                </div>
 
-                    <form id="person-form" style="display:flex; flex-direction:column; gap:1.25rem;">
-                        <input type="hidden" id="person-id">
-                        
-                        <!-- AVATAR / PHOTO UPLOAD SECTION -->
-                        <div id="person-avatar-dropzone" style="display:flex; align-items:center; gap:1.25rem; background:var(--surface-50); padding:1rem; border-radius:12px; border:1.5px dashed var(--border-color); flex-wrap:wrap; transition:all 0.2s ease; cursor:pointer;" title="Click or Drag & Drop image here">
-                            <div style="position:relative; width:68px; height:68px; border-radius:50%; overflow:hidden; background:#ffffff; border:2px solid #E4E4E7; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
-                                <img id="person-avatar-preview" src="" alt="Avatar" style="width:100%; height:100%; object-fit:cover; display:none;">
-                                <div id="person-avatar-placeholder" style="color:#18181B; display:flex; align-items:center; justify-content:center;">
-                                    ${currentTab === 'clients' ? ICONS.client : (isBusinessMode ? ICONS.business : ICONS.person)}
+                                <!-- Spent Range Inputs -->
+                                <div id="people-spent-range-wrap" style="display:${peopleFilterQuery === 'spent_range' ? 'inline-flex' : 'none'}; align-items:center; gap:4px;">
+                                    <input type="number" id="people-spent-min" min="0" placeholder="Min $" value="${escapeHtml(peopleSpentMin)}" style="width:72px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Minimum total spent">
+                                    <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
+                                    <input type="number" id="people-spent-max" min="0" placeholder="Max $" value="${escapeHtml(peopleSpentMax)}" style="width:72px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Maximum total spent">
                                 </div>
                             </div>
-                            <div style="flex:1; min-width:220px;">
-                                <label style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:block; margin-bottom:0.25rem;">Profile Image / Logo (Drag & Drop or Browse)</label>
-                                <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                                    <label class="btn btn-secondary" style="cursor:pointer; font-size:0.82rem; padding:0.35rem 0.75rem; margin:0; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
-                                        ${ICONS.camera} Choose Photo File
-                                        <input type="file" id="person-image-file" accept="image/*" style="display:none;">
-                                    </label>
-                                    <input type="url" id="person-image-url" placeholder="or paste Image URL (https://...)" class="form-control" style="flex:1; min-width:180px; font-size:0.82rem; padding:0.35rem 0.6rem;">
-                                </div>
-                                <small style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem; display:block;">Drag & drop JPG, PNG, WEBP directly onto this area, or browse files.</small>
-                            </div>
-                        </div>
-
-                        <!-- BASIC FIELDS -->
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1rem;">
-                            <div>
-                                <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Full Name / Company Title *</label>
-                                <input type="text" id="person-name" required class="form-control" placeholder="e.g. Rahman Traders" style="width:100%; padding:0.55rem 0.75rem;">
-                            </div>
-                            <div>
-                                <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Phone Number</label>
-                                <input type="text" id="person-phone" class="form-control" placeholder="e.g. +880 1712 345678" style="width:100%; padding:0.55rem 0.75rem;">
-                            </div>
-                        </div>
-
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1rem;">
-                            <div>
-                                <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Email Address</label>
-                                <input type="email" id="person-email" class="form-control" placeholder="e.g. contact@example.com" style="width:100%; padding:0.55rem 0.75rem;">
-                            </div>
-                            <div>
-                                <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Address / Location</label>
-                                <input type="text" id="person-address" class="form-control" placeholder="e.g. House 12, Road 5, Dhaka" style="width:100%; padding:0.55rem 0.75rem;">
-                            </div>
-                        </div>
-
-                        <!-- TAGS & NOTES -->
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1rem;">
-                            <div>
-                                <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Tags (Comma Separated)</label>
-                                <input type="text" id="person-tags" class="form-control" placeholder="e.g. Retail, Wholesale, Regular Customer, VIP" style="width:100%; padding:0.55rem 0.75rem;">
-                            </div>
-                            <div>
-                                <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Status</label>
-                                <select id="person-status" class="form-control" style="width:100%; padding:0.55rem 0.75rem; font-weight:600;">
-                                    <option value="Active">Active</option>
-                                    <option value="Pending">Pending</option>
-                                    <option value="Inactive">Inactive</option>
+                            <div style="display:flex; align-items:center; gap:0.35rem;">
+                                <label style="font-size:0.78rem; font-weight:700; color:#71717A; text-transform:uppercase;">Sort:</label>
+                                <select id="people-sort-query" style="height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.75rem; font-size:0.82rem; font-weight:600; background:#FFFFFF; color:#18181B; outline:none; cursor:pointer;">
+                                    <option value="newest" ${peopleSortQuery === 'newest' ? 'selected' : ''}>Newest Added</option>
+                                    <option value="oldest" ${peopleSortQuery === 'oldest' ? 'selected' : ''}>Oldest Added</option>
+                                    <option value="spent_high" ${peopleSortQuery === 'spent_high' ? 'selected' : ''}>Highest Spent</option>
+                                    <option value="spent_low" ${peopleSortQuery === 'spent_low' ? 'selected' : ''}>Lowest Spent</option>
+                                    <option value="invoices_high" ${peopleSortQuery === 'invoices_high' ? 'selected' : ''}>Most Invoices</option>
+                                    <option value="name_asc" ${peopleSortQuery === 'name_asc' ? 'selected' : ''}>Name (A → Z)</option>
+                                    <option value="name_desc" ${peopleSortQuery === 'name_desc' ? 'selected' : ''}>Name (Z → A)</option>
                                 </select>
                             </div>
                         </div>
-
-                        <div>
-                            <label style="font-weight:600; font-size:0.85rem; margin-bottom:0.35rem; display:block;">Internal Notes & Remarks</label>
-                            <textarea id="person-notes" rows="2" class="form-control" placeholder="Add custom customer notes, delivery guidelines, or payment terms..." style="width:100%; padding:0.55rem 0.75rem; font-family:inherit;"></textarea>
-                        </div>
-
-                        <!-- ACTIONS -->
-                        <div style="display:flex; gap:0.75rem; margin-top:0.5rem; justify-content:flex-end;">
-                            <button type="button" class="btn btn-secondary" id="person-cancel-btn" style="padding:0.55rem 1.25rem;">Cancel</button>
-                            <button type="submit" class="btn btn-primary" id="person-submit-btn" style="background:#18181B; border-color:#18181B; font-weight:700; padding:0.55rem 1.5rem;">Save Profile</button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- SEARCH, QUERY FILTER & SORT TOOLBAR -->
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap;">
-                    <div style="position:relative; flex:1; min-width:240px; max-width:440px;">
-                        <input type="text" id="people-search-input" placeholder="Search by name, phone, email, address, ID..." value="${escapeHtml(peopleSearchTerm)}" style="width:100%; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.85rem 0 2.25rem; font-size:0.85rem; background:#FFFFFF; color:#18181B; outline:none; transition:border-color 0.2s ease;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" style="position:absolute; left:0.75rem; top:50%; transform:translateY(-50%); pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     </div>
-                    <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-                        <div style="display:flex; align-items:center; gap:0.35rem;">
-                            <label style="font-size:0.78rem; font-weight:700; color:#71717A; text-transform:uppercase;">Filter:</label>
-                            <select id="people-filter-query" style="height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.75rem; font-size:0.82rem; font-weight:600; background:#FFFFFF; color:#18181B; outline:none; cursor:pointer;">
-                                <option value="all" ${peopleFilterQuery === 'all' ? 'selected' : ''}>All Profiles</option>
-                                <option value="unused" ${peopleFilterQuery === 'unused' ? 'selected' : ''}>Unused (0 Invoices)</option>
-                                <option value="custom_count" ${peopleFilterQuery === 'custom_count' ? 'selected' : ''}>Custom Invoice Count</option>
-                                <option value="count_range" ${peopleFilterQuery === 'count_range' ? 'selected' : ''}>Invoice Count Range</option>
-                                <option value="spent_range" ${peopleFilterQuery === 'spent_range' ? 'selected' : ''}>Spent Range ($ Min - Max)</option>
-                                <option value="high_spent" ${peopleFilterQuery === 'high_spent' ? 'selected' : ''}>High Spent (&gt; $500)</option>
-                            </select>
-                            <input type="number" id="people-custom-count" min="0" placeholder="Count..." value="${escapeHtml(customInvoiceCountVal)}" style="width:85px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.65rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none; display:${peopleFilterQuery === 'custom_count' ? 'inline-block' : 'none'};" title="Filter by exact invoice count">
-                            
-                            <!-- Invoice Count Range Inputs -->
-                            <div id="people-count-range-wrap" style="display:${peopleFilterQuery === 'count_range' ? 'inline-flex' : 'none'}; align-items:center; gap:4px;">
-                                <input type="number" id="people-count-min" min="0" placeholder="Min" value="${escapeHtml(peopleCountMin)}" style="width:65px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Minimum invoice count">
-                                <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
-                                <input type="number" id="people-count-max" min="0" placeholder="Max" value="${escapeHtml(peopleCountMax)}" style="width:65px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Maximum invoice count">
-                            </div>
 
-                            <!-- Spent Range Inputs -->
-                            <div id="people-spent-range-wrap" style="display:${peopleFilterQuery === 'spent_range' ? 'inline-flex' : 'none'}; align-items:center; gap:4px;">
-                                <input type="number" id="people-spent-min" min="0" placeholder="Min $" value="${escapeHtml(peopleSpentMin)}" style="width:72px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Minimum total spent">
-                                <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
-                                <input type="number" id="people-spent-max" min="0" placeholder="Max $" value="${escapeHtml(peopleSpentMax)}" style="width:72px; height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.5rem; font-size:0.82rem; font-weight:700; color:#18181B; background:#FFFFFF; outline:none;" title="Maximum total spent">
-                            </div>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:0.35rem;">
-                            <label style="font-size:0.78rem; font-weight:700; color:#71717A; text-transform:uppercase;">Sort:</label>
-                            <select id="people-sort-query" style="height:38px; border-radius:8px; border:1px solid #E4E4E7; padding:0 0.75rem; font-size:0.82rem; font-weight:600; background:#FFFFFF; color:#18181B; outline:none; cursor:pointer;">
-                                <option value="newest" ${peopleSortQuery === 'newest' ? 'selected' : ''}>Newest Added</option>
-                                <option value="oldest" ${peopleSortQuery === 'oldest' ? 'selected' : ''}>Oldest Added</option>
-                                <option value="spent_high" ${peopleSortQuery === 'spent_high' ? 'selected' : ''}>Highest Spent</option>
-                                <option value="spent_low" ${peopleSortQuery === 'spent_low' ? 'selected' : ''}>Lowest Spent</option>
-                                <option value="invoices_high" ${peopleSortQuery === 'invoices_high' ? 'selected' : ''}>Most Invoices</option>
-                                <option value="name_asc" ${peopleSortQuery === 'name_asc' ? 'selected' : ''}>Name (A → Z)</option>
-                                <option value="name_desc" ${peopleSortQuery === 'name_desc' ? 'selected' : ''}>Name (Z → A)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DIRECTORY TABLE -->
-                <div class="card" style="padding:0; overflow:hidden; border:1px solid var(--border-color); border-radius:14px; box-shadow:0 4px 20px rgba(0,0,0,0.03);">
-                    <div style="overflow-x:auto;">
-                        <table style="width:100%; border-collapse:collapse; text-align:left;">
-                            <thead>
-                                <tr style="background:var(--surface-50); border-bottom:1px solid var(--border-color); font-size:0.78rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">
-                                    <th style="padding:1rem 0.5rem 1rem 1.25rem; width:38px;">
-                                        <input type="checkbox" id="people-select-all" style="cursor:pointer; width:16px; height:16px; accent-color:#18181B; border-radius:4px;">
-                                    </th>
-                                    <th style="padding:1rem 1rem;">Profile & Name</th>
-                                    <th style="padding:1rem;">Contact Info</th>
-                                    <th style="padding:1rem;">Address</th>
-                                    <th style="padding:1rem;">Total Spent</th>
-                                    <th style="padding:1rem;">Invoices</th>
-                                    <th style="padding:1rem 1.25rem; text-align:right;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="people-list-body">
-                                ${Array(4).fill(0).map(() => `
-                                    <tr style="border-bottom:1px solid var(--border-color);">
-                                        <td style="padding:1rem 0.5rem 1rem 1.25rem;"><div class="skeleton-shimmer" style="width:16px; height:16px; border-radius:4px;"></div></td>
-                                        <td style="padding:1rem 1rem;"><div class="skeleton-shimmer" style="width:160px; height:18px;"></div></td>
-                                        <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:120px; height:16px;"></div></td>
-                                        <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:140px; height:16px;"></div></td>
-                                        <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:80px; height:16px;"></div></td>
-                                        <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:60px; height:20px; border-radius:999px;"></div></td>
-                                        <td style="padding:1rem 1.25rem; text-align:right;"><div class="skeleton-shimmer" style="width:100px; height:28px; border-radius:6px; margin-left:auto;"></div></td>
+                    <!-- DIRECTORY TABLE CARD -->
+                    <div class="card" id="people-table-card" style="padding:0; overflow:hidden; border:1px solid var(--border-color); border-radius:14px; box-shadow:0 4px 20px rgba(0,0,0,0.03);">
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; text-align:left;">
+                                <thead>
+                                    <tr style="background:var(--surface-50); border-bottom:1px solid var(--border-color); font-size:0.78rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">
+                                        <th style="padding:1rem 0.5rem 1rem 1.25rem; width:38px;">
+                                            <input type="checkbox" id="people-select-all" style="cursor:pointer; width:16px; height:16px; accent-color:#18181B; border-radius:4px;">
+                                        </th>
+                                        <th style="padding:1rem 1rem;">Profile & Name</th>
+                                        <th style="padding:1rem;">Contact Info</th>
+                                        <th style="padding:1rem;">Address</th>
+                                        <th style="padding:1rem;">Total Spent</th>
+                                        <th style="padding:1rem;">Invoices</th>
+                                        <th style="padding:1rem 1.25rem; text-align:right;">Actions</th>
                                     </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody id="people-list-body">
+                                    ${Array(4).fill(0).map(() => `
+                                        <tr style="border-bottom:1px solid var(--border-color);">
+                                            <td style="padding:1rem 0.5rem 1rem 1.25rem;"><div class="skeleton-shimmer" style="width:16px; height:16px; border-radius:4px;"></div></td>
+                                            <td style="padding:1rem 1rem;"><div class="skeleton-shimmer" style="width:160px; height:18px;"></div></td>
+                                            <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:120px; height:16px;"></div></td>
+                                            <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:140px; height:16px;"></div></td>
+                                            <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:80px; height:16px;"></div></td>
+                                            <td style="padding:1rem;"><div class="skeleton-shimmer" style="width:60px; height:20px; border-radius:999px;"></div></td>
+                                            <td style="padding:1rem 1.25rem; text-align:right;"><div class="skeleton-shimmer" style="width:100px; height:28px; border-radius:6px; margin-left:auto;"></div></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- FLOATING PEOPLE BATCH ACTION BAR (Multi-selection) -->
+                    <div id="people-batch-action-bar" class="prd-batch-action-bar" style="display:none;">
+                        <div style="display:flex; align-items:center; gap:0.65rem;">
+                            <span id="people-batch-count" class="prd-batch-badge">0 selected</span>
+                            <button type="button" id="btn-people-batch-select-all" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem;" title="Select all active contacts or deselect all">
+                                Select All
+                            </button>
+                            <button type="button" id="btn-people-batch-invert" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem; display:none;" title="Invert selection">
+                                Invert
+                            </button>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                            <button type="button" id="btn-people-batch-export" class="btn btn-primary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #18181B; background:#18181B; color:#FFFFFF; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Export selected profiles as CSV">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                <span>Export Selected</span>
+                            </button>
+                            <button type="button" id="btn-people-batch-delete" class="btn btn-danger btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1.5px solid #fca5a5; background:#FFFFFF; color:#dc2626; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Delete all selected profiles">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                <span>Delete Selected</span>
+                            </button>
+                            <button type="button" id="btn-people-batch-cancel" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.85rem;" title="Clear selection">
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- FLOATING PEOPLE BATCH ACTION BAR (Multi-selection) -->
-                <div id="people-batch-action-bar" class="prd-batch-action-bar" style="display:none;">
-                    <div style="display:flex; align-items:center; gap:0.65rem;">
-                        <span id="people-batch-count" class="prd-batch-badge">0 selected</span>
-                        <button type="button" id="btn-people-batch-select-all" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem;" title="Select all active contacts or deselect all">
-                            Select All
-                        </button>
-                        <button type="button" id="btn-people-batch-invert" class="btn btn-secondary btn-sm" style="height:30px; font-size:0.75rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.65rem; display:none;" title="Invert selection">
-                            Invert
-                        </button>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                        <button type="button" id="btn-people-batch-export" class="btn btn-primary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #18181B; background:#18181B; color:#FFFFFF; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Export selected profiles as CSV">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            <span>Export Selected</span>
-                        </button>
-                        <button type="button" id="btn-people-batch-delete" class="btn btn-danger btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1.5px solid #fca5a5; background:#FFFFFF; color:#dc2626; border-radius:8px; display:inline-flex; align-items:center; gap:0.4rem;" title="Delete all selected profiles">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            <span>Delete Selected</span>
-                        </button>
-                        <button type="button" id="btn-people-batch-cancel" class="btn btn-secondary btn-sm" style="height:32px; font-size:0.8rem; font-weight:700; border:1px solid #E4E4E7; background:#FFFFFF; color:#18181B; border-radius:8px; padding:0 0.85rem;" title="Clear selection">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
+                <!-- Dedicated Editor Panel Mounted in List View -->
+                ${getPersonFormMarkup()}
             </div>
 
             <style>
@@ -517,8 +636,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
         container.innerHTML = `
             <div class="dedicated-detail-container" style="animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
-                
-                <!-- BREADCRUMB & TOP NAV -->
+                <div id="people-detail-view">
+                    <!-- BREADCRUMB & TOP NAV -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
                     <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.88rem;">
                         <button type="button" id="btn-back-to-people" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-weight:600; display:flex; align-items:center; gap:0.35rem; padding:0;">
@@ -1031,6 +1150,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
                 </div>
 
+                <!-- Dedicated Editor Panel Mounted in Detail View -->
+                ${getPersonFormMarkup()}
             </div>
 
             <style>
@@ -1084,100 +1205,384 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     };
 
     // -------------------------------------------------------------
-    // ATTACH LIST EVENTS
+    // DEDICATED PERSON EDITOR LOGIC & CONTROLS
     // -------------------------------------------------------------
-    function bindListEvents() {
+    let returnToDetailAfterEditor = false;
+    let initialPersonSnapshot = null;
+    let pendingPersonAvatarFile = null;
+    let personUnsavedIndicator = null;
+
+    const processPersonFile = async (file) => {
+        if (!file || !file.type.startsWith('image/')) {
+            showAlert.warning("Please provide a valid image file.");
+            return;
+        }
+
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDimension = 512;
+
+                    if (width > maxDimension || height > maxDimension) {
+                        if (width > height) {
+                            height = Math.round((height * maxDimension) / width);
+                            width = maxDimension;
+                        } else {
+                            width = Math.round((width * maxDimension) / height);
+                            height = maxDimension;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const avatarPreview = container.querySelector('#person-avatar-preview');
+                    const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
+                    const removeImgBtn = container.querySelector('#person-remove-avatar-btn');
+                    const imageUrlInput = container.querySelector('#person-image-url');
+
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            pendingPersonAvatarFile = file;
+                            if (avatarPreview) {
+                                avatarPreview.src = e.target.result;
+                                avatarPreview.style.display = 'block';
+                            }
+                            if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                            if (removeImgBtn) removeImgBtn.style.display = 'inline-flex';
+                            resolve(file);
+                            return;
+                        }
+                        const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                            type: "image/webp",
+                            lastModified: Date.now()
+                        });
+                        pendingPersonAvatarFile = compressedFile;
+                        if (avatarPreview) {
+                            avatarPreview.src = canvas.toDataURL('image/webp', 0.88);
+                            avatarPreview.style.display = 'block';
+                        }
+                        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                        if (removeImgBtn) removeImgBtn.style.display = 'inline-flex';
+                        if (imageUrlInput) imageUrlInput.value = '';
+                        resolve(compressedFile);
+                    }, 'image/webp', 0.88);
+                };
+                img.onerror = () => {
+                    pendingPersonAvatarFile = file;
+                    const avatarPreview = container.querySelector('#person-avatar-preview');
+                    const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
+                    const removeImgBtn = container.querySelector('#person-remove-avatar-btn');
+                    if (avatarPreview) {
+                        avatarPreview.src = e.target.result;
+                        avatarPreview.style.display = 'block';
+                    }
+                    if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                    if (removeImgBtn) removeImgBtn.style.display = 'inline-flex';
+                    resolve(file);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const getPersonFormSnapshot = () => {
+        return JSON.stringify({
+            id: container.querySelector('#person-id')?.value || '',
+            name: container.querySelector('#person-name')?.value?.trim() || '',
+            phone: container.querySelector('#person-phone')?.value?.trim() || '',
+            email: container.querySelector('#person-email')?.value?.trim() || '',
+            address: container.querySelector('#person-address')?.value?.trim() || '',
+            tags: container.querySelector('#person-tags')?.value?.trim() || '',
+            status: container.querySelector('#person-status')?.value || 'Active',
+            notes: container.querySelector('#person-notes')?.value?.trim() || '',
+            taxId: container.querySelector('#person-tax-id')?.value?.trim() || '',
+            website: container.querySelector('#person-website')?.value?.trim() || '',
+            isPrimary: Boolean(container.querySelector('#person-primary')?.checked),
+            image: container.querySelector('#person-image-url')?.value?.trim() || ''
+        });
+    };
+
+    const isPersonFormDirty = () => {
+        const formContainer = container.querySelector('#person-form-container');
+        if (!formContainer || !document.body.contains(formContainer) || formContainer.style.display === 'none') return false;
+
+        const id = container.querySelector('#person-id')?.value;
+        if (id) {
+            if (!initialPersonSnapshot) return false;
+            return getPersonFormSnapshot() !== initialPersonSnapshot;
+        } else {
+            const name = container.querySelector('#person-name')?.value?.trim() || '';
+            const phone = container.querySelector('#person-phone')?.value?.trim() || '';
+            const email = container.querySelector('#person-email')?.value?.trim() || '';
+            const address = container.querySelector('#person-address')?.value?.trim() || '';
+            const notes = container.querySelector('#person-notes')?.value?.trim() || '';
+            const img = container.querySelector('#person-image-url')?.value?.trim() || '';
+            return Boolean(name || phone || email || address || notes || img || pendingPersonAvatarFile);
+        }
+    };
+
+    const checkPersonDirty = () => {
+        const isDirty = isPersonFormDirty();
+        if (personUnsavedIndicator) {
+            personUnsavedIndicator.update(isDirty);
+        }
+        const id = container.querySelector('#person-id')?.value || 'new';
+        const draftKey = `person_${currentTab}_${id}`;
+        if (isDirty) {
+            draftManager.saveDraft(draftKey, getPersonFormSnapshot());
+            draftManager.registerActiveForm('person_form', isPersonFormDirty);
+        } else {
+            draftManager.clearDraft(draftKey);
+            draftManager.unregisterActiveForm('person_form');
+        }
+    };
+
+    const restorePersonDraftIfAny = (targetId = 'new') => {
+        const draftKey = `person_${currentTab}_${targetId}`;
+        const draft = draftManager.getDraft(draftKey);
+        if (!draft) return false;
+        try {
+            const data = typeof draft === 'string' ? JSON.parse(draft) : draft;
+            if (data.name !== undefined && container.querySelector('#person-name')) container.querySelector('#person-name').value = data.name;
+            if (data.phone !== undefined && container.querySelector('#person-phone')) container.querySelector('#person-phone').value = data.phone;
+            if (data.email !== undefined && container.querySelector('#person-email')) container.querySelector('#person-email').value = data.email;
+            if (data.address !== undefined && container.querySelector('#person-address')) container.querySelector('#person-address').value = data.address;
+            if (data.tags !== undefined && container.querySelector('#person-tags')) container.querySelector('#person-tags').value = data.tags;
+            if (data.status !== undefined && container.querySelector('#person-status')) container.querySelector('#person-status').value = data.status;
+            if (data.notes !== undefined && container.querySelector('#person-notes')) container.querySelector('#person-notes').value = data.notes;
+            if (data.taxId !== undefined && container.querySelector('#person-tax-id')) container.querySelector('#person-tax-id').value = data.taxId;
+            if (data.website !== undefined && container.querySelector('#person-website')) container.querySelector('#person-website').value = data.website;
+            if (data.isPrimary !== undefined && container.querySelector('#person-primary')) container.querySelector('#person-primary').checked = Boolean(data.isPrimary);
+            if (data.image && container.querySelector('#person-image-url')) {
+                container.querySelector('#person-image-url').value = data.image;
+                const avatarPreview = container.querySelector('#person-avatar-preview');
+                const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
+                const removeImgBtn = container.querySelector('#person-remove-avatar-btn');
+                if (avatarPreview) {
+                    avatarPreview.src = data.image;
+                    avatarPreview.style.display = 'block';
+                }
+                if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                if (removeImgBtn) removeImgBtn.style.display = 'inline-flex';
+            }
+            return true;
+        } catch (e) {
+            console.warn("Could not parse person draft:", e);
+            return false;
+        }
+    };
+
+    const showPersonEditor = (person = null, fromDetail = false) => {
+        returnToDetailAfterEditor = fromDetail;
+        const formContainer = container.querySelector('#person-form-container');
+        const listView = container.querySelector('#people-list-view');
+        const detailView = container.querySelector('#people-detail-view');
+        const batchBar = container.querySelector('#people-batch-action-bar');
+
+        if (listView) listView.style.display = 'none';
+        if (detailView) detailView.style.display = 'none';
+        if (batchBar) batchBar.style.display = 'none';
+
+        if (formContainer) {
+            formContainer.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        const typeName = isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer');
+        const badge = container.querySelector('#person-form-badge');
+        const title = container.querySelector('#person-form-title');
+        const subtitle = container.querySelector('#person-form-subtitle');
+        const avatarPreview = container.querySelector('#person-avatar-preview');
+        const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
+        const removeImgBtn = container.querySelector('#person-remove-avatar-btn');
+        const submitBtn = container.querySelector('#person-submit-btn');
+
+        pendingPersonAvatarFile = null;
+
+        if (person) {
+            // Edit Mode
+            const displayId = person.uniqueId || (person.id ? person.id.slice(0, 8) : 'N/A');
+            const displayName = person.name || person.businessName || 'Profile';
+            if (badge) badge.textContent = `Edit ${typeName} • #${displayId}`;
+            if (title) title.textContent = `Edit ${typeName}: ${displayName}`;
+            if (subtitle) subtitle.textContent = `Update directory credentials, contact channels, and transaction terms`;
+            if (submitBtn) submitBtn.textContent = `Save ${typeName}`;
+
+            if (container.querySelector('#person-id')) container.querySelector('#person-id').value = person.id || '';
+            if (container.querySelector('#person-name')) container.querySelector('#person-name').value = person.name || person.businessName || '';
+            if (container.querySelector('#person-phone')) container.querySelector('#person-phone').value = person.phone || '';
+            if (container.querySelector('#person-email')) container.querySelector('#person-email').value = person.email || '';
+            if (container.querySelector('#person-address')) container.querySelector('#person-address').value = person.address || '';
+            if (container.querySelector('#person-contact-liaison')) container.querySelector('#person-contact-liaison').value = person.contactPerson || '';
+            if (container.querySelector('#person-tags')) {
+                const rawTags = Array.isArray(person.tags) ? person.tags : (person.tags ? String(person.tags).split(',') : []);
+                container.querySelector('#person-tags').value = rawTags.map(t => String(t).trim()).filter(Boolean).join(', ');
+            }
+            if (container.querySelector('#person-status')) {
+                container.querySelector('#person-status').value = person.status || 'Active';
+            }
+            if (container.querySelector('#person-notes')) {
+                container.querySelector('#person-notes').value = person.notes || '';
+            }
+            if (container.querySelector('#person-tax-id')) {
+                container.querySelector('#person-tax-id').value = person.taxId || person.bin || '';
+            }
+            if (container.querySelector('#person-website')) {
+                container.querySelector('#person-website').value = person.website || '';
+            }
+            if (container.querySelector('#person-primary')) {
+                container.querySelector('#person-primary').checked = Boolean(person.isPrimary);
+            }
+
+            const img = person.imageUrl || person.imageUri;
+            if (container.querySelector('#person-image-url')) {
+                container.querySelector('#person-image-url').value = img || '';
+            }
+            if (img && avatarPreview) {
+                avatarPreview.src = img;
+                avatarPreview.style.display = 'block';
+                if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                if (removeImgBtn) removeImgBtn.style.display = 'inline-flex';
+            } else {
+                if (avatarPreview) {
+                    avatarPreview.src = '';
+                    avatarPreview.style.display = 'none';
+                }
+                if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
+                if (removeImgBtn) removeImgBtn.style.display = 'none';
+            }
+        } else {
+            // Create Mode
+            if (badge) badge.textContent = `New ${typeName} Profile`;
+            if (title) title.textContent = `New ${typeName}`;
+            if (subtitle) subtitle.textContent = `Add a new ${typeName.toLowerCase()} record to the directory for invoicing and relationship tracking`;
+            if (submitBtn) submitBtn.textContent = `Save ${typeName}`;
+
+            container.querySelector('#person-form')?.reset();
+            if (container.querySelector('#person-id')) container.querySelector('#person-id').value = '';
+            if (container.querySelector('#person-image-url')) container.querySelector('#person-image-url').value = '';
+            if (avatarPreview) {
+                avatarPreview.src = '';
+                avatarPreview.style.display = 'none';
+            }
+            if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
+            if (removeImgBtn) removeImgBtn.style.display = 'none';
+            if (container.querySelector('#person-status')) container.querySelector('#person-status').value = 'Active';
+            if (container.querySelector('#person-primary')) container.querySelector('#person-primary').checked = false;
+
+            restorePersonDraftIfAny('new');
+        }
+
+        initialPersonSnapshot = getPersonFormSnapshot();
+        checkPersonDirty();
+    };
+
+    const hidePersonEditor = () => {
+        const formContainer = container.querySelector('#person-form-container');
+        const listView = container.querySelector('#people-list-view');
+        const detailView = container.querySelector('#people-detail-view');
+
+        if (formContainer) formContainer.style.display = 'none';
+
+        if (returnToDetailAfterEditor && activePersonDetail && detailView) {
+            detailView.style.display = 'block';
+        } else if (listView) {
+            listView.style.display = 'block';
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    function setupPersonEditorView() {
         const formContainer = container.querySelector('#person-form-container');
         const form = container.querySelector('#person-form');
         const title = container.querySelector('#person-form-title');
-        const btnAdd = container.querySelector('#btn-add-person');
-        const btnCancel = container.querySelector('#person-cancel-btn');
-        const btnCancelX = container.querySelector('#person-cancel-x');
-
         const avatarDropzone = container.querySelector('#person-avatar-dropzone');
         const avatarPreview = container.querySelector('#person-avatar-preview');
         const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
         const imageFileInput = container.querySelector('#person-image-file');
         const imageUrlInput = container.querySelector('#person-image-url');
+        const removeImgBtn = container.querySelector('#person-remove-avatar-btn');
 
-        let pendingPersonAvatarFile = null;
+        if (!formContainer || !form) return;
 
-        const processPersonFile = async (file) => {
-            if (!file || !file.type.startsWith('image/')) {
-                showAlert.warning("Please provide a valid image file.");
-                return;
-            }
+        // Cancel triggers
+        formContainer.querySelectorAll('.person-cancel-trigger').forEach(btn => {
+            btn.onclick = async () => {
+                if (isPersonFormDirty()) {
+                    const leave = await showAlert.confirmUnsavedChanges();
+                    if (!leave) return;
+                }
+                const id = container.querySelector('#person-id')?.value || 'new';
+                draftManager.clearDraft(`person_${currentTab}_${id}`);
+                draftManager.unregisterActiveForm('person_form');
+                if (personUnsavedIndicator) personUnsavedIndicator.update(false);
+                hidePersonEditor();
+            };
+        });
 
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        const maxDimension = 512;
+        // Remove avatar
+        if (removeImgBtn) {
+            removeImgBtn.onclick = () => {
+                pendingPersonAvatarFile = null;
+                if (imageUrlInput) imageUrlInput.value = '';
+                if (imageFileInput) imageFileInput.value = '';
+                if (avatarPreview) {
+                    avatarPreview.src = '';
+                    avatarPreview.style.display = 'none';
+                }
+                if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
+                removeImgBtn.style.display = 'none';
+                checkPersonDirty();
+            };
+        }
 
-                        if (width > maxDimension || height > maxDimension) {
-                            if (width > height) {
-                                height = Math.round((height * maxDimension) / width);
-                                width = maxDimension;
-                            } else {
-                                width = Math.round((width * maxDimension) / height);
-                                height = maxDimension;
-                            }
-                        }
+        // Image file change
+        if (imageFileInput) {
+            imageFileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    await processPersonFile(file);
+                    checkPersonDirty();
+                }
+            };
+        }
 
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
+        // Image URL input
+        if (imageUrlInput) {
+            imageUrlInput.oninput = () => {
+                const val = imageUrlInput.value.trim();
+                pendingPersonAvatarFile = null;
+                if (val) {
+                    if (avatarPreview) {
+                        avatarPreview.src = val;
+                        avatarPreview.style.display = 'block';
+                    }
+                    if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+                    if (removeImgBtn) removeImgBtn.style.display = 'inline-flex';
+                } else {
+                    if (avatarPreview) avatarPreview.style.display = 'none';
+                    if (avatarPlaceholder) avatarPlaceholder.style.display = 'flex';
+                    if (removeImgBtn) removeImgBtn.style.display = 'none';
+                }
+                checkPersonDirty();
+            };
+        }
 
-                        canvas.toBlob((blob) => {
-                            if (!blob) {
-                                pendingPersonAvatarFile = file;
-                                if (avatarPreview) {
-                                    avatarPreview.src = e.target.result;
-                                    avatarPreview.style.display = 'block';
-                                }
-                                if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                                resolve(file);
-                                return;
-                            }
-                            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
-                                type: "image/webp",
-                                lastModified: Date.now()
-                            });
-                            pendingPersonAvatarFile = compressedFile;
-                            if (avatarPreview) {
-                                avatarPreview.src = canvas.toDataURL('image/webp', 0.88);
-                                avatarPreview.style.display = 'block';
-                            }
-                            if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                            if (imageUrlInput) imageUrlInput.value = '';
-                            resolve(compressedFile);
-                        }, 'image/webp', 0.88);
-                    };
-                    img.onerror = () => {
-                        pendingPersonAvatarFile = file;
-                        if (avatarPreview) {
-                            avatarPreview.src = e.target.result;
-                            avatarPreview.style.display = 'block';
-                        }
-                        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                        resolve(file);
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        };
-
+        // Avatar dropzone
         if (avatarDropzone && imageFileInput) {
-            avatarDropzone.addEventListener('click', (e) => {
-                if (e.target.closest('input') || e.target.closest('label')) return;
+            avatarDropzone.onclick = (e) => {
+                if (e.target.closest('input') || e.target.closest('label') || e.target.closest('button')) return;
                 imageFileInput.click();
-            });
+            };
 
             ['dragenter', 'dragover'].forEach(evtName => {
                 avatarDropzone.addEventListener(evtName, (e) => {
@@ -1185,7 +1590,6 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     e.stopPropagation();
                     avatarDropzone.style.borderColor = '#18181B';
                     avatarDropzone.style.background = '#F4F4F5';
-                    avatarDropzone.style.boxShadow = '0 0 0 2px #E4E4E7';
                 });
             });
 
@@ -1193,9 +1597,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 avatarDropzone.addEventListener(evtName, (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    avatarDropzone.style.borderColor = 'var(--border-color)';
-                    avatarDropzone.style.background = 'var(--surface-50)';
-                    avatarDropzone.style.boxShadow = 'none';
+                    avatarDropzone.style.borderColor = '#E4E4E7';
+                    avatarDropzone.style.background = '#FAFAFA';
                 });
             });
 
@@ -1206,92 +1609,10 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 if (files && files.length > 0) {
                     await processPersonFile(files[0]);
                     showAlert.info("Image selected. Ready to save.");
+                    checkPersonDirty();
                 }
             });
         }
-
-        // Unsaved changes state & snapshot helpers
-        let personUnsavedIndicator = null;
-        let initialPersonSnapshot = null;
-
-        const getPersonFormSnapshot = () => {
-            return JSON.stringify({
-                id: container.querySelector('#person-id')?.value || '',
-                name: container.querySelector('#person-name')?.value?.trim() || '',
-                phone: container.querySelector('#person-phone')?.value?.trim() || '',
-                email: container.querySelector('#person-email')?.value?.trim() || '',
-                address: container.querySelector('#person-address')?.value?.trim() || '',
-                tags: container.querySelector('#person-tags')?.value?.trim() || '',
-                status: container.querySelector('#person-status')?.value || 'Active',
-                notes: container.querySelector('#person-notes')?.value?.trim() || '',
-                image: container.querySelector('#person-image-url')?.value?.trim() || ''
-            });
-        };
-
-        const isPersonFormDirty = () => {
-            const formContainer = container.querySelector('#person-form-container');
-            if (!formContainer || !document.body.contains(formContainer) || formContainer.style.display === 'none') return false;
-
-            const id = container.querySelector('#person-id')?.value;
-            if (id) {
-                if (!initialPersonSnapshot) return false;
-                return getPersonFormSnapshot() !== initialPersonSnapshot;
-            } else {
-                const name = container.querySelector('#person-name')?.value?.trim() || '';
-                const phone = container.querySelector('#person-phone')?.value?.trim() || '';
-                const email = container.querySelector('#person-email')?.value?.trim() || '';
-                const address = container.querySelector('#person-address')?.value?.trim() || '';
-                const notes = container.querySelector('#person-notes')?.value?.trim() || '';
-                const img = container.querySelector('#person-image-url')?.value?.trim() || '';
-                return Boolean(name || phone || email || address || notes || img || pendingPersonAvatarFile);
-            }
-        };
-
-        const checkPersonDirty = () => {
-            const isDirty = isPersonFormDirty();
-            if (personUnsavedIndicator) {
-                personUnsavedIndicator.update(isDirty);
-            }
-            const id = container.querySelector('#person-id')?.value || 'new';
-            const draftKey = `person_${currentTab}_${id}`;
-            if (isDirty) {
-                draftManager.saveDraft(draftKey, getPersonFormSnapshot());
-                draftManager.registerActiveForm('person_form', isPersonFormDirty);
-            } else {
-                draftManager.clearDraft(draftKey);
-                draftManager.unregisterActiveForm('person_form');
-            }
-        };
-
-        const restorePersonDraftIfAny = (targetId = 'new') => {
-            const draftKey = `person_${currentTab}_${targetId}`;
-            const draft = draftManager.getDraft(draftKey);
-            if (!draft) return false;
-            try {
-                const data = typeof draft === 'string' ? JSON.parse(draft) : draft;
-                if (data.name !== undefined && container.querySelector('#person-name')) container.querySelector('#person-name').value = data.name;
-                if (data.phone !== undefined && container.querySelector('#person-phone')) container.querySelector('#person-phone').value = data.phone;
-                if (data.email !== undefined && container.querySelector('#person-email')) container.querySelector('#person-email').value = data.email;
-                if (data.address !== undefined && container.querySelector('#person-address')) container.querySelector('#person-address').value = data.address;
-                if (data.tags !== undefined && container.querySelector('#person-tags')) container.querySelector('#person-tags').value = data.tags;
-                if (data.status !== undefined && container.querySelector('#person-status')) container.querySelector('#person-status').value = data.status;
-                if (data.notes !== undefined && container.querySelector('#person-notes')) container.querySelector('#person-notes').value = data.notes;
-                if (data.image && container.querySelector('#person-image-url')) {
-                    container.querySelector('#person-image-url').value = data.image;
-                    const avatarPreview = container.querySelector('#person-avatar-preview');
-                    const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
-                    if (avatarPreview) {
-                        avatarPreview.src = data.image;
-                        avatarPreview.style.display = 'block';
-                    }
-                    if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                }
-                return true;
-            } catch (e) {
-                console.warn("Could not parse person draft:", e);
-                return false;
-            }
-        };
 
         // Mount Unsaved Indicator
         const formHeaderRow = title?.parentElement;
@@ -1309,70 +1630,128 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             });
         }
 
-        form?.querySelectorAll('input, select, textarea').forEach(el => {
+        // Form dirty checking
+        form.querySelectorAll('input, select, textarea').forEach(el => {
             el.addEventListener('input', checkPersonDirty);
             el.addEventListener('change', checkPersonDirty);
         });
 
+        // Form Submit
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const submitBtn = container.querySelector('#person-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Saving...';
+            }
+
+            try {
+                const id = container.querySelector('#person-id')?.value;
+                let finalImageUrl = imageUrlInput ? imageUrlInput.value.trim() : '';
+
+                const file = pendingPersonAvatarFile || imageFileInput?.files?.[0];
+                if (file) {
+                    try {
+                        finalImageUrl = await storageService.uploadImage(file, workspaceId);
+                    } catch (imgErr) {
+                        console.warn("Storage upload warning, falling back:", imgErr);
+                    }
+                }
+
+                const nameVal = container.querySelector('#person-name')?.value?.trim() || '';
+                if (!nameVal) {
+                    throw new Error("Full Name / Company Title is required.");
+                }
+
+                const typeLabel = isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer');
+
+                const payload = {
+                    name: nameVal,
+                    phone: container.querySelector('#person-phone')?.value?.trim() || '',
+                    email: container.querySelector('#person-email')?.value?.trim() || '',
+                    address: container.querySelector('#person-address')?.value?.trim() || '',
+                    tags: container.querySelector('#person-tags')?.value?.split(',').map(s => s.trim()).filter(Boolean) || [],
+                    status: container.querySelector('#person-status')?.value || 'Active',
+                    notes: container.querySelector('#person-notes')?.value || '',
+                    contactPerson: container.querySelector('#person-contact-liaison')?.value?.trim() || '',
+                    taxId: container.querySelector('#person-tax-id')?.value?.trim() || '',
+                    website: container.querySelector('#person-website')?.value?.trim() || '',
+                    isPrimary: Boolean(container.querySelector('#person-primary')?.checked),
+                    imageUrl: finalImageUrl,
+                    imageUri: finalImageUrl
+                };
+
+                if (isBusinessMode || currentTab === 'businesses') {
+                    payload.businessName = payload.name;
+                }
+
+                if (!id && userRestrictions.disableAdd) {
+                    throw new Error(`You do not have permission to add new ${typeLabel.toLowerCase()} profiles.`);
+                }
+                if (id && userRestrictions.disableUpdate) {
+                    throw new Error(`You do not have permission to update ${typeLabel.toLowerCase()} profiles.`);
+                }
+                if (id && userRestrictions.disableUpdateOthers) {
+                    const existing = dataList.find(p => p.id === id);
+                    const isCreatorSelf = existing && ((existing.creatorId && (existing.creatorId === currentUser?.uid || (currentUser?.email && existing.creatorId.toLowerCase() === (currentUser?.email || '').toLowerCase()))) || (existing.createdBy && (existing.createdBy === currentUser?.uid || (currentUser?.email && existing.createdBy.toLowerCase() === (currentUser?.email || '').toLowerCase()))));
+                    if (!isCreatorSelf) {
+                        throw new Error("You are restricted from updating profiles created by other members.");
+                    }
+                }
+
+                if (id) {
+                    if (currentTab === 'customers') await peopleService.updateCustomer(id, payload);
+                    else if (currentTab === 'businesses' || isBusinessMode) await peopleService.updateBusiness(id, payload);
+                    else if (currentTab === 'clients') await peopleService.updateClient(id, payload);
+
+                    if (payload.isPrimary) {
+                        await peopleService.setPrimaryBusiness(id).catch(() => {});
+                    }
+                    showAlert.success(`${typeLabel} updated successfully!`);
+                } else {
+                    let newId;
+                    if (currentTab === 'customers') newId = await peopleService.addCustomer(payload, currentUser?.uid);
+                    else if (currentTab === 'businesses' || isBusinessMode) newId = await peopleService.addBusiness(payload, currentUser?.uid);
+                    else if (currentTab === 'clients') newId = await peopleService.addClient(payload, currentUser?.uid);
+
+                    if (payload.isPrimary && newId) {
+                        await peopleService.setPrimaryBusiness(newId).catch(() => {});
+                    }
+                    showAlert.success(`${typeLabel} created successfully!`);
+                }
+
+                const curId = id || 'new';
+                draftManager.clearDraft(`person_${currentTab}_${curId}`);
+                draftManager.unregisterActiveForm('person_form');
+                if (personUnsavedIndicator) personUnsavedIndicator.update(false);
+
+                if (returnToDetailAfterEditor && activePersonDetail) {
+                    activePersonDetail = { ...activePersonDetail, ...payload, id: id || activePersonDetail.id };
+                    renderDedicatedDetailView();
+                } else {
+                    hidePersonEditor();
+                    loadData();
+                }
+            } catch (err) {
+                console.error("Save error:", err);
+                showAlert.error("Failed to save profile: " + (err.message || 'Error'));
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Save Profile';
+                }
+            }
+        };
+    }
+
+    // -------------------------------------------------------------
+    // ATTACH LIST EVENTS
+    // -------------------------------------------------------------
+    function bindListEvents() {
+        const btnAdd = container.querySelector('#btn-add-person');
         if (btnAdd) {
             btnAdd.addEventListener('click', () => {
-                form.reset();
-                pendingPersonAvatarFile = null;
-                container.querySelector('#person-id').value = '';
-                if (avatarPreview) avatarPreview.style.display = 'none';
-                if (avatarPlaceholder) avatarPlaceholder.style.display = 'block';
-                title.textContent = `New ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}`;
-                
-                initialPersonSnapshot = null;
-                const restored = restorePersonDraftIfAny('new');
-                if (restored) {
-                    showAlert.info("Restored progressive unsaved draft.");
-                }
-
-                checkPersonDirty();
-                formContainer.style.display = 'block';
-                formContainer.scrollIntoView({ behavior: 'smooth' });
-            });
-        }
-
-        const handleCancelPersonForm = async () => {
-            if (isPersonFormDirty()) {
-                const leave = await showAlert.confirmUnsavedChanges();
-                if (!leave) return;
-            }
-            const id = container.querySelector('#person-id')?.value || 'new';
-            const draftKey = `person_${currentTab}_${id}`;
-            draftManager.clearDraft(draftKey);
-            draftManager.unregisterActiveForm('person_form');
-            if (personUnsavedIndicator) personUnsavedIndicator.update(false);
-            formContainer.style.display = 'none';
-        };
-
-        if (btnCancel) btnCancel.addEventListener('click', handleCancelPersonForm);
-        if (btnCancelX) btnCancelX.addEventListener('click', handleCancelPersonForm);
-
-        if (imageFileInput) {
-            imageFileInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    await processPersonFile(file);
-                    checkPersonDirty();
-                }
-            });
-        }
-
-        if (imageUrlInput) {
-            imageUrlInput.addEventListener('input', () => {
-                const val = imageUrlInput.value.trim();
-                pendingPersonAvatarFile = null;
-                if (val) {
-                    if (avatarPreview) {
-                        avatarPreview.src = val;
-                        avatarPreview.style.display = 'block';
-                    }
-                    if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                }
-                checkPersonDirty();
+                showPersonEditor(null, false);
             });
         }
 
@@ -1384,91 +1763,13 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     if (targetTab === currentTab) return;
                     currentTab = targetTab;
                     activePersonDetail = null;
-                    formContainer.style.display = 'none';
+                    hidePersonEditor();
                     loadData();
                 });
             });
         }
 
-        // Form Submit
-        if (form) {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitBtn = container.querySelector('#person-submit-btn');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Saving...';
-                }
-
-                try {
-                    const id = container.querySelector('#person-id').value;
-                    let finalImageUrl = imageUrlInput ? imageUrlInput.value.trim() : '';
-
-                    const file = pendingPersonAvatarFile || imageFileInput?.files?.[0];
-                    if (file) {
-                        try {
-                            finalImageUrl = await storageService.uploadImage(file, workspaceId);
-                        } catch (imgErr) {
-                            console.warn("Storage upload warning, falling back:", imgErr);
-                        }
-                    }
-
-                    const payload = {
-                        name: container.querySelector('#person-name').value.trim(),
-                        phone: container.querySelector('#person-phone').value.trim(),
-                        email: container.querySelector('#person-email').value.trim(),
-                        address: container.querySelector('#person-address').value.trim(),
-                        tags: container.querySelector('#person-tags')?.value?.split(',').map(s => s.trim()).filter(Boolean) || [],
-                        status: container.querySelector('#person-status')?.value || 'Active',
-                        notes: container.querySelector('#person-notes')?.value || '',
-                        imageUrl: finalImageUrl,
-                        imageUri: finalImageUrl
-                    };
-
-                    if (!id && userRestrictions.disableAdd) {
-                        throw new Error("You do not have permission to add new directory profiles.");
-                    }
-                    if (id && userRestrictions.disableUpdate) {
-                        throw new Error("You do not have permission to update directory profiles.");
-                    }
-                    if (id && userRestrictions.disableUpdateOthers) {
-                        const existing = dataList.find(p => p.id === id);
-                        const isCreatorSelf = existing && ((existing.creatorId && (existing.creatorId === currentUser?.uid || (currentUser?.email && existing.creatorId.toLowerCase() === (currentUser?.email || '').toLowerCase()))) || (existing.createdBy && (existing.createdBy === currentUser?.uid || (currentUser?.email && existing.createdBy.toLowerCase() === (currentUser?.email || '').toLowerCase()))));
-                        if (!isCreatorSelf) {
-                            throw new Error("You are restricted from updating profiles created by other members.");
-                        }
-                    }
-
-                    if (id) {
-                        if (currentTab === 'customers') await peopleService.updateCustomer(id, payload);
-                        else if (currentTab === 'businesses') await peopleService.updateBusiness(id, payload);
-                        else if (currentTab === 'clients') await peopleService.updateClient(id, payload);
-                        showAlert.success("Profile updated successfully!");
-                    } else {
-                        if (currentTab === 'customers') await peopleService.addCustomer(payload, currentUser?.uid);
-                        else if (currentTab === 'businesses') await peopleService.addBusiness(payload, currentUser?.uid);
-                        else if (currentTab === 'clients') await peopleService.addClient(payload, currentUser?.uid);
-                        showAlert.success("Profile created successfully!");
-                    }
-
-                    const curId = id || 'new';
-                    const draftKey = `person_${currentTab}_${curId}`;
-                    draftManager.clearDraft(draftKey);
-                    draftManager.unregisterActiveForm('person_form');
-                    if (personUnsavedIndicator) personUnsavedIndicator.update(false);
-
-                    formContainer.style.display = 'none';
-                } catch (err) {
-                    console.error("Save error:", err);
-                    showAlert.error("Failed to save profile: " + (err.message || 'Error'));
-                } finally {
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Save Profile';
-                    }
-                }
-            });
-        }
+        setupPersonEditorView();
     };
 
     // -------------------------------------------------------------
@@ -1534,40 +1835,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         const btnEdit = container.querySelector('#btn-edit-detail-profile');
         if (btnEdit && activePersonDetail) {
             btnEdit.addEventListener('click', () => {
-                const p = activePersonDetail;
-                activePersonDetail = null;
-                renderListView();
-                renderRealtimeList(dataList);
-
-                const formContainer = container.querySelector('#person-form-container');
-                const title = container.querySelector('#person-form-title');
-                const avatarPreview = container.querySelector('#person-avatar-preview');
-                const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
-
-                container.querySelector('#person-id').value = p.id;
-                container.querySelector('#person-name').value = p.name || '';
-                container.querySelector('#person-phone').value = p.phone || '';
-                container.querySelector('#person-email').value = p.email || '';
-                container.querySelector('#person-address').value = p.address || '';
-                if (container.querySelector('#person-tags')) {
-                    container.querySelector('#person-tags').value = (p.tags || []).join(', ');
-                }
-                if (container.querySelector('#person-notes')) {
-                    container.querySelector('#person-notes').value = p.notes || '';
-                }
-
-                const img = p.imageUrl || p.imageUri;
-                if (img && avatarPreview) {
-                    avatarPreview.src = img;
-                    avatarPreview.style.display = 'block';
-                    if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                }
-
-                title.textContent = `Edit ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}`;
-                formContainer.style.display = 'block';
-                formContainer.scrollIntoView({ behavior: 'smooth' });
+                showPersonEditor(activePersonDetail, true);
             });
         }
+
+        setupPersonEditorView();
 
         // Create Invoice pre-filled with this person / business / client
         const triggerCreateInvoice = () => {
@@ -2399,36 +2671,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 const id = e.currentTarget.getAttribute('data-id');
                 const p = dataList.find(x => x.id === id);
                 if (p) {
-                    const formContainer = container.querySelector('#person-form-container');
-                    const title = container.querySelector('#person-form-title');
-                    const avatarPreview = container.querySelector('#person-avatar-preview');
-                    const avatarPlaceholder = container.querySelector('#person-avatar-placeholder');
-
-                    container.querySelector('#person-id').value = p.id;
-                    container.querySelector('#person-name').value = p.name || '';
-                    container.querySelector('#person-phone').value = p.phone || '';
-                    container.querySelector('#person-email').value = p.email || '';
-                    container.querySelector('#person-address').value = p.address || '';
-                    if (container.querySelector('#person-tags')) {
-                        container.querySelector('#person-tags').value = (p.tags || []).join(', ');
-                    }
-                    if (container.querySelector('#person-notes')) {
-                        container.querySelector('#person-notes').value = p.notes || '';
-                    }
-                    if (container.querySelector('#person-status')) {
-                        container.querySelector('#person-status').value = p.status || 'Active';
-                    }
-
-                    const img = p.imageUrl || p.imageUri;
-                    if (img && avatarPreview) {
-                        avatarPreview.src = img;
-                        avatarPreview.style.display = 'block';
-                        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
-                    }
-
-                    title.textContent = `Edit ${isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')}`;
-                    formContainer.style.display = 'block';
-                    formContainer.scrollIntoView({ behavior: 'smooth' });
+                    showPersonEditor(p, false);
                 }
             });
         });

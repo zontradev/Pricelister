@@ -90,12 +90,35 @@ export const getSupplierService = (workspaceId) => {
         // =========================================================================
         getAllSuppliers: async (statusFilter = 'all') => {
             let suppliers = await supplierRepo.getAll();
-            if (!suppliers || suppliers.length === 0) {
-                for (const s of INITIAL_SUPPLIERS) {
-                    await supplierRepo.add({ ...s, workspaceId: wsId });
+            const isMockMode = !wsId || wsId === 'ws_dev_mock';
+
+            if (isMockMode) {
+                if (!suppliers || suppliers.length === 0) {
+                    for (const s of INITIAL_SUPPLIERS) {
+                        await supplierRepo.add({ ...s, workspaceId: wsId });
+                    }
+                    suppliers = await supplierRepo.getAll();
                 }
-                suppliers = await supplierRepo.getAll();
+            } else {
+                // In real workspace mode: NEVER inject demo suppliers!
+                // Purge any legacy mock records that may have been seeded in earlier sessions
+                if (suppliers && suppliers.length > 0) {
+                    const mockIds = ['sup-vanguard-01', 'sup-shenzhen-02', 'sup-nordic-03'];
+                    const mockItems = suppliers.filter(s => mockIds.includes(s.id) || s.creatorId === 'developer@local.test');
+                    if (mockItems.length > 0) {
+                        for (const item of mockItems) {
+                            try {
+                                await supplierRepo.delete(item.id);
+                            } catch (err) {
+                                console.warn("Could not delete legacy mock supplier:", err);
+                            }
+                        }
+                        suppliers = suppliers.filter(s => !mockIds.includes(s.id) && s.creatorId !== 'developer@local.test');
+                    }
+                }
             }
+
+            if (!suppliers) suppliers = [];
 
             if (statusFilter && statusFilter !== 'all') {
                 return suppliers.filter(s => s.status === statusFilter);

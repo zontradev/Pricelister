@@ -214,7 +214,8 @@ const routes = {
  * No .html and no # hash symbol in locator.
  */
 export const getCleanUrlForRoute = (routePath = '/overview') => {
-    let clean = (routePath || '/overview').replace(/^#/, '').trim();
+    let clean = (routePath || '/overview').replace(/^#/, '').replace(/\/index\.html$/i, '').trim();
+    if (!clean || clean === '/') clean = '/overview';
     if (!clean.startsWith('/')) clean = '/' + clean;
     if (clean === '/workers') clean = '/workspace';
     if (clean === '/customer-invoices') clean = '/invoices/customer';
@@ -244,6 +245,8 @@ export const extractRouteFromUrl = () => {
     const wsMatch = pathname.match(/(?:\/|^)workspace(\/.*)?$/i);
     if (wsMatch) {
         let sub = (wsMatch[1] || '').trim();
+        // Strip any appended /index.html to prevent routing crashes
+        sub = sub.replace(/\/index\.html$/i, '').trim();
         if (sub) {
             if (!sub.startsWith('/')) sub = '/' + sub;
             if (sub === '/customer-invoices') sub = '/invoices/customer';
@@ -256,7 +259,8 @@ export const extractRouteFromUrl = () => {
 
     // 3. Check direct route path match
     for (const r of Object.keys(routes)) {
-        if (pathname.toLowerCase().endsWith(r.toLowerCase())) {
+        const cleanPath = pathname.replace(/\/index\.html$/i, '');
+        if (cleanPath.toLowerCase().endsWith(r.toLowerCase())) {
             return r;
         }
     }
@@ -273,23 +277,36 @@ export const extractRouteFromUrl = () => {
 };
 
 export const initRouter = async (workspaceIdParam = null) => {
+    // Hardcoded Security Guard: App router is strictly for authenticated users!
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        console.warn("[PriceLister Security] Unauthenticated router initialization attempt. Redirecting to /index.html");
+        window.__isRedirecting = true;
+        window.location.replace('/index.html');
+        return;
+    }
+
     // Resolve current workspace ID for the router
     let currentWorkspaceId = workspaceIdParam;
     if (!currentWorkspaceId) {
-        const user = authService.getCurrentUser();
-        if (user && user.uid) {
-            try {
-                const ws = await firestoreService.checkWorkspaceExists(user.uid, user.email);
-                if (ws) currentWorkspaceId = ws.id;
-            } catch (e) {
-                console.error("Failed to load workspace for router", e);
-            }
+        try {
+            const ws = await firestoreService.checkWorkspaceExists(currentUser.uid, currentUser.email);
+            if (ws) currentWorkspaceId = ws.id;
+        } catch (e) {
+            console.error("Failed to load workspace for router", e);
         }
     }
 
-    // Fallback: active workspace from storage or demo sandbox
+    // Fallback: active workspace from storage
     if (!currentWorkspaceId) {
-        currentWorkspaceId = localStorage.getItem('pricelister_active_ws') || 'ws_dev_mock';
+        currentWorkspaceId = localStorage.getItem('pricelister_active_ws');
+    }
+
+    if (!currentWorkspaceId) {
+        console.warn("[PriceLister Security] No active workspace for authenticated user. Redirecting to connection gateway.");
+        window.__isRedirecting = true;
+        window.location.replace('/index.html?view=connection');
+        return;
     }
 
     let currentActiveRoute = null;
@@ -298,13 +315,21 @@ export const initRouter = async (workspaceIdParam = null) => {
      * Core Route Execution Function
      */
     const executeRoute = async (targetPath) => {
+        const checkUser = authService.getCurrentUser();
+        if (!checkUser) {
+            window.__isRedirecting = true;
+            window.location.replace('/index.html');
+            return;
+        }
+
         if (!currentWorkspaceId) return;
 
         // Security Guard: Immediately abort and eject if access is blocked
         if (typeof window !== 'undefined' && window.__activeWorkspace?.isAccessBlocked) {
-            console.warn("[PriceLister Security] Blocked user attempted navigation. Redirecting to launcher.");
+            console.warn("[PriceLister Security] Blocked user attempted navigation. Redirecting to connection gateway.");
             showAlert.error(`Access Blocked: Your access is suspended until ${window.__activeWorkspace.revokeEndFormatted || 'the duration expires'}.`);
-            window.location.href = 'index.html';
+            window.__isRedirecting = true;
+            window.location.replace('/index.html?view=connection');
             return;
         }
 

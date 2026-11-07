@@ -5,7 +5,7 @@ import { getProductService } from '../services/productService.js';
 import { getInvoiceService } from '../services/invoiceService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { getPeopleService } from '../services/peopleService.js';
-import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { firebaseApp } from '../../firebase/firebase-config.js';
 
 const db = getFirestore(firebaseApp);
@@ -13,7 +13,7 @@ const db = getFirestore(firebaseApp);
 export const renderMembers = async (container, workspaceId) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
-        window.location.href = 'index.html';
+        window.location.replace('/index.html');
         return;
     }
 
@@ -81,13 +81,45 @@ export const renderMembers = async (container, workspaceId) => {
         const adminClientCount = countMemberItems(clients, adminIds, true);
         const adminBusCount = countMemberItems(businesses, adminIds, true);
 
+        const adminMemberDoc = rawMembers.find(m => (m.email || '').toLowerCase() === adminEmail);
+        const isCurrentAdmin = (currentUser.uid === adminUid) || ((currentUser.email || '').toLowerCase() === adminEmail);
+        const validAdminTags = ['Administrator', 'Owner', 'Leader', 'Author','Chief', 'Boss', 'Founder', 'Director'];
+
+        const safeAdminTag = (adminMemberDoc?.roleTag && validAdminTags.includes(adminMemberDoc.roleTag))
+            ? adminMemberDoc.roleTag
+            : ((wsInfo.adminRoleTag && validAdminTags.includes(wsInfo.adminRoleTag)) ? wsInfo.adminRoleTag : 'Administrator');
+
+        const safeAdminPhoto = (isCurrentAdmin && currentUser.photoURL) 
+            ? currentUser.photoURL 
+            : (adminMemberDoc?.photoURL || adminMemberDoc?.photo || wsInfo.adminPhotoURL || wsInfo.photoURL || '');
+
+        const safeAdminName = (isCurrentAdmin && currentUser.displayName)
+            ? currentUser.displayName
+            : (adminMemberDoc?.name || wsInfo.adminName || 'Administrator');
+
+        // Self-heal corrupted root workspace doc if current authenticated user is the admin
+        if (isCurrentAdmin && adminUid && adminUid !== 'ws_dev_mock') {
+            if ((wsInfo.adminPhotoURL && wsInfo.adminPhotoURL !== safeAdminPhoto) || 
+                (wsInfo.adminRoleTag && !validAdminTags.includes(wsInfo.adminRoleTag)) ||
+                (currentUser.displayName && wsInfo.adminName !== currentUser.displayName)) {
+                try {
+                    const wsRef = doc(db, 'Workspaces', adminUid);
+                    setDoc(wsRef, {
+                        adminPhotoURL: safeAdminPhoto,
+                        adminRoleTag: safeAdminTag,
+                        adminName: safeAdminName
+                    }, { merge: true }).catch(() => {});
+                } catch (e) {}
+            }
+        }
+
         const adminData = {
-            name: wsInfo.adminName || 'Founder',
-            email: wsInfo.adminEmail || 'admin@workspace.com',
-            photoURL: wsInfo.adminPhotoURL || wsInfo.photoURL || '',
+            name: safeAdminName,
+            email: wsInfo.adminEmail || (isCurrentAdmin ? currentUser.email : 'admin@workspace.com'),
+            photoURL: safeAdminPhoto,
             id: wsInfo.adminId || adminUid,
             role: 'CREATOR_ADMIN',
-            roleTag: wsInfo.adminRoleTag || wsInfo.roleTag || 'Administrator',
+            roleTag: safeAdminTag,
             isPending: false,
             joinedAt: wsInfo.createdAt,
             productCount: Math.max(adminPCount, Number(wsInfo.adminProductCount ?? 0)),
@@ -346,7 +378,7 @@ const renderMemberRowHtml = (member, defaultExpanded = false) => {
         return isNaN(d.getTime()) ? 'Active' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     })();
 
-    const initial = ((member.email || 'M').charAt(0) || 'M').toUpperCase();
+    const initial = ((member.name || member.email || 'M').trim().charAt(0) || 'M').toUpperCase();
 
     return `
         <div class="member-card-wrapper card" style="padding:0; border-radius:12px; border:1px solid var(--border-color); overflow:hidden; box-shadow:var(--shadow-subtle); margin-bottom:0.75rem; background:#ffffff;">
@@ -356,7 +388,8 @@ const renderMemberRowHtml = (member, defaultExpanded = false) => {
                     <!-- Avatar Circle with photo or initial -->
                     <div style="width:36px; height:36px; border-radius:50%; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.88rem; flex-shrink:0; position:relative; overflow:hidden;">
                         ${member.photoURL ? `
-                            <img src="${member.photoURL}" alt="${member.name || member.email}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.parentElement.innerHTML='${initial}<span style=\'position:absolute; bottom:0; right:0; width:9px; height:9px; border-radius:50%; background:${dotColor}; border:1.5px solid #ffffff;\'></span>';">
+                            <img src="${member.photoURL}" alt="${member.name || member.email}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <span style="display:none; width:100%; height:100%; align-items:center; justify-content:center;">${initial}</span>
                         ` : `
                             ${initial}
                         `}

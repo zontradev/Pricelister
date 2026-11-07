@@ -39,6 +39,7 @@
         })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <base href="/">
     <title>Sign In &bull; PriceLister — Smart Business Workspace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -580,7 +581,7 @@
 
         <!-- COLUMN 1: LEFT HERO BRANDING -->
         <div class="auth-hero-showcase">
-            <a href="index.html" class="auth-hero-brand">
+            <a href="/index.html" class="auth-hero-brand">
                 <img src="Workspace/pricelister_org.png" alt="PriceLister" width="46" height="46" style="border-radius: 4px; object-fit: contain; flex-shrink: 0; box-shadow: 0 3px 10px rgba(0,0,0,0.06);">
                 <span style="font-weight: 800; font-size: 1.45rem; letter-spacing: -0.02em;">PriceLister</span>
             </a>
@@ -1086,7 +1087,7 @@
                 btn.textContent = 'Signing in...';
                 await authService.loginWithEmail(email, password);
                 showAlert.success('Signed in successfully.');
-                setTimeout(() => { window.location.href = 'index.html?view=connection'; }, 300);
+                setTimeout(() => { window.location.href = '/index.html?view=connection'; }, 300);
             } catch (err) {
                 console.error("Login error:", err);
                 showAlert.error(formatAuthError(err));
@@ -1118,7 +1119,7 @@
                 btn.textContent = 'Creating account...';
                 await authService.signupWithEmail(fullName, email, password);
                 showAlert.success('Account created successfully! Connecting to workspace...');
-                setTimeout(() => { window.location.href = 'index.html?view=connection'; }, 350);
+                setTimeout(() => { window.location.href = '/index.html?view=connection'; }, 350);
             } catch (err) {
                 console.error("Signup error:", err);
                 showAlert.error(formatAuthError(err));
@@ -1275,7 +1276,7 @@
                 googleBtn.disabled = true;
                 await authService.loginWithGoogle(true);
                 showAlert.success('Google sign-in successful.');
-                setTimeout(() => { window.location.href = 'index.html?view=connection'; }, 300);
+                setTimeout(() => { window.location.href = '/index.html?view=connection'; }, 300);
             } catch (err) {
                 console.error("Google login error:", err);
                 showAlert.error(formatAuthError(err));
@@ -1288,7 +1289,7 @@
             try {
                 await authService.loginAsGuest();
                 showAlert.success('Entering Demo Sandbox...');
-                setTimeout(() => { window.location.href = 'app.html'; }, 200);
+                setTimeout(() => { window.location.href = '/app.html'; }, 200);
             } catch (err) {
                 showAlert.error('Demo sandbox initialization failed.');
             }
