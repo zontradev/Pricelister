@@ -8,6 +8,7 @@ import { storageService } from '../../supabase/storage.js';
 import { draftManager } from '../services/draftManager.js';
 import { getUserRestrictions } from '../auth-handler.js';
 import { getFinanceService } from '../services/financeService.js';
+import { renderPeopleInitialEmptyState, renderPeopleSearchEmptyState } from '../utils/emptyStateHelper.js';
 
 export const renderPeople = async (container, workspaceId, defaultTab = 'customers') => {
     const peopleService = getPeopleService(workspaceId);
@@ -2208,7 +2209,32 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         if (!tbody) return;
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="padding:2.5rem; text-align:center; color: var(--text-muted);">No matching ${isBusinessMode ? 'businesses' : currentTab} found.</td></tr>`;
+            const ws = window.__activeWorkspace || {};
+            const isRestrictedWorker = userRestrictions.isRestricted || userRestrictions.disableAdd || ws.workspaceRole === 4;
+            const canCreate = !isRestrictedWorker;
+            const modeType = isBusinessMode ? 'businesses' : currentTab;
+
+            let emptyHtml = '';
+            if (allPeople.length === 0) {
+                // Initial empty state: No people/businesses added yet
+                emptyHtml = renderPeopleInitialEmptyState({ type: modeType, canCreate });
+            } else {
+                // Search result empty state
+                emptyHtml = renderPeopleSearchEmptyState({ type: modeType, searchQuery: searchVal });
+            }
+
+            tbody.innerHTML = `<tr><td colspan="7" style="padding:0; border:none;">${emptyHtml}</td></tr>`;
+
+            tbody.querySelector('#btn-empty-add-person')?.addEventListener('click', () => {
+                container.querySelector('#btn-add-person')?.click();
+            });
+
+            tbody.querySelector('#btn-empty-clear-people-search')?.addEventListener('click', () => {
+                const searchInput = container.querySelector('#people-search-input');
+                if (searchInput) searchInput.value = '';
+                renderList();
+            });
+
             updatePeopleBatchBar([]);
             return;
         }

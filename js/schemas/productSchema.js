@@ -50,6 +50,15 @@ export const validateProduct = (data, isPartial = false) => {
     if (data.sizeWeight && typeof data.sizeWeight !== 'string') errors.push('Size/Weight must be text.');
     if (data.mfgDate && typeof data.mfgDate !== 'string') errors.push('Manufacturing Date must be text.');
     if (data.expDate && typeof data.expDate !== 'string') errors.push('Expiration Date must be text.');
+
+    // Server data integrity check: reject ISO YYYY-MM-DD to avoid Android client crashes
+    if (data.mfgDate && /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(data.mfgDate.trim())) {
+        errors.push('Manufacturing Date cannot be YYYY-MM-DD. Use DD-MM-YYYY or MM-DD-YYYY.');
+    }
+    if (data.expDate && /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(data.expDate.trim())) {
+        errors.push('Expiration Date cannot be YYYY-MM-DD. Use DD-MM-YYYY or MM-DD-YYYY.');
+    }
+
     if (data.note && typeof data.note !== 'string') errors.push('Note must be text.');
     if (data.upcCode && typeof data.upcCode !== 'string') errors.push('UPC Code must be text.');
     if (data.color && typeof data.color !== 'string') errors.push('Color must be text.');

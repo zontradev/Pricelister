@@ -6,10 +6,15 @@ import { getUserRestrictions } from '../auth-handler.js';
 import { showAlert } from '../alert-handler.js';
 import { storageService } from '../../supabase/storage.js';
 import { openExcelImportModal, openExportModal } from './importExportModal.js';
-import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp, escapeHtml } from '../utilities.js';
+import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp, escapeHtml, normalizeProductDate, parseProductDate } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { draftManager } from '../services/draftManager.js';
 import { getCodeStudioService } from '../services/codeStudioService.js';
+import { 
+    renderProductsInitialEmptyState, 
+    renderProductsSearchEmptyState, 
+    renderProductsCategoryEmptyState 
+} from '../utils/emptyStateHelper.js';
 
 export const renderProducts = async (container, workspaceId) => {
     const productService = getProductService(workspaceId);
@@ -306,11 +311,11 @@ export const renderProducts = async (container, workspaceId) => {
         let mfgStr = prd.mfgDate || '';
         let expStr = prd.expDate || '';
 
-        // Fallback for manufacturing date (creation timestamp or fallback)
+        // Robust parsing of DD-MM-YYYY, MM-DD-YYYY or legacy YYYY-MM-DD
         let mfgTime = null;
         if (mfgStr) {
-            const mDate = new Date(mfgStr);
-            if (!isNaN(mDate.getTime())) mfgTime = mDate.getTime();
+            const mDate = parseProductDate(mfgStr);
+            if (mDate && !isNaN(mDate.getTime())) mfgTime = mDate.getTime();
         }
         if (!mfgTime && (prd.createdAt || prd.timestamp)) {
             const num = Number(prd.createdAt || prd.timestamp);
@@ -323,8 +328,8 @@ export const renderProducts = async (container, workspaceId) => {
 
         let expTime = null;
         if (expStr) {
-            const eDate = new Date(expStr);
-            if (!isNaN(eDate.getTime())) expTime = eDate.getTime();
+            const eDate = parseProductDate(expStr);
+            if (eDate && !isNaN(eDate.getTime())) expTime = eDate.getTime();
         }
 
         if (!mfgTime && !expTime) {
@@ -1433,13 +1438,21 @@ export const renderProducts = async (container, workspaceId) => {
                                     </div>
                                     <div>
                                         <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Mfg Date</label>
-                                        <input type="date" id="prd-mfg-date" class="form-control" style="width:100%; padding:0.55rem 0.65rem; font-size:0.82rem;">
-                                        <small style="color:var(--text-muted); font-size:0.72rem;">Production date</small>
+                                        <div style="position:relative; display:flex; align-items:center;">
+                                            <input type="text" id="prd-mfg-date" class="form-control" placeholder="DD-MM-YYYY" style="width:100%; padding:0.55rem 2.2rem 0.55rem 0.65rem; font-size:0.82rem; font-family:monospace;">
+                                            <input type="date" id="prd-mfg-picker" tabindex="-1" aria-label="Pick Mfg Date" style="position:absolute; right:0.5rem; width:22px; height:22px; opacity:0; cursor:pointer; z-index:3;">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute; right:0.65rem; pointer-events:none; color:var(--text-muted);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        </div>
+                                        <small style="color:var(--text-muted); font-size:0.72rem;">Type DD-MM-YYYY or pick date</small>
                                     </div>
                                     <div>
                                         <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:var(--text-primary);">Exp Date</label>
-                                        <input type="date" id="prd-exp-date" class="form-control" style="width:100%; padding:0.55rem 0.65rem; font-size:0.82rem;">
-                                        <small style="color:var(--text-muted); font-size:0.72rem;">Expiry warning</small>
+                                        <div style="position:relative; display:flex; align-items:center;">
+                                            <input type="text" id="prd-exp-date" class="form-control" placeholder="DD-MM-YYYY" style="width:100%; padding:0.55rem 2.2rem 0.55rem 0.65rem; font-size:0.82rem; font-family:monospace;">
+                                            <input type="date" id="prd-exp-picker" tabindex="-1" aria-label="Pick Exp Date" style="position:absolute; right:0.5rem; width:22px; height:22px; opacity:0; cursor:pointer; z-index:3;">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute; right:0.65rem; pointer-events:none; color:var(--text-muted);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        </div>
+                                        <small style="color:var(--text-muted); font-size:0.72rem;">Type DD-MM-YYYY or pick date</small>
                                     </div>
                                 </div>
                             </div>
@@ -1923,10 +1936,60 @@ export const renderProducts = async (container, workspaceId) => {
         }
 
         if (totalItems === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted);"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></td></tr>`;
-            if (gridCardContainer) {
-                gridCardContainer.innerHTML = `<div style="padding:3rem 1.5rem; text-align:center; color: var(--text-muted); grid-column: 1 / -1;"><div style="font-weight:600; font-size:1rem; margin-bottom:0.25rem;">No products match your criteria</div><div style="font-size:0.83rem;">Try adjusting your search terms or category filter.</div></div>`;
+            const ws = window.__activeWorkspace || {};
+            const canCreate = !userRestrictions.disableAdd && !userRestrictions.isRestricted && ws.workspaceRole !== 4;
+            let emptyHtml = '';
+
+            if (activeProducts.length === 0) {
+                // 1. Initial Empty State: No Product Added yet
+                emptyHtml = renderProductsInitialEmptyState({ canCreate });
+            } else if (searchVal) {
+                // 2. Search query yielded no results
+                emptyHtml = renderProductsSearchEmptyState({ searchVal });
+            } else if (catVal !== 'all') {
+                // 3. Category filter empty
+                const catObj = categoriesList.find(c => c.uniqueId === catVal || c.id === catVal || c.name === catVal);
+                const catName = catObj?.name || catVal;
+                emptyHtml = renderProductsCategoryEmptyState({ catName, canCreate });
+            } else {
+                emptyHtml = renderProductsSearchEmptyState({ searchVal: '' });
             }
+
+            tbody.innerHTML = `<tr><td colspan="7" style="padding:0; border:none;">${emptyHtml}</td></tr>`;
+            if (gridCardContainer) {
+                gridCardContainer.innerHTML = `<div style="grid-column: 1 / -1; width: 100%;">${emptyHtml}</div>`;
+            }
+
+            // Wire action buttons inside empty state
+            const wireEmptyButtons = (rootEl) => {
+                if (!rootEl) return;
+                rootEl.querySelector('#btn-empty-add-product')?.addEventListener('click', () => {
+                    container.querySelector('#btn-add-product')?.click();
+                });
+                rootEl.querySelector('#btn-empty-market-inserter')?.addEventListener('click', () => {
+                    window.location.hash = '#/market-inserter';
+                });
+                rootEl.querySelector('#btn-empty-clear-search')?.addEventListener('click', () => {
+                    const searchInput = container.querySelector('#filter-search');
+                    if (searchInput) searchInput.value = '';
+                    renderProductList();
+                });
+                rootEl.querySelector('#btn-empty-clear-cat')?.addEventListener('click', () => {
+                    const catSelect = container.querySelector('#filter-category');
+                    if (catSelect) catSelect.value = 'all';
+                    renderProductList();
+                });
+                rootEl.querySelector('#btn-empty-add-cat-prod')?.addEventListener('click', () => {
+                    container.querySelector('#btn-add-product')?.click();
+                    setTimeout(() => {
+                        const formCat = container.querySelector('#product-category');
+                        if (formCat && catVal !== 'all') formCat.value = catVal;
+                    }, 50);
+                });
+            };
+
+            wireEmptyButtons(tbody);
+            if (gridCardContainer) wireEmptyButtons(gridCardContainer);
             return;
         }
 
@@ -2365,8 +2428,8 @@ export const renderProducts = async (container, workspaceId) => {
                     container.querySelector('#prd-base-price').value = prd.basePrice !== undefined && prd.basePrice !== null ? prd.basePrice : '';
                     container.querySelector('#prd-mrp').value = prd.mrp !== undefined && prd.mrp !== null ? prd.mrp : '';
 
-                    container.querySelector('#prd-mfg-date').value = prd.mfgDate || '';
-                    container.querySelector('#prd-exp-date').value = prd.expDate || '';
+                    container.querySelector('#prd-mfg-date').value = prd.mfgDate ? normalizeProductDate(prd.mfgDate) : '';
+                    container.querySelector('#prd-exp-date').value = prd.expDate ? normalizeProductDate(prd.expDate) : '';
 
                     // Populate Variations
                     clearVariations();
@@ -2711,8 +2774,8 @@ export const renderProducts = async (container, workspaceId) => {
             if (data.sale !== undefined) container.querySelector('#prd-sale-price').value = data.sale || '';
             if (data.base !== undefined) container.querySelector('#prd-base-price').value = data.base || '';
             if (data.mrp !== undefined) container.querySelector('#prd-mrp').value = data.mrp || '';
-            if (data.mfg !== undefined) container.querySelector('#prd-mfg-date').value = data.mfg || '';
-            if (data.exp !== undefined) container.querySelector('#prd-exp-date').value = data.exp || '';
+            if (data.mfg !== undefined) container.querySelector('#prd-mfg-date').value = normalizeProductDate(data.mfg) || '';
+            if (data.exp !== undefined) container.querySelector('#prd-exp-date').value = normalizeProductDate(data.exp) || '';
             if (data.image) {
                 container.querySelector('#prd-image').value = data.image;
                 updateImagePreview(data.image);
@@ -3765,6 +3828,39 @@ export const renderProducts = async (container, workspaceId) => {
             });
         });
 
+        // Date Picker & Free-Text Input Sync for Mfg & Exp Dates
+        const mfgInput = container.querySelector('#prd-mfg-date');
+        const mfgPicker = container.querySelector('#prd-mfg-picker');
+        if (mfgPicker && mfgInput) {
+            mfgPicker.addEventListener('change', () => {
+                if (mfgPicker.value) {
+                    mfgInput.value = normalizeProductDate(mfgPicker.value);
+                    checkProductDirty();
+                }
+            });
+            mfgInput.addEventListener('blur', () => {
+                if (mfgInput.value.trim()) {
+                    mfgInput.value = normalizeProductDate(mfgInput.value.trim());
+                }
+            });
+        }
+
+        const expInput = container.querySelector('#prd-exp-date');
+        const expPicker = container.querySelector('#prd-exp-picker');
+        if (expPicker && expInput) {
+            expPicker.addEventListener('change', () => {
+                if (expPicker.value) {
+                    expInput.value = normalizeProductDate(expPicker.value);
+                    checkProductDirty();
+                }
+            });
+            expInput.addEventListener('blur', () => {
+                if (expInput.value.trim()) {
+                    expInput.value = normalizeProductDate(expInput.value.trim());
+                }
+            });
+        }
+
         // Quick Markup Preset Chips
         container.querySelectorAll('.prd-quick-chip[data-markup]').forEach(chip => {
             chip.addEventListener('click', (e) => {
@@ -4035,8 +4131,8 @@ export const renderProducts = async (container, workspaceId) => {
                 basePrice: container.querySelector('#prd-base-price').value ? parseFloat(container.querySelector('#prd-base-price').value) : 0,
                 mrp: container.querySelector('#prd-mrp').value ? parseFloat(container.querySelector('#prd-mrp').value) : 0,
 
-                mfgDate: container.querySelector('#prd-mfg-date').value,
-                expDate: container.querySelector('#prd-exp-date').value,
+                mfgDate: normalizeProductDate(container.querySelector('#prd-mfg-date').value),
+                expDate: normalizeProductDate(container.querySelector('#prd-exp-date').value),
 
                 variations: collectedVariations
             };

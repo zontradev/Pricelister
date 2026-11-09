@@ -2166,23 +2166,90 @@ html:not([data-color-mode="dark"]):not([data-color-mode="deep-dark"]):not([data-
     font-size: 0.85rem;
 }
 
-/* ===== Skeleton Shimmer Loading ===== */
+/* ===== High-Performance Console Skeleton Shimmer Loading (Firebase / Supabase Grade) ===== */
 @keyframes shimmer {
     0% {
         background-position: -200% 0;
     }
-
     100% {
         background-position: 200% 0;
     }
 }
 
+@keyframes shimmerSheen {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(450%);
+    }
+}
+
+@keyframes skeletonPulseGlow {
+    0%, 100% {
+        opacity: 0.95;
+    }
+    50% {
+        opacity: 0.75;
+    }
+}
+
 .skeleton-shimmer {
-    background: linear-gradient(90deg, rgba(241, 245, 249, 0.8) 25%, rgba(226, 232, 240, 0.95) 37%, rgba(241, 245, 249, 0.8) 63%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite ease-in-out;
+    background: linear-gradient(
+        110deg,
+        #f1f5f9 12%,
+        #e2e8f0 25%,
+        #ffffff 38%,
+        #e2e8f0 52%,
+        #f1f5f9 68%
+    ) !important;
+    background-size: 200% 100% !important;
+    animation: shimmer 1.35s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
     border-radius: 6px;
     display: inline-block;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.85) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    animation: shimmerSheen 1.35s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .skeleton-shimmer,
+.dark .skeleton-shimmer {
+    background: linear-gradient(
+        110deg,
+        #18181b 12%,
+        #27272a 25%,
+        #3f3f46 38%,
+        #27272a 52%,
+        #18181b 68%
+    ) !important;
+    background-size: 200% 100% !important;
+}
+
+[data-theme="dark"] .skeleton-shimmer::after,
+.dark .skeleton-shimmer::after {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
 }
 
 .skeleton-row td {

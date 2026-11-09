@@ -128,7 +128,8 @@ const createModalDialog = ({
     confirmBtnBg = null,
     detailsHtml = null,
     onConfirm,
-    onCancel
+    onCancel,
+    onClose = null
 }) => {
     const overlay = document.createElement('div');
     overlay.className = 'custom-alert-modal-overlay';
@@ -238,6 +239,8 @@ const createModalDialog = ({
     const cancelBtn = modal.querySelector('#modal-btn-cancel');
     const closeBtn = modal.querySelector('#modal-btn-close');
 
+    const onDismiss = typeof onClose === 'function' ? onClose : onCancel;
+
     confirmBtn?.addEventListener('click', () => {
         cleanup();
         onConfirm();
@@ -248,15 +251,24 @@ const createModalDialog = ({
         onCancel();
     });
 
+    // Close button (x): uses onDismiss (defaults to onClose if provided, e.g. Stay)
     closeBtn?.addEventListener('click', () => {
         cleanup();
-        onCancel();
+        onDismiss();
+    });
+
+    // Clicking outside modal in the empty backdrop area triggers onDismiss (Stay for unsaved edits)
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            cleanup();
+            onDismiss();
+        }
     });
 
     const keyHandler = (e) => {
         if (e.key === 'Escape') {
             cleanup();
-            onCancel();
+            onDismiss();
         } else if (e.key === 'Enter') {
             cleanup();
             onConfirm();
@@ -420,7 +432,8 @@ export const showAlert = {
                 confirmIconHtml: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>',
                 confirmBtnBg: '#09090b',
                 onConfirm: () => resolve(false), // Stay & Save -> do NOT leave (false)
-                onCancel: () => resolve(true)   // Discard & Leave -> allow leave (true)
+                onCancel: () => resolve(true),   // Discard & Leave -> allow leave (true)
+                onClose: () => resolve(false)    // Close button (x), backdrop click, or Escape -> STAY (false)!
             });
         });
     },

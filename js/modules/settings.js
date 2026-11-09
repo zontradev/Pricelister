@@ -72,8 +72,80 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
     }
 
     container.innerHTML = `
-        <div style="display:flex; justify-content:center; align-items:center; min-height:350px;">
-            <div class="spinner"></div>
+        <div class="workspace-settings-skeleton" style="display:flex; flex-direction:column; gap:1.5rem; max-width:1400px; margin:0 auto; width:100%; padding:0.5rem 0;">
+            <!-- 1. Header Skeleton -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+                <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                    <div class="skeleton-shimmer" style="width:140px; height:12px; border-radius:4px;"></div>
+                    <div class="skeleton-shimmer" style="width:280px; height:28px; border-radius:8px;"></div>
+                    <div class="skeleton-shimmer" style="width:420px; height:14px; border-radius:4px;"></div>
+                </div>
+                <div style="display:flex; gap:0.65rem;">
+                    <div class="skeleton-shimmer" style="width:130px; height:38px; border-radius:8px;"></div>
+                    <div class="skeleton-shimmer" style="width:110px; height:38px; border-radius:8px;"></div>
+                </div>
+            </div>
+
+            <!-- 2. Settings Navigation Tabs Skeleton -->
+            <div style="display:flex; gap:0.65rem; border-bottom:1.5px solid #e4e4e7; padding-bottom:0.75rem;">
+                <div class="skeleton-shimmer" style="width:120px; height:34px; border-radius:9999px;"></div>
+                <div class="skeleton-shimmer" style="width:110px; height:34px; border-radius:9999px;"></div>
+                <div class="skeleton-shimmer" style="width:130px; height:34px; border-radius:9999px;"></div>
+                <div class="skeleton-shimmer" style="width:100px; height:34px; border-radius:9999px;"></div>
+            </div>
+
+            <!-- 3. Workspace Branding Card Skeleton -->
+            <div class="card" style="padding:1.5rem; border:1.5px solid #e4e4e7; border-radius:14px; background:#ffffff;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+                    <div class="skeleton-shimmer" style="width:190px; height:20px; border-radius:6px;"></div>
+                    <div class="skeleton-shimmer" style="width:90px; height:16px; border-radius:4px;"></div>
+                </div>
+                
+                <!-- Banner & Logo Skeleton -->
+                <div style="position:relative; margin-bottom:2rem;">
+                    <div class="skeleton-shimmer" style="width:100%; height:130px; border-radius:12px;"></div>
+                    <div class="skeleton-shimmer" style="width:84px; height:84px; border-radius:20px; border:3px solid #ffffff; position:absolute; bottom:-25px; left:20px; box-shadow:0 4px 10px rgba(0,0,0,0.06);"></div>
+                </div>
+
+                <!-- Form Fields Grid Skeleton -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem; margin-top:2rem;">
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <div class="skeleton-shimmer" style="width:130px; height:13px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:100%; height:40px; border-radius:8px;"></div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <div class="skeleton-shimmer" style="width:120px; height:13px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:100%; height:40px; border-radius:8px;"></div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; grid-column:1 / -1;">
+                        <div class="skeleton-shimmer" style="width:150px; height:13px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:100%; height:70px; border-radius:8px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Contact & Regional Settings Skeleton -->
+            <div class="card" style="padding:1.5rem; border:1.5px solid #e4e4e7; border-radius:14px; background:#ffffff;">
+                <div class="skeleton-shimmer" style="width:210px; height:20px; border-radius:6px; margin-bottom:1.25rem;"></div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <div class="skeleton-shimmer" style="width:100px; height:13px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:100%; height:40px; border-radius:8px;"></div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <div class="skeleton-shimmer" style="width:110px; height:13px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:100%; height:40px; border-radius:8px;"></div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <div class="skeleton-shimmer" style="width:90px; height:13px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:100%; height:40px; border-radius:8px;"></div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <div class="skeleton-shimmer" style="width:115px; height:13px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:100%; height:40px; border-radius:8px;"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 

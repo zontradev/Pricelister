@@ -136,14 +136,27 @@ export const renderOrders = async (container, workspaceId) => {
             <!-- ORDERS LIST / TABLE -->
             <div class="card" style="padding:0; overflow:hidden; background:#ffffff;">
                 ${filtered.length === 0 ? `
-                    <div style="text-align:center; padding:3.5rem 1.5rem;">
-                        <div style="width:54px; height:54px; border-radius:50%; background:var(--surface-100); display:flex; align-items:center; justify-content:center; margin:0 auto 1rem; color:var(--text-muted);">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    <div style="text-align:center; padding:4.5rem 1.5rem; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                        <div style="width:78px; height:78px; border-radius:20px; background:#f4f4f5; display:flex; align-items:center; justify-content:center; margin-bottom:1.25rem; border:1.5px solid #e4e4e7; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="9" cy="21" r="1"></circle>
+                                <circle cx="20" cy="21" r="1"></circle>
+                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                            </svg>
                         </div>
-                        <h4 style="font-size:1.1rem; color:var(--text-primary); margin-bottom:0.3rem;">No Orders Found</h4>
-                        <p style="color:var(--text-secondary); font-size:0.85rem; max-width:380px; margin:0 auto 1rem;">
-                            ${searchQuery || currentFilter !== 'ALL' ? 'Try adjusting your search query or status filter.' : 'When customers place orders from your online catalog, they will appear here in real-time.'}
+                        <h4 style="font-size:1.3rem; font-weight:800; color:var(--text-primary); margin-bottom:0.4rem;">
+                            ${ordersList.length === 0 ? 'No Orders Received yet.' : 'No Orders Found'}
+                        </h4>
+                        <p style="color:var(--text-secondary); font-size:0.9rem; max-width:440px; margin:0 auto 1.25rem; line-height:1.55;">
+                            ${ordersList.length === 0 
+                                ? 'When customers or clients place storefront orders from your catalog, incoming order tickets will stream in right here.' 
+                                : 'No orders match your active search or filter selection. Try resetting your filters to see all orders.'}
                         </p>
+                        ${ordersList.length > 0 ? `
+                            <button type="button" id="btn-empty-clear-orders-filter" class="btn" style="padding:0.55rem 1.4rem; font-size:0.88rem; font-weight:700; border-radius:8px; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; cursor:pointer;">
+                                Reset All Filters
+                            </button>
+                        ` : ''}
                     </div>
                 ` : `
                     <div class="table-responsive">
@@ -298,6 +311,12 @@ export const renderOrders = async (container, workspaceId) => {
                 renderUI();
             });
         }
+
+        document.getElementById('btn-empty-clear-orders-filter')?.addEventListener('click', () => {
+            searchQuery = '';
+            currentFilter = 'ALL';
+            renderUI();
+        });
 
         // Status Tabs
         document.querySelectorAll('button[data-status]').forEach(btn => {

@@ -47,6 +47,9 @@ export const discardActiveUnsavedChanges = () => {
         if (draftManager && typeof draftManager.clearAllActiveForms === 'function') {
             draftManager.clearAllActiveForms();
         }
+        if (typeof window._marketInserterHasUnsaved === 'function') {
+            window._marketInserterHasUnsaved = () => false;
+        }
         const floatingBar = document.getElementById('settings-floating-bar');
         if (floatingBar) {
             floatingBar.style.opacity = '0';
@@ -75,75 +78,105 @@ export const discardActiveUnsavedChanges = () => {
 
 /**
  * Universal Edit Safety / Unsaved Changes Detector
- * Detects whether any active view or modal form currently has unsaved modifications.
+ * Strictly scoped to the currently active screen to prevent false warnings or glitching across other panels.
  */
 export const hasUnsavedChanges = () => {
     if (isNavigatingAway) return false;
     try {
-        if (draftManager && typeof draftManager.hasActiveUnsavedChanges === 'function') {
-            if (draftManager.hasActiveUnsavedChanges()) return true;
-        }
+        const activeRoute = currentActiveRoute || (window.location.hash ? window.location.hash.replace(/^#/, '') : '');
 
-        // 1. Settings Module: Floating bar active when user modified settings
-        const floatingBar = document.getElementById('settings-floating-bar');
-        if (floatingBar && document.body.contains(floatingBar) && (floatingBar.style.opacity === '1' || floatingBar.style.pointerEvents === 'auto')) {
-            return true;
-        }
-
-        // 2. Product Form: Check if open with unsaved changes
-        const prdFormContainer = document.getElementById('product-form-container');
-        if (prdFormContainer && document.body.contains(prdFormContainer) && prdFormContainer.style.display !== 'none') {
-            const prdId = document.getElementById('prd-id')?.value;
-            if (!prdId) {
-                const name = document.getElementById('prd-name')?.value?.trim();
-                const sale = document.getElementById('prd-sale-price')?.value?.trim();
-                const cost = document.getElementById('prd-cost-price')?.value?.trim();
-                const note = document.getElementById('prd-note')?.value?.trim();
-                const upc = document.getElementById('prd-upc')?.value?.trim();
-                if (name || sale || cost || note || upc) return true;
+        // 1. Market Inserter: ONLY detect when user is on the Market Inserter screen
+        if (activeRoute === '/market-inserter') {
+            if (typeof window._marketInserterHasUnsaved === 'function') {
+                return window._marketInserterHasUnsaved();
             }
-        }
-
-        // 3. Invoice Editor: Editor open with unsaved modifications or items
-        const invEditor = document.getElementById('invoice-editor-view');
-        if (invEditor && document.body.contains(invEditor) && invEditor.style.display !== 'none') {
-            if (typeof invEditor._isDirty === 'function') {
-                if (invEditor._isDirty()) return true;
-            }
-        }
-
-        // 4. Category Form: Form open with non-empty input
-        const catFormContainer = document.getElementById('category-form-container');
-        if (catFormContainer && document.body.contains(catFormContainer) && catFormContainer.style.display !== 'none') {
-            const catName = document.getElementById('cat-name')?.value?.trim();
-            const catSubmitBtn = document.getElementById('cat-submit-btn');
-            if (catSubmitBtn && !catSubmitBtn.disabled && catName) return true;
-        }
-
-        // 5. Worker Permissions Manage Form: Form open with modified permissions
-        const workerSaveBtn = document.getElementById('btn-save-manage');
-        const manageWorkerContainer = document.getElementById('manage-worker-container');
-        if (manageWorkerContainer && document.body.contains(manageWorkerContainer) && manageWorkerContainer.style.display !== 'none') {
-            if (workerSaveBtn && !workerSaveBtn.disabled) return true;
-        }
-
-        // 6. Market Inserter: Open grid with pending rows containing user input
-        const miGrid = document.getElementById('mi-grid-body');
-        if (miGrid && document.body.contains(miGrid)) {
-            const miRows = miGrid.querySelectorAll('tr.mi-grid-row');
-            if (miRows && miRows.length > 0) {
-                const hasData = Array.from(miRows).some(row => {
-                    const nameInp = row.querySelector('.mi-inp-name')?.value?.trim();
-                    return Boolean(nameInp);
+            const miTbody = document.getElementById('mi-tbody');
+            if (miTbody && document.body.contains(miTbody)) {
+                const inputs = miTbody.querySelectorAll('.mi-input-name, .mi-input');
+                const hasData = Array.from(inputs).some(inp => {
+                    const f = inp.getAttribute('data-field');
+                    if (f === 'category') return false; // Category alone never triggers unsaved changes
+                    const v = (inp.value || '').trim();
+                    if (!v) return false;
+                    if (['quantity', 'basePrice', 'price', 'salePrice', 'mrp'].includes(f)) {
+                        return parseFloat(v) > 0;
+                    }
+                    return true;
                 });
                 if (hasData) return true;
             }
+            return false;
         }
 
-        // 7. Customer Panel Setup: Form has unsaved modifications
-        const btnSaveCustomerPanel = document.getElementById('btn-save-customer-panel');
-        if (btnSaveCustomerPanel && document.body.contains(btnSaveCustomerPanel) && !btnSaveCustomerPanel.disabled && btnSaveCustomerPanel.getAttribute('data-dirty') === 'true') {
-            return true;
+        // 2. Settings Module: ONLY detect when user is on the Settings screen
+        if (activeRoute === '/settings') {
+            const floatingBar = document.getElementById('settings-floating-bar');
+            if (floatingBar && document.body.contains(floatingBar) && (floatingBar.style.opacity === '1' || floatingBar.style.pointerEvents === 'auto')) {
+                return true;
+            }
+            return false;
+        }
+
+        // 3. Product Form: ONLY detect when on Products and product form modal is open
+        if (activeRoute === '/products') {
+            const prdFormContainer = document.getElementById('product-form-container');
+            if (prdFormContainer && document.body.contains(prdFormContainer) && prdFormContainer.style.display !== 'none') {
+                const prdId = document.getElementById('prd-id')?.value;
+                if (!prdId) {
+                    const name = document.getElementById('prd-name')?.value?.trim();
+                    const sale = document.getElementById('prd-sale-price')?.value?.trim();
+                    const cost = document.getElementById('prd-cost-price')?.value?.trim();
+                    const note = document.getElementById('prd-note')?.value?.trim();
+                    const upc = document.getElementById('prd-upc')?.value?.trim();
+                    if (name || sale || cost || note || upc) return true;
+                }
+            }
+            return false;
+        }
+
+        // 4. Invoice Editor: ONLY detect when on Invoices and invoice editor is open
+        if (activeRoute.startsWith('/invoices')) {
+            const invEditor = document.getElementById('invoice-editor-view');
+            if (invEditor && document.body.contains(invEditor) && invEditor.style.display !== 'none') {
+                if (typeof invEditor._isDirty === 'function') {
+                    if (invEditor._isDirty()) return true;
+                }
+            }
+            return false;
+        }
+
+        // 5. Category Form: ONLY detect when on Categories and category form is open
+        if (activeRoute === '/categories') {
+            const catFormContainer = document.getElementById('category-form-container');
+            if (catFormContainer && document.body.contains(catFormContainer) && catFormContainer.style.display !== 'none') {
+                const catName = document.getElementById('cat-name')?.value?.trim();
+                const catSubmitBtn = document.getElementById('cat-submit-btn');
+                if (catSubmitBtn && !catSubmitBtn.disabled && catName) return true;
+            }
+            return false;
+        }
+
+        // 6. Worker Permissions Manage Form: ONLY detect when on workspace/workers/members
+        if (['/workspace', '/workers', '/members'].includes(activeRoute)) {
+            const workerSaveBtn = document.getElementById('btn-save-manage');
+            const manageWorkerContainer = document.getElementById('manage-worker-container');
+            if (manageWorkerContainer && document.body.contains(manageWorkerContainer) && manageWorkerContainer.style.display !== 'none') {
+                if (workerSaveBtn && !workerSaveBtn.disabled) return true;
+            }
+            return false;
+        }
+
+        // 7. Customer Panel Setup: ONLY detect when on Customer Panel
+        if (activeRoute === '/customer-panel') {
+            const btnSaveCustomerPanel = document.getElementById('btn-save-customer-panel');
+            if (btnSaveCustomerPanel && document.body.contains(btnSaveCustomerPanel) && !btnSaveCustomerPanel.disabled && btnSaveCustomerPanel.getAttribute('data-dirty') === 'true') {
+                return true;
+            }
+            return false;
+        }
+
+        if (draftManager && typeof draftManager.hasActiveUnsavedChanges === 'function') {
+            if (draftManager.hasActiveUnsavedChanges()) return true;
         }
     } catch (e) {
         console.warn("Edit safety check warning:", e);
@@ -335,6 +368,12 @@ export const initRouter = async (workspaceIdParam = null) => {
 
         let path = targetPath || '/overview';
         let routeParam = null;
+
+        // Cleanup Market Inserter fullscreen overlay if navigating away
+        if (path !== '/market-inserter') {
+            document.body.classList.remove('mi-fullscreen-active');
+            document.body.style.overflow = '';
+        }
 
         // Support /analytics/:feature routes
         if (path.startsWith('/analytics/')) {

@@ -13,6 +13,7 @@ import { formatCurrency, getAppCurrencySymbol } from '../utilities.js';
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { openInvoiceDetailsModal, renderInvoiceDetailPanel } from './invoiceDetailsModal.js';
 import { storageService } from '../../supabase/storage.js';
+import { renderInvoicesInitialEmptyState, renderInvoicesFilterEmptyState } from '../utils/emptyStateHelper.js';
 import { draftManager } from '../services/draftManager.js';
 
 function escapeHtml(str) {
@@ -63,11 +64,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     let customDateVal = '';
     let activeSort = 'NEWEST';
     let searchQuery = '';
-    let activeQueryFilter = 'ALL'; // 'ALL', 'VALUE_RANGE', 'ITEM_RANGE', 'HIGH_VAL', 'UNPAID', 'PAID', 'MULTI_ITEM'
+    let activeQueryFilter = 'ALL'; // 'ALL', 'VALUE_RANGE', 'ITEM_RANGE', 'TARGET_CUSTOMER', 'TARGET_BUSINESS'
     let filterValMin = '';
     let filterValMax = '';
     let filterItemMin = '';
     let filterItemMax = '';
+    let targetCustomerQuery = '';
+    let targetBusinessQuery = '';
     const selectedInvoiceIds = new Set();
 
     // Quick Add Entity State
@@ -122,10 +125,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <option value="ALL">All Invoices</option>
                         <option value="VALUE_RANGE">Value Range ($ Min - Max)</option>
                         <option value="ITEM_RANGE">Item Range (Min - Max)</option>
-                        <option value="HIGH_VAL">High Value (&gt; $500)</option>
-                        <option value="UNPAID">Unpaid / Balance Due</option>
-                        <option value="PAID">Paid in Full</option>
-                        <option value="MULTI_ITEM">Multi-Item (3+ Items)</option>
+                        <option value="TARGET_CUSTOMER">Target Customer</option>
+                        <option value="TARGET_BUSINESS">Targeted Business</option>
                     </select>
 
                     <!-- Value Range 2-block Inputs -->
@@ -140,6 +141,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <input type="number" id="inv-item-min" min="0" placeholder="Min Items" class="form-control" style="width:78px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
                         <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
                         <input type="number" id="inv-item-max" min="0" placeholder="Max Items" class="form-control" style="width:78px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
+                    </div>
+
+                    <!-- Target Customer Input (Matches by Name, Number, Email, ID) -->
+                    <div id="inv-target-cust-wrap" style="display:none; align-items:center; gap:4px;">
+                        <input type="text" id="inv-target-cust-input" placeholder="Search customer (Name, Phone, Email, ID)..." class="form-control" style="width:230px; padding:0.35rem 0.65rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:600;">
+                    </div>
+
+                    <!-- Targeted Business Input (Matches by Name, Number, Email, ID) -->
+                    <div id="inv-target-bus-wrap" style="display:none; align-items:center; gap:4px;">
+                        <input type="text" id="inv-target-bus-input" placeholder="Search business (Name, Phone, Email, ID)..." class="form-control" style="width:230px; padding:0.35rem 0.65rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:600;">
                     </div>
 
                     <!-- Sort Dropdown -->
@@ -2426,7 +2437,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             });
         }
 
-        // Apply Query Filters
+        // Apply Query Filters (Strict Options: Value Range, Item Range, Target Customer, Targeted Business)
         if (activeQueryFilter && activeQueryFilter !== 'ALL') {
             if (activeQueryFilter === 'VALUE_RANGE') {
                 const min = filterValMin !== '' ? Number(filterValMin) : -Infinity;
@@ -2442,14 +2453,28 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     const count = Array.isArray(i.items) ? i.items.length : 0;
                     return count >= min && count <= max;
                 });
-            } else if (activeQueryFilter === 'HIGH_VAL') {
-                filtered = filtered.filter(i => (Number(i.totalPrice) || 0) >= 500);
-            } else if (activeQueryFilter === 'UNPAID') {
-                filtered = filtered.filter(i => (i.status || '').toUpperCase() !== 'PAID');
-            } else if (activeQueryFilter === 'PAID') {
-                filtered = filtered.filter(i => (i.status || '').toUpperCase() === 'PAID');
-            } else if (activeQueryFilter === 'MULTI_ITEM') {
-                filtered = filtered.filter(i => Array.isArray(i.items) && i.items.length >= 3);
+            } else if (activeQueryFilter === 'TARGET_CUSTOMER') {
+                const q = (targetCustomerQuery || '').toLowerCase().trim();
+                if (q) {
+                    filtered = filtered.filter(i => {
+                        const cName = (i.customerName || i.recipientName || '').toLowerCase();
+                        const cPhone = (i.customerNumber || i.customerPhone || i.recipientPhone || '').toLowerCase();
+                        const cEmail = (i.customerEmail || i.recipientEmail || '').toLowerCase();
+                        const cId = (i.customerId || i.recipientId || i.uniqueId || '').toLowerCase();
+                        return cName.includes(q) || cPhone.includes(q) || cEmail.includes(q) || cId.includes(q);
+                    });
+                }
+            } else if (activeQueryFilter === 'TARGET_BUSINESS') {
+                const q = (targetBusinessQuery || '').toLowerCase().trim();
+                if (q) {
+                    filtered = filtered.filter(i => {
+                        const bName = (i.businessName || i.issuerName || '').toLowerCase();
+                        const bPhone = (i.businessPhone || i.businessNumber || '').toLowerCase();
+                        const bEmail = (i.businessEmail || '').toLowerCase();
+                        const bId = (i.businessId || i.issuerId || i.uniqueId || '').toLowerCase();
+                        return bName.includes(q) || bPhone.includes(q) || bEmail.includes(q) || bId.includes(q);
+                    });
+                }
             }
         }
 
@@ -2476,17 +2501,61 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         });
 
         if (filtered.length === 0) {
+            const ws = window.__activeWorkspace || {};
+            const isRestrictedWorker = userRestrictions.isRestricted || userRestrictions.disableAdd || ws.workspaceRole === 4;
+            const canCreate = !isRestrictedWorker;
+
+            let emptyHtml = '';
+            if (validRaw.length === 0) {
+                // Initial empty state: No invoices added yet
+                emptyHtml = renderInvoicesInitialEmptyState({ canCreate, isBusinessInvoice });
+            } else {
+                // Filter or search produced no results
+                const isTargetCust = activeQueryFilter === 'TARGET_CUSTOMER';
+                const isTargetBus = activeQueryFilter === 'TARGET_BUSINESS';
+                const isRange = activeQueryFilter === 'VALUE_RANGE' || activeQueryFilter === 'ITEM_RANGE';
+                emptyHtml = renderInvoicesFilterEmptyState({
+                    searchQuery,
+                    targetType: isTargetCust ? 'customer' : (isTargetBus ? 'business' : ''),
+                    targetQuery: isTargetCust ? targetCustomerQuery : (isTargetBus ? targetBusinessQuery : ''),
+                    isRange
+                });
+            }
+
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="padding: 3.5rem 1rem; text-align: center;">
-                        <div style="color: var(--text-muted); opacity: 0.35; margin-bottom: 0.75rem;">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                        </div>
-                        <div style="font-weight: 600; font-size: 1.05rem; color: var(--text-primary); margin-bottom: 0.25rem;">No invoices match your selection</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">Try selecting another status, date range, or clear your search query.</div>
+                    <td colspan="7" style="padding: 0; border: none;">
+                        ${emptyHtml}
                     </td>
                 </tr>
             `;
+
+            // Wire action buttons
+            tbody.querySelector('#btn-empty-create-invoice')?.addEventListener('click', () => {
+                showEditorView(false);
+            });
+            tbody.querySelector('#btn-empty-clear-inv-filters')?.addEventListener('click', () => {
+                if (filterQueryEl) filterQueryEl.value = 'ALL';
+                activeQueryFilter = 'ALL';
+                if (valRangeWrap) valRangeWrap.style.display = 'none';
+                if (itemRangeWrap) itemRangeWrap.style.display = 'none';
+                const targetCustWrap = container.querySelector('#inv-target-cust-wrap');
+                const targetBusWrap = container.querySelector('#inv-target-bus-wrap');
+                const targetCustInput = container.querySelector('#inv-target-cust-input');
+                const targetBusInput = container.querySelector('#inv-target-bus-input');
+                if (targetCustWrap) targetCustWrap.style.display = 'none';
+                if (targetBusWrap) targetBusWrap.style.display = 'none';
+                if (targetCustInput) targetCustInput.value = '';
+                if (targetBusInput) targetBusInput.value = '';
+                if (searchInputEl) searchInputEl.value = '';
+                searchQuery = '';
+                targetCustomerQuery = '';
+                targetBusinessQuery = '';
+                if (dateFilterEl) dateFilterEl.value = 'ALL';
+                activeDateFilter = 'ALL';
+                applyFiltersAndRender();
+            });
+
             updateInvoiceBatchBar([]);
             return;
         }
@@ -3064,6 +3133,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const filterQueryEl = container.querySelector('#inv-filter-query');
     const valRangeWrap = container.querySelector('#inv-val-range-wrap');
     const itemRangeWrap = container.querySelector('#inv-item-range-wrap');
+    const targetCustWrap = container.querySelector('#inv-target-cust-wrap');
+    const targetCustInput = container.querySelector('#inv-target-cust-input');
+    const targetBusWrap = container.querySelector('#inv-target-bus-wrap');
+    const targetBusInput = container.querySelector('#inv-target-bus-input');
     const valMinEl = container.querySelector('#inv-val-min');
     const valMaxEl = container.querySelector('#inv-val-max');
     const itemMinEl = container.querySelector('#inv-item-min');
@@ -3074,6 +3147,22 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             activeQueryFilter = e.target.value;
             if (valRangeWrap) valRangeWrap.style.display = activeQueryFilter === 'VALUE_RANGE' ? 'inline-flex' : 'none';
             if (itemRangeWrap) itemRangeWrap.style.display = activeQueryFilter === 'ITEM_RANGE' ? 'inline-flex' : 'none';
+            if (targetCustWrap) targetCustWrap.style.display = activeQueryFilter === 'TARGET_CUSTOMER' ? 'inline-flex' : 'none';
+            if (targetBusWrap) targetBusWrap.style.display = activeQueryFilter === 'TARGET_BUSINESS' ? 'inline-flex' : 'none';
+            applyFiltersAndRender();
+        });
+    }
+
+    if (targetCustInput) {
+        targetCustInput.addEventListener('input', (e) => {
+            targetCustomerQuery = e.target.value.trim();
+            applyFiltersAndRender();
+        });
+    }
+
+    if (targetBusInput) {
+        targetBusInput.addEventListener('input', (e) => {
+            targetBusinessQuery = e.target.value.trim();
             applyFiltersAndRender();
         });
     }

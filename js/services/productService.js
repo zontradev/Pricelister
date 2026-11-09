@@ -5,6 +5,7 @@ import { validateProduct } from '../schemas/productSchema.js';
 import { storageService } from '../../supabase/storage.js';
 import { getAutomationService } from './automationService.js';
 import { getSupplierService } from './supplierService.js';
+import { normalizeProductDate } from '../utilities.js';
 
 export const getProductService = (workspaceId) => {
     const repo = createRepository('Products', workspaceId);
@@ -53,13 +54,19 @@ export const getProductService = (workspaceId) => {
             if (workerPermission && workerPermission.disableAdd) {
                 throw new Error("You don't have permission to add new products.");
             }
-            validateProduct(productData);
+
+            // Normalize mfgDate & expDate to DD-MM-YYYY to prevent Android crash on YYYY-MM-DD
+            const cleanedData = { ...productData };
+            if (cleanedData.mfgDate) cleanedData.mfgDate = normalizeProductDate(cleanedData.mfgDate);
+            if (cleanedData.expDate) cleanedData.expDate = normalizeProductDate(cleanedData.expDate);
+
+            validateProduct(cleanedData);
 
             const safeWsId = resolveBusinessWorkspaceId();
             const safeCreatorId = resolveCreatorWorkerId(creatorId);
 
             const newProduct = new Product({
-                ...productData,
+                ...cleanedData,
                 workspaceId: safeWsId,
                 uniqueId: generateUniqueId(),
                 creatorId: safeCreatorId,
@@ -176,13 +183,18 @@ export const getProductService = (workspaceId) => {
                 }
             }
 
-            validateProduct(productData, true);
+            // Normalize mfgDate & expDate to DD-MM-YYYY to prevent Android crash on YYYY-MM-DD
+            const cleanedData = { ...productData };
+            if (cleanedData.mfgDate) cleanedData.mfgDate = normalizeProductDate(cleanedData.mfgDate);
+            if (cleanedData.expDate) cleanedData.expDate = normalizeProductDate(cleanedData.expDate);
+
+            validateProduct(cleanedData, true);
 
             // Clean up old image from Supabase if it was changed
             let oldProduct = null;
             try {
                 oldProduct = await repo.getById(id);
-                if (oldProduct && oldProduct.imageUri && productData.imageUri && oldProduct.imageUri !== productData.imageUri) {
+                if (oldProduct && oldProduct.imageUri && cleanedData.imageUri && oldProduct.imageUri !== cleanedData.imageUri) {
                     await storageService.deleteImage(oldProduct.imageUri);
                 }
             } catch(e) {
@@ -191,7 +203,7 @@ export const getProductService = (workspaceId) => {
 
             // Never update ID, uniqueId, creatorId, timestamp in an update operation
             const updatePayload = {
-                ...productData,
+                ...cleanedData,
                 updatedTimestamp: Date.now()
             };
             

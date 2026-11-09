@@ -169,6 +169,14 @@ export const showHeadAdminCannotJoinModal = (currentWs, invite) => {
     const existing = document.getElementById('head-admin-cannot-join-modal');
     if (existing) existing.remove();
 
+    // Check if user is currently inside the workspace app environment
+    const isInsideWorkspace = Boolean(
+        window.location.pathname.includes('/Workspace') || 
+        window.location.pathname.includes('/app.html') ||
+        typeof window.navigateToRoute === 'function' ||
+        document.getElementById('main-content')
+    );
+
     const overlay = document.createElement('div');
     overlay.id = 'head-admin-cannot-join-modal';
     overlay.style.cssText = `
@@ -224,18 +232,29 @@ export const showHeadAdminCannotJoinModal = (currentWs, invite) => {
                         If you need to join another workspace, some required actions must be completed first:
                     </p>
                     <div style="margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.55rem; font-size: 0.82rem; color: #18181b; font-weight: 600;">
-                        <div style="display: flex; align-items: center; gap: 0.6rem;">
-                            <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">1</span>
-                            <span>Enter Workspace</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 0.6rem;">
-                            <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">2</span>
-                            <span>Remove all of your Members from Workers Activity</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 0.6rem;">
-                            <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">3</span>
-                            <span>Delete your Workspace permanently in Settings</span>
-                        </div>
+                        ${isInsideWorkspace ? `
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">1</span>
+                                <span>Remove all of your Members from Workspace Hub</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">2</span>
+                                <span>Delete your Workspace permanently from Settings</span>
+                            </div>
+                        ` : `
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">1</span>
+                                <span>Enter Workspace</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">2</span>
+                                <span>Remove all of your Members from Workspace Hub</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="width: 22px; height: 22px; border-radius: 50%; background: #18181b; color: #fff; font-size: 0.74rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">3</span>
+                                <span>Delete your Workspace permanently from Settings</span>
+                            </div>
+                        `}
                     </div>
                 </div>
             </div>
@@ -243,7 +262,7 @@ export const showHeadAdminCannotJoinModal = (currentWs, invite) => {
             <!-- Footer -->
             <div style="padding: 1.15rem 1.75rem; background: #fafafa; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 0.65rem;">
                 <button type="button" id="btn-cancel-head-admin" class="btn" style="padding: 0.6rem 1.15rem; font-weight: 700; font-size: 0.85rem; border-radius: 10px; background: #ffffff; color: #18181b; border: 1.5px solid #d4d4d8; cursor: pointer;">Cancel</button>
-                <button type="button" id="btn-enter-head-admin-ws" class="btn" style="padding: 0.6rem 1.25rem; font-weight: 700; font-size: 0.85rem; border-radius: 10px; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; cursor: pointer;">Enter Workspace &rarr;</button>
+                <button type="button" id="btn-enter-head-admin-ws" class="btn" style="padding: 0.6rem 1.25rem; font-weight: 700; font-size: 0.85rem; border-radius: 10px; background: #18181b; color: #ffffff; border: 1.5px solid #18181b; cursor: pointer;">${isInsideWorkspace ? 'Go Workspace Hub &rarr;' : 'Enter Workspace &rarr;'}</button>
             </div>
         </div>
     `;
@@ -255,7 +274,15 @@ export const showHeadAdminCannotJoinModal = (currentWs, invite) => {
     overlay.querySelector('#btn-cancel-head-admin').onclick = close;
     overlay.querySelector('#btn-enter-head-admin-ws').onclick = () => {
         close();
-        window.location.href = '/app.html';
+        if (isInsideWorkspace) {
+            if (typeof window.navigateToRoute === 'function') {
+                window.navigateToRoute('/workspace');
+            } else {
+                window.location.hash = '#/workspace';
+            }
+        } else {
+            window.location.href = '/app.html';
+        }
     };
     overlay.onclick = (e) => {
         if (e.target === overlay) close();

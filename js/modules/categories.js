@@ -3,6 +3,7 @@ import { getProductService } from '../services/productService.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 import { getUserRestrictions } from '../auth-handler.js';
+import { escapeHtml } from '../utilities.js';
 
 export const renderCategories = async (container, workspaceId) => {
     const categoryService = getCategoryService(workspaceId);
@@ -153,17 +154,44 @@ export const renderCategories = async (container, workspaceId) => {
         }
 
         if (filtered.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" style="padding: 3rem 1rem; text-align: center;">
-                        <div style="color: var(--text-muted); opacity: 0.35; margin-bottom: 0.5rem;">
-                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        </div>
-                        <div style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">No categories found</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Try clearing your search or add a new category.</div>
-                    </td>
-                </tr>
-            `;
+            if (allCategories.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="padding: 3.5rem 1rem; text-align: center;">
+                            <div style="width:68px; height:68px; border-radius:18px; background:#f4f4f5; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem; border:1.5px solid #e4e4e7;">
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#18181B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                    <line x1="12" y1="11" x2="12" y2="17"></line>
+                                    <line x1="9" y1="14" x2="15" y2="14"></line>
+                                </svg>
+                            </div>
+                            <div style="font-weight: 800; font-size: 1.15rem; color: var(--text-primary); margin-bottom: 0.35rem;">No Categories Created yet.</div>
+                            <div style="font-size: 0.88rem; color: var(--text-secondary); max-width: 360px; margin: 0 auto; line-height: 1.5;">Use the form on the left to add and color-code your first category.</div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="padding: 3.5rem 1rem; text-align: center;">
+                            <div style="width:68px; height:68px; border-radius:18px; background:#f8fafc; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem; border:1.5px solid #e2e8f0;">
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                            </div>
+                            <div style="font-weight: 800; font-size: 1.15rem; color: var(--text-primary); margin-bottom: 0.35rem;">No Categories Found</div>
+                            <div style="font-size: 0.88rem; color: var(--text-secondary); max-width: 360px; margin: 0 auto 1.25rem auto;">No categories match your search "${escapeHtml(searchQuery)}".</div>
+                            <button type="button" id="btn-clear-cat-search" class="btn btn-secondary btn-sm" style="padding:0.45rem 1.2rem; font-weight:700;">Clear Search</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.querySelector('#btn-clear-cat-search')?.addEventListener('click', () => {
+                    const s = container.querySelector('#category-search');
+                    if (s) s.value = '';
+                    renderList();
+                });
+            }
             return;
         }
 

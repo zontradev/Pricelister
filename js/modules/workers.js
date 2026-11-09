@@ -36,10 +36,126 @@ export const renderWorkers = async (container, workspaceId) => {
     }
 
     
-    // Show smooth initial skeleton loader
+    // Show smooth initial skeleton loader with console-grade shimmering
     container.innerHTML = `
-        <div style="display:flex; justify-content:center; align-items:center; min-height:400px;">
-            <div class="spinner"></div>
+        <div class="workspace-hub-skeleton" style="display:flex; flex-direction:column; gap:1.5rem; max-width:1400px; margin:0 auto; width:100%; padding:0.5rem 0;">
+            <!-- 1. Header Banner & Identity Card Skeleton -->
+            <div class="card" style="padding:0; overflow:hidden; border:1.5px solid #e4e4e7; border-radius:16px; background:#ffffff;">
+                <div class="skeleton-shimmer" style="width:100%; height:130px; border-radius:16px 16px 0 0;"></div>
+                <div style="padding:1.5rem; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:1.25rem; margin-top:-50px; position:relative; z-index:2;">
+                    <div style="display:flex; align-items:flex-end; gap:1.25rem; flex-wrap:wrap;">
+                        <div class="skeleton-shimmer" style="width:96px; height:96px; border-radius:24px; border:4px solid #ffffff; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
+                        <div style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:0.25rem;">
+                            <div style="display:flex; align-items:center; gap:0.6rem;">
+                                <div class="skeleton-shimmer" style="width:240px; height:26px; border-radius:8px;"></div>
+                                <div class="skeleton-shimmer" style="width:90px; height:22px; border-radius:9999px;"></div>
+                            </div>
+                            <div class="skeleton-shimmer" style="width:320px; height:14px; border-radius:4px;"></div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:0.65rem;">
+                        <div class="skeleton-shimmer" style="width:120px; height:40px; border-radius:10px;"></div>
+                        <div class="skeleton-shimmer" style="width:130px; height:40px; border-radius:10px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Quick Action KPI Cards Row Skeleton -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
+                <div class="card" style="padding:1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; background:#ffffff; display:flex; align-items:center; gap:0.85rem;">
+                    <div class="skeleton-shimmer" style="width:44px; height:44px; border-radius:10px; flex-shrink:0;"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:0.4rem;">
+                        <div class="skeleton-shimmer" style="width:65%; height:14px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:85%; height:11px; border-radius:4px;"></div>
+                    </div>
+                </div>
+                <div class="card" style="padding:1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; background:#ffffff; display:flex; align-items:center; gap:0.85rem;">
+                    <div class="skeleton-shimmer" style="width:44px; height:44px; border-radius:10px; flex-shrink:0;"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:0.4rem;">
+                        <div class="skeleton-shimmer" style="width:65%; height:14px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:85%; height:11px; border-radius:4px;"></div>
+                    </div>
+                </div>
+                <div class="card" style="padding:1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; background:#ffffff; display:flex; align-items:center; gap:0.85rem;">
+                    <div class="skeleton-shimmer" style="width:44px; height:44px; border-radius:10px; flex-shrink:0;"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:0.4rem;">
+                        <div class="skeleton-shimmer" style="width:65%; height:14px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:85%; height:11px; border-radius:4px;"></div>
+                    </div>
+                </div>
+                <div class="card" style="padding:1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; background:#ffffff; display:flex; align-items:center; gap:0.85rem;">
+                    <div class="skeleton-shimmer" style="width:44px; height:44px; border-radius:10px; flex-shrink:0;"></div>
+                    <div style="flex:1; display:flex; flex-direction:column; gap:0.4rem;">
+                        <div class="skeleton-shimmer" style="width:65%; height:14px; border-radius:4px;"></div>
+                        <div class="skeleton-shimmer" style="width:85%; height:11px; border-radius:4px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Members List Container Skeleton -->
+            <div class="card" style="padding:1.5rem; border:1.5px solid #e4e4e7; border-radius:14px; background:#ffffff;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:1rem;">
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <div class="skeleton-shimmer" style="width:110px; height:24px; border-radius:6px;"></div>
+                        <div class="skeleton-shimmer" style="width:36px; height:22px; border-radius:9999px;"></div>
+                    </div>
+                    <div class="skeleton-shimmer" style="width:260px; height:38px; border-radius:10px;"></div>
+                </div>
+                <!-- Member Cards Shimmer Row -->
+                <div style="display:flex; flex-direction:column; gap:0.85rem;">
+                    <div style="padding:1.15rem 1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            <div class="skeleton-shimmer" style="width:52px; height:52px; border-radius:14px; flex-shrink:0;"></div>
+                            <div style="display:flex; flex-direction:column; gap:0.45rem;">
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <div class="skeleton-shimmer" style="width:160px; height:18px; border-radius:5px;"></div>
+                                    <div class="skeleton-shimmer" style="width:90px; height:18px; border-radius:9999px;"></div>
+                                </div>
+                                <div class="skeleton-shimmer" style="width:190px; height:13px; border-radius:4px;"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.85rem;">
+                            <div class="skeleton-shimmer" style="width:110px; height:22px; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:120px; height:22px; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:85px; height:34px; border-radius:8px;"></div>
+                        </div>
+                    </div>
+                    <div style="padding:1.15rem 1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            <div class="skeleton-shimmer" style="width:52px; height:52px; border-radius:14px; flex-shrink:0;"></div>
+                            <div style="display:flex; flex-direction:column; gap:0.45rem;">
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <div class="skeleton-shimmer" style="width:140px; height:18px; border-radius:5px;"></div>
+                                    <div class="skeleton-shimmer" style="width:80px; height:18px; border-radius:9999px;"></div>
+                                </div>
+                                <div class="skeleton-shimmer" style="width:170px; height:13px; border-radius:4px;"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.85rem;">
+                            <div class="skeleton-shimmer" style="width:110px; height:22px; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:120px; height:22px; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:85px; height:34px; border-radius:8px;"></div>
+                        </div>
+                    </div>
+                    <div style="padding:1.15rem 1.25rem; border:1.5px solid #e4e4e7; border-radius:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            <div class="skeleton-shimmer" style="width:52px; height:52px; border-radius:14px; flex-shrink:0;"></div>
+                            <div style="display:flex; flex-direction:column; gap:0.45rem;">
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <div class="skeleton-shimmer" style="width:150px; height:18px; border-radius:5px;"></div>
+                                    <div class="skeleton-shimmer" style="width:75px; height:18px; border-radius:9999px;"></div>
+                                </div>
+                                <div class="skeleton-shimmer" style="width:180px; height:13px; border-radius:4px;"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.85rem;">
+                            <div class="skeleton-shimmer" style="width:110px; height:22px; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:120px; height:22px; border-radius:6px;"></div>
+                            <div class="skeleton-shimmer" style="width:85px; height:34px; border-radius:8px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 
@@ -1677,8 +1793,7 @@ export const renderWorkers = async (container, workspaceId) => {
             if (isCreator) {
                 rolePillHtml = `
                     <span style="font-size: 0.74rem; font-weight: 800; padding: 0.22rem 0.65rem; border-radius: 6px; background: #ECFDF5; color: #047857; border: 1.5px solid #10B981; display: inline-flex; align-items: center; gap: 4px;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>Creator Admin</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#10B981"     xmlns="http://www.w3.org/2000/svg"> <path d="M13.5 1L3 14h7l-1 9L21 10h-7l1.5-9z"/></svg> <span>Creator Admin</span>
                     </span>
                 `;
             } else if (rUpper === 'CO_ADMIN' || rUpper === 'CO-ADMIN') {
@@ -1866,7 +1981,6 @@ export const renderWorkers = async (container, workspaceId) => {
 
                                     ${isCreator ? `
                                         <span style="font-size: 0.74rem; font-weight: 700; color: #047857; background: #ECFDF5; border: 1.5px solid #A7F3D0; padding: 0.2rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
                                             Head Administrator
                                         </span>
                                     ` : ''}

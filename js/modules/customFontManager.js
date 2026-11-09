@@ -273,9 +273,10 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                 to { opacity: 1; }
             }
             .critical-board-dialog {
-                width: 100%;
-                max-width: 960px;
-                max-height: 90vh;
+                width: 96vw;
+                max-width: 1550px;
+                height: 92vh;
+                max-height: 94vh;
                 background: var(--bg-card, #ffffff);
                 border: 1.5px solid var(--border-color, #e2e8f0);
                 border-radius: 8px;
@@ -441,7 +442,13 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                             <p style="margin:2px 0 0 0; font-size:0.8rem; color:var(--text-secondary);">Advanced Browser PriceLister Settings: Custom Font Manager, UI Divider Block Positions &amp; Workspace Layout.</p>
                         </div>
                     </div>
-                    <button type="button" id="cb-close-btn" class="cb-close-btn" title="Close (Esc)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <button type="button" id="cb-header-save-apply" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:0.45rem; font-size:0.84rem; font-weight:700; padding:0.48rem 1.15rem; border-radius:6px; cursor:pointer;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Save &amp; Apply
+                        </button>
+                        <button type="button" id="cb-close-btn" class="cb-close-btn" title="Close (Esc)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                    </div>
                 </div>
 
                 <!-- NAVIGATION TABS -->
@@ -767,6 +774,47 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
     closeBtn?.addEventListener('click', closeModal);
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) closeModal();
+    });
+
+    // UI Header: "Save & Apply" button = Save settings & Close dialog
+    overlay.querySelector('#cb-header-save-apply')?.addEventListener('click', async () => {
+        try {
+            // 1. Save font if specified
+            const fontNameInput = overlay.querySelector('#cb-font-name');
+            const name = (fontNameInput?.value || loadedFontName || '').trim();
+            const currentApplied = localStorage.getItem('pricelister_custom_font');
+            if (name && (name !== currentApplied || loadedFontDataUrl)) {
+                await applyCustomFont(name, loadedFontDataUrl);
+            }
+
+            // 2. Save border color if accent customizer is active
+            const borderCard = overlay.querySelector('#cb-border-customizer-card');
+            const isAccentDivider = currentLayoutConfig.dividerStyle === 'accent';
+            if (isAccentDivider && borderCard && borderCard.style.display !== 'none') {
+                const cbBorderPicker = overlay.querySelector('#cb-border-color-picker');
+                const cbBorderHex = overlay.querySelector('#cb-border-color-hex');
+                let color = (cbBorderHex?.value || cbBorderPicker?.value || '').trim();
+                if (color) {
+                    if (!color.startsWith('#')) color = '#' + color;
+                    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+                        color = color.toUpperCase();
+                        document.documentElement.style.setProperty('--border-color', color);
+                        document.documentElement.style.setProperty('--border-subtle', color);
+                        document.documentElement.style.setProperty('--custom-border-color', color);
+                        localStorage.setItem('pricelister_custom_border_color', color);
+                    }
+                }
+            }
+
+            // 3. Apply layout configuration
+            applyCustomLayout(currentLayoutConfig);
+
+            showAlert.success("Settings saved and applied successfully!");
+            closeModal();
+        } catch (err) {
+            console.error("Save & Apply error:", err);
+            showAlert.error(err.message || "Failed to save settings.");
+        }
     });
 
     window.addEventListener('keydown', (e) => {
