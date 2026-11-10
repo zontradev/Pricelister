@@ -873,9 +873,8 @@ export const renderWorkers = async (container, workspaceId) => {
 
                                     <!-- Promote / Demote Quick Action Button -->
                                     <div id="manage-role-action-box" style="margin-top: 0.85rem;">
-                                        <button type="button" id="btn-quick-shift-role" style="width: 100%; height: 42px; border-radius: 10px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.18s ease; border: 1.5px solid #09090B; background: #09090B; color: #FFFFFF;">
+                                        <button type="button" id="btn-quick-shift-role" style="width: 100%; height: 42px; border-radius: 10px; font-size: 0.84rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.18s ease; border: 1.5px solid rgba(19, 223, 29, 1); background: #09090B; color: #FFFFFF;">
                                             <span id="btn-quick-shift-text" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                                                 Promote to Co-Admin
                                             </span>
                                         </button>
@@ -1395,13 +1394,12 @@ export const renderWorkers = async (container, workspaceId) => {
             }
         } else {
             if (shiftBtn) {
-                shiftBtn.style.background = '#09090B';
+                shiftBtn.style.background = '#16A34A';
                 shiftBtn.style.color = '#FFFFFF';
                 shiftBtn.style.border = 'none';
             }
             if (shiftText) {
                 shiftText.innerHTML = `
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                     Promote to Co-Admin
                 `;
             }
@@ -1775,17 +1773,17 @@ export const renderWorkers = async (container, workspaceId) => {
             const totalAssetsUsage = Math.max(pAdded + invAdded + catAdded + clientAdded + busAdded + barcodeAdded + explicitUsage, liveTouchedCount);
 
             // Card Border and Background Styling (Spacious Full-Width Enterprise Architecture)
-            let cardStyle = 'background: #FFFFFF; border: 1.5px solid #E4E4E7; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); width: 100%; box-sizing: border-box;';
+            let cardStyle = 'background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: var(--shadow-subtle); width: 100%; box-sizing: border-box;';
             
             if (isCreator) {
                 // Creator in very top Green outlined highlighted
-                cardStyle = 'background: #FFFFFF; border: 2px solid #10B981 !important; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 6px 25px -4px rgba(16, 185, 129, 0.18); position: relative; width: 100%; box-sizing: border-box;';
+                cardStyle = 'background: var(--bg-card); border: 2px solid #10B981 !important; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 6px 25px -4px rgba(16, 185, 129, 0.18); position: relative; width: 100%; box-sizing: border-box;';
             } else if (isBlocked) {
                 // Access Suspended / Blocked
-                cardStyle = 'background: #FFFFFF; border: 1.5px solid #E4E4E7; border-bottom: 4px solid #EF4444 !important; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 2px 10px rgba(239, 68, 68, 0.08); width: 100%; box-sizing: border-box;';
+                cardStyle = 'background: var(--bg-card); border: 1.5px solid var(--border-color); border-bottom: 4px solid #EF4444 !important; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 2px 10px rgba(239, 68, 68, 0.08); width: 100%; box-sizing: border-box;';
             } else if (hasRestrictions) {
                 // Restricted worker: yellow/amber bottom border
-                cardStyle = 'background: #FFFFFF; border: 1.5px solid #E4E4E7; border-bottom: 4px solid #F59E0B !important; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 2px 10px rgba(245, 158, 11, 0.08); width: 100%; box-sizing: border-box;';
+                cardStyle = 'background: var(--bg-card); border: 1.5px solid var(--border-color); border-bottom: 4px solid #F59E0B !important; border-radius: 18px; padding: 1.35rem 1.75rem; transition: all 0.2s ease; box-shadow: 0 2px 10px rgba(245, 158, 11, 0.08); width: 100%; box-sizing: border-box;';
             }
 
             // Role Badge styling
@@ -1859,13 +1857,13 @@ export const renderWorkers = async (container, workspaceId) => {
             if (canManageWorkers && !isSelf) {
                 if (isPending) {
                     actionBtnHtml = `
-                        <button type="button" class="btn btn-sm btn-cancel-invite" data-email="${escapeHtml(m.email)}" style="font-size:0.82rem; padding:0.5rem 1.15rem; color:#09090B; background:#FFFFFF; border:1.5px solid #E4E4E7; border-radius:10px; font-weight:700; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.background='#F4F4F5'; this.style.borderColor='#D4D4D8';" onmouseout="this.style.background='#FFFFFF'; this.style.borderColor='#E4E4E7';">
+                        <button type="button" class="btn btn-sm btn-secondary btn-cancel-invite" data-email="${escapeHtml(m.email)}" style="font-size:0.82rem; padding:0.5rem 1.15rem; border-radius:10px; font-weight:700; cursor:pointer; transition:all 0.15s ease;">
                             Cancel Invite
                         </button>
                     `;
                 } else if ((isAdmin && !isCreator) || (isCoAdmin && !isCreator && rUpper === 'WORKER')) {
                     actionBtnHtml = `
-                        <button type="button" class="btn btn-sm btn-manage-member" 
+                        <button type="button" class="btn btn-sm btn-secondary btn-manage-member" 
                             onclick="window.openManageWorkerModal(this)"
                             data-email="${escapeHtml(m.email)}" 
                             data-role="${rUpper}"
@@ -1880,7 +1878,7 @@ export const renderWorkers = async (container, workspaceId) => {
                             data-revoke-end="${m.revokeEnd || ''}"
                             data-revoke-start-fmt="${escapeHtml(m.revokeStartFormatted || '')}"
                             data-revoke-end-fmt="${escapeHtml(m.revokeEndFormatted || '')}"
-                            style="font-size:0.84rem; padding:0.55rem 1.25rem; font-weight:700; border-radius:10px; border:1.5px solid #D4D4D8; background:#FFFFFF; color:#09090B; cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all 0.15s ease;" onmouseover="this.style.background='#F4F4F5'; this.style.borderColor='#A1A1AA';" onmouseout="this.style.background='#FFFFFF'; this.style.borderColor='#D4D4D8';">
+                            style="font-size:0.84rem; padding:0.55rem 1.25rem; font-weight:700; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem; transition:all 0.15s ease;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                             <span>Manage</span>
                         </button>
@@ -1945,16 +1943,16 @@ export const renderWorkers = async (container, workspaceId) => {
                                 
                                 <!-- Row 1: Name + (You) + Role Pill + Status -->
                                 <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
-                                    <span style="font-weight: 800; font-size: 1.05rem; color: #09090B; letter-spacing: -0.01em;">
+                                    <span style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary); letter-spacing: -0.01em;">
                                         ${escapeHtml(displayName)}
                                     </span>
-                                    ${isSelf ? '<span style="font-size: 0.74rem; font-weight: 800; color: #18181B; background: #F4F4F5; padding: 0.18rem 0.55rem; border-radius: 6px; border: 1px solid #E4E4E7;">(You)</span>' : ''}
+                                    ${isSelf ? '<span style="font-size: 0.74rem; font-weight: 800; color: var(--text-primary); background: var(--surface-100); padding: 0.18rem 0.55rem; border-radius: 6px; border: 1px solid var(--border-color);">(You)</span>' : ''}
                                     ${rolePillHtml}
                                     ${statusBadgeHtml}
                                 </div>
 
                                 <!-- Row 2: Full Email -->
-                                <div style="font-size: 0.88rem; color: #52525B; font-weight: 500; word-break: break-all;">
+                                <div style="font-size: 0.88rem; color: var(--text-secondary); font-weight: 500; word-break: break-all;">
                                     ${escapeHtml(m.email || 'No email')}
                                 </div>
 
@@ -1962,19 +1960,19 @@ export const renderWorkers = async (container, workspaceId) => {
                                 <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; margin-top: 0.25rem;">
                                     
                                     <!-- ID Badge -->
-                                    <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.78rem; font-weight: 700; background: #F4F4F5; color: #09090B; padding: 0.22rem 0.65rem; border-radius: 6px; border: 1px solid #E4E4E7; display: inline-flex; align-items: center; gap: 5px;">
+                                    <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.78rem; font-weight: 700; background: var(--surface-100); color: var(--text-primary); padding: 0.22rem 0.65rem; border-radius: 6px; border: 1px solid var(--border-color); display: inline-flex; align-items: center; gap: 5px;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                         ID: #${escapeHtml(cleanWorkerId)}
                                     </span>
 
                                     <!-- AssetsUsage Badge -->
-                                    <span style="font-size: 0.78rem; font-weight: 700; background: #F4F4F5; color: #18181B; padding: 0.22rem 0.7rem; border-radius: 6px; border: 1px solid #E4E4E7; display: inline-flex; align-items: center; gap: 5px;" title="Combined workspace footprint (products, invoices, categories, clients, businesses, barcodes)">
+                                    <span style="font-size: 0.78rem; font-weight: 700; background: var(--surface-100); color: var(--text-primary); padding: 0.22rem 0.7rem; border-radius: 6px; border: 1px solid var(--border-color); display: inline-flex; align-items: center; gap: 5px;" title="Combined workspace footprint (products, invoices, categories, clients, businesses, barcodes)">
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                                        <span>AssetsUsage: <strong style="color: #09090B; font-weight: 800; font-size: 0.84rem;">${totalAssetsUsage}</strong></span>
+                                        <span>AssetsUsage: <strong style="color: var(--text-primary); font-weight: 800; font-size: 0.84rem;">${totalAssetsUsage}</strong></span>
                                     </span>
 
                                     <!-- Joined Date Badge -->
-                                    <span style="font-size: 0.76rem; font-weight: 600; color: #71717A; background: #FAFAFA; border: 1px solid #E4E4E7; padding: 0.22rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+                                    <span style="font-size: 0.76rem; font-weight: 600; color: var(--text-secondary); background: var(--surface-100); border: 1px solid var(--border-color); padding: 0.22rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                         <span>Joined: ${escapeHtml(joinedDateFormatted)}</span>
                                     </span>
@@ -2060,6 +2058,9 @@ export const renderWorkers = async (container, workspaceId) => {
     const isMock = workspaceId === 'ws_dev_mock' || workspaceId === 'dev-mock-uid' || !workspaceId ||
                    (typeof localStorage !== 'undefined' && localStorage.getItem('pricelister_demo_mode') === 'true');
 
+    let unsubMembers = null;
+    let unsubJoinRequests = null;
+
     if (isMock) {
         firestoreService.getWorkspaceMembers(workspaceId).then(mockMembers => {
             const members = Array.isArray(mockMembers) ? [...mockMembers] : [];
@@ -2087,7 +2088,7 @@ export const renderWorkers = async (container, workspaceId) => {
     } else {
         try {
             const membersRef = collection(db, 'Workspaces/' + workspaceId + '/Members');
-            onSnapshot(membersRef, (snap) => {
+            unsubMembers = onSnapshot(membersRef, (snap) => {
                 const members = snap.docs.map(d => ({ email: d.id, ...d.data() }));
 
                 // Ensure workspace creator is always represented
@@ -2132,7 +2133,7 @@ export const renderWorkers = async (container, workspaceId) => {
         const joinReqBadge = container.querySelector('#join-requests-count-badge');
 
         try {
-            firestoreService.listenJoinRequests(workspaceId, (requests) => {
+            unsubJoinRequests = firestoreService.listenJoinRequests(workspaceId, (requests) => {
                 if (!joinReqSection || !joinReqContainer) return;
                 const pending = (requests || []).filter(r => r.status === 'PENDING');
                 if (pending.length === 0) {
@@ -2581,4 +2582,15 @@ export const renderWorkers = async (container, workspaceId) => {
                 }
             }
         });
+
+    container._cleanup = () => {
+        if (typeof unsubMembers === 'function') {
+            unsubMembers();
+            unsubMembers = null;
+        }
+        if (typeof unsubJoinRequests === 'function') {
+            unsubJoinRequests();
+            unsubJoinRequests = null;
+        }
+    };
 };

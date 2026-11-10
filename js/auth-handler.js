@@ -10,6 +10,7 @@ import { setAppCurrencySymbol } from './utilities.js';
 import { openBannerPickerModal } from './modules/bannerModal.js';
 import { initGlobalSearch } from './modules/globalSearch.js';
 import { openCriticalBoardModal } from './modules/customFontManager.js';
+import { applyThemeMode, getThemeMode } from './utils/themeManager.js';
 if (typeof window !== 'undefined') {
     window.openCriticalBoardModal = openCriticalBoardModal;
 }
@@ -2261,11 +2262,11 @@ export const initAuthHandler = (pageType) => {
                             demoTag.style.alignItems = 'center';
                             demoTag.style.gap = '0.5rem';
                             demoTag.innerHTML = `
-                                <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:#FFFFFF; color:#18181B; padding:0.25rem 0.65rem; border-radius:9999px; border:1px solid #E4E4E7; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                                <span class="topbar-demo-pill" style="display:inline-flex; align-items:center; gap:5px; font-size:0.75rem; font-weight:700; background:var(--bg-card); color:var(--text-primary); padding:0.25rem 0.65rem; border-radius:9999px; border:1px solid var(--border-color); box-shadow:var(--shadow-subtle);">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                                     Demo Sandbox Mode
                                 </span>
-                                <button type="button" id="btn-reset-demo-data" class="btn btn-sm btn-secondary" style="font-size:0.72rem; padding:0.2rem 0.55rem; background:#FFFFFF; border:1px solid #E4E4E7; color:#18181B;" title="Reset demo dataset to initial state">
+                                <button type="button" id="btn-reset-demo-data" class="btn btn-sm btn-secondary" style="font-size:0.72rem; padding:0.2rem 0.55rem; border-radius:6px;" title="Reset demo dataset to initial state">
                                     Reset Demo Data
                                 </button>
                             `;
@@ -2405,53 +2406,41 @@ export const initAuthHandler = (pageType) => {
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem;">
                             <span id="drawer-active-theme-label" style="font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 999px; background: var(--surface-100); border: 1px solid var(--border-color); color: var(--text-primary); text-transform: capitalize;">
-                                ${currentColorMode === 'deep-dark' ? 'Deep Dark' : currentColorMode}
+                                ${getThemeMode().charAt(0).toUpperCase() + getThemeMode().slice(1)}
                             </span>
                             <svg id="drawer-chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition: transform 0.2s ease; transform: rotate(0deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </div>
                     </button>
 
-                    <!-- Drawer List: All 4 Themes in List, Showing which theme is active (By default closed) -->
+                    <!-- Drawer List: 3 Supported Themes (Light, Dark, System) - Default closed -->
                     <div id="appearance-drawer-list" style="display: none; flex-direction: column; gap: 3px; margin-top: 0.35rem; background: var(--surface-50); border: 1px solid var(--border-color); border-radius: 9px; padding: 0.35rem; transition: max-height 0.2s ease;">
                         
                         <!-- 1. Light Mode -->
-                        <button type="button" class="theme-drawer-item ${currentColorMode === 'light' ? 'active' : ''}" data-mode="light" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-radius: 7px; border: 1px solid ${currentColorMode === 'light' ? 'var(--text-primary)' : 'transparent'}; background: ${currentColorMode === 'light' ? 'var(--surface-100)' : 'transparent'}; color: var(--text-primary); cursor: pointer; text-align: left; transition: all 0.15s ease;">
+                        <button type="button" class="theme-drawer-item ${getThemeMode() === 'light' ? 'active' : ''}" data-mode="light" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-radius: 7px; border: 1px solid ${getThemeMode() === 'light' ? 'var(--text-primary)' : 'transparent'}; background: ${getThemeMode() === 'light' ? 'var(--surface-100)' : 'transparent'}; color: var(--text-primary); cursor: pointer; text-align: left; transition: all 0.15s ease;">
                             <div style="display: flex; align-items: center; gap: 0.55rem;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
                                 <div>
                                     <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-primary);">Light Mode</div>
-                                    <div style="font-size: 0.66rem; color: var(--text-secondary);">Minimal soft white</div>
+                                    <div style="font-size: 0.66rem; color: var(--text-secondary);">Minimal soft daylight (Default)</div>
                                 </div>
                             </div>
-                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'light' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${getThemeMode() === 'light' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                         </button>
 
-                        <!-- 2. Dark Mode -->
-                        <button type="button" class="theme-drawer-item ${currentColorMode === 'dark' ? 'active' : ''}" data-mode="dark" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-radius: 7px; border: 1px solid ${currentColorMode === 'dark' ? 'var(--text-primary)' : 'transparent'}; background: ${currentColorMode === 'dark' ? 'var(--surface-100)' : 'transparent'}; color: var(--text-primary); cursor: pointer; text-align: left; transition: all 0.15s ease;">
+                        <!-- 2. Dark Mode (Premium Graphite Enterprise) -->
+                        <button type="button" class="theme-drawer-item ${getThemeMode() === 'dark' ? 'active' : ''}" data-mode="dark" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-radius: 7px; border: 1px solid ${getThemeMode() === 'dark' ? 'var(--text-primary)' : 'transparent'}; background: ${getThemeMode() === 'dark' ? 'var(--surface-100)' : 'transparent'}; color: var(--text-primary); cursor: pointer; text-align: left; transition: all 0.15s ease;">
                             <div style="display: flex; align-items: center; gap: 0.55rem;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                                 <div>
                                     <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-primary);">Dark Mode</div>
-                                    <div style="font-size: 0.66rem; color: var(--text-secondary);">Executive smooth charcoal</div>
+                                    <div style="font-size: 0.66rem; color: var(--text-secondary);">Premium layered graphite</div>
                                 </div>
                             </div>
-                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'dark' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${getThemeMode() === 'dark' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                         </button>
 
-                        <!-- 3. Deep Dark Mode -->
-                        <button type="button" class="theme-drawer-item ${currentColorMode === 'deep-dark' ? 'active' : ''}" data-mode="deep-dark" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-radius: 7px; border: 1px solid ${currentColorMode === 'deep-dark' ? 'var(--text-primary)' : 'transparent'}; background: ${currentColorMode === 'deep-dark' ? 'var(--surface-100)' : 'transparent'}; color: var(--text-primary); cursor: pointer; text-align: left; transition: all 0.15s ease;">
-                            <div style="display: flex; align-items: center; gap: 0.55rem;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="3"></rect></svg>
-                                <div>
-                                    <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-primary);">Deep Dark Mode</div>
-                                    <div style="font-size: 0.66rem; color: var(--text-secondary);">Pure pitch black AMOLED</div>
-                                </div>
-                            </div>
-                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'deep-dark' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
-                        </button>
-
-                        <!-- 4. Auto System Mode -->
-                        <button type="button" class="theme-drawer-item ${currentColorMode === 'system' ? 'active' : ''}" data-mode="system" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-radius: 7px; border: 1px solid ${currentColorMode === 'system' ? 'var(--text-primary)' : 'transparent'}; background: ${currentColorMode === 'system' ? 'var(--surface-100)' : 'transparent'}; color: var(--text-primary); cursor: pointer; text-align: left; transition: all 0.15s ease;">
+                        <!-- 3. Auto System Mode -->
+                        <button type="button" class="theme-drawer-item ${getThemeMode() === 'system' ? 'active' : ''}" data-mode="system" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.6rem; border-radius: 7px; border: 1px solid ${getThemeMode() === 'system' ? 'var(--text-primary)' : 'transparent'}; background: ${getThemeMode() === 'system' ? 'var(--surface-100)' : 'transparent'}; color: var(--text-primary); cursor: pointer; text-align: left; transition: all 0.15s ease;">
                             <div style="display: flex; align-items: center; gap: 0.55rem;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
                                 <div>
@@ -2459,7 +2448,7 @@ export const initAuthHandler = (pageType) => {
                                     <div style="font-size: 0.66rem; color: var(--text-secondary);">Sync with device theme</div>
                                 </div>
                             </div>
-                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${currentColorMode === 'system' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            <span class="drawer-check" style="font-size: 0.8rem; font-weight: 800; color: var(--text-primary); visibility: ${getThemeMode() === 'system' ? 'visible' : 'hidden'};"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                         </button>
 
                     </div>
@@ -2544,27 +2533,7 @@ export const initAuthHandler = (pageType) => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const mode = e.currentTarget.getAttribute('data-mode');
-                document.documentElement.setAttribute('data-color-mode', mode);
-                localStorage.setItem('pricelister_color_mode', mode);
-
-                // Update List items active state
-                group.querySelectorAll('.theme-drawer-item').forEach(b => {
-                    const isThis = b.getAttribute('data-mode') === mode;
-                    b.classList.toggle('active', isThis);
-                    b.style.borderColor = isThis ? 'var(--text-primary)' : 'transparent';
-                    b.style.background = isThis ? 'var(--surface-100)' : 'transparent';
-                    const check = b.querySelector('.drawer-check');
-                    if (check) check.style.visibility = isThis ? 'visible' : 'hidden';
-                });
-
-                // Update Active Badge in Drawer Header
-                const activeLabel = group.querySelector('#drawer-active-theme-label');
-                if (activeLabel) {
-                    activeLabel.textContent = mode === 'deep-dark' ? 'Deep Dark' : mode;
-                }
-
-                window.dispatchEvent(new CustomEvent('pricelister-color-mode-changed', { detail: { mode } }));
-                window.dispatchEvent(new CustomEvent('pricelister-theme-changed', { detail: { colorMode: mode } }));
+                applyThemeMode(mode);
             });
         });
 

@@ -39,11 +39,11 @@ export const getPeopleService = (workspaceId) => {
                 return [];
             }
         },
-        listenCustomers: (callback) => {
+        listenCustomers: (callback, onError = null) => {
             return clientRepo.listenAll(data => {
                 const list = Array.isArray(data) ? data : [];
                 callback(list.filter(c => c && c.isClient !== true));
-            });
+            }, [], onError);
         },
         addCustomer: async (data, creatorId) => {
             validateCustomer(data);
@@ -103,7 +103,7 @@ export const getPeopleService = (workspaceId) => {
                 isPrimary: b.isPrimary === true || (primaryId ? b.id === primaryId : false)
             }));
         },
-        listenBusinesses: (callback) => {
+        listenBusinesses: (callback, onError = null) => {
             return businessRepo.listenAll(data => {
                 const list = Array.isArray(data) ? data : [];
                 let primaryId = null;
@@ -115,7 +115,7 @@ export const getPeopleService = (workspaceId) => {
                     isPrimary: b.isPrimary === true || (primaryId ? b.id === primaryId : false)
                 }));
                 callback(mapped);
-            });
+            }, [], onError);
         },
         setPrimaryBusiness: async (id) => {
             const list = (await businessRepo.getAll()) || [];
@@ -211,11 +211,11 @@ export const getPeopleService = (workspaceId) => {
                 return [];
             }
         },
-        listenClients: (callback) => {
+        listenClients: (callback, onError = null) => {
             return clientRepo.listenAll(data => {
                 const list = Array.isArray(data) ? data : [];
                 callback(list.filter(c => c && c.isClient === true));
-            });
+            }, [], onError);
         },
         addClient: async (data, creatorId) => {
             validateClient(data);

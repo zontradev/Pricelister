@@ -123,27 +123,27 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     <!-- Query Filter Dropdown -->
                     <select id="inv-filter-query" class="form-control" style="width: auto; padding: 0.4rem 0.85rem; border-radius: var(--radius-pill); font-size: 0.82rem; height: 38px; font-weight:600;">
                         <option value="ALL">All Invoices</option>
-                        <option value="VALUE_RANGE">Value Range ($ Min - Max)</option>
-                        <option value="ITEM_RANGE">Item Range (Min - Max)</option>
-                        <option value="TARGET_CUSTOMER">Target Customer</option>
+                        <option value="VALUE_RANGE">Value Range</option>
+                        <option value="ITEM_RANGE">Item Range</option>
+                        <option value="TARGET_CUSTOMER">Targeted Customer</option>
                         <option value="TARGET_BUSINESS">Targeted Business</option>
                     </select>
 
                     <!-- Value Range 2-block Inputs -->
                     <div id="inv-val-range-wrap" style="display:none; align-items:center; gap:4px;">
-                        <input type="number" id="inv-val-min" min="0" placeholder="Min $" class="form-control" style="width:72px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
+                        <input type="number" id="inv-val-min" min="0" placeholder="Min $" class="form-control" style="width:100px; padding:0.35rem 0.5rem; border-radius:4px; font-size:0.82rem; height:38px; font-weight:700;">
                         <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
-                        <input type="number" id="inv-val-max" min="0" placeholder="Max $" class="form-control" style="width:72px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
+                        <input type="number" id="inv-val-max" min="0" placeholder="Max $" class="form-control" style="width:100px; padding:0.35rem 0.5rem; border-radius:4px; font-size:0.82rem; height:38px; font-weight:700;">
                     </div>
 
                     <!-- Item Range 2-block Inputs -->
                     <div id="inv-item-range-wrap" style="display:none; align-items:center; gap:4px;">
-                        <input type="number" id="inv-item-min" min="0" placeholder="Min Items" class="form-control" style="width:78px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
+                        <input type="number" id="inv-item-min" min="0" placeholder="Min Items" class="form-control" style="width:100px; padding:0.35rem 0.5rem; border-radius:4px; font-size:0.82rem; height:38px; font-weight:700;">
                         <span style="font-size:0.75rem; color:#71717A; font-weight:700;">to</span>
-                        <input type="number" id="inv-item-max" min="0" placeholder="Max Items" class="form-control" style="width:78px; padding:0.35rem 0.5rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:700;">
+                        <input type="number" id="inv-item-max" min="0" placeholder="Max Items" class="form-control" style="width:100px; padding:0.35rem 0.5rem; border-radius:4px; font-size:0.82rem; height:38px; font-weight:700;">
                     </div>
 
-                    <!-- Target Customer Input (Matches by Name, Number, Email, ID) -->
+                    <!-- Targeted Customer Input (Matches by Name, Number, Email, ID) -->
                     <div id="inv-target-cust-wrap" style="display:none; align-items:center; gap:4px;">
                         <input type="text" id="inv-target-cust-input" placeholder="Search customer (Name, Phone, Email, ID)..." class="form-control" style="width:230px; padding:0.35rem 0.65rem; border-radius:8px; font-size:0.82rem; height:38px; font-weight:600;">
                     </div>

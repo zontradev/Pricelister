@@ -2215,12 +2215,12 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             const modeType = isBusinessMode ? 'businesses' : currentTab;
 
             let emptyHtml = '';
-            if (allPeople.length === 0) {
+            if (dataList.length === 0) {
                 // Initial empty state: No people/businesses added yet
                 emptyHtml = renderPeopleInitialEmptyState({ type: modeType, canCreate });
             } else {
                 // Search result empty state
-                emptyHtml = renderPeopleSearchEmptyState({ type: modeType, searchQuery: searchVal });
+                emptyHtml = renderPeopleSearchEmptyState({ type: modeType, searchQuery: peopleSearchTerm });
             }
 
             tbody.innerHTML = `<tr><td colspan="7" style="padding:0; border:none;">${emptyHtml}</td></tr>`;
@@ -2232,7 +2232,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             tbody.querySelector('#btn-empty-clear-people-search')?.addEventListener('click', () => {
                 const searchInput = container.querySelector('#people-search-input');
                 if (searchInput) searchInput.value = '';
-                renderList();
+                peopleSearchTerm = '';
+                renderRealtimeList(dataList);
             });
 
             updatePeopleBatchBar([]);
@@ -2320,12 +2321,16 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         }).join('');
 
         // Wire Toolbar Search, Filter & Sort Events
+        let searchDebounce = null;
         const searchInput = container.querySelector('#people-search-input');
         if (searchInput && !searchInput.__bound) {
             searchInput.__bound = true;
             searchInput.addEventListener('input', (e) => {
-                peopleSearchTerm = e.target.value.trim();
-                renderRealtimeList(dataList);
+                clearTimeout(searchDebounce);
+                searchDebounce = setTimeout(() => {
+                    peopleSearchTerm = e.target.value.trim();
+                    renderRealtimeList(dataList);
+                }, 150);
             });
         }
 
@@ -2742,11 +2747,38 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     };
 
     // -------------------------------------------------------------
-    // DATA LOADER & REALTIME LISTENER
+    // DATA LOADER, REALTIME LISTENER & ERROR RECOVERY
     // -------------------------------------------------------------
     let unsubscribe = null;
     let unsubscribeCustInvs = null;
     let unsubscribeBusInvs = null;
+
+    function renderErrorState(errText) {
+        const tbody = container.querySelector('#people-list-body');
+        if (!tbody) return;
+        const msg = errText || 'Failed to load directory data. Please check connection.';
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="padding: 3.5rem 1rem; text-align: center;">
+                    <div style="width:68px; height:68px; border-radius:18px; background:#fef2f2; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem; border:1.5px solid #fee2e2;">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <div style="font-weight: 800; font-size: 1.15rem; color: #18181B; margin-bottom: 0.35rem;">Unable to Load Directory</div>
+                    <div style="font-size: 0.88rem; color: #71717A; max-width: 440px; margin: 0 auto 1.25rem auto; line-height: 1.5;">${escapeHtml(msg)}</div>
+                    <button type="button" id="btn-people-retry-load" class="btn btn-primary" style="padding:0.55rem 1.5rem; font-weight:700; background:#18181B; color:#FFFFFF; border-radius:8px; cursor:pointer;">
+                        Retry Connection
+                    </button>
+                </td>
+            </tr>
+        `;
+        tbody.querySelector('#btn-people-retry-load')?.addEventListener('click', () => {
+            loadData();
+        });
+    }
 
     async function loadData() {
         if (unsubscribe) {
@@ -2763,9 +2795,22 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         }
 
         renderListView();
-        await fetchInvoices();
 
-        // Listen for invoice changes so invoice pill counts update in real-time
+        // If we already have in-memory data, render it immediately to prevent unnecessary waiting
+        if (dataList && dataList.length > 0) {
+            renderRealtimeList(dataList);
+        }
+
+        // Concurrent background fetch for invoices (non-blocking, updates transaction stats when ready)
+        fetchInvoices().then(() => {
+            if (dataList && dataList.length > 0 && !activePersonDetail) {
+                renderRealtimeList(dataList);
+            }
+        }).catch(err => {
+            console.warn("Background invoices fetch warning:", err);
+        });
+
+        // Listen for invoice changes in real-time
         try {
             unsubscribeCustInvs = invoiceService.listenInvoices(false, () => {
                 fetchInvoices().then(() => {
@@ -2785,17 +2830,43 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             console.warn("Invoice listeners warning:", e);
         }
 
+        const handleDataSnapshot = (data) => {
+            const list = Array.isArray(data) ? data : [];
+            renderRealtimeList(list);
+        };
+
+        const handleDataError = (err) => {
+            console.error(`Directory snapshot error for ${currentTab}:`, err);
+            renderErrorState(err?.message || `Failed to connect to ${currentTab} collection.`);
+        };
+
         try {
             if (isBusinessMode || currentTab === 'businesses') {
-                unsubscribe = peopleService.listenBusinesses(renderRealtimeList);
+                unsubscribe = peopleService.listenBusinesses(handleDataSnapshot, handleDataError);
             } else if (currentTab === 'clients') {
-                unsubscribe = peopleService.listenClients(renderRealtimeList);
+                unsubscribe = peopleService.listenClients(handleDataSnapshot, handleDataError);
             } else {
-                unsubscribe = peopleService.listenCustomers(renderRealtimeList);
+                unsubscribe = peopleService.listenCustomers(handleDataSnapshot, handleDataError);
             }
         } catch (error) {
-            console.error(`Failed to listen to ${currentTab}:`, error);
-            showAlert.error(`Failed to listen to directory`);
+            console.error(`Failed to initialize listener for ${currentTab}:`, error);
+            renderErrorState(error?.message || `Failed to listen to ${currentTab}`);
+        }
+    }
+
+    // Component Unmount Cleanup Hook — invoked by router when navigating away
+    container._cleanup = () => {
+        if (unsubscribe) {
+            unsubscribe();
+            unsubscribe = null;
+        }
+        if (unsubscribeCustInvs) {
+            unsubscribeCustInvs();
+            unsubscribeCustInvs = null;
+        }
+        if (unsubscribeBusInvs) {
+            unsubscribeBusInvs();
+            unsubscribeBusInvs = null;
         }
     };
 

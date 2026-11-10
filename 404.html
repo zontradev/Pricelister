@@ -41,7 +41,7 @@
                 if (subroute) {
                     try { sessionStorage.setItem('pricelister_last_route', '/' + subroute.replace(/^\//, '')); } catch(e) {}
                 }
-                window.location.replace(repoPrefix + 'app.html');
+                window.location.replace(repoPrefix + 'app.html' + search + hash);
                 return;
             }
             var landingViews = ['home', 'explore', 'pricing', 'find', 'privacy', 'terms', 'connection'];

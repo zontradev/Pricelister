@@ -145,14 +145,14 @@ export const renderOrders = async (container, workspaceId) => {
                             </svg>
                         </div>
                         <h4 style="font-size:1.3rem; font-weight:800; color:var(--text-primary); margin-bottom:0.4rem;">
-                            ${ordersList.length === 0 ? 'No Orders Received yet.' : 'No Orders Found'}
+                            ${allOrders.length === 0 ? 'No Orders Received yet.' : 'No Orders Found'}
                         </h4>
                         <p style="color:var(--text-secondary); font-size:0.9rem; max-width:440px; margin:0 auto 1.25rem; line-height:1.55;">
-                            ${ordersList.length === 0 
+                            ${allOrders.length === 0 
                                 ? 'When customers or clients place storefront orders from your catalog, incoming order tickets will stream in right here.' 
                                 : 'No orders match your active search or filter selection. Try resetting your filters to see all orders.'}
                         </p>
-                        ${ordersList.length > 0 ? `
+                        ${allOrders.length > 0 ? `
                             <button type="button" id="btn-empty-clear-orders-filter" class="btn" style="padding:0.55rem 1.4rem; font-size:0.88rem; font-weight:700; border-radius:8px; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; cursor:pointer;">
                                 Reset All Filters
                             </button>
@@ -529,11 +529,17 @@ export const renderOrders = async (container, workspaceId) => {
         });
     };
 
-    // Listen to real-time order updates
-    orderService.listenOrders((updatedList) => {
+    // Listen to real-time order updates with clean component unmount
+    const unsubOrders = orderService.listenOrders((updatedList) => {
         allOrders = updatedList;
         renderUI();
     });
+
+    container._cleanup = () => {
+        if (typeof unsubOrders === 'function') {
+            unsubOrders();
+        }
+    };
 
     renderUI();
 };

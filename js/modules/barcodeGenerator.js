@@ -474,18 +474,42 @@ const bindBuilderEvents = (target) => {
         openSaveTemplateModal();
     });
 
-    target.querySelector('#btn-send-to-barcode')?.addEventListener('click', () => {
+    target.querySelector('#btn-send-to-barcode')?.addEventListener('click', async () => {
         const svc = getCodeStudioService(currentWorkspaceId);
         barcodeState.content = svc.assembleCode(activeBlocks, activeSeparatorConfig);
+        try {
+            await svc.logCodeGeneration({
+                code: barcodeState.content,
+                format: 'Code 128',
+                templateName: 'Custom Builder',
+                connectionId: 'unlinked',
+                purpose: 'product',
+                event: 'generated'
+            });
+        } catch (e) {
+            console.warn("Could not log code to server history:", e);
+        }
         activeTab = 'barcode';
         const navBtns = document.querySelectorAll('.studio-tab-btn');
         navBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === 'barcode'));
         renderBarcodeTab(target);
     });
 
-    target.querySelector('#btn-send-to-qr')?.addEventListener('click', () => {
+    target.querySelector('#btn-send-to-qr')?.addEventListener('click', async () => {
         const svc = getCodeStudioService(currentWorkspaceId);
         qrState.content = svc.assembleCode(activeBlocks, activeSeparatorConfig);
+        try {
+            await svc.logCodeGeneration({
+                code: qrState.content,
+                format: 'QR Code',
+                templateName: 'Custom Builder',
+                connectionId: 'unlinked',
+                purpose: 'product',
+                event: 'generated'
+            });
+        } catch (e) {
+            console.warn("Could not log QR code to server history:", e);
+        }
         activeTab = 'qrcode';
         const navBtns = document.querySelectorAll('.studio-tab-btn');
         navBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === 'qrcode'));
@@ -712,7 +736,9 @@ const bindBarcodeEvents = (target) => {
         try {
             const prodService = getProductService(currentWorkspaceId);
             await prodService.updateProduct(barcodeState.productId, { upcCode: barcodeState.content });
-            showAlert.success(`Barcode ${barcodeState.content} attached to product.`);
+            const svc = getCodeStudioService(currentWorkspaceId);
+            await svc.linkCodeToTarget(barcodeState.content, barcodeState.productId, 'product');
+            showAlert.success(`Barcode ${barcodeState.content} attached and linked to product.`);
         } catch (e) {
             showAlert.error(`Could not update product: ${e.message}`);
         }
@@ -860,6 +886,20 @@ const downloadBarcodePNG = async () => {
     if (!dataUrl) {
         showAlert.info("Barcode preview is preparing...");
         return;
+    }
+    try {
+        const svc = getCodeStudioService(currentWorkspaceId);
+        await svc.logCodeGeneration({
+            code: sku,
+            barcode: sku,
+            format: barcodeState.format,
+            connectionId: barcodeState.productId || 'unlinked',
+            productId: barcodeState.productId || null,
+            purpose: barcodeState.productId ? 'product' : 'general',
+            event: 'downloaded'
+        });
+    } catch (e) {
+        console.warn("Could not log downloaded barcode to server:", e);
     }
     const a = document.createElement("a");
     a.download = `barcode_${sku.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
@@ -1303,6 +1343,17 @@ const downloadQRCodePNG = () => {
 
     const finishDownload = () => {
         try {
+            const svc = getCodeStudioService(currentWorkspaceId);
+            svc.logCodeGeneration({
+                code: content,
+                barcode: content,
+                format: 'QR Code',
+                connectionId: 'unlinked',
+                purpose: 'general',
+                event: 'downloaded'
+            }).catch(() => {});
+        } catch (e) {}
+        try {
             const a = document.createElement("a");
             a.download = `qrcode_${Date.now()}.png`;
             a.href = exportCanvas.toDataURL("image/png");
@@ -1673,34 +1724,49 @@ const renderHistoryTab = async (target) => {
                         <thead>
                             <tr style="background:#F4F4F5; border-bottom:1px solid #E4E4E7; font-size:0.75rem; text-transform:uppercase; color:#71717A;">
                                 <th style="padding:0.8rem 1rem;">Timestamp</th>
-                                <th style="padding:0.8rem 1rem;">Generated Code</th>
+                                <th style="padding:0.8rem 1rem;">Barcode / Code</th>
+                                <th style="padding:0.8rem 1rem;">ConnectionID</th>
                                 <th style="padding:0.8rem 1rem;">Format / Template</th>
-                                <th style="padding:0.8rem 1rem;">Target Reference</th>
-                                <th style="padding:0.8rem 1rem;">Action Event</th>
+                                <th style="padding:0.8rem 1rem;">Purpose</th>
+                                <th style="padding:0.8rem 1rem;">WorkspaceID</th>
+                                <th style="padding:0.8rem 1rem;">Status / Event</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${history.map(h => `
+                            ${history.map(h => {
+                                const connId = h.connectionId || h.productId || h.invoiceNumber || 'unlinked';
+                                const isLinked = connId && connId !== 'unlinked' && connId !== 'draft';
+                                const realWs = h.workspaceId || (window.__activeWorkspace?.workspaceId) || currentWorkspaceId;
+                                return `
                                 <tr style="border-bottom:1px solid #E4E4E7;">
-                                    <td style="padding:0.8rem 1rem; font-family:monospace; font-size:0.78rem; color:#71717A;">
+                                    <td style="padding:0.8rem 1rem; font-family:monospace; font-size:0.78rem; color:#71717A; white-space:nowrap;">
                                         ${new Date(h.timestamp || Date.now()).toLocaleString()}
                                     </td>
-                                    <td style="padding:0.8rem 1rem; font-family:monospace; font-weight:800; color:#18181B;">
-                                        ${escapeHtml(h.code)}
-                                    </td>
-                                    <td style="padding:0.8rem 1rem; color:#18181B;">
-                                        ${escapeHtml(h.format || h.templateName || 'Custom')}
-                                    </td>
-                                    <td style="padding:0.8rem 1rem; color:#71717A;">
-                                        ${escapeHtml(h.productName || h.productId || 'Catalog Draft')}
+                                    <td style="padding:0.8rem 1rem; font-family:monospace; font-weight:800; color:#18181B; font-size:0.9rem;">
+                                        ${escapeHtml(h.barcode || h.code)}
                                     </td>
                                     <td style="padding:0.8rem 1rem;">
-                                        <span class="badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:4px; font-weight:700;">
-                                            ${h.event || 'generated'}
+                                        <span class="badge" style="font-family:monospace; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:6px; font-weight:700; ${isLinked ? 'background:#F0FDF4; color:#166534; border:1px solid #BBF7D0;' : 'background:#F4F4F5; color:#71717A; border:1px solid #E4E4E7;'}">
+                                            ${escapeHtml(connId)}
+                                        </span>
+                                    </td>
+                                    <td style="padding:0.8rem 1rem; color:#18181B; font-weight:600;">
+                                        ${escapeHtml(h.format || h.templateName || 'Custom')}
+                                    </td>
+                                    <td style="padding:0.8rem 1rem; color:#71717A; text-transform:capitalize; font-size:0.8rem;">
+                                        ${escapeHtml(h.purpose || 'catalog')}
+                                    </td>
+                                    <td style="padding:0.8rem 1rem; font-family:monospace; font-size:0.75rem; color:#71717A;">
+                                        ${escapeHtml(realWs)}
+                                    </td>
+                                    <td style="padding:0.8rem 1rem;">
+                                        <span class="badge" style="background:#18181B; color:#FFFFFF; border:1px solid #18181B; font-size:0.72rem; padding:0.18rem 0.55rem; border-radius:4px; font-weight:700; text-transform:uppercase;">
+                                            ${h.event || (isLinked ? 'committed' : 'generated')}
                                         </span>
                                     </td>
                                 </tr>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>

@@ -1286,8 +1286,13 @@ export const firestoreService = {
 };
 
 
+// High-speed In-Memory Snapshot Cache to guarantee instant UI rendering without flicker
+const firestoreRepoCache = new Map();
+
 // Modular Repository Factory
 export const createRepository = (collectionName, workspaceId) => {
+    const cacheKey = `${workspaceId || 'default'}:${collectionName}`;
+
     // For local dev / UI testing sandbox
     if (workspaceId === 'ws_dev_mock') {
         return {
@@ -1295,7 +1300,7 @@ export const createRepository = (collectionName, workspaceId) => {
                 const store = getDemoStore(collectionName);
                 return JSON.parse(JSON.stringify(store));
             },
-            listenAll: (callback) => {
+            listenAll: (callback, additionalConditions = [], onError = null) => {
                 const store = getDemoStore(collectionName);
                 callback(JSON.parse(JSON.stringify(store)));
                 return () => {}; // mock unsubscribe
@@ -1342,20 +1347,46 @@ export const createRepository = (collectionName, workspaceId) => {
             if (additionalConditions.length > 0) {
                 q = query(collRef, ...additionalConditions);
             }
-            const snap = await getDocs(q);
-            return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            try {
+                const snap = await getDocs(q);
+                const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (additionalConditions.length === 0) {
+                    firestoreRepoCache.set(cacheKey, data);
+                }
+                return data;
+            } catch (err) {
+                console.warn(`Error reading ${baseCollectionPath}:`, err);
+                if (additionalConditions.length === 0 && firestoreRepoCache.has(cacheKey)) {
+                    return firestoreRepoCache.get(cacheKey);
+                }
+                throw err;
+            }
         },
         
-        listenAll: (callback, additionalConditions = []) => {
+        listenAll: (callback, additionalConditions = [], onError = null) => {
             let q = query(collRef);
             if (additionalConditions.length > 0) {
                 q = query(collRef, ...additionalConditions);
+            } else if (firestoreRepoCache.has(cacheKey)) {
+                // Immediately deliver cached snapshot so UI renders instantly with zero waiting
+                try {
+                    callback(firestoreRepoCache.get(cacheKey));
+                } catch (e) {
+                    console.warn("Cached data delivery warning:", e);
+                }
             }
+
             return onSnapshot(q, (snap) => {
                 const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (additionalConditions.length === 0) {
+                    firestoreRepoCache.set(cacheKey, data);
+                }
                 callback(data);
             }, (err) => {
                 console.warn(`Error listening to ${baseCollectionPath}:`, err);
+                if (typeof onError === 'function') {
+                    onError(err);
+                }
             });
         },
         

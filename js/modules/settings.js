@@ -12,6 +12,7 @@ import { openCurrencyPickerModal } from './currencyModal.js';
 import { openBannerPickerModal, CURATED_BANNER_PRESETS } from './bannerModal.js';
 import { COUNTRIES_LIST } from '../../DataModel.js';
 import { CURRENCY_LIST, getCurrencyByCode } from '../utils/currencyData.js';
+import { getThemeMode, applyThemeMode } from '../utils/themeManager.js';
 
 const db = getFirestore(firebaseApp);
 
@@ -513,10 +514,99 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                 <div class="settings-tab-pane active" id="tab-general">
                     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                         
+                        <!-- SECTION 0: APPEARANCE & THEME MODE -->
+                        <div class="card" style="border: 1px solid var(--border-color); border-radius: 18px; padding: 1.75rem; background: var(--bg-card); box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <div style="width: 34px; height: 34px; border-radius: 9px; background: var(--surface-100); color: var(--text-primary); display: flex; align-items: center; justify-content: center;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                                    </div>
+                                    <div>
+                                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Theme &amp; Appearance</h3>
+                                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Select the interface appearance. 3 standard modes supported: Light, Dark, and System.</p>
+                                    </div>
+                                </div>
+                                <span style="font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.65rem; border-radius: 999px; background: var(--surface-100); color: var(--text-secondary); border: 1px solid var(--border-color);">
+                                    Active: <strong id="settings-active-theme-label" style="color:var(--text-primary); text-transform:capitalize;">${getThemeMode()}</strong>
+                                </span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                                <!-- LIGHT MODE CARD -->
+                                <div class="settings-theme-card" data-theme-mode="light" style="cursor: pointer; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.1rem; background: var(--surface-50); transition: all 0.18s ease; display: flex; flex-direction: column; justify-content: space-between;">
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                <div style="width: 28px; height: 28px; border-radius: 6px; background: #ffffff; border: 1px solid #d4d4d8; display: flex; align-items: center; justify-content: center; color: #18181b;">
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                                                </div>
+                                                <span style="font-weight: 800; font-size: 0.92rem; color: var(--text-primary);">Light Mode</span>
+                                            </div>
+                                            <div class="settings-theme-dot" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center;"></div>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0; line-height: 1.45;">
+                                            Clean daylight interface with crisp white cards, light workspace and zinc borders.
+                                        </p>
+                                    </div>
+                                    <div style="margin-top: 0.85rem; height: 24px; border-radius: 6px; background: #ffffff; border: 1px solid #e4e4e7; display: flex; align-items: center; padding: 0 8px; gap: 4px;">
+                                        <div style="width: 8px; height: 8px; border-radius: 2px; background: #18181b;"></div>
+                                        <div style="width: 32px; height: 4px; border-radius: 2px; background: #e4e4e7;"></div>
+                                        <div style="width: 20px; height: 4px; border-radius: 2px; background: #e4e4e7; margin-left: auto;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- DARK GRAPHITE MODE CARD -->
+                                <div class="settings-theme-card" data-theme-mode="dark" style="cursor: pointer; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.1rem; background: var(--surface-50); transition: all 0.18s ease; display: flex; flex-direction: column; justify-content: space-between;">
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                <div style="width: 28px; height: 28px; border-radius: 6px; background: #272727; border: 1px solid #414141; display: flex; align-items: center; justify-content: center; color: #E6E6E6;">
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                                                </div>
+                                                <span style="font-weight: 800; font-size: 0.92rem; color: var(--text-primary);">Dark (Graphite)</span>
+                                            </div>
+                                            <div class="settings-theme-dot" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center;"></div>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0; line-height: 1.45;">
+                                            Sophisticated layered graphite workspace (#181818, #272727) with silver-white typography.
+                                        </p>
+                                    </div>
+                                    <div style="margin-top: 0.85rem; height: 24px; border-radius: 6px; background: #272727; border: 1px solid #414141; display: flex; align-items: center; padding: 0 8px; gap: 4px;">
+                                        <div style="width: 8px; height: 8px; border-radius: 2px; background: #E6E6E6;"></div>
+                                        <div style="width: 32px; height: 4px; border-radius: 2px; background: #414141;"></div>
+                                        <div style="width: 20px; height: 4px; border-radius: 2px; background: #414141; margin-left: auto;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- SYSTEM AUTO SYNC CARD -->
+                                <div class="settings-theme-card" data-theme-mode="system" style="cursor: pointer; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 1.1rem; background: var(--surface-50); transition: all 0.18s ease; display: flex; flex-direction: column; justify-content: space-between;">
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                <div style="width: 28px; height: 28px; border-radius: 6px; background: var(--surface-100); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-primary);">
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                                </div>
+                                                <span style="font-weight: 800; font-size: 0.92rem; color: var(--text-primary);">System Auto</span>
+                                            </div>
+                                            <div class="settings-theme-dot" style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center;"></div>
+                                        </div>
+                                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0; line-height: 1.45;">
+                                            Automatically harmonizes with your operating system's light or dark mode preferences.
+                                        </p>
+                                    </div>
+                                    <div style="margin-top: 0.85rem; height: 24px; border-radius: 6px; background: linear-gradient(90deg, #ffffff 50%, #272727 50%); border: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 8px; gap: 4px;">
+                                        <div style="width: 8px; height: 8px; border-radius: 2px; background: #18181b;"></div>
+                                        <div style="width: 20px; height: 4px; border-radius: 2px; background: #cbd5e1;"></div>
+                                        <div style="width: 20px; height: 4px; border-radius: 2px; background: #505050; margin-left: auto;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- SECTION 1: VISUAL MEDIA (LOGO 1:1 & BANNER 16:9) -->
-                        <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+                        <div class="card" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 18px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
                             <div style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-                                <div style="width: 34px; height: 34px; border-radius: 9px; background: #f4f4f5; color: #18181b; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 34px; height: 34px; border-radius: 9px; background: var(--surface-100); color: var(--text-primary); display: flex; align-items: center; justify-content: center;">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                                 </div>
                                 <div>
@@ -535,7 +625,7 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
                                                 Workspace Logo
                                             </label>
-                                            <span style="font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px; background: #FAFAFA; color: #18181B; border: 1px solid #E4E4E7;">
+                                            <span style="font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--surface-100); color: var(--text-primary); border: 1px solid var(--border-color);">
                                                 1:1 Recommended
                                             </span>
                                         </div>
@@ -1145,7 +1235,43 @@ export const renderSettings = async (container, workspaceId = 'ws_dev_mock') => 
             });
         });
 
-        // Theme Mode removed from workspace settings per theme rules
+        // Theme Mode settings controller
+        const themeCards = container.querySelectorAll('.settings-theme-card');
+        const activeThemeLabel = container.querySelector('#settings-active-theme-label');
+
+        const syncSettingsThemeCards = (mode) => {
+            const effective = (mode === 'system') ? ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light') : mode;
+            themeCards.forEach(c => {
+                const cMode = c.getAttribute('data-theme-mode');
+                const isSelected = cMode === mode;
+                c.classList.toggle('selected', isSelected);
+                if (isSelected) {
+                    c.style.borderColor = effective === 'dark' ? '#E6E6E6' : '#18181B';
+                    c.style.boxShadow = '0 0 0 2px rgba(80, 80, 80, 0.25)';
+                } else {
+                    c.style.borderColor = 'var(--border-color)';
+                    c.style.boxShadow = 'none';
+                }
+                const dot = c.querySelector('.settings-theme-dot');
+                if (dot) {
+                    dot.style.background = isSelected ? (effective === 'dark' ? '#E6E6E6' : '#18181B') : 'transparent';
+                }
+            });
+            if (activeThemeLabel) {
+                activeThemeLabel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+            }
+        };
+
+        syncSettingsThemeCards(getThemeMode());
+
+        themeCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const selectedMode = card.getAttribute('data-theme-mode');
+                applyThemeMode(selectedMode);
+                syncSettingsThemeCards(selectedMode);
+                showAlert.success(`Theme updated to ${selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)}.`);
+            });
+        });
 
         // 1. Query all form input controls
         const vendingInput = container.querySelector('#set-vending');

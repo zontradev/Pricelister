@@ -182,6 +182,20 @@ export const getCodeStudioService = (workspaceId) => {
     const historyRepo = createRepository('CodeHistory', wsId);
     const batchesRepo = createRepository('CodeBatches', wsId);
     const productsRepo = createRepository('Products', wsId);
+    const customerInvoiceRepo = createRepository('Invoices', wsId);
+    const businessInvoiceRepo = createRepository('BusinessInvoices', wsId);
+
+    // Resolve real workspace ID (e.g. WS-XXXXX or 14-char base34 ID) instead of the raw document ID / auth UID
+    const getRealWorkspaceId = () => {
+        if (typeof window !== 'undefined' && window.__activeWorkspace) {
+            if (window.__activeWorkspace.workspaceId) return window.__activeWorkspace.workspaceId;
+            if (window.__activeWorkspace.realWorkspaceId) return window.__activeWorkspace.realWorkspaceId;
+            if (window.__activeWorkspace.uniqueId) return window.__activeWorkspace.uniqueId;
+        }
+        const stored = (typeof localStorage !== 'undefined') ? (localStorage.getItem('pricelister_active_real_ws') || localStorage.getItem('pricelister_workspace_id')) : null;
+        if (stored) return stored;
+        return wsId;
+    };
 
     return {
         // =====================================================================
@@ -396,11 +410,12 @@ export const getCodeStudioService = (workspaceId) => {
         },
 
         // =====================================================================
-        // 2. ATOMIC SEQUENCE COUNTER ENGINE
+        // 2. ATOMIC SEQUENCE COUNTER ENGINE (Strictly monotonic, sequence must not reverse)
         // =====================================================================
         atomicGetNextSequence: async (sequenceKey = 'default_supermarket', step = 1, startingNumber = 1) => {
             const allSeqs = await sequencesRepo.getAll();
             const existing = allSeqs.find(s => s.sequenceKey === sequenceKey || s.id === sequenceKey);
+            const realWsId = getRealWorkspaceId();
 
             let nextSeqNum = startingNumber;
             if (existing && existing.id) {
@@ -408,6 +423,8 @@ export const getCodeStudioService = (workspaceId) => {
                 await sequencesRepo.update(existing.id, {
                     currentValue: nextSeqNum,
                     sequenceKey,
+                    workspaceId: realWsId,
+                    connectionId: existing.connectionId || 'unlinked',
                     lastAllocatedAt: Date.now(),
                     step,
                     updatedAt: Date.now()
@@ -416,10 +433,11 @@ export const getCodeStudioService = (workspaceId) => {
                 const newId = `seq-${generateUniqueId()}`;
                 await sequencesRepo.add({
                     id: newId,
-                    workspaceId: wsId,
+                    workspaceId: realWsId,
                     sequenceKey,
                     currentValue: startingNumber,
                     step,
+                    connectionId: 'unlinked',
                     createdAt: Date.now(),
                     lastAllocatedAt: Date.now()
                 });
@@ -438,18 +456,21 @@ export const getCodeStudioService = (workspaceId) => {
         resetSequenceCounter: async (sequenceKey = 'default_supermarket', resetValue = 1) => {
             const allSeqs = await sequencesRepo.getAll();
             const record = allSeqs.find(s => s.sequenceKey === sequenceKey || s.id === sequenceKey);
+            const realWsId = getRealWorkspaceId();
             if (record) {
                 await sequencesRepo.update(record.id, {
                     currentValue: resetValue,
+                    workspaceId: realWsId,
                     lastAllocatedAt: Date.now(),
                     updatedAt: Date.now()
                 });
             } else {
                 await sequencesRepo.add({
                     id: `seq-${generateUniqueId()}`,
-                    workspaceId: wsId,
+                    workspaceId: realWsId,
                     sequenceKey,
                     currentValue: resetValue,
+                    connectionId: 'unlinked',
                     createdAt: Date.now(),
                     lastAllocatedAt: Date.now()
                 });
@@ -458,53 +479,95 @@ export const getCodeStudioService = (workspaceId) => {
 
         // =====================================================================
         // 3. COLLISION DETECTION & CODE RESERVATION
+        // Verifies against: Products (catalog + variations) AND Invoices (customer + business)
+        // Never reuse second time if product or invoice exists with this code
         // =====================================================================
-        checkCodeUniqueness: async (candidateCode, excludeProductId = null) => {
+        checkCodeUniqueness: async (candidateCode, excludeProductId = null, excludeInvoiceId = null) => {
             const clean = String(candidateCode || '').trim();
             if (!clean) return { isUnique: false, conflictType: 'empty', message: 'Code is empty' };
 
-            // 1. Check active product catalog
-            const allProducts = await productsRepo.getAll();
-            for (const p of allProducts) {
-                if (excludeProductId && p.id === excludeProductId) continue;
-                if (!p.isArchive) {
-                    if (p.upcCode && p.upcCode.trim().toLowerCase() === clean.toLowerCase()) {
-                        return { isUnique: false, conflictType: 'product', conflictingItem: p, message: `Code already in use by product: "${p.name}"` };
-                    }
-                    if (p.uniqueId && p.uniqueId.trim().toLowerCase() === clean.toLowerCase()) {
-                        return { isUnique: false, conflictType: 'product_id', conflictingItem: p, message: `Code matches unique ID of product: "${p.name}"` };
-                    }
-                    // Check variations
-                    if (Array.isArray(p.variations)) {
-                        for (const v of p.variations) {
-                            if (v.upcCode && v.upcCode.trim().toLowerCase() === clean.toLowerCase()) {
-                                return { isUnique: false, conflictType: 'variation', conflictingItem: { product: p, variation: v }, message: `Code already in use by variation: "${p.name} (${v.sizeFlavor || ''})"` };
+            // 1. Check active product catalog (including uniqueId and all variations)
+            try {
+                const allProducts = await productsRepo.getAll();
+                for (const p of allProducts) {
+                    if (excludeProductId && p.id === excludeProductId) continue;
+                    if (!p.isArchive) {
+                        if (p.upcCode && p.upcCode.trim().toLowerCase() === clean.toLowerCase()) {
+                            return { isUnique: false, conflictType: 'product', conflictingItem: p, message: `Code already in use by product: "${p.name}"` };
+                        }
+                        if (p.uniqueId && p.uniqueId.trim().toLowerCase() === clean.toLowerCase()) {
+                            return { isUnique: false, conflictType: 'product_id', conflictingItem: p, message: `Code matches unique ID of product: "${p.name}"` };
+                        }
+                        // Check variations
+                        if (Array.isArray(p.variations)) {
+                            for (const v of p.variations) {
+                                if (v.upcCode && v.upcCode.trim().toLowerCase() === clean.toLowerCase()) {
+                                    return { isUnique: false, conflictType: 'variation', conflictingItem: { product: p, variation: v }, message: `Code already in use by variation: "${p.name} (${v.sizeFlavor || ''})"` };
+                                }
                             }
                         }
                     }
                 }
+            } catch (e) {
+                console.warn("Error checking product code uniqueness:", e);
             }
 
-            // 2. Check pending reservations (prune expired reservations older than 2 hours)
-            const allRes = await reservationsRepo.getAll();
-            const now = Date.now();
-            for (const r of allRes) {
-                if (r.code && r.code.trim().toLowerCase() === clean.toLowerCase()) {
-                    if (r.expiresAt && r.expiresAt > now) {
-                        return { isUnique: false, conflictType: 'reservation', conflictingItem: r, message: `Code currently reserved by session: ${r.purpose || 'Draft'}` };
+            // 2. Check Customer Invoices & Business Invoices (Cross-usage collision guard)
+            try {
+                const [custInvoices, busInvoices] = await Promise.all([
+                    customerInvoiceRepo.getAll().catch(() => []),
+                    businessInvoiceRepo.getAll().catch(() => [])
+                ]);
+                const allInvoices = [...(custInvoices || []), ...(busInvoices || [])];
+                for (const inv of allInvoices) {
+                    if (excludeInvoiceId && (inv.id === excludeInvoiceId || inv.uniqueId === excludeInvoiceId)) continue;
+                    const invNums = [inv.invoiceNumber, inv.busInvNumber, inv.uniqueId].filter(Boolean).map(s => String(s).trim().toLowerCase());
+                    if (invNums.includes(clean.toLowerCase())) {
+                        return { isUnique: false, conflictType: 'invoice', conflictingItem: inv, message: `Code already in use by invoice: "${inv.invoiceNumber || inv.busInvNumber || inv.id}"` };
                     }
                 }
+            } catch (e) {
+                console.warn("Error checking invoice code uniqueness:", e);
             }
+
+            // 3. Check Committed Code History (Codes linked to products/invoices can never be reused)
+            try {
+                const allHistory = await historyRepo.getAll();
+                for (const h of allHistory) {
+                    if (h.code && h.code.trim().toLowerCase() === clean.toLowerCase()) {
+                        if (h.event === 'committed' || (h.connectionId && h.connectionId !== 'unlinked' && h.connectionId !== 'draft')) {
+                            return { isUnique: false, conflictType: 'committed_history', conflictingItem: h, message: `Code already committed to ${h.purpose || 'record'} (${h.connectionId})` };
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("Error checking history code uniqueness:", e);
+            }
+
+            // 4. Check active pending reservations (prune expired reservations older than 2 hours)
+            try {
+                const allRes = await reservationsRepo.getAll();
+                const now = Date.now();
+                for (const r of allRes) {
+                    if (r.code && r.code.trim().toLowerCase() === clean.toLowerCase()) {
+                        if (r.expiresAt && r.expiresAt > now) {
+                            return { isUnique: false, conflictType: 'reservation', conflictingItem: r, message: `Code currently reserved by session: ${r.purpose || 'Draft'}` };
+                        }
+                    }
+                }
+            } catch (e) {}
 
             return { isUnique: true, conflictType: null, message: 'Code is unique and available' };
         },
 
         reserveCode: async (code, purpose = 'product_creation', ttlMinutes = 60, metadata = {}) => {
             const resId = `res-${generateUniqueId()}`;
+            const realWsId = getRealWorkspaceId();
             const record = {
                 id: resId,
-                workspaceId: wsId,
+                workspaceId: realWsId,
                 code: String(code).trim(),
+                connectionId: metadata.connectionId || metadata.productId || metadata.invoiceNumber || 'unlinked',
                 purpose,
                 metadata,
                 createdAt: Date.now(),
@@ -524,15 +587,10 @@ export const getCodeStudioService = (workspaceId) => {
             }
         },
 
-        commitReservedCode: async (code, productId) => {
+        commitReservedCode: async (code, targetId, targetType = 'product') => {
             await getCodeStudioService(wsId).releaseReservation(code);
-            // Log to generation audit history
-            await getCodeStudioService(wsId).logCodeGeneration({
-                code,
-                format: 'Custom Code Builder',
-                productId,
-                event: 'committed'
-            });
+            // Log & link to generation audit history
+            await getCodeStudioService(wsId).linkCodeToTarget(code, targetId, targetType);
         },
 
         // =====================================================================
@@ -669,25 +727,44 @@ export const getCodeStudioService = (workspaceId) => {
         // =====================================================================
         // 5. AUDIT HISTORY & GENERATION LOGGING
         // =====================================================================
+        // =====================================================================
+        // 5. AUDIT HISTORY, GENERATION LOGGING & CODE CONNECTION
+        // Stores: barcode, timestamp, connectionID (*wherelinked), workspaceId (real ID)
+        // =====================================================================
         logCodeGeneration: async ({
             code,
+            barcode = null,
             format = 'Code 128',
             templateId = null,
             templateName = 'Custom Builder',
+            connectionId = null,
             productId = null,
             productName = null,
+            invoiceId = null,
+            invoiceNumber = null,
+            purpose = null,
             event = 'generated',
             generatedBy = 'admin'
         }) => {
+            const finalCode = String(code || barcode || '').trim();
+            if (!finalCode) return null;
+            const realWsId = getRealWorkspaceId();
+            const resolvedConnId = connectionId || productId || invoiceNumber || invoiceId || 'unlinked';
+            const resolvedPurpose = purpose || (invoiceNumber || invoiceId ? 'invoice' : (productId ? 'product' : 'general'));
+
             const record = {
                 id: `hist-${generateUniqueId()}`,
-                workspaceId: wsId,
-                code: String(code).trim(),
+                workspaceId: realWsId,
+                barcode: finalCode,
+                code: finalCode,
                 format,
                 templateId,
                 templateName,
-                productId,
-                productName,
+                connectionId: resolvedConnId,
+                productId: productId || null,
+                productName: productName || null,
+                invoiceNumber: invoiceNumber || (resolvedPurpose === 'invoice' ? resolvedConnId : null),
+                purpose: resolvedPurpose,
                 event,
                 generatedBy,
                 timestamp: Date.now(),
@@ -697,6 +774,140 @@ export const getCodeStudioService = (workspaceId) => {
             return record;
         },
 
+        linkCodeToTarget: async (code, connectionId, targetType = 'product') => {
+            const clean = String(code || '').trim();
+            if (!clean || !connectionId) return;
+            const realWsId = getRealWorkspaceId();
+
+            try {
+                const allHistory = await historyRepo.getAll();
+                let updated = false;
+
+                for (const h of allHistory) {
+                    if (h.code && h.code.trim().toLowerCase() === clean.toLowerCase()) {
+                        await historyRepo.update(h.id, {
+                            connectionId: String(connectionId).trim(),
+                            workspaceId: realWsId,
+                            event: 'committed',
+                            targetType,
+                            purpose: targetType,
+                            linkedAt: Date.now(),
+                            updatedAt: Date.now()
+                        });
+                        updated = true;
+                    }
+                }
+
+                if (!updated) {
+                    await historyRepo.add({
+                        id: `hist-${generateUniqueId()}`,
+                        workspaceId: realWsId,
+                        barcode: clean,
+                        code: clean,
+                        connectionId: String(connectionId).trim(),
+                        format: targetType === 'invoice' ? 'Invoice Number' : 'Product Barcode',
+                        templateName: targetType === 'invoice' ? 'Invoice Coder' : 'Product Barcode',
+                        purpose: targetType,
+                        event: 'committed',
+                        generatedBy: 'admin',
+                        timestamp: Date.now(),
+                        linkedAt: Date.now(),
+                        createdAt: new Date().toISOString()
+                    });
+                }
+
+                // Release temporary reservations if any
+                await getCodeStudioService(wsId).releaseReservation(clean);
+            } catch (e) {
+                console.warn("Could not link code to target:", e);
+            }
+        },
+
+        // =====================================================================
+        // UNUSED CODE REUSE & MONOTONIC SEQUENCE ALLOCATION
+        // "Else if code generated but never uses anywhere than it will use next time."
+        // "secuence must not reverse."
+        // =====================================================================
+        allocateNextCodeForTemplate: async (templateId, purpose = 'invoice', currentTargetId = null) => {
+            const svc = getCodeStudioService(wsId);
+            const template = (templateId ? await svc.getTemplateById(templateId) : null) || await svc.getDefaultTemplate();
+            if (!template) throw new Error("Template not found");
+
+            // 1. Check if an uncommitted, unused code already exists for this template
+            // "Else if code generated but never uses anywhere than it will use next time."
+            try {
+                const allHistory = await historyRepo.getAll();
+                const unusedHistory = allHistory
+                    .filter(h => h.templateId === template.id && (!h.connectionId || h.connectionId === 'unlinked' || h.connectionId === 'draft') && h.event !== 'committed')
+                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+                for (const item of unusedHistory) {
+                    const check = await svc.checkCodeUniqueness(item.code);
+                    if (check.isUnique) {
+                        // Reuse this previously generated code without advancing the sequence
+                        return {
+                            code: item.code,
+                            template,
+                            isReused: true,
+                            historyId: item.id
+                        };
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not check unused history:", e);
+            }
+
+            // 2. Generate a new unique code moving the sequence forward ("secuence must not reverse")
+            const seqKey = template.sequenceKey || template.id || 'default_sequence';
+            let candidateCode = '';
+            let isUnique = false;
+            let attempts = 0;
+
+            const hasSeqBlock = (template.blocks || []).some(b => b.type === 'sequential_number');
+            const seqBlock = hasSeqBlock ? (template.blocks || []).find(b => b.type === 'sequential_number') : null;
+            const startingNum = seqBlock ? (Number(seqBlock.startingNumber) || 1) : 1;
+            const step = seqBlock ? (Number(seqBlock.step) || 1) : 1;
+
+            while (!isUnique && attempts < 25) {
+                attempts++;
+                let seqVal = undefined;
+                if (hasSeqBlock) {
+                    seqVal = await svc.atomicGetNextSequence(seqKey, step, startingNum);
+                }
+
+                candidateCode = svc.assembleCode(template.blocks, template, {
+                    sequence: seqVal
+                });
+
+                const check = await svc.checkCodeUniqueness(candidateCode);
+                if (check.isUnique) {
+                    isUnique = true;
+                }
+            }
+
+            if (!isUnique) {
+                candidateCode = `${candidateCode}-${Date.now().toString().slice(-4)}`;
+            }
+
+            // Log new code to CodeHistory on server
+            const histRec = await svc.logCodeGeneration({
+                code: candidateCode,
+                format: template.name,
+                templateId: template.id,
+                templateName: template.name,
+                connectionId: currentTargetId || 'unlinked',
+                purpose,
+                event: 'generated'
+            });
+
+            return {
+                code: candidateCode,
+                template,
+                isReused: false,
+                historyId: histRec?.id
+            };
+        },
+
         getCodeHistory: async ({ limit = 100, format = null, search = '' } = {}) => {
             let all = await historyRepo.getAll();
             if (format) all = all.filter(h => h.format === format);
@@ -704,6 +915,8 @@ export const getCodeStudioService = (workspaceId) => {
                 const q = search.toLowerCase();
                 all = all.filter(h => 
                     (h.code || '').toLowerCase().includes(q) ||
+                    (h.barcode || '').toLowerCase().includes(q) ||
+                    (h.connectionId || '').toLowerCase().includes(q) ||
                     (h.productName || '').toLowerCase().includes(q) ||
                     (h.templateName || '').toLowerCase().includes(q)
                 );

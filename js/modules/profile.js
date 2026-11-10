@@ -827,6 +827,14 @@ export const renderProfile = async (container, workspaceId) => {
 
         // Store active unsubscriptions on the container
         container._profileUnsubs = unsubs;
+        container._cleanup = () => {
+            if (Array.isArray(container._profileUnsubs)) {
+                container._profileUnsubs.forEach(u => {
+                    try { if (typeof u === 'function') u(); } catch(e) {}
+                });
+                container._profileUnsubs = [];
+            }
+        };
 
         // Run initial live calculation
         updateLiveFootprint();

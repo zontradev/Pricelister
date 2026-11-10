@@ -381,9 +381,9 @@ const renderMemberRowHtml = (member, defaultExpanded = false) => {
     const initial = ((member.name || member.email || 'M').trim().charAt(0) || 'M').toUpperCase();
 
     return `
-        <div class="member-card-wrapper card" style="padding:0; border-radius:12px; border:1px solid var(--border-color); overflow:hidden; box-shadow:var(--shadow-subtle); margin-bottom:0.75rem; background:#ffffff;">
+        <div class="member-card-wrapper card" style="padding:0; border-radius:12px; border:1px solid var(--border-color); overflow:hidden; box-shadow:var(--shadow-subtle); margin-bottom:0.75rem; background:var(--bg-card);">
             <!-- Header Row -->
-            <div class="member-row-header" data-target="${uniqueRowId}" style="padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:#ffffff; transition:background 0.15s ease;">
+            <div class="member-row-header" data-target="${uniqueRowId}" style="padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:var(--bg-card); transition:background 0.15s ease;">
                 <div style="display:flex; align-items:center; gap:0.85rem; overflow:hidden;">
                     <!-- Avatar Circle with photo or initial -->
                     <div style="width:36px; height:36px; border-radius:50%; background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.88rem; flex-shrink:0; position:relative; overflow:hidden;">

@@ -246,23 +246,23 @@ const routes = {
  * to a clean public URL path (e.g. '/Workspace/overview', '/Workspace/settings')
  * No .html and no # hash symbol in locator.
  */
-export const getCleanUrlForRoute = (routePath = '/overview') => {
+export const getCleanUrlForRoute = (routePath = '/overview', search = '') => {
     let clean = (routePath || '/overview').replace(/^#/, '').replace(/\/index\.html$/i, '').trim();
     if (!clean || clean === '/') clean = '/overview';
     if (!clean.startsWith('/')) clean = '/' + clean;
     if (clean === '/workers') clean = '/workspace';
     if (clean === '/customer-invoices') clean = '/invoices/customer';
     if (clean === '/business-invoices') clean = '/invoices/business';
-    return `/Workspace${clean}`;
+    const query = search || (typeof window !== 'undefined' ? window.location.search : '') || '';
+    return `/Workspace${clean}${query && !clean.includes('?') ? query : ''}`;
 };
 
 /**
  * Extract normalized internal route from the current window location
  * Supports:
- *   - /Workspace/overview, /Workspace/settings, /Workspace/invoices/customer
- *   - /overview, /settings, /members
+ *   - /Workspace/overview, /Workspace/settings, /Workspace/workspace
  *   - Route persistence fallback via sessionStorage (pricelister_last_route)
- *   - Legacy fallback: #/overview
+ *   - Distinguishes between workspace root (/Workspace) and workspace hub (/Workspace/workspace)
  */
 export const extractRouteFromUrl = () => {
     // 1. Check hash fallback if user accessed via old bookmark
@@ -275,30 +275,38 @@ export const extractRouteFromUrl = () => {
 
     // 2. Check clean path /Workspace/...
     const pathname = window.location.pathname || '';
-    const wsMatch = pathname.match(/(?:\/|^)workspace(\/.*)?$/i);
-    if (wsMatch) {
-        let sub = (wsMatch[1] || '').trim();
-        // Strip any appended /index.html to prevent routing crashes
-        sub = sub.replace(/\/index\.html$/i, '').trim();
-        if (sub) {
-            if (!sub.startsWith('/')) sub = '/' + sub;
-            if (sub === '/customer-invoices') sub = '/invoices/customer';
-            if (sub === '/business-invoices') sub = '/invoices/business';
-            if (routes[sub] || sub.startsWith('/analytics/') || sub.startsWith('/schema-analyzer/')) {
-                return sub;
+    const cleanPathname = pathname.replace(/\/index\.html$/i, '').trim();
+
+    // Check if path is literally the workspace root (e.g. /Workspace, /workspace, /Workspace/)
+    const isWorkspaceRoot = /^\/workspace\/?$/i.test(cleanPathname);
+
+    if (!isWorkspaceRoot) {
+        const wsMatch = cleanPathname.match(/(?:\/|^)workspace(\/.*)?$/i);
+        if (wsMatch) {
+            let sub = (wsMatch[1] || '').trim();
+            if (sub && sub !== '/') {
+                if (!sub.startsWith('/')) sub = '/' + sub;
+                if (sub === '/customer-invoices') sub = '/invoices/customer';
+                if (sub === '/business-invoices') sub = '/invoices/business';
+                if (routes[sub] || sub.startsWith('/analytics/') || sub.startsWith('/schema-analyzer/')) {
+                    return sub;
+                }
+            }
+        }
+
+        // 3. Check direct route path match (e.g. /overview, /products, /customers)
+        for (const r of Object.keys(routes)) {
+            if (r === '/workspace' || r === '/workers') {
+                if (cleanPathname.toLowerCase() === '/workspace/workspace' || cleanPathname.toLowerCase() === '/workspace/workers') {
+                    return r;
+                }
+            } else if (cleanPathname.toLowerCase().endsWith(r.toLowerCase())) {
+                return r;
             }
         }
     }
 
-    // 3. Check direct route path match
-    for (const r of Object.keys(routes)) {
-        const cleanPath = pathname.replace(/\/index\.html$/i, '');
-        if (cleanPath.toLowerCase().endsWith(r.toLowerCase())) {
-            return r;
-        }
-    }
-
-    // 4. Persistence Fallback: If user refreshed (F5) or reloaded, check sessionStorage so active page is NEVER forgotten!
+    // 4. Persistence Fallback: If user refreshed or entered at workspace root, restore last active page!
     try {
         const lastRoute = sessionStorage.getItem('pricelister_last_route');
         if (lastRoute && (routes[lastRoute] || lastRoute.startsWith('/analytics/') || lastRoute.startsWith('/schema-analyzer/'))) {
@@ -426,6 +434,26 @@ export const initRouter = async (workspaceIdParam = null) => {
             try {
                 if (mainContainer) {
                     discardActiveUnsavedChanges();
+
+                    // Lifecycle cleanup: cleanly unsubscribe listeners, timers & observers from previous view
+                    if (typeof mainContainer._cleanup === 'function') {
+                        try {
+                            mainContainer._cleanup();
+                        } catch (errClean) {
+                            console.warn("[Router] Main container cleanup error:", errClean);
+                        }
+                        mainContainer._cleanup = null;
+                    }
+                    const prevView = mainContainer.querySelector('.route-view');
+                    if (prevView && typeof prevView._cleanup === 'function') {
+                        try {
+                            prevView._cleanup();
+                        } catch (errClean) {
+                            console.warn("[Router] Route view cleanup error:", errClean);
+                        }
+                        prevView._cleanup = null;
+                    }
+
                     mainContainer.innerHTML = '';
                     const routeContainer = document.createElement('div');
                     routeContainer.className = 'route-view';
@@ -498,11 +526,19 @@ export const initRouter = async (workspaceIdParam = null) => {
      */
     const navigateTo = async (targetRoute, replace = false) => {
         let rawTarget = (targetRoute || '/overview').replace(/^#/, '').trim();
-        if (rawTarget === 'customer-invoices' || rawTarget === '/customer-invoices') rawTarget = '/invoices/customer';
-        if (rawTarget === 'business-invoices' || rawTarget === '/business-invoices') rawTarget = '/invoices/business';
-        const normalizedTarget = rawTarget.startsWith('/') ? rawTarget : '/' + rawTarget;
+        let targetPath = rawTarget;
+        let targetSearch = '';
+        const qIdx = rawTarget.indexOf('?');
+        if (qIdx !== -1) {
+            targetPath = rawTarget.substring(0, qIdx);
+            targetSearch = rawTarget.substring(qIdx);
+        }
 
-        if (normalizedTarget === currentActiveRoute && !replace) return;
+        if (targetPath === 'customer-invoices' || targetPath === '/customer-invoices') targetPath = '/invoices/customer';
+        if (targetPath === 'business-invoices' || targetPath === '/business-invoices') targetPath = '/invoices/business';
+        const normalizedTarget = targetPath.startsWith('/') ? targetPath : '/' + targetPath;
+
+        if (normalizedTarget === currentActiveRoute && !replace && !targetSearch) return;
 
         // Edit Safety Check: Intercept navigation if there are unsaved edits
         if (!isNavigatingAway && currentActiveRoute && currentActiveRoute !== normalizedTarget && hasUnsavedChanges()) {
@@ -515,7 +551,7 @@ export const initRouter = async (workspaceIdParam = null) => {
             }
         }
 
-        const cleanUrl = getCleanUrlForRoute(normalizedTarget);
+        const cleanUrl = getCleanUrlForRoute(normalizedTarget, targetSearch || window.location.search);
 
         try {
             if (replace) {
@@ -657,7 +693,7 @@ export const initRouter = async (workspaceIdParam = null) => {
                 if (!allowLeave) {
                     // Revert URL forward
                     if (currentActiveRoute) {
-                        window.history.pushState({ route: currentActiveRoute }, '', getCleanUrlForRoute(currentActiveRoute));
+                        window.history.pushState({ route: currentActiveRoute }, '', getCleanUrlForRoute(currentActiveRoute, window.location.search));
                     }
                     return;
                 } else {
@@ -679,7 +715,7 @@ export const initRouter = async (workspaceIdParam = null) => {
     
     // Initial load: Sanitize address bar to clean /Workspace/... locator immediately
     const initialRoute = extractRouteFromUrl();
-    const initialCleanUrl = getCleanUrlForRoute(initialRoute);
+    const initialCleanUrl = getCleanUrlForRoute(initialRoute, window.location.search);
     try {
         window.history.replaceState({ route: initialRoute }, '', initialCleanUrl);
     } catch (e) {

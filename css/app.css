@@ -1283,10 +1283,11 @@
 
 .group-count {
     font-size: 0.65rem;
-    color: #A1A1AA;
+    color: var(--text-muted, #A1A1AA);
     padding: 0.05rem 0.35rem;
     border-radius: 4px;
-    background: #F4F4F5;
+    background: var(--surface-100, #F4F4F5);
+    border: 1px solid var(--border-color, transparent);
     font-family: monospace;
     font-weight: 600;
 }

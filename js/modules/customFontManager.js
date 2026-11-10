@@ -4,6 +4,7 @@
  */
 
 import { showAlert } from '../alert-handler.js';
+import { getThemeMode, applyThemeMode } from '../utils/themeManager.js';
 
 // Pre-defined high-quality curated Google & System Fonts (Expanded Professional Suite)
 export const FONT_PRESETS = [
@@ -565,6 +566,26 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                     <div class="cb-tab-pane" id="cb-tab-layout" style="display:none;">
                         <div style="display:flex; flex-direction:column; gap:1.25rem;">
                             
+                            <!-- 0. Theme Mode (Light / Dark / System) -->
+                            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:1.15rem;">
+                                <label style="font-weight:700; font-size:0.9rem; color:var(--text-primary); display:block; margin-bottom:0.25rem;">Appearance &amp; Theme Mode</label>
+                                <p style="font-size:0.8rem; color:var(--text-secondary); margin:0 0 0.75rem 0;">Choose your visual mode: Clean Light (Default), Premium Graphite Dark, or OS System auto-sync.</p>
+                                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:0.5rem;" id="cb-theme-mode-group">
+                                    <button type="button" class="btn btn-sm cb-theme-btn" data-theme-mode="light" style="font-size:0.82rem; font-weight:700; padding:0.45rem 0.65rem; justify-content:center; display:flex; align-items:center; gap:6px;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                                        Light
+                                    </button>
+                                    <button type="button" class="btn btn-sm cb-theme-btn" data-theme-mode="dark" style="font-size:0.82rem; font-weight:700; padding:0.45rem 0.65rem; justify-content:center; display:flex; align-items:center; gap:6px;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                                        Dark (Graphite)
+                                    </button>
+                                    <button type="button" class="btn btn-sm cb-theme-btn" data-theme-mode="system" style="font-size:0.82rem; font-weight:700; padding:0.45rem 0.65rem; justify-content:center; display:flex; align-items:center; gap:6px;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                        System (Auto)
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- 1. Sidebar Position -->
                             <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; padding:1.15rem;">
                                 <label style="font-weight:700; font-size:0.9rem; color:var(--text-primary); display:block; margin-bottom:0.25rem;">Sidebar Alignment Position</label>
@@ -630,7 +651,7 @@ export const openCriticalBoardModal = (initialTab = 'font') => {
                                     <button type="button" class="cb-border-swatch" data-color="#CBD5E1" style="background:#CBD5E1; width:26px; height:26px; border-radius:4px; border:1.5px solid rgba(0,0,0,0.15); cursor:pointer;" title="Silver (#CBD5E1)"></button>
                                     <button type="button" class="cb-border-swatch" data-color="#3F3F46" style="background:#3F3F46; width:26px; height:26px; border-radius:4px; border:1.5px solid rgba(255,255,255,0.2); cursor:pointer;" title="Dark Zinc (#3F3F46)"></button>
                                     <button type="button" class="cb-border-swatch" data-color="#27272A" style="background:#27272A; width:26px; height:26px; border-radius:4px; border:1.5px solid rgba(255,255,255,0.2); cursor:pointer;" title="Charcoal (#27272A)"></button>
-                                    <button type="button" class="cb-border-swatch" data-color="#000000" style="background:#000000; width:26px; height:26px; border-radius:4px; border:1.5px solid rgba(255,255,255,0.3); cursor:pointer;" title="Pitch AMOLED (#000000)"></button>
+                                    <button type="button" class="cb-border-swatch" data-color="#414141" style="background:#414141; width:26px; height:26px; border-radius:4px; border:1.5px solid rgba(255,255,255,0.2); cursor:pointer;" title="Graphite Divider (#414141)"></button>
                                     <button type="button" class="cb-border-swatch" data-color="#3B82F6" style="background:#3B82F6; width:26px; height:26px; border-radius:4px; border:1.5px solid rgba(0,0,0,0.15); cursor:pointer;" title="Electric Blue (#3B82F6)"></button>
                                     <button type="button" class="cb-border-swatch" data-color="#10B981" style="background:#10B981; width:26px; height:26px; border-radius:4px; border:1.5px solid rgba(0,0,0,0.15); cursor:pointer;" title="Emerald (#10B981)"></button>
                                 </div>
@@ -1073,6 +1094,23 @@ const attachCriticalBoardEvents = (overlay, existingLayoutConfig) => {
         const savedL = localStorage.getItem('pricelister_custom_layout');
         if (savedL) currentLayoutConfig = { ...currentLayoutConfig, ...JSON.parse(savedL) };
     } catch(e) {}
+
+    // Theme Mode buttons (Light / Dark / System)
+    const cbThemeBtns = overlay.querySelectorAll('.cb-theme-btn');
+    const initialThemeMode = getThemeMode();
+    cbThemeBtns.forEach(btn => {
+        const mode = btn.getAttribute('data-theme-mode');
+        btn.classList.toggle('btn-primary', initialThemeMode === mode);
+        btn.classList.toggle('btn-secondary', initialThemeMode !== mode);
+        btn.addEventListener('click', () => {
+            applyThemeMode(mode);
+            cbThemeBtns.forEach(b => {
+                const isMatch = b.getAttribute('data-theme-mode') === mode;
+                b.classList.toggle('btn-primary', isMatch);
+                b.classList.toggle('btn-secondary', !isMatch);
+            });
+        });
+    });
 
     // Sidebar position buttons
     const sidebarBtns = overlay.querySelectorAll('.cb-layout-sidebar-btn');

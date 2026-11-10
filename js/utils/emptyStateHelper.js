@@ -37,7 +37,7 @@ export const renderProductsInitialEmptyState = ({ canCreate = true } = {}) => {
                 No Product Added yet.
             </h3>
             <p style="margin: 0 0 1.75rem 0; font-size: 0.92rem; color: var(--text-secondary, #71717A); max-width: 440px; line-height: 1.55;">
-                Start adding products to amplify your business production journey.
+                Start adding products to amplify your business and grow production.
             </p>
 
             ${canCreate ? `
@@ -143,7 +143,7 @@ export const renderInvoicesInitialEmptyState = ({ canCreate = true, isBusinessIn
                 No Invoice added yet.
             </h3>
             <p style="margin: 0 0 1.75rem 0; font-size: 0.92rem; color: var(--text-secondary, #71717A); max-width: 460px; line-height: 1.55;">
-                Start making the invoice to track your business records and analyze your customers.
+                Start making invoices to track your business records and analyze your customers.
             </p>
 
             ${canCreate ? `

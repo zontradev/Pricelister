@@ -2020,7 +2020,7 @@ export const renderProducts = async (container, workspaceId) => {
                 mrpMarkup = `
                     <div style="display:flex; align-items:center; gap:4px; margin-top:2px;">
                         <span style="font-size:0.75rem; text-decoration:line-through; color:#94a3b8;">${formatCurrency(prd.mrp)}</span>
-                        <span style="background:#F4F4F5; border:1px solid #E4E4E7; color:var(--text-primary); font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:4px;">-${discountPct}%</span>
+                        <span style="background:var(--surface-100); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.7rem; font-weight:700; padding:1px 5px; border-radius:4px;">-${discountPct}%</span>
                     </div>
                 `;
             }
@@ -3747,9 +3747,9 @@ export const renderProducts = async (container, workspaceId) => {
                     upcInput.value = candidate;
                     const pill = container.querySelector('#prd-code-status-pill');
                     if (pill) {
-                        pill.textContent = 'Reserved & Unique';
-                        pill.style.background = '#18181B';
-                        pill.style.color = '#FFFFFF';
+                        pill.textContent = 'Reserved';
+                        pill.style.background = '#ffffffff';
+                        pill.style.color = '#0e0e0eff';
                     }
                     const tmplLabel = container.querySelector('#prd-current-tmpl-label');
                     if (tmplLabel) {
