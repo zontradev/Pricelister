@@ -1324,6 +1324,9 @@ export const updateLandingHeaderAuthState = async (user, cachedWorkspace = null)
         const enterLink = document.getElementById('header-btn-enter-connected');
         if (enterLink) {
             enterLink.href = 'app.html';
+            enterLink.onclick = () => {
+                try { sessionStorage.removeItem('pl_app_entered'); } catch(e) {}
+            };
         }
     } else {
         // 2. User is NOT connected to any workspace yet -> Show Google account icon + (Create Workspace ->)
@@ -1652,6 +1655,7 @@ export const initAuthHandler = (pageType) => {
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
                                     `;
                                     enterBtn.onclick = () => {
+                                        try { sessionStorage.removeItem('pl_app_entered'); } catch(e) {}
                                         window.location.href = '/app.html';
                                     };
                                 }

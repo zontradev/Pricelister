@@ -6,6 +6,7 @@ import { getPeopleService } from './services/peopleService.js';
 import { calculateInvoiceTotal } from './utils/invoiceCalculator.js';
 import { formatCurrency, getAppCurrencySymbol, setAppCurrencySymbol } from './utilities.js';
 import { authService } from '../firebase/auth.js';
+import { getRepoCache, setRepoCache } from '../firebase/firestore.js';
 import { openInvoiceViewerModal } from './modules/invoiceViewer.js';
 import { openInvoiceDetailsModal } from './modules/invoiceDetailsModal.js';
 import { showAlert } from './alert-handler.js';
@@ -359,13 +360,23 @@ export const renderOverview = async (container, workspaceId) => {
     let currentRange = calculateDateRange(activeFilterKey, customStart, customEnd);
     let comparisonRange = calculateComparisonRange(currentRange, activeCompareMode);
 
-    // Cache containers
-    let cachedProducts = [];
-    let cachedCategories = [];
-    let cachedCustInvoices = [];
-    let cachedBusInvoices = [];
-    let cachedCustomers = [];
-    let cachedBusinesses = [];
+    // Cache containers with instant pre-population from repo cache
+    let cachedProducts = (getRepoCache(`${workspaceId || 'default'}:Products`) || []).filter(p => !p.isArchive);
+    let cachedCategories = getRepoCache(`${workspaceId || 'default'}:Categories`) || [];
+    let cachedCustInvoices = getRepoCache(`${workspaceId || 'default'}:Invoices`) || [];
+    let cachedBusInvoices = getRepoCache(`${workspaceId || 'default'}:BusinessInvoices`) || [];
+    let cachedCustomers = [
+        ...(getRepoCache(`${workspaceId || 'default'}:ClientProfiles`) || [])
+    ];
+    let cachedBusinesses = getRepoCache(`${workspaceId || 'default'}:BusinessProfiles`) || [];
+
+    const hasInitialCache = cachedProducts.length > 0 || cachedCustInvoices.length > 0 || cachedBusinesses.length > 0;
+    if (hasInitialCache) {
+        // Instant visual render from cache before remote fetches
+        setTimeout(() => {
+            try { computeAndRenderDashboard(); } catch (e) {}
+        }, 0);
+    }
 
     // Currency & Number Formatters & Helpers
     const formatCurr = (val) => formatCurrency(val);

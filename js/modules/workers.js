@@ -1,4 +1,4 @@
-import { firestoreService } from '../../firebase/firestore.js';
+import { firestoreService, getRepoCache, setRepoCache } from '../../firebase/firestore.js';
 import { authService } from '../../firebase/auth.js';
 import { showAlert } from '../alert-handler.js';
 import { getRoleBadgeHtml } from '../auth-handler.js';
@@ -159,17 +159,17 @@ export const renderWorkers = async (container, workspaceId) => {
         </div>
     `;
 
-    // Fetch workspace info and related stats
-    let wsInfo = null;
-    let productsList = [];
-    let categoriesList = [];
+    // Fetch workspace info and related stats with instant cache resolution
+    let wsInfo = window.__activeWorkspace || null;
+    let productsList = (getRepoCache(`${workspaceId || 'default'}:Products`) || []).filter(p => !p.isArchive);
+    let categoriesList = getRepoCache(`${workspaceId || 'default'}:Categories`) || [];
     let panelSettings = {};
 
     try {
         const [wsData, prods, cats, pSet] = await Promise.all([
             firestoreService.checkWorkspaceExists(currentUser.uid, currentUser.email).catch(() => null),
-            getProductService(workspaceId).getAllActiveProducts().catch(() => []),
-            getCategoryService(workspaceId).getAllCategories().catch(() => []),
+            getProductService(workspaceId).getAllActiveProducts().catch(() => productsList),
+            getCategoryService(workspaceId).getAllCategories().catch(() => categoriesList),
             getSettingsService(workspaceId).getCustomerPanelSettings().catch(() => ({}))
         ]);
         wsInfo = wsData || window.__activeWorkspace || {};

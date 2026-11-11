@@ -2,6 +2,7 @@ import { getProductService } from '../services/productService.js';
 import { getCategoryService } from '../services/categoryService.js';
 import { getInvoiceService } from '../services/invoiceService.js';
 import { authService } from '../../firebase/auth.js';
+import { getRepoCache } from '../../firebase/firestore.js';
 import { getUserRestrictions } from '../auth-handler.js';
 import { showAlert } from '../alert-handler.js';
 import { storageService } from '../../supabase/storage.js';
@@ -23,14 +24,24 @@ export const renderProducts = async (container, workspaceId) => {
     const invoiceService = getInvoiceService(workspaceId);
     const currentUser = authService.getCurrentUser();
 
-    let categoriesList = [];
-    let activeProducts = [];
+    // Pre-populate with cached items for instant first-paint
+    const cachedProds = (getRepoCache(`${workspaceId || 'default'}:Products`) || []).filter(p => !p.isArchive);
+    const cachedCats = getRepoCache(`${workspaceId || 'default'}:Categories`) || [];
+    let categoriesList = cachedCats;
+    let activeProducts = cachedProds;
     let allInvoices = [];
     let activeProductDetail = null; // When set, renders dedicated analytical Product Detail View
     let currentLayout = localStorage.getItem('pricelister_product_layout') || 'list';
     let currentPage = 1;
     const pageSize = 15;
     let selectedProductIds = new Set();
+
+    if (activeProducts.length > 0 || categoriesList.length > 0) {
+        // Instant visual mount from cache
+        try {
+            renderProductMainView();
+        } catch(e) {}
+    }
     const layoutDisplayNames = {
         'list': 'List',
         'large_list': 'Large List',

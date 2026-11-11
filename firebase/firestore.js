@@ -1314,13 +1314,13 @@ export const firestoreService = {
 };
 
 
-// High-speed Session & In-Memory Snapshot Cache to guarantee instant UI rendering without flicker
+// High-speed Session, LocalStorage & In-Memory Snapshot Cache to guarantee instant UI rendering without flicker
 const firestoreRepoCache = new Map();
 
-const getRepoCache = (key) => {
+export const getRepoCache = (key) => {
     if (firestoreRepoCache.has(key)) return firestoreRepoCache.get(key);
     try {
-        const raw = sessionStorage.getItem(`pl_fs_snap_${key}`);
+        const raw = sessionStorage.getItem(`pl_fs_snap_${key}`) || localStorage.getItem(`pl_fs_snap_${key}`);
         if (raw) {
             const data = JSON.parse(raw);
             firestoreRepoCache.set(key, data);
@@ -1330,10 +1330,12 @@ const getRepoCache = (key) => {
     return null;
 };
 
-const setRepoCache = (key, data) => {
+export const setRepoCache = (key, data) => {
     firestoreRepoCache.set(key, data);
     try {
-        sessionStorage.setItem(`pl_fs_snap_${key}`, JSON.stringify(data));
+        const raw = JSON.stringify(data);
+        sessionStorage.setItem(`pl_fs_snap_${key}`, raw);
+        localStorage.setItem(`pl_fs_snap_${key}`, raw);
     } catch(e) {}
 };
 
@@ -1396,12 +1398,25 @@ export const createRepository = (collectionName, workspaceId) => {
                 q = query(collRef, ...additionalConditions);
             }
             try {
-                const snap = await getDocs(q);
-                const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (additionalConditions.length === 0) {
-                    setRepoCache(cacheKey, data);
+                // If conditions are standard and cached data exists, race network with fast fallback to avoid hanging
+                const cached = additionalConditions.length === 0 ? getRepoCache(cacheKey) : null;
+                const fetchPromise = getDocs(q).then(snap => {
+                    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    if (additionalConditions.length === 0) {
+                        setRepoCache(cacheKey, data);
+                    }
+                    return data;
+                });
+
+                if (cached !== null) {
+                    // Fast fallback: if network doesn't respond in 900ms, immediately return cache and let background refresh
+                    return await Promise.race([
+                        fetchPromise,
+                        new Promise(resolve => setTimeout(() => resolve(cached), 900))
+                    ]);
                 }
-                return data;
+
+                return await fetchPromise;
             } catch (err) {
                 console.warn(`Error reading ${baseCollectionPath}:`, err);
                 const cached = getRepoCache(cacheKey);
