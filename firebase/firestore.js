@@ -1314,8 +1314,28 @@ export const firestoreService = {
 };
 
 
-// High-speed In-Memory Snapshot Cache to guarantee instant UI rendering without flicker
+// High-speed Session & In-Memory Snapshot Cache to guarantee instant UI rendering without flicker
 const firestoreRepoCache = new Map();
+
+const getRepoCache = (key) => {
+    if (firestoreRepoCache.has(key)) return firestoreRepoCache.get(key);
+    try {
+        const raw = sessionStorage.getItem(`pl_fs_snap_${key}`);
+        if (raw) {
+            const data = JSON.parse(raw);
+            firestoreRepoCache.set(key, data);
+            return data;
+        }
+    } catch(e) {}
+    return null;
+};
+
+const setRepoCache = (key, data) => {
+    firestoreRepoCache.set(key, data);
+    try {
+        sessionStorage.setItem(`pl_fs_snap_${key}`, JSON.stringify(data));
+    } catch(e) {}
+};
 
 // Modular Repository Factory
 export const createRepository = (collectionName, workspaceId) => {
@@ -1379,13 +1399,14 @@ export const createRepository = (collectionName, workspaceId) => {
                 const snap = await getDocs(q);
                 const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (additionalConditions.length === 0) {
-                    firestoreRepoCache.set(cacheKey, data);
+                    setRepoCache(cacheKey, data);
                 }
                 return data;
             } catch (err) {
                 console.warn(`Error reading ${baseCollectionPath}:`, err);
-                if (additionalConditions.length === 0 && firestoreRepoCache.has(cacheKey)) {
-                    return firestoreRepoCache.get(cacheKey);
+                const cached = getRepoCache(cacheKey);
+                if (additionalConditions.length === 0 && cached !== null) {
+                    return cached;
                 }
                 throw err;
             }
@@ -1395,19 +1416,22 @@ export const createRepository = (collectionName, workspaceId) => {
             let q = query(collRef);
             if (additionalConditions.length > 0) {
                 q = query(collRef, ...additionalConditions);
-            } else if (firestoreRepoCache.has(cacheKey)) {
-                // Immediately deliver cached snapshot so UI renders instantly with zero waiting
-                try {
-                    callback(firestoreRepoCache.get(cacheKey));
-                } catch (e) {
-                    console.warn("Cached data delivery warning:", e);
+            } else {
+                const cached = getRepoCache(cacheKey);
+                if (cached !== null) {
+                    // Immediately deliver cached snapshot so UI renders instantly with zero waiting
+                    try {
+                        callback(cached);
+                    } catch (e) {
+                        console.warn("Cached data delivery warning:", e);
+                    }
                 }
             }
 
             return onSnapshot(q, (snap) => {
                 const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 if (additionalConditions.length === 0) {
-                    firestoreRepoCache.set(cacheKey, data);
+                    setRepoCache(cacheKey, data);
                 }
                 callback(data);
             }, (err) => {

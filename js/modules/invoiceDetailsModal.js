@@ -605,10 +605,12 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
             uniqueId: invoice.uniqueId || invoice.id,
             invoiceNumber: displayInvNumber,
             isBusinessInvoice: isBusinessInvoice,
-            returnRoute: isBusinessInvoice ? '/invoices/business' : '/invoices/customer'
+            returnRoute: isBusinessInvoice ? '/invoices/business' : '/invoices/customer',
+            invoice: invoice
         };
         try {
             sessionStorage.setItem('pricelister_return_invoice', JSON.stringify(returnContext));
+            sessionStorage.setItem('pricelister_last_viewed_invoice', JSON.stringify(invoice));
             sessionStorage.setItem('pricelister_target_person_detail', JSON.stringify({
                 mode: 'businesses',
                 id: targetBusId,
@@ -641,10 +643,12 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
             uniqueId: invoice.uniqueId || invoice.id,
             invoiceNumber: displayInvNumber,
             isBusinessInvoice: isBusinessInvoice,
-            returnRoute: isBusinessInvoice ? '/invoices/business' : '/invoices/customer'
+            returnRoute: isBusinessInvoice ? '/invoices/business' : '/invoices/customer',
+            invoice: invoice
         };
         try {
             sessionStorage.setItem('pricelister_return_invoice', JSON.stringify(returnContext));
+            sessionStorage.setItem('pricelister_last_viewed_invoice', JSON.stringify(invoice));
             sessionStorage.setItem('pricelister_target_person_detail', JSON.stringify({
                 mode: targetMode,
                 id: targetRecId,

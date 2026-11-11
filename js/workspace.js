@@ -1831,8 +1831,8 @@ export const renderOverview = async (container, workspaceId) => {
                             const imgUrl = matchedProd?.imageUrl || matchedProd?.imageUri || '';
                             const sharePct = currentRevenue > 0 ? ((p.revenue / currentRevenue) * 100).toFixed(1) : '0.0';
                             const avatarHtml = imgUrl 
-                                ? `<img src="${imgUrl}" alt="${p.name}" style="width:34px; height:34px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0;">`
-                                : `<div style="width:34px; height:34px; border-radius:8px; background:var(--surface-100); color:var(--text-primary); font-weight:700; font-size:0.75rem; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color); flex-shrink:0;">${p.name.substring(0, 2).toUpperCase()}</div>`;
+                                ? `<img src="${imgUrl}" alt="${p.name}" style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0;">`
+                                : `<div style="width:34px; height:34px; border-radius:50%; background:var(--surface-100); color:var(--text-primary); font-weight:700; font-size:0.75rem; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color); flex-shrink:0;">${p.name.substring(0, 2).toUpperCase()}</div>`;
 
                             return `
                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:0.65rem; font-size:0.8rem; padding:0.35rem 0.2rem; border-bottom:1px solid var(--border-color);">
@@ -1972,10 +1972,10 @@ export const renderOverview = async (container, workspaceId) => {
                             const bInitials = (b.name || 'B').trim().substring(0, 2).toUpperCase();
                             const bAvatarHtml = bImg ? `
                                 <img src="${escapeHtml(bImg)}" alt="${escapeHtml(b.name)}" 
-                                    style="width:32px; height:32px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0; background:var(--surface-100);" 
-                                    onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\\'width:32px; height:32px; border-radius:8px; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);\\\'>${bInitials}</div>';" />
+                                    style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0; background:var(--surface-100);" 
+                                    onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\\'width:34px; height:34px; border-radius:50%; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);\\\'>${bInitials}</div>';" />
                             ` : `
-                                <div style="width:32px; height:32px; border-radius:8px; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">
+                                <div style="width:34px; height:34px; border-radius:50%; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">
                                     ${bInitials}
                                 </div>
                             `;
@@ -2021,10 +2021,10 @@ export const renderOverview = async (container, workspaceId) => {
                             const cInitials = (c.name || 'C').trim().substring(0, 2).toUpperCase();
                             const cAvatarHtml = cImg ? `
                                 <img src="${escapeHtml(cImg)}" alt="${escapeHtml(c.name)}" 
-                                    style="width:32px; height:32px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0; background:var(--surface-100);" 
-                                    onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\\'width:32px; height:32px; border-radius:8px; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);\\\'>${cInitials}</div>';" />
+                                    style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0; background:var(--surface-100);" 
+                                    onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\\'width:34px; height:34px; border-radius:50%; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);\\\'>${cInitials}</div>';" />
                             ` : `
-                                <div style="width:32px; height:32px; border-radius:8px; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">
+                                <div style="width:34px; height:34px; border-radius:50%; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">
                                     ${cInitials}
                                 </div>
                             `;
@@ -2086,10 +2086,10 @@ export const renderOverview = async (container, workspaceId) => {
                             const invInitials = (invDisplayName || 'IN').trim().substring(0, 2).toUpperCase();
                             const invAvatarHtml = invImg ? `
                                 <img src="${escapeHtml(invImg)}" alt="${escapeHtml(invDisplayName)}" 
-                                    style="width:32px; height:32px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0; background:var(--surface-100);" 
-                                    onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\\'width:32px; height:32px; border-radius:8px; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.72rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);\\\'>${invInitials}</div>';" />
+                                    style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0; background:var(--surface-100);" 
+                                    onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\\'width:34px; height:34px; border-radius:50%; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.72rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);\\\'>${invInitials}</div>';" />
                             ` : `
-                                <div style="width:32px; height:32px; border-radius:8px; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.72rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">
+                                <div style="width:34px; height:34px; border-radius:50%; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.72rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">
                                     ${invInitials}
                                 </div>
                             `;
@@ -2584,6 +2584,22 @@ export const renderOverview = async (container, workspaceId) => {
                 gaugeCircle.setAttribute('stroke-dasharray', `${((healthScore / 100) * 289).toFixed(1)} 289`);
             });
         }
+
+        // Kinetic Sparkline Wave Animation Trigger (0 -> full wave over 3s: 0.5s pause/soft start, 0.5-2.9s fast sweep, 2.9-3s settle)
+        requestAnimationFrame(() => {
+            container.querySelectorAll('.quantum-spark-line').forEach(lineEl => {
+                lineEl.style.animation = 'none';
+                lineEl.style.strokeDashoffset = '1000';
+                void lineEl.offsetWidth;
+                lineEl.style.animation = 'quantumDrawLine 3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards';
+            });
+            container.querySelectorAll('.quantum-spark-area').forEach(areaEl => {
+                areaEl.style.animation = 'none';
+                areaEl.style.opacity = '0';
+                void areaEl.offsetWidth;
+                areaEl.style.animation = 'quantumDrawArea 3s ease forwards';
+            });
+        });
 
         // =========================================================================
         // ROW FOLDING TOGGLE BINDINGS

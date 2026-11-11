@@ -27,20 +27,56 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Module-level cache for zero-waiting instant renders
+// Module, Session & Local Storage cache for zero-waiting instant renders
 const moduleInvoiceCache = new Map();
+const getInvoiceCacheKey = (wsId, isBiz) => `${wsId || 'default'}_${isBiz ? 'bus' : 'cust'}`;
+
+const getStoredInvoiceCache = (key) => {
+    let entry = moduleInvoiceCache.get(key);
+    if (entry && entry.hasLoadedOnce) return entry;
+    try {
+        const raw = sessionStorage.getItem(`pl_inv_cache_${key}`) || localStorage.getItem(`pl_inv_cache_${key}`);
+        if (raw) {
+            entry = JSON.parse(raw);
+            if (entry && entry.hasLoadedOnce) {
+                moduleInvoiceCache.set(key, entry);
+                return entry;
+            }
+        }
+    } catch (e) {}
+    return null;
+};
+
+const setStoredInvoiceCache = (key, invoices) => {
+    const entry = {
+        invoices: Array.isArray(invoices) ? invoices : [],
+        hasLoadedOnce: true,
+        timestamp: Date.now()
+    };
+    moduleInvoiceCache.set(key, entry);
+    try {
+        const str = JSON.stringify(entry);
+        sessionStorage.setItem(`pl_inv_cache_${key}`, str);
+        localStorage.setItem(`pl_inv_cache_${key}`, str);
+    } catch (e) {}
+};
 
 export const renderInvoices = async (container, workspaceId, isBusinessInvoice) => {
-    const invoiceService = getInvoiceService(workspaceId);
-    const productService = getProductService(workspaceId);
-    const peopleService = getPeopleService(workspaceId);
-    const settingsService = getSettingsService(workspaceId);
-    const categoryService = getCategoryService(workspaceId);
+    const effectiveWsId = workspaceId || window.__activeWorkspace?.workspaceId || window.__activeWorkspace?.id || localStorage.getItem('pricelister_active_ws') || 'default';
+    const invoiceService = getInvoiceService(effectiveWsId);
+    const productService = getProductService(effectiveWsId);
+    const peopleService = getPeopleService(effectiveWsId);
+    const settingsService = getSettingsService(effectiveWsId);
+    const categoryService = getCategoryService(effectiveWsId);
     const currentUser = authService.getCurrentUser();
     const userRestrictions = getUserRestrictions();
     const canSetPrimary = Boolean(userRestrictions?.isCreator || userRestrictions?.isCoAdmin || userRestrictions?.isPrivileged);
 
     const typeLabel = isBusinessInvoice ? 'Business Invoice' : 'Customer Invoice';
+
+    const cacheKey = getInvoiceCacheKey(effectiveWsId, isBusinessInvoice);
+    const cachedEntry = getStoredInvoiceCache(cacheKey);
+    const hasCachedData = Boolean(cachedEntry && cachedEntry.hasLoadedOnce);
 
     let allProducts = [];
     let allCategories = [];
@@ -48,8 +84,29 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     let allClients = [];
     let allCustomers = [];
     let invoiceItems = [];
-    let rawInvoices = [];
+    let rawInvoices = hasCachedData && Array.isArray(cachedEntry.invoices) ? [...cachedEntry.invoices] : [];
     let isVendingActive = false;
+
+    // Fast synchronous check if returning from People / Contact view or opening specific invoice
+    let reopenId = null;
+    let reopenMeta = null;
+    let returnNav = null;
+    try {
+        reopenId = sessionStorage.getItem('pricelister_reopen_invoice_id');
+        const metaRaw = sessionStorage.getItem('pricelister_reopen_invoice_meta');
+        if (metaRaw) reopenMeta = JSON.parse(metaRaw);
+        const returnRaw = sessionStorage.getItem('pricelister_return_invoice');
+        if (returnRaw) returnNav = JSON.parse(returnRaw);
+    } catch (e) {}
+
+    let urlInvParam = null;
+    try {
+        const params = new URLSearchParams(window.location.search);
+        urlInvParam = params.get('inv') || params.get('invoiceId') || params.get('id');
+    } catch(e) {}
+
+    const pendingInvoiceTarget = String(reopenId || reopenMeta?.invoiceId || reopenMeta?.uniqueId || returnNav?.invoiceId || returnNav?.uniqueId || urlInvParam || reopenMeta?.invoiceNumber || returnNav?.invoiceNumber || '').trim();
+    const shouldOpenDetailImmediately = Boolean(pendingInvoiceTarget);
 
     // Recipient selection mode: 'customer' | 'client' | 'walkin'
     let recipientMode = isBusinessInvoice ? 'client' : 'customer';
@@ -84,7 +141,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     container.innerHTML = `
         <!-- ================= INVOICE LIST VIEW ================= -->
-        <div id="invoice-list-view">
+        <div id="invoice-list-view" style="${shouldOpenDetailImmediately ? 'display:none;' : ''}">
             <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
                 <div>
                     <h2 style="margin: 0 0 0.35rem 0; font-size: 1.75rem; font-weight: 800; color: #09090b;">${typeLabel}s</h2>
@@ -192,7 +249,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                             </tr>
                         </thead>
                         <tbody id="invoices-table-body">
-                            ${Array(5).fill(0).map(() => `
+                            ${(!hasCachedData && !shouldOpenDetailImmediately) ? Array(5).fill(0).map(() => `
                                 <tr class="skeleton-row" style="border-bottom: 1px solid var(--border-color);">
                                     <td style="padding:1rem 1.25rem;"><div class="skeleton-shimmer" style="width: 100px; height: 18px;"></div></td>
                                     <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 75px; height: 18px;"></div></td>
@@ -201,7 +258,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                     <td style="padding:1rem;"><div class="skeleton-shimmer" style="width: 70px; height: 18px;"></div></td>
                                     <td style="padding:1rem 1.25rem;"><div class="skeleton-shimmer" style="width: 140px; height: 28px; border-radius: 8px;"></div></td>
                                 </tr>
-                            `).join('')}
+                            `).join('') : ''}
                         </tbody>
                     </table>
                 </div>
@@ -235,7 +292,21 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         </div>
 
         <!-- ================= DEDICATED INVOICE DETAIL VIEW PANEL ================= -->
-        <div id="invoice-detail-view" style="display:none; padding-bottom:2.5rem;"></div>
+        <div id="invoice-detail-view" style="${shouldOpenDetailImmediately ? 'display:block;' : 'display:none;'} padding-bottom:2.5rem;">
+            ${shouldOpenDetailImmediately ? `
+                <div style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.25rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="skeleton-shimmer" style="height:36px; width:260px; border-radius:8px;"></div>
+                        <div class="skeleton-shimmer" style="height:36px; width:140px; border-radius:8px;"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
+                        <div class="skeleton-shimmer" style="height:140px; border-radius:14px;"></div>
+                        <div class="skeleton-shimmer" style="height:140px; border-radius:14px;"></div>
+                    </div>
+                    <div class="skeleton-shimmer" style="height:200px; border-radius:14px;"></div>
+                </div>
+            ` : ''}
+        </div>
 
         <!-- ================= EXPANDED INVOICE CREATION / EDIT VIEW ================= -->
         <div id="invoice-editor-view" style="display:none; margin-bottom: 2.5rem;">
@@ -2041,6 +2112,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     // Dedicated Invoice Detail View helper (Full Panel, Grey/Black combo)
     const showInvoiceDetail = (inv, pushState = true) => {
         if (!inv) return;
+        try {
+            sessionStorage.setItem('pricelister_last_viewed_invoice', JSON.stringify(inv));
+        } catch(e) {}
         saveScrollPosition('subview:invoices:list:' + (isBusinessInvoice ? 'biz' : 'cust'));
         const detailPanel = container.querySelector('#invoice-detail-view');
         const listView = container.querySelector('#invoice-list-view');
@@ -2076,12 +2150,19 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 detailPanel.style.display = 'none';
                 listView.style.display = 'block';
                 restoreScrollPosition('subview:invoices:list:' + (isBusinessInvoice ? 'biz' : 'cust'));
+                try {
+                    sessionStorage.removeItem('pricelister_reopen_invoice_id');
+                    sessionStorage.removeItem('pricelister_reopen_invoice_meta');
+                    sessionStorage.removeItem('pricelister_return_invoice');
+                    sessionStorage.removeItem('pricelister_last_viewed_invoice');
+                } catch(e) {}
                 // Clear invoice query param
                 if (window.history) {
                     try {
                         const currentUrl = new URL(window.location.href);
                         currentUrl.searchParams.delete('inv');
                         currentUrl.searchParams.delete('invoiceId');
+                        currentUrl.searchParams.delete('id');
                         window.history.replaceState({ ...window.history.state, inv: null }, '', currentUrl.toString());
                     } catch(e) {}
                 }
@@ -2120,7 +2201,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
         if (!targetId && !targetNum) return false;
 
-        const match = (invoicesList || []).find(i => {
+        // 1. Try finding in current invoicesList
+        let match = (invoicesList || []).find(i => {
             if (!i) return false;
             const iId = String(i.id || '').trim().toLowerCase();
             const iUid = String(i.uniqueId || '').trim().toLowerCase();
@@ -2131,6 +2213,47 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             if (targetNum && (iNum === targetNum || iBusNum === targetNum || iUid === targetNum || iId === targetNum)) return true;
             return false;
         });
+
+        // 2. Try finding in module-level cache
+        if (!match) {
+            const cacheEntry = moduleInvoiceCache.get(cacheKey);
+            if (cacheEntry?.invoices) {
+                match = (cacheEntry.invoices || []).find(i => {
+                    if (!i) return false;
+                    const iId = String(i.id || '').trim().toLowerCase();
+                    const iUid = String(i.uniqueId || '').trim().toLowerCase();
+                    const iNum = String(i.invoiceNumber || '').trim().toLowerCase();
+                    const iBusNum = String(i.busInvNumber || '').trim().toLowerCase();
+
+                    if (targetId && (iId === targetId || iUid === targetId || iNum === targetId || iBusNum === targetId)) return true;
+                    if (targetNum && (iNum === targetNum || iBusNum === targetNum || iUid === targetNum || iId === targetNum)) return true;
+                    return false;
+                });
+            }
+        }
+
+        // 3. Fallback: check returnNav?.invoice or reopenMeta?.invoice
+        if (!match && (returnNav?.invoice || reopenMeta?.invoice)) {
+            match = returnNav?.invoice || reopenMeta?.invoice;
+        }
+
+        // 4. Fallback: check sessionStorage last viewed invoice
+        if (!match) {
+            try {
+                const rawLast = sessionStorage.getItem('pricelister_last_viewed_invoice');
+                if (rawLast) {
+                    const parsed = JSON.parse(rawLast);
+                    const pId = String(parsed?.id || '').trim().toLowerCase();
+                    const pUid = String(parsed?.uniqueId || '').trim().toLowerCase();
+                    const pNum = String(parsed?.invoiceNumber || '').trim().toLowerCase();
+                    const pBusNum = String(parsed?.busInvNumber || '').trim().toLowerCase();
+                    if ((targetId && (pId === targetId || pUid === targetId || pNum === targetId || pBusNum === targetId)) ||
+                        (targetNum && (pNum === targetNum || pBusNum === targetNum || pUid === targetNum || pId === targetNum))) {
+                        match = parsed;
+                    }
+                }
+            } catch(e) {}
+        }
 
         if (match) {
             try {
@@ -2840,124 +2963,37 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
     };
 
-    // Load Data
-    const loadData = async () => {
+    // Immediate Synchronous Rendering Check:
+    // If returning to a viewed invoice, open it instantly without touching the list!
+    // Else if invoices are already cached from a previous visit, render the table/empty state immediately!
+    if (shouldOpenDetailImmediately) {
+        checkAndAutoOpenInvoice(rawInvoices);
+    } else if (hasCachedData) {
+        applyFiltersAndRender();
+    }
+
+    // Load Data: fast, parallelized, and completely non-blocking
+    const loadData = async (forceSkeleton = false) => {
         try {
-            renderSkeleton();
-
-            try {
-                allCategories = (await categoryService.getAllCategories()) || [];
-            } catch (catErr) {
-                console.warn("Could not load categories:", catErr);
-                allCategories = [];
+            // Only show skeleton on first cold load when there is no cached data and not viewing an invoice
+            if (forceSkeleton || (!hasCachedData && !shouldOpenDetailImmediately)) {
+                renderSkeleton();
             }
 
-            try {
-                isVendingActive = await settingsService.isVendingEnabled();
-            } catch (vendErr) {
-                console.warn("Could not load vending status:", vendErr);
-                isVendingActive = false;
-            }
-
-            const badgeEl = container.querySelector('#inv-vending-badge');
-            const formVendingIndicator = container.querySelector('#form-vending-indicator');
-
-            if (badgeEl) {
-                badgeEl.innerHTML = isVendingActive
-                    ? `<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.8rem; font-weight: 600;">Vending Mode Active (Auto-deducts Stock)</span>`
-                    : `<span class="badge" style="background: rgba(100, 116, 139, 0.1); color: #64748b; font-size: 0.8rem;">Vending Off (No Stock Deduction)</span>`;
-            }
-
-            if (formVendingIndicator) {
-                formVendingIndicator.innerHTML = isVendingActive
-                    ? `<span style="color: #059669; font-weight:600;">Vending Mode Active</span>`
-                    : `<span style="color: var(--text-muted);">Vending Mode Off</span>`;
-            }
-
-            try {
-                allProducts = (await productService.getAllActiveProducts()) || [];
-            } catch (prodErr) {
-                console.warn("Could not load products:", prodErr);
-                allProducts = [];
-            }
-
-            const prodSelect = container.querySelector('#inv-add-product-select');
-            if (prodSelect) {
-                prodSelect.innerHTML = '<option value="">Select a product...</option>' +
-                    allProducts.map(p => {
-                        const catName = getCategoryName(p.category);
-                        const catBadge = catName ? ` [${catName}]` : '';
-                        return `<option value="${p.id}">${p.name}${catBadge} - ${formatCurrency(p.salePrice || 0)} (Stock: ${p.quantity || 0})</option>`;
-                    }).join('');
-            }
-
-            try {
-                renderPickerCategories();
-            } catch (pickerErr) {
-                console.warn("renderPickerCategories error:", pickerErr);
-            }
-
-            // Load businesses, clients & customers
-            try { await reloadBusinesses(); } catch (bErr) { console.warn("reloadBusinesses error:", bErr); }
-            try { await reloadClients(); } catch (cErr) { console.warn("reloadClients error:", cErr); }
-            try { await reloadCustomers(); } catch (custErr) { console.warn("reloadCustomers error:", custErr); }
-
-            // Auto-select if directed from People / Directory "Create Invoice" (checks global and sessionStorage)
-            let pre = window.__preselectedInvoiceRecipient;
-            if (!pre) {
-                try {
-                    const stored = sessionStorage.getItem('pricelister_preselected_invoice_target');
-                    if (stored) {
-                        pre = JSON.parse(stored);
-                        sessionStorage.removeItem('pricelister_preselected_invoice_target');
-                    }
-                } catch (e) {
-                    console.warn("Could not read preselected invoice recipient from sessionStorage:", e);
-                }
-            } else {
-                window.__preselectedInvoiceRecipient = null;
-                try { sessionStorage.removeItem('pricelister_preselected_invoice_target'); } catch (e) {}
-            }
-
-            if (pre) {
-                showEditorView(false, null, pre);
-                if (pre.mode === 'customer') {
-                    setRecipientMode('customer');
-                    const custSelect = container.querySelector('#inv-customer');
-                    if (custSelect && pre.id) {
-                        custSelect.value = pre.id;
-                        const searchCustInput = container.querySelector('#search-inv-customer');
-                        if (searchCustInput) searchCustInput.value = pre.name || '';
-                        updateRecipientPreview();
-                    }
-                } else if (pre.mode === 'client') {
-                    setRecipientMode('client');
-                    const cliSelect = container.querySelector('#inv-client');
-                    if (cliSelect && pre.id) {
-                        cliSelect.value = pre.id;
-                        const searchCliInput = container.querySelector('#search-inv-client');
-                        if (searchCliInput) searchCliInput.value = pre.name || '';
-                        updateRecipientPreview();
-                    }
-                } else if (pre.mode === 'business') {
-                    const busSelect = container.querySelector('#inv-business');
-                    if (busSelect && pre.id) {
-                        busSelect.value = pre.id;
-                        const searchBusInput = container.querySelector('#search-inv-business');
-                        if (searchBusInput) searchBusInput.value = pre.name || '';
-                        updateBusinessPreview();
-                    }
-                }
-            }
-
+            let hasReceivedInitial = false;
             const handleInvoicesSnapshot = (invoices) => {
+                hasReceivedInitial = true;
                 rawInvoices = Array.isArray(invoices) ? invoices : [];
+
+                // Store in module, session, and local storage cache for instantaneous subsequent visits
+                setStoredInvoiceCache(cacheKey, rawInvoices);
+
                 if (!checkAndAutoOpenInvoice(rawInvoices)) {
                     applyFiltersAndRender();
                 }
             };
 
-            // Realtime Invoice Listener
+            // Realtime Invoice Listener attached IMMEDIATELY
             if (container._invoiceUnsubscribe) {
                 try {
                     container._invoiceUnsubscribe();
@@ -2968,9 +3004,114 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 container._invoiceUnsubscribe = invoiceService.listenInvoices(isBusinessInvoice, handleInvoicesSnapshot);
             } catch (listenErr) {
                 console.warn("listenInvoices fallback to getAllInvoices:", listenErr);
-                rawInvoices = (await invoiceService.getAllInvoices(isBusinessInvoice)) || [];
-                handleInvoicesSnapshot(rawInvoices);
             }
+
+            // Fast network fallback: If onSnapshot takes more than 750ms on cold load, query getAllInvoices
+            if (!hasCachedData) {
+                setTimeout(() => {
+                    if (!hasReceivedInitial) {
+                        invoiceService.getAllInvoices(isBusinessInvoice).then(invs => {
+                            if (!hasReceivedInitial) {
+                                handleInvoicesSnapshot(invs || []);
+                            }
+                        }).catch(() => {
+                            if (!hasReceivedInitial) {
+                                handleInvoicesSnapshot([]);
+                            }
+                        });
+                    }
+                }, 750);
+            }
+
+            // Load auxiliary data for Editor / Pickers concurrently in the background
+            Promise.allSettled([
+                categoryService.getAllCategories().catch(() => []),
+                settingsService.isVendingEnabled().catch(() => false),
+                productService.getAllActiveProducts().catch(() => []),
+                reloadBusinesses().catch(() => []),
+                reloadClients().catch(() => []),
+                reloadCustomers().catch(() => [])
+            ]).then(([catRes, vendRes, prodRes]) => {
+                if (catRes.status === 'fulfilled' && Array.isArray(catRes.value)) {
+                    allCategories = catRes.value;
+                }
+                if (vendRes.status === 'fulfilled') {
+                    isVendingActive = Boolean(vendRes.value);
+                    const badgeEl = container.querySelector('#inv-vending-badge');
+                    const formVendingIndicator = container.querySelector('#form-vending-indicator');
+                    if (badgeEl) {
+                        badgeEl.innerHTML = isVendingActive
+                            ? `<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.8rem; font-weight: 600;">Vending Mode Active (Auto-deducts Stock)</span>`
+                            : `<span class="badge" style="background: rgba(100, 116, 139, 0.1); color: #64748b; font-size: 0.8rem;">Vending Off (No Stock Deduction)</span>`;
+                    }
+                    if (formVendingIndicator) {
+                        formVendingIndicator.innerHTML = isVendingActive
+                            ? `<span style="color: #059669; font-weight:600;">Vending Mode Active</span>`
+                            : `<span style="color: var(--text-muted);">Vending Mode Off</span>`;
+                    }
+                }
+                if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
+                    allProducts = prodRes.value;
+                    const prodSelect = container.querySelector('#inv-add-product-select');
+                    if (prodSelect) {
+                        prodSelect.innerHTML = '<option value="">Select a product...</option>' +
+                            allProducts.map(p => {
+                                const catName = getCategoryName(p.category);
+                                const catBadge = catName ? ` [${catName}]` : '';
+                                return `<option value="${p.id}">${p.name}${catBadge} - ${formatCurrency(p.salePrice || 0)} (Stock: ${p.quantity || 0})</option>`;
+                            }).join('');
+                    }
+                    try { renderPickerCategories(); } catch(e) {}
+                }
+
+                // Auto-select if directed from People / Directory "Create Invoice"
+                let pre = window.__preselectedInvoiceRecipient;
+                if (!pre) {
+                    try {
+                        const stored = sessionStorage.getItem('pricelister_preselected_invoice_target');
+                        if (stored) {
+                            pre = JSON.parse(stored);
+                            sessionStorage.removeItem('pricelister_preselected_invoice_target');
+                        }
+                    } catch (e) {
+                        console.warn("Could not read preselected invoice recipient from sessionStorage:", e);
+                    }
+                } else {
+                    window.__preselectedInvoiceRecipient = null;
+                    try { sessionStorage.removeItem('pricelister_preselected_invoice_target'); } catch (e) {}
+                }
+
+                if (pre) {
+                    showEditorView(false, null, pre);
+                    if (pre.mode === 'customer') {
+                        setRecipientMode('customer');
+                        const custSelect = container.querySelector('#inv-customer');
+                        if (custSelect && pre.id) {
+                            custSelect.value = pre.id;
+                            const searchCustInput = container.querySelector('#search-inv-customer');
+                            if (searchCustInput) searchCustInput.value = pre.name || '';
+                            updateRecipientPreview();
+                        }
+                    } else if (pre.mode === 'client') {
+                        setRecipientMode('client');
+                        const cliSelect = container.querySelector('#inv-client');
+                        if (cliSelect && pre.id) {
+                            cliSelect.value = pre.id;
+                            const searchCliInput = container.querySelector('#search-inv-client');
+                            if (searchCliInput) searchCliInput.value = pre.name || '';
+                            updateRecipientPreview();
+                        }
+                    } else if (pre.mode === 'business') {
+                        const busSelect = container.querySelector('#inv-business');
+                        if (busSelect && pre.id) {
+                            busSelect.value = pre.id;
+                            const searchBusInput = container.querySelector('#search-inv-business');
+                            if (searchBusInput) searchBusInput.value = pre.name || '';
+                            updateBusinessPreview();
+                        }
+                    }
+                }
+            });
 
             renderItemsList();
             updateLiveTotals();
