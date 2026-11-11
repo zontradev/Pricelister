@@ -15,6 +15,7 @@ import { openInvoiceDetailsModal, renderInvoiceDetailPanel } from './invoiceDeta
 import { storageService } from '../../supabase/storage.js';
 import { renderInvoicesInitialEmptyState, renderInvoicesFilterEmptyState } from '../utils/emptyStateHelper.js';
 import { draftManager } from '../services/draftManager.js';
+import { saveScrollPosition, restoreScrollPosition, resetScrollToTop } from '../utils/scrollMemory.js';
 
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -26,6 +27,9 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
+// Module-level cache for zero-waiting instant renders
+const moduleInvoiceCache = new Map();
+
 export const renderInvoices = async (container, workspaceId, isBusinessInvoice) => {
     const invoiceService = getInvoiceService(workspaceId);
     const productService = getProductService(workspaceId);
@@ -34,6 +38,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const categoryService = getCategoryService(workspaceId);
     const currentUser = authService.getCurrentUser();
     const userRestrictions = getUserRestrictions();
+    const canSetPrimary = Boolean(userRestrictions?.isCreator || userRestrictions?.isCoAdmin || userRestrictions?.isPrivileged);
 
     const typeLabel = isBusinessInvoice ? 'Business Invoice' : 'Customer Invoice';
 
@@ -326,7 +331,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
                             <!-- Smart Profile Switcher Pills (Enterprise Grey & Black) -->
                             <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; background: #fafafa; padding: 0.3rem; border-radius: 8px; border: 1.5px solid #d4d4d8; width: fit-content;" id="recipient-type-pills">
-                                <button type="button" class="btn btn-sm" data-mode="customer" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 700; display:inline-flex; align-items:center; gap:5px; border-radius:6px; ${recipientMode === 'customer' ? 'background:#18181B; color:#ffffff; border:1.5px solid #18181B;' : 'background:#ffffff; color:#18181B; border:1.5px solid #d4d4d8;'}">
+                                <button type="button" class="btn btn-sm" data-mode="customer" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 700; display:inline-flex; align-items:center; gap:5px; border-radius:6px; ${recipientMode === 'customer' ? 'background:#d4d4d8; color:#ffffff; border:1.5px solid #18181B;' : 'background:#ffffff; color:#18181B; border:1.5px solid #d4d4d8;'}">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                     Customer Profile
                                 </button>
@@ -650,7 +655,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
                     <!-- Primary Business rule banner (shown when in Find Business mode) -->
                     <div id="inv-drawer-primary-note" style="display:none; font-size:0.75rem; color:#52525b; background:#fafafa; border:1.5px solid #d4d4d8; border-radius:6px; padding:0.45rem 0.75rem; align-items:center; gap:6px;">
-                        <span style="font-size:0.85rem; color:#18181b;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>
+                        <span style="font-size:0.85rem; color:#18181b;"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
                         <span><strong>Primary Business:</strong> Only one business can be primary at a time. The primary business is automatically preselected for all new invoices.</span>
                     </div>
                 </div>
@@ -672,67 +677,67 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 <form id="quick-add-form" style="display:flex; flex-direction:column; gap:1rem;">
                     
                     <!-- Avatar Upload / URL with Live Round Preview & Drag-Drop -->
-                    <div id="qa-avatar-dropzone" style="display:flex; align-items:center; gap:1rem; background:var(--surface-50); padding:0.85rem; border-radius:10px; border:1.5px dashed var(--border-color); cursor:pointer; transition:all 0.2s ease;" title="Click or Drag & Drop photo here">
-                        <div id="qa-avatar-preview" style="width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #18181B, #27272A); display:flex; align-items:center; justify-content:center; color:white; font-size:1.5rem; font-weight:700; flex-shrink:0; overflow:hidden; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,0.1); pointer-events:none;">
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                    <div id="qa-avatar-dropzone" style="display:flex; align-items:center; gap:1rem; background:#fafafa; padding:0.85rem; border-radius:10px; border:1.5px dashed #d4d4d8; cursor:pointer; transition:all 0.2s ease;" title="Click or Drag & Drop photo here">
+                        <div id="qa-avatar-preview" style="width:56px; height:56px; border-radius:50%; background:#18181B; display:flex; align-items:center; justify-content:center; color:#ffffff; font-size:1.4rem; font-weight:700; flex-shrink:0; overflow:hidden; border:2px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.08); pointer-events:none;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
                         </div>
                         <div style="flex:1;">
-                            <label style="font-size:0.8rem; font-weight:600; margin-bottom:0.25rem; display:block; color:var(--text-primary);">Photo / Avatar (Drag & Drop or Browse)</label>
-                            <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                                <label class="btn btn-sm btn-secondary" style="cursor:pointer; font-size:0.75rem; padding:0.25rem 0.6rem; display:inline-flex; align-items:center; gap:4px;">
+                            <label style="font-size:0.8rem; font-weight:700; margin-bottom:0.35rem; display:block; color:#18181b;">Photo / Avatar (Drag & Drop or Browse)</label>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                <label class="btn btn-sm btn-secondary" style="cursor:pointer; font-size:0.75rem; padding:0.3rem 0.65rem; display:inline-flex; align-items:center; gap:5px; border:1px solid #d4d4d8; background:#ffffff; color:#18181b; border-radius:6px; font-weight:700;">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                     Upload Photo
                                     <input type="file" id="qa-photo-file" accept="image/*" style="display:none;">
                                 </label>
-                                <input type="url" id="qa-photo-url" class="form-control" placeholder="Or paste image URL" style="font-size:0.75rem; padding:0.25rem 0.5rem; flex:1; min-width:140px; height:28px;">
+                                <input type="url" id="qa-photo-url" class="form-control" placeholder="Or paste image URL" style="font-size:0.75rem; padding:0.3rem 0.6rem; flex:1; min-width:140px; height:30px; border:1px solid #d4d4d8; border-radius:6px;">
                             </div>
                         </div>
                     </div>
 
                     <!-- All Fields -->
                     <div>
-                        <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Full Name / Business Name <span style="color:var(--danger);">*</span></label>
-                        <input type="text" id="qa-name" required class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. Acme Innovations or John Doe">
+                        <label style="font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; display:block; color:#18181b;">Full Name / Business Name <span style="color:#ef4444;">*</span></label>
+                        <input type="text" id="qa-name" required class="form-control" style="width:100%; padding:0.55rem; border:1px solid #d4d4d8; border-radius:8px; font-size:0.86rem;" placeholder="e.g. Acme Innovations or John Doe">
                     </div>
 
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
                         <div>
-                            <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Phone Number</label>
-                            <input type="text" id="qa-phone" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. +123456789">
+                            <label style="font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; display:block; color:#18181b;">Phone Number</label>
+                            <input type="text" id="qa-phone" class="form-control" style="width:100%; padding:0.55rem; border:1px solid #d4d4d8; border-radius:8px; font-size:0.86rem;" placeholder="e.g. +123456789">
                         </div>
                         <div>
-                            <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Email Address</label>
-                            <input type="email" id="qa-email" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. contact@example.com">
+                            <label style="font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; display:block; color:#18181b;">Email Address</label>
+                            <input type="email" id="qa-email" class="form-control" style="width:100%; padding:0.55rem; border:1px solid #d4d4d8; border-radius:8px; font-size:0.86rem;" placeholder="e.g. contact@example.com">
                         </div>
                     </div>
 
                     <div>
-                        <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Full Address</label>
-                        <input type="text" id="qa-address" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. 123 Main St, Suite 400, New York, NY">
+                        <label style="font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; display:block; color:#18181b;">Full Address</label>
+                        <input type="text" id="qa-address" class="form-control" style="width:100%; padding:0.55rem; border:1px solid #d4d4d8; border-radius:8px; font-size:0.86rem;" placeholder="e.g. 123 Main St, Suite 400, New York, NY">
                     </div>
 
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
                         <div>
-                            <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Status</label>
-                            <select id="qa-status" class="form-control" style="width:100%; padding:0.55rem;">
+                            <label style="font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; display:block; color:#18181b;">Status</label>
+                            <select id="qa-status" class="form-control" style="width:100%; padding:0.55rem; border:1px solid #d4d4d8; border-radius:8px; font-size:0.86rem;">
                                 <option value="Active">Active</option>
                                 <option value="Inactive">Inactive</option>
                             </select>
                         </div>
                         <div>
-                            <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Tags</label>
-                            <input type="text" id="qa-tags" class="form-control" style="width:100%; padding:0.55rem;" placeholder="e.g. VIP, Wholesale, Retail">
+                            <label style="font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; display:block; color:#18181b;">Tags</label>
+                            <input type="text" id="qa-tags" class="form-control" style="width:100%; padding:0.55rem; border:1px solid #d4d4d8; border-radius:8px; font-size:0.86rem;" placeholder="e.g. VIP, Wholesale, Retail">
                         </div>
                     </div>
 
                     <div>
-                        <label style="font-size:0.82rem; font-weight:600; margin-bottom:0.35rem; display:block;">Notes / Payment Terms</label>
-                        <textarea id="qa-notes" class="form-control" style="width:100%; padding:0.55rem; min-height:55px;" placeholder="Optional details..."></textarea>
+                        <label style="font-size:0.82rem; font-weight:700; margin-bottom:0.35rem; display:block; color:#18181b;">Notes / Payment Terms</label>
+                        <textarea id="qa-notes" class="form-control" style="width:100%; padding:0.55rem; min-height:55px; border:1px solid #d4d4d8; border-radius:8px; font-size:0.86rem;" placeholder="Optional details..."></textarea>
                     </div>
 
-                    <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:0.5rem; border-top:1px solid var(--border-color); padding-top:1rem;">
-                        <button type="button" id="btn-cancel-quick-add" class="btn btn-secondary">Cancel</button>
-                        <button type="submit" id="btn-save-quick-add" class="btn btn-primary" style="background:#18181B; border-color:#18181B;">Save & Select</button>
+                    <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:0.5rem; border-top:1px solid #e4e4e7; padding-top:1rem;">
+                        <button type="button" id="btn-cancel-quick-add" class="btn btn-secondary" style="border:1px solid #d4d4d8; background:#ffffff; color:#18181b; font-weight:700; border-radius:8px; padding:0.45rem 1.15rem; cursor:pointer;">Cancel</button>
+                        <button type="submit" id="btn-save-quick-add" class="btn btn-primary" style="background:#18181B; border:1px solid #18181B; color:#ffffff; font-weight:700; border-radius:8px; padding:0.45rem 1.25rem; cursor:pointer;">Save & Select</button>
                     </div>
                 </form>
             </div>
@@ -1034,9 +1039,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Switch View Helper
     const showEditorView = (isEdit = false, invoice = null, preselectedTarget = null) => {
+        saveScrollPosition('subview:invoices:list:' + (isBusinessInvoice ? 'biz' : 'cust'));
         if (listView) listView.style.display = 'none';
         if (editorView) editorView.style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        resetScrollToTop();
 
         const titleRow = container.querySelector('#inv-form-title')?.parentElement;
         if (titleRow && !invUnsavedIndicator) {
@@ -1097,6 +1103,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         editingInvoiceId = null;
         editingInvoiceUniqueId = null;
         initialInvoiceFormSnapshot = null;
+        restoreScrollPosition('subview:invoices:list:' + (isBusinessInvoice ? 'biz' : 'cust'));
     };
 
     const handleCloseEditor = async () => {
@@ -1145,7 +1152,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                                 <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.35rem;">
                                     <span style="font-weight:800; font-size:1.05rem; color:#18181B; line-height:1.2;">${escapeHtml(b.name)}</span>
                                     <span style="font-size:0.72rem; background:#fafafa; border:1.5px solid #d4d4d8; color:#18181B; padding:2px 8px; border-radius:6px; font-weight:700;">Issuer (Your Business)</span>
-                                    ${b.isPrimary ? `<span style="font-size:0.72rem; background:#fafafa; border:1.5px solid #d4d4d8; color:#18181B; padding:2px 8px; border-radius:6px; font-weight:700;">Primary Business</span>` : ''}
+                                    ${b.isPrimary ? `<span style="font-size:0.72rem; background:#fafafa; border:1.5px solid #d4d4d8; color:#18181B; padding:2px 8px; border-radius:6px; font-weight:700; display:inline-flex; align-items:center; gap:4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Primary Business</span>` : ''}
                                 </div>
                                 <div style="font-size:0.82rem; color:#52525b; display:flex; flex-wrap:wrap; gap:0.85rem; margin-top:0.25rem;">
                                     ${b.phone ? `<span style="display:inline-flex; align-items:center; gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>${escapeHtml(b.phone)}</span>` : ''}
@@ -1158,7 +1165,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                         <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
                             <button type="button" id="btn-change-inv-business" class="btn btn-sm" style="font-size:0.8rem; font-weight:700; padding:0.4rem 0.85rem; display:inline-flex; align-items:center; gap:5px; background:#ffffff; color:#18181b; border:1.5px solid #d4d4d8; border-radius:8px;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
-                                Change Business
+                                Change
                             </button>
                             <button type="button" id="btn-clear-inv-business" class="btn btn-sm" style="font-size:0.8rem; padding:0.4rem 0.65rem; background:#ffffff; color:#71717a; border:1.5px solid #d4d4d8; border-radius:8px;" title="Clear Selection">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -1350,10 +1357,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     // Populate Form for Editing
     const populateFormForEdit = (inv) => {
-        // Business Issuer
+        // Business Issuer - Strict ID-to-ID
         const busSelect = container.querySelector('#inv-business');
         if (busSelect) {
-            const matchedBus = allBusinesses.find(b => (b.uniqueId && b.uniqueId === inv.businessId) || b.id === inv.businessId || b.name === inv.businessName);
+            const matchedBus = allBusinesses.find(b => (b.uniqueId && (b.uniqueId === inv.businessId || b.uniqueId === inv.businessUniqueId)) || b.id === inv.businessId || b.id === inv.businessDocId);
             if (matchedBus) {
                 busSelect.value = matchedBus.id;
             } else if (inv.businessId) {
@@ -1362,9 +1369,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             updateBusinessPreview();
         }
 
-        // Recipient resolution
-        const matchedCust = allCustomers.find(c => (c.uniqueId && c.uniqueId === inv.customerId) || c.id === inv.customerId || (inv.customerName && c.name === inv.customerName));
-        const matchedCli = allClients.find(c => (c.uniqueId && c.uniqueId === inv.clientId) || c.id === inv.clientId || (inv.customerName && c.name === inv.customerName));
+        // Recipient resolution - Strict ID-to-ID
+        const matchedCust = allCustomers.find(c => (c.uniqueId && (c.uniqueId === inv.customerId || c.uniqueId === inv.customerUniqueId)) || c.id === inv.customerId || c.id === inv.customerDocId);
+        const matchedCli = allClients.find(c => (c.uniqueId && (c.uniqueId === inv.clientId || c.uniqueId === inv.clientUniqueId)) || c.id === inv.clientId || c.id === inv.clientDocId);
 
         if (inv.clientId && matchedCli) {
             setRecipientMode('client');
@@ -1374,14 +1381,6 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             setRecipientMode('customer');
             const custSelect = container.querySelector('#inv-customer');
             if (custSelect) custSelect.value = matchedCust.id;
-        } else if (matchedCust) {
-            setRecipientMode('customer');
-            const custSelect = container.querySelector('#inv-customer');
-            if (custSelect) custSelect.value = matchedCust.id;
-        } else if (matchedCli) {
-            setRecipientMode('client');
-            const cliSelect = container.querySelector('#inv-client');
-            if (cliSelect) cliSelect.value = matchedCli.id;
         } else {
             setRecipientMode('walkin');
         }
@@ -2040,8 +2039,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     };
 
     // Dedicated Invoice Detail View helper (Full Panel, Grey/Black combo)
-    const showInvoiceDetail = (inv) => {
+    const showInvoiceDetail = (inv, pushState = true) => {
         if (!inv) return;
+        saveScrollPosition('subview:invoices:list:' + (isBusinessInvoice ? 'biz' : 'cust'));
         const detailPanel = container.querySelector('#invoice-detail-view');
         const listView = container.querySelector('#invoice-list-view');
         const editorView = container.querySelector('#invoice-editor-view');
@@ -2050,16 +2050,41 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         if (editorView) editorView.style.display = 'none';
         listView.style.display = 'none';
         detailPanel.style.display = 'block';
-        detailPanel.scrollIntoView({ behavior: 'smooth' });
+        restoreScrollPosition('subview:invoices:detail:' + (inv.id || inv.uniqueId), 0);
+
+        // Synchronize clean URL query parameter for browser history / back key restoration
+        const invParam = inv.uniqueId || inv.id || inv.invoiceNumber;
+        if (invParam && window.history) {
+            try {
+                const currentUrl = new URL(window.location.href);
+                const prevInv = currentUrl.searchParams.get('inv');
+                currentUrl.searchParams.set('inv', invParam);
+                if (pushState && prevInv !== invParam) {
+                    window.history.pushState({ route: isBusinessInvoice ? '/invoices/business' : '/invoices/customer', inv: invParam }, '', currentUrl.toString());
+                } else {
+                    window.history.replaceState({ ...window.history.state, inv: invParam }, '', currentUrl.toString());
+                }
+            } catch(e) {}
+        }
 
         renderInvoiceDetailPanel(detailPanel, inv, {
             allBusinesses,
             allCustomers,
             allClients,
             onBack: () => {
+                if (inv) saveScrollPosition('subview:invoices:detail:' + (inv.id || inv.uniqueId));
                 detailPanel.style.display = 'none';
                 listView.style.display = 'block';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                restoreScrollPosition('subview:invoices:list:' + (isBusinessInvoice ? 'biz' : 'cust'));
+                // Clear invoice query param
+                if (window.history) {
+                    try {
+                        const currentUrl = new URL(window.location.href);
+                        currentUrl.searchParams.delete('inv');
+                        currentUrl.searchParams.delete('invoiceId');
+                        window.history.replaceState({ ...window.history.state, inv: null }, '', currentUrl.toString());
+                    } catch(e) {}
+                }
             },
             onEdit: (invoiceToEdit) => {
                 detailPanel.style.display = 'none';
@@ -2067,6 +2092,115 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             }
         });
     };
+
+    // Check if returning from People / Directory or Browser Back to auto-open specific invoice
+    const checkAndAutoOpenInvoice = (invoicesList) => {
+        let reopenId = null;
+        let reopenMeta = null;
+        let returnNav = null;
+        try {
+            reopenId = sessionStorage.getItem('pricelister_reopen_invoice_id');
+            const metaRaw = sessionStorage.getItem('pricelister_reopen_invoice_meta');
+            if (metaRaw) reopenMeta = JSON.parse(metaRaw);
+            const returnRaw = sessionStorage.getItem('pricelister_return_invoice');
+            if (returnRaw) returnNav = JSON.parse(returnRaw);
+        } catch (e) {}
+
+        // Check URL search parameters (e.g. ?inv=... or ?invoiceId=...)
+        let urlInvParam = null;
+        try {
+            const params = new URLSearchParams(window.location.search);
+            urlInvParam = params.get('inv') || params.get('invoiceId') || params.get('id');
+        } catch(e) {}
+
+        if (!reopenId && !reopenMeta && !returnNav && !urlInvParam) return false;
+
+        const targetId = String(reopenId || reopenMeta?.invoiceId || reopenMeta?.uniqueId || returnNav?.invoiceId || returnNav?.uniqueId || urlInvParam || '').trim().toLowerCase();
+        const targetNum = String(reopenMeta?.invoiceNumber || returnNav?.invoiceNumber || urlInvParam || reopenId || '').trim().toLowerCase();
+
+        if (!targetId && !targetNum) return false;
+
+        const match = (invoicesList || []).find(i => {
+            if (!i) return false;
+            const iId = String(i.id || '').trim().toLowerCase();
+            const iUid = String(i.uniqueId || '').trim().toLowerCase();
+            const iNum = String(i.invoiceNumber || '').trim().toLowerCase();
+            const iBusNum = String(i.busInvNumber || '').trim().toLowerCase();
+
+            if (targetId && (iId === targetId || iUid === targetId || iNum === targetId || iBusNum === targetId)) return true;
+            if (targetNum && (iNum === targetNum || iBusNum === targetNum || iUid === targetNum || iId === targetNum)) return true;
+            return false;
+        });
+
+        if (match) {
+            try {
+                sessionStorage.removeItem('pricelister_reopen_invoice_id');
+                sessionStorage.removeItem('pricelister_reopen_invoice_meta');
+                sessionStorage.removeItem('pricelister_return_invoice');
+            } catch (e) {}
+            showInvoiceDetail(match, false);
+            return true;
+        }
+        return false;
+    };
+
+    // Keyboard Back Key Handler (Escape key or Alt+ArrowLeft or Backspace outside inputs)
+    const handleInvoiceBackKey = (e) => {
+        if (!container || !container.isConnected) return;
+        const tag = document.activeElement?.tagName;
+        const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+
+        const isBackKey = e.key === 'Escape' || 
+                          ((e.key === 'Backspace' || (e.altKey && e.key === 'ArrowLeft')) && !isTyping);
+
+        if (isBackKey) {
+            const detailPanel = container.querySelector('#invoice-detail-view');
+            if (detailPanel && detailPanel.style.display !== 'none') {
+                e.preventDefault();
+                const backToPersonBtn = detailPanel.querySelector('#btn-detail-back-to-person');
+                const backBtn = detailPanel.querySelector('#btn-detail-back-invoices');
+                if (backToPersonBtn) {
+                    backToPersonBtn.click();
+                } else if (backBtn) {
+                    backBtn.click();
+                } else {
+                    const listView = container.querySelector('#invoice-list-view');
+                    detailPanel.style.display = 'none';
+                    if (listView) {
+                        listView.style.display = 'block';
+                        restoreScrollPosition('subview:invoices:list:' + (isBusinessInvoice ? 'biz' : 'cust'));
+                    }
+                }
+            }
+        }
+    };
+    window.removeEventListener('keydown', container.__invoiceKeyHandler);
+    container.__invoiceKeyHandler = handleInvoiceBackKey;
+    window.addEventListener('keydown', handleInvoiceBackKey);
+
+    // Browser History PopState handler for intra-module back/forward navigation
+    const handleInvoicePopState = () => {
+        if (!container || !container.isConnected) return;
+        const detailPanel = container.querySelector('#invoice-detail-view');
+        const listView = container.querySelector('#invoice-list-view');
+        const params = new URLSearchParams(window.location.search);
+        const invParam = params.get('inv') || params.get('invoiceId');
+
+        if (!invParam) {
+            if (detailPanel && detailPanel.style.display !== 'none') {
+                detailPanel.style.display = 'none';
+                if (listView) {
+                    listView.style.display = 'block';
+                    restoreScrollPosition('subview:invoices:list:' + (isBusinessInvoice ? 'biz' : 'cust'));
+                }
+            }
+        } else {
+            checkAndAutoOpenInvoice(rawInvoices);
+        }
+    };
+    window.removeEventListener('popstate', container.__invoicePopHandler);
+    container.__invoicePopHandler = handleInvoicePopState;
+    window.addEventListener('popstate', handleInvoicePopState);
 
     // Update Floating Invoice Batch Bar
     const updateInvoiceBatchBar = (filteredInvoices = []) => {
@@ -2394,29 +2528,16 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
     const applyFiltersAndRender = () => {
         if (!tbody) return;
 
-        const countAllEl = container.querySelector('#count-all');
-        const countPaidEl = container.querySelector('#count-paid');
-        const countUnpaidEl = container.querySelector('#count-unpaid');
-
         const validRaw = (rawInvoices || []).filter(Boolean);
 
-        if (countAllEl) countAllEl.textContent = validRaw.length;
-        if (countPaidEl) countPaidEl.textContent = validRaw.filter(i => (i.status || '').toUpperCase() === 'PAID').length;
-        if (countUnpaidEl) countUnpaidEl.textContent = validRaw.filter(i => (i.status || '').toUpperCase() !== 'PAID').length;
-
-        let filtered = validRaw.filter(inv => {
-            if (!inv) return false;
-            const s = (inv.status || 'Draft').toUpperCase();
-            if (activeStatus === 'PAID') return s === 'PAID';
-            if (activeStatus === 'UNPAID') return s !== 'PAID';
-            return true;
-        });
+        // 1. Filter by Date, Query Filters, and Search Query (independent of Paid/Unpaid status)
+        let queryMatched = [...validRaw];
 
         if (activeDateFilter !== 'ALL') {
             const now = new Date();
             const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-            filtered = filtered.filter(inv => {
+            queryMatched = queryMatched.filter(inv => {
                 const invTime = getInvoiceTime(inv);
                 if (activeDateFilter === 'TODAY') {
                     return invTime >= startOfToday;
@@ -2442,21 +2563,21 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             if (activeQueryFilter === 'VALUE_RANGE') {
                 const min = filterValMin !== '' ? Number(filterValMin) : -Infinity;
                 const max = filterValMax !== '' ? Number(filterValMax) : Infinity;
-                filtered = filtered.filter(i => {
+                queryMatched = queryMatched.filter(i => {
                     const val = Number(i.totalPrice || i.grandTotal || i.total || 0);
                     return val >= min && val <= max;
                 });
             } else if (activeQueryFilter === 'ITEM_RANGE') {
                 const min = filterItemMin !== '' ? Number(filterItemMin) : -Infinity;
                 const max = filterItemMax !== '' ? Number(filterItemMax) : Infinity;
-                filtered = filtered.filter(i => {
+                queryMatched = queryMatched.filter(i => {
                     const count = Array.isArray(i.items) ? i.items.length : 0;
                     return count >= min && count <= max;
                 });
             } else if (activeQueryFilter === 'TARGET_CUSTOMER') {
                 const q = (targetCustomerQuery || '').toLowerCase().trim();
                 if (q) {
-                    filtered = filtered.filter(i => {
+                    queryMatched = queryMatched.filter(i => {
                         const cName = (i.customerName || i.recipientName || '').toLowerCase();
                         const cPhone = (i.customerNumber || i.customerPhone || i.recipientPhone || '').toLowerCase();
                         const cEmail = (i.customerEmail || i.recipientEmail || '').toLowerCase();
@@ -2467,7 +2588,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             } else if (activeQueryFilter === 'TARGET_BUSINESS') {
                 const q = (targetBusinessQuery || '').toLowerCase().trim();
                 if (q) {
-                    filtered = filtered.filter(i => {
+                    queryMatched = queryMatched.filter(i => {
                         const bName = (i.businessName || i.issuerName || '').toLowerCase();
                         const bPhone = (i.businessPhone || i.businessNumber || '').toLowerCase();
                         const bEmail = (i.businessEmail || '').toLowerCase();
@@ -2479,8 +2600,8 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
 
         if (searchQuery) {
-            const q = searchQuery.toLowerCase();
-            filtered = filtered.filter(inv => {
+            const q = searchQuery.toLowerCase().trim();
+            queryMatched = queryMatched.filter(inv => {
                 const num = (inv.invoiceNumber || '').toLowerCase();
                 const busNum = (inv.busInvNumber || '').toLowerCase();
                 const uid = (inv.uniqueId || '').toLowerCase();
@@ -2491,6 +2612,24 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 return num.includes(q) || busNum.includes(q) || uid.includes(q) || title.includes(q) || busName.includes(q) || custName.includes(q) || note.includes(q);
             });
         }
+
+        // 2. Update status pill counts to reflect visible queried/filtered invoices
+        const countAllEl = container.querySelector('#count-all');
+        const countPaidEl = container.querySelector('#count-paid');
+        const countUnpaidEl = container.querySelector('#count-unpaid');
+
+        if (countAllEl) countAllEl.textContent = queryMatched.length;
+        if (countPaidEl) countPaidEl.textContent = queryMatched.filter(i => (i.status || '').toUpperCase() === 'PAID').length;
+        if (countUnpaidEl) countUnpaidEl.textContent = queryMatched.filter(i => (i.status || '').toUpperCase() !== 'PAID').length;
+
+        // 3. Filter by Active Status Pill (ALL, PAID, UNPAID)
+        let filtered = queryMatched.filter(inv => {
+            if (!inv) return false;
+            const s = (inv.status || 'Draft').toUpperCase();
+            if (activeStatus === 'PAID') return s === 'PAID';
+            if (activeStatus === 'UNPAID') return s !== 'PAID';
+            return true;
+        });
 
         filtered.sort((a, b) => {
             if (activeSort === 'NEWEST') return getInvoiceTime(b) - getInvoiceTime(a);
@@ -2623,6 +2762,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }).join('');
 
         attachInvoiceItemEvents(filtered);
+        const detailPanel = container.querySelector('#invoice-detail-view');
+        if (!detailPanel || detailPanel.style.display === 'none') {
+            restoreScrollPosition('subview:invoices:list:' + (isBusinessInvoice ? 'biz' : 'cust'));
+        }
     };
 
     // Reload Entity Dropdowns
@@ -2807,6 +2950,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 }
             }
 
+            const handleInvoicesSnapshot = (invoices) => {
+                rawInvoices = Array.isArray(invoices) ? invoices : [];
+                if (!checkAndAutoOpenInvoice(rawInvoices)) {
+                    applyFiltersAndRender();
+                }
+            };
+
             // Realtime Invoice Listener
             if (container._invoiceUnsubscribe) {
                 try {
@@ -2815,14 +2965,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             }
 
             try {
-                container._invoiceUnsubscribe = invoiceService.listenInvoices(isBusinessInvoice, (invoices) => {
-                    rawInvoices = Array.isArray(invoices) ? invoices : [];
-                    applyFiltersAndRender();
-                });
+                container._invoiceUnsubscribe = invoiceService.listenInvoices(isBusinessInvoice, handleInvoicesSnapshot);
             } catch (listenErr) {
                 console.warn("listenInvoices fallback to getAllInvoices:", listenErr);
                 rawInvoices = (await invoiceService.getAllInvoices(isBusinessInvoice)) || [];
-                applyFiltersAndRender();
+                handleInvoicesSnapshot(rawInvoices);
             }
 
             renderItemsList();
@@ -2866,9 +3013,13 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`;
         }
 
-        const submitBtn = container.querySelector('#btn-save-quick-add');
+        const submitBtn = document.getElementById('btn-save-quick-add') || (quickAddModal ? quickAddModal.querySelector('#btn-save-quick-add') : null);
+        const qaNameInput = document.getElementById('qa-name') || (quickAddModal ? quickAddModal.querySelector('#qa-name') : null);
         if (submitBtn) {
-            submitBtn.disabled = true;
+            const hasName = Boolean(qaNameInput && qaNameInput.value.trim());
+            submitBtn.disabled = !hasName;
+            submitBtn.style.opacity = hasName ? '1' : '0.5';
+            submitBtn.style.cursor = hasName ? 'pointer' : 'not-allowed';
             submitBtn.textContent = 'Save & Select';
         }
 
@@ -3033,9 +3184,11 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
 
     quickAddForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const submitBtn = container.querySelector('#btn-save-quick-add');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
+        const submitBtn = document.getElementById('btn-save-quick-add') || (quickAddModal ? quickAddModal.querySelector('#btn-save-quick-add') : null);
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+        }
 
         let finalImageUrl = qaPhotoUrlInput?.value?.trim() || '';
         const file = pendingQaPhotoFile || qaPhotoFileInput?.files?.[0];
@@ -3085,8 +3238,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         } catch (err) {
             showAlert.error(err.message || "Failed to add entry.");
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Save & Select';
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save & Select';
+            }
         }
     });
 
@@ -3787,7 +3942,7 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.3rem;">
                                 <span style="font-weight: 800; font-size: 0.96rem; color: #18181B; line-height: 1.3;">${escapeHtml(item.name || 'Unnamed')}</span>
                                 <span class="badge" style="background: #fafafa; color: #18181B; border: 1px solid #d4d4d8; font-size: 0.7rem; padding: 2px 7px; border-radius: 6px; font-weight: 700;">${typeBadgeText}</span>
-                                ${isPrimaryBiz ? `<span class="badge" style="background: #fafafa; color: #18181B; border: 1.5px solid #d4d4d8; font-size: 0.7rem; padding: 2px 7px; border-radius: 6px; font-weight: 800; display: inline-flex; align-items: center; gap: 3px;">Primary Business</span>` : ''}
+                                ${isPrimaryBiz ? `<span class="badge" style="background: #fafafa; color: #18181B; border: 1.5px solid #d4d4d8; font-size: 0.7rem; padding: 2px 7px; border-radius: 6px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Primary Business</span>` : ''}
                                 ${isSelected ? `<span class="badge" style="background: #18181B; color: #ffffff; font-size: 0.68rem; padding: 2px 6px; border-radius: 6px; font-weight: 700;">Selected</span>` : ''}
                             </div>
                             
@@ -3825,9 +3980,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     </div>
 
                     <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.45rem; flex-shrink: 0;">
-                        ${(isBiz && !isPrimaryBiz) ? `
-                            <button type="button" class="btn btn-sm btn-drawer-set-primary" data-bus-id="${item.id}" title="Set as default business for all new invoices (only one primary at a time)" style="font-size: 0.72rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 700; white-space: nowrap; background: #ffffff; color: #18181B; border: 1.5px solid #d4d4d8; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;">
-                                Set Primary
+                        ${(isBiz && !isPrimaryBiz && canSetPrimary) ? `
+                            <button type="button" class="btn btn-sm btn-drawer-set-primary" data-bus-id="${item.id}" title="Set as default business for all new invoices (only one primary at a time)" style="font-size: 0.72rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 700; white-space: nowrap; background: #ffffff; color: #18181B; border: 1.5px solid #d4d4d8; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Set Primary
                             </button>
                         ` : ''}
                         <button type="button" class="btn btn-sm btn-drawer-select-item" data-item-id="${item.id}" style="font-size: 0.78rem; padding: 0.35rem 0.95rem; font-weight: 700; border-radius: 8px; background: #18181B; color: #ffffff; border: 1.5px solid #18181B; cursor: pointer;">
@@ -3884,6 +4039,10 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         listEl.querySelectorAll('.btn-drawer-set-primary').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
+                if (!canSetPrimary) {
+                    showAlert.error("Permission Denied: Only Admins and Co-Admins can set the Primary Business.");
+                    return;
+                }
                 const busId = btn.getAttribute('data-bus-id');
                 try {
                     btn.disabled = true;
@@ -4058,12 +4217,31 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
         }
     });
 
-    container.querySelector('#qa-name')?.addEventListener('input', (e) => {
-        const submitBtn = container.querySelector('#btn-save-quick-add');
-        if (submitBtn) {
-            submitBtn.disabled = !e.target.value.trim();
+    const updateQuickAddSubmitState = () => {
+        const qaInput = document.getElementById('qa-name') || (quickAddModal ? quickAddModal.querySelector('#qa-name') : null);
+        const submitBtn = document.getElementById('btn-save-quick-add') || (quickAddModal ? quickAddModal.querySelector('#btn-save-quick-add') : null);
+        if (submitBtn && qaInput) {
+            const hasName = Boolean(qaInput.value && qaInput.value.trim().length > 0);
+            submitBtn.disabled = !hasName;
+            submitBtn.style.opacity = hasName ? '1' : '0.5';
+            submitBtn.style.cursor = hasName ? 'pointer' : 'not-allowed';
         }
-    });
+    };
+
+    if (quickAddModal) {
+        quickAddModal.addEventListener('input', (e) => {
+            if (e.target && e.target.id === 'qa-name') updateQuickAddSubmitState();
+        });
+        quickAddModal.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'qa-name') updateQuickAddSubmitState();
+        });
+        quickAddModal.addEventListener('keyup', (e) => {
+            if (e.target && e.target.id === 'qa-name') updateQuickAddSubmitState();
+        });
+        quickAddModal.addEventListener('paste', () => {
+            setTimeout(updateQuickAddSubmitState, 15);
+        });
+    }
 
     // SAVE / UPDATE INVOICE HANDLER
     if (btnSubmit) {
@@ -4111,6 +4289,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                 const bus = allBusinesses.find(b => b.id === bSelect.value);
                 if (bus) {
                     invoiceData.businessId = bus.uniqueId || bus.id;
+                    invoiceData.businessUniqueId = bus.uniqueId || '';
+                    invoiceData.businessDocId = bus.id || '';
+                    invoiceData.issuerId = bus.uniqueId || bus.id;
                     invoiceData.businessName = bus.name || '';
                     invoiceData.businessAddress = bus.address || '';
                     invoiceData.businessPhone = bus.phone || '';
@@ -4123,6 +4304,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     const cust = allCustomers.find(c => c.id === cSelect?.value);
                     if (cust) {
                         invoiceData.customerId = cust.uniqueId || cust.id;
+                        invoiceData.customerUniqueId = cust.uniqueId || '';
+                        invoiceData.customerDocId = cust.id || '';
+                        invoiceData.recipientId = cust.uniqueId || cust.id;
                         invoiceData.customerName = cust.name || '';
                         invoiceData.customerNumber = cust.phone || '';
                         invoiceData.clientEmail = cust.email || '';
@@ -4138,6 +4322,9 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
                     const cli = allClients.find(c => c.id === cSelect?.value);
                     if (cli) {
                         invoiceData.clientId = cli.uniqueId || cli.id;
+                        invoiceData.clientUniqueId = cli.uniqueId || '';
+                        invoiceData.clientDocId = cli.id || '';
+                        invoiceData.recipientId = cli.uniqueId || cli.id;
                         invoiceData.customerName = cli.name || '';
                         invoiceData.customerNumber = cli.phone || '';
                         invoiceData.clientPhone = cli.phone || '';
@@ -4217,6 +4404,29 @@ export const renderInvoices = async (container, workspaceId, isBusinessInvoice) 
             showAlert.success(`Exported ${rawInvoices.length} invoices to Excel!`);
         });
     }
+
+    // Lifecycle Component Cleanup (invoked by router when navigating away)
+    container._cleanup = () => {
+        if (container._invoiceUnsubscribe) {
+            try {
+                container._invoiceUnsubscribe();
+            } catch(e) {}
+            container._invoiceUnsubscribe = null;
+        }
+        if (container.__invoiceKeyHandler) {
+            window.removeEventListener('keydown', container.__invoiceKeyHandler);
+            container.__invoiceKeyHandler = null;
+        }
+        if (container.__invoicePopHandler) {
+            window.removeEventListener('popstate', container.__invoicePopHandler);
+            container.__invoicePopHandler = null;
+        }
+        const bar = document.getElementById('inv-batch-action-bar');
+        if (bar) bar.remove();
+        if (quickAddModal && quickAddModal.parentElement === document.body) {
+            quickAddModal.remove();
+        }
+    };
 
     loadData();
 };

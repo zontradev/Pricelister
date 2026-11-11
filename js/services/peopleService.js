@@ -4,6 +4,7 @@ import { CustomerProfile, BusinessProfile, ClientProfile } from '../../DataModel
 import { validateCustomer } from '../schemas/customerSchema.js';
 import { validateBusiness } from '../schemas/businessSchema.js';
 import { validateClient } from '../schemas/clientSchema.js';
+import { getUserRestrictions } from '../auth-handler.js';
 
 export const getPeopleService = (workspaceId) => {
     const businessRepo = createRepository('BusinessProfiles', workspaceId);
@@ -28,6 +29,32 @@ export const getPeopleService = (workspaceId) => {
         return explicitCreator || 'MUI4JS8S83F33A';
     };
 
+    // Helper to resolve effective Primary Business ID across server, collection, and workspace
+    const resolveEffectivePrimaryId = (list = []) => {
+        // 1. Direct explicit boolean flag on business document in collection
+        const explicitPrimary = list.find(b => b && b.isPrimary === true);
+        if (explicitPrimary) return explicitPrimary.id;
+
+        // 2. Server-side workspace configuration (window.__activeWorkspace)
+        const wsPrimary = (typeof window !== 'undefined' && window.__activeWorkspace?.primaryBusinessId) ? window.__activeWorkspace.primaryBusinessId : null;
+        if (wsPrimary && list.some(b => b && b.id === wsPrimary)) return wsPrimary;
+
+        // 3. Demo / Local storage shared database
+        try {
+            const demoDb = JSON.parse(localStorage.getItem('pricelister_demo_db_v2') || '{}');
+            const demoWsPrimary = demoDb.Workspaces?.[workspaceId]?.primaryBusinessId;
+            if (demoWsPrimary && list.some(b => b && b.id === demoWsPrimary)) return demoWsPrimary;
+        } catch(e) {}
+
+        // 4. Local device fallback
+        try {
+            const localPrimary = localStorage.getItem('pricelister_primary_business_' + workspaceId);
+            if (localPrimary && list.some(b => b && b.id === localPrimary)) return localPrimary;
+        } catch(e) {}
+
+        return list[0]?.id || null;
+    };
+
     return {
         // --- CUSTOMERS (Stored in ClientProfiles with isClient: false) ---
         getAllCustomers: async () => {
@@ -47,10 +74,13 @@ export const getPeopleService = (workspaceId) => {
         },
         addCustomer: async (data, creatorId) => {
             validateCustomer(data);
+            const cleanCreatorId = resolveCreatorWorkerId(creatorId);
+            const cleanWorkspaceId = resolveBusinessWorkspaceId();
             const customer = new CustomerProfile({
                 ...data,
-                workspaceId: resolveBusinessWorkspaceId(),
-                creatorId: resolveCreatorWorkerId(creatorId),
+                workspaceId: cleanWorkspaceId,
+                creatorId: cleanCreatorId,
+                appWorkerId: cleanCreatorId,
                 uniqueId: generateUniqueId(),
                 timestamp: Date.now()
             });
@@ -73,13 +103,13 @@ export const getPeopleService = (workspaceId) => {
             ]);
 
             const uId = cust?.uniqueId || id;
-            const name = (cust?.name || '').trim().toLowerCase();
-            const phone = (cust?.phone || '').trim();
 
+            // Strict ID-to-ID matching: never match by duplicate names or numbers
             const connectedInvs = (allInvoices || []).filter(inv =>
                 (inv.customerId && (inv.customerId === uId || inv.customerId === id)) ||
-                (inv.customerName && inv.customerName.trim().toLowerCase() === name) ||
-                (phone && inv.customerNumber && inv.customerNumber.trim() === phone)
+                (inv.customerUniqueId && (inv.customerUniqueId === uId || inv.customerUniqueId === id)) ||
+                (inv.customerDocId && (inv.customerDocId === uId || inv.customerDocId === id)) ||
+                (inv.recipientId && (inv.recipientId === uId || inv.recipientId === id))
             );
 
             if (connectedInvs.length > 0) {
@@ -94,34 +124,36 @@ export const getPeopleService = (workspaceId) => {
         // --- BUSINESSES ---
         getAllBusinesses: async () => {
             const list = (await businessRepo.getAll()) || [];
-            let primaryId = null;
-            try {
-                primaryId = localStorage.getItem('pricelister_primary_business_' + workspaceId);
-            } catch(e) {}
+            const effectivePrimaryId = resolveEffectivePrimaryId(list);
             return list.map(b => ({
                 ...b,
-                isPrimary: b.isPrimary === true || (primaryId ? b.id === primaryId : false)
+                isPrimary: Boolean(b.id === effectivePrimaryId)
             }));
         },
         listenBusinesses: (callback, onError = null) => {
             return businessRepo.listenAll(data => {
                 const list = Array.isArray(data) ? data : [];
-                let primaryId = null;
-                try {
-                    primaryId = localStorage.getItem('pricelister_primary_business_' + workspaceId);
-                } catch(e) {}
+                const effectivePrimaryId = resolveEffectivePrimaryId(list);
                 const mapped = list.map(b => ({
                     ...b,
-                    isPrimary: b.isPrimary === true || (primaryId ? b.id === primaryId : false)
+                    isPrimary: Boolean(b.id === effectivePrimaryId)
                 }));
                 callback(mapped);
             }, [], onError);
         },
         setPrimaryBusiness: async (id) => {
+            // Strict Role Enforcement: Only Admin & Co-Admin can set Primary Business
+            const restrictions = getUserRestrictions();
+            const canSetPrimary = Boolean(restrictions?.isCreator || restrictions?.isCoAdmin || restrictions?.isPrivileged);
+            if (!canSetPrimary) {
+                throw new Error("Permission Denied: Only Workspace Admins and Co-Admins can set the Primary Business.");
+            }
+
             const list = (await businessRepo.getAll()) || [];
             const target = list.find(b => b.id === id);
             if (!target) throw new Error("Business profile not found.");
 
+            // 1. Sync isPrimary across all business documents in collection
             for (const b of list) {
                 const makePrimary = (b.id === id);
                 if (b.isPrimary !== makePrimary) {
@@ -132,7 +164,37 @@ export const getPeopleService = (workspaceId) => {
                     }
                 }
             }
+
+            // 2. Persist primary business to server workspace record (shared across ALL members)
             try {
+                await firestoreService.updateWorkspacePrimaryBusiness(workspaceId, id, target.name || target.businessName || '');
+            } catch(wsErr) {
+                console.warn("Could not sync primary business to workspace document:", wsErr);
+            }
+
+            // 3. Update active workspace state in memory
+            if (typeof window !== 'undefined' && window.__activeWorkspace) {
+                window.__activeWorkspace.primaryBusinessId = id;
+                window.__activeWorkspace.primaryBusinessName = target.name || target.businessName || '';
+            }
+
+            // 4. Update demo database in localStorage if active
+            try {
+                const rawDemo = localStorage.getItem('pricelister_demo_db_v2');
+                if (rawDemo) {
+                    const demoDb = JSON.parse(rawDemo);
+                    if (Array.isArray(demoDb.Businesses)) {
+                        demoDb.Businesses.forEach(b => { b.isPrimary = (b.id === id); });
+                    }
+                    if (Array.isArray(demoDb.BusinessProfiles)) {
+                        demoDb.BusinessProfiles.forEach(b => { b.isPrimary = (b.id === id); });
+                    }
+                    if (!demoDb.Workspaces) demoDb.Workspaces = {};
+                    if (!demoDb.Workspaces[workspaceId]) demoDb.Workspaces[workspaceId] = {};
+                    demoDb.Workspaces[workspaceId].primaryBusinessId = id;
+                    demoDb.Workspaces[workspaceId].primaryBusinessName = target.name || target.businessName || '';
+                    localStorage.setItem('pricelister_demo_db_v2', JSON.stringify(demoDb));
+                }
                 localStorage.setItem('pricelister_primary_business_' + workspaceId, id);
                 window.dispatchEvent(new CustomEvent('pricelister-primary-business-changed', {
                     detail: { businessId: id, business: target }
@@ -142,19 +204,19 @@ export const getPeopleService = (workspaceId) => {
         },
         getPrimaryBusiness: async () => {
             const list = (await businessRepo.getAll()) || [];
-            let primaryId = null;
-            try {
-                primaryId = localStorage.getItem('pricelister_primary_business_' + workspaceId);
-            } catch(e) {}
-            return (primaryId ? list.find(b => b.id === primaryId) : null) ||
-                   list.find(b => b.isPrimary === true) ||
-                   list[0] || null;
+            const effectivePrimaryId = resolveEffectivePrimaryId(list);
+            const found = list.find(b => b.id === effectivePrimaryId);
+            return found ? { ...found, isPrimary: true } : (list[0] || null);
         },
         addBusiness: async (data, creatorId) => {
             validateBusiness(data);
+            const cleanCreatorId = resolveCreatorWorkerId(creatorId);
+            const cleanWorkspaceId = resolveBusinessWorkspaceId();
             const business = new BusinessProfile({
                 ...data,
-                creatorId: creatorId,
+                workspaceId: cleanWorkspaceId,
+                creatorId: cleanCreatorId,
+                appWorkerId: cleanCreatorId,
                 uniqueId: generateUniqueId(),
                 timestamp: Date.now()
             });
@@ -180,11 +242,13 @@ export const getPeopleService = (workspaceId) => {
 
             const allInvoices = [...(custInvs || []), ...(busInvs || [])];
             const uId = bus?.uniqueId || id;
-            const name = (bus?.name || '').trim().toLowerCase();
 
+            // Strict ID-to-ID matching: never match by duplicate business names
             const connectedInvs = allInvoices.filter(inv =>
                 (inv.businessId && (inv.businessId === uId || inv.businessId === id)) ||
-                (inv.businessName && inv.businessName.trim().toLowerCase() === name)
+                (inv.businessUniqueId && (inv.businessUniqueId === uId || inv.businessUniqueId === id)) ||
+                (inv.businessDocId && (inv.businessDocId === uId || inv.businessDocId === id)) ||
+                (inv.issuerId && (inv.issuerId === uId || inv.issuerId === id))
             );
 
             if (connectedInvs.length > 0) {
@@ -219,10 +283,13 @@ export const getPeopleService = (workspaceId) => {
         },
         addClient: async (data, creatorId) => {
             validateClient(data);
+            const cleanCreatorId = resolveCreatorWorkerId(creatorId);
+            const cleanWorkspaceId = resolveBusinessWorkspaceId();
             const client = new ClientProfile({
                 ...data,
-                workspaceId: resolveBusinessWorkspaceId(),
-                creatorId: resolveCreatorWorkerId(creatorId),
+                workspaceId: cleanWorkspaceId,
+                creatorId: cleanCreatorId,
+                appWorkerId: cleanCreatorId,
                 uniqueId: generateUniqueId(),
                 isClient: true, // Preserve specific source mapping distinction
                 timestamp: Date.now()
@@ -245,15 +312,12 @@ export const getPeopleService = (workspaceId) => {
             ]);
 
             const uId = cl?.uniqueId || id;
-            const name = (cl?.name || '').trim().toLowerCase();
-            const phone = (cl?.phone || '').trim();
-            const email = (cl?.email || '').trim().toLowerCase();
 
+            // Strict ID-to-ID matching: never match by duplicate client names, phones or emails
             const connectedInvs = (allInvoices || []).filter(inv =>
                 (inv.clientId && (inv.clientId === uId || inv.clientId === id)) ||
-                (inv.clientName && inv.clientName.trim().toLowerCase() === name) ||
-                (phone && inv.clientPhone && inv.clientPhone.trim() === phone) ||
-                (email && inv.clientEmail && inv.clientEmail.trim().toLowerCase() === email)
+                (inv.clientUniqueId && (inv.clientUniqueId === uId || inv.clientUniqueId === id)) ||
+                (inv.clientDocId && (inv.clientDocId === uId || inv.clientDocId === id))
             );
 
             if (connectedInvs.length > 0) {

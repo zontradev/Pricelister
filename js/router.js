@@ -28,6 +28,7 @@ import { firestoreService } from '../firebase/firestore.js';
 
 import { showAlert } from './alert-handler.js';
 import { draftManager } from './services/draftManager.js';
+import { saveScrollPosition, restoreScrollPosition, resetScrollToTop } from './utils/scrollMemory.js';
 
 // Placeholders for remaining modules
 const renderPlaceholder = (container, title) => {
@@ -404,6 +405,10 @@ export const initRouter = async (workspaceIdParam = null) => {
         }
 
         if (route) {
+            // Save scroll position of previous route before leaving
+            if (currentActiveRoute && currentActiveRoute !== targetPath) {
+                saveScrollPosition('route:' + currentActiveRoute);
+            }
             currentActiveRoute = targetPath;
             try {
                 sessionStorage.setItem('pricelister_last_route', targetPath);
@@ -459,6 +464,9 @@ export const initRouter = async (workspaceIdParam = null) => {
                     routeContainer.className = 'route-view';
                     mainContainer.appendChild(routeContainer);
                     await route.render(routeContainer, currentWorkspaceId, routeParam);
+                    
+                    // Sectional Scroll Memory: Restore target screen's scroll position (defaults to 0 for fresh/unvisited screens)
+                    restoreScrollPosition('route:' + targetPath, 0);
                 }
             } catch (err) {
                 console.error(`Error rendering route ${path}:`, err);
@@ -473,6 +481,8 @@ export const initRouter = async (workspaceIdParam = null) => {
                 if (typeof window.__dismissWorkspaceLoader === 'function') {
                     window.__dismissWorkspaceLoader('route_rendered');
                 }
+                // Double check restoration after loader dismissal
+                restoreScrollPosition('route:' + targetPath, 0);
             }
 
             // Update active sidebar nav indicators & hierarchical tree state
@@ -539,6 +549,11 @@ export const initRouter = async (workspaceIdParam = null) => {
         const normalizedTarget = targetPath.startsWith('/') ? targetPath : '/' + targetPath;
 
         if (normalizedTarget === currentActiveRoute && !replace && !targetSearch) return;
+
+        // Save scroll position of current active route before starting transition
+        if (currentActiveRoute && currentActiveRoute !== normalizedTarget) {
+            saveScrollPosition('route:' + currentActiveRoute);
+        }
 
         // Edit Safety Check: Intercept navigation if there are unsaved edits
         if (!isNavigatingAway && currentActiveRoute && currentActiveRoute !== normalizedTarget && hasUnsavedChanges()) {
@@ -688,6 +703,9 @@ export const initRouter = async (workspaceIdParam = null) => {
     window.addEventListener('popstate', async (e) => {
         const popRoute = e.state?.route || extractRouteFromUrl();
         if (popRoute !== currentActiveRoute) {
+            if (currentActiveRoute) {
+                saveScrollPosition('route:' + currentActiveRoute);
+            }
             if (!isNavigatingAway && hasUnsavedChanges()) {
                 const allowLeave = await showAlert.confirmUnsavedChanges();
                 if (!allowLeave) {
@@ -704,6 +722,24 @@ export const initRouter = async (workspaceIdParam = null) => {
             await executeRoute(popRoute);
         }
     });
+
+    // Continuous scroll position tracking: debounced update for current active screen
+    let activeScrollTimer = null;
+    const trackActiveScreenScroll = () => {
+        if (!currentActiveRoute) return;
+        clearTimeout(activeScrollTimer);
+        activeScrollTimer = setTimeout(() => {
+            if (currentActiveRoute) {
+                saveScrollPosition('route:' + currentActiveRoute);
+            }
+        }, 120);
+    };
+
+    const wsContainerEl = document.getElementById('workspace-container');
+    if (wsContainerEl) {
+        wsContainerEl.addEventListener('scroll', trackActiveScreenScroll, { passive: true });
+    }
+    window.addEventListener('scroll', trackActiveScreenScroll, { passive: true });
 
     // Hashchange Fallback (cleans up any legacy inline hash assignments immediately)
     window.addEventListener('hashchange', async () => {

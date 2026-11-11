@@ -10,6 +10,7 @@ import { formatCurrency, getAppCurrencySymbol, formatExactTimestamp, escapeHtml,
 import { openInvoiceViewerModal } from './invoiceViewer.js';
 import { draftManager } from '../services/draftManager.js';
 import { getCodeStudioService } from '../services/codeStudioService.js';
+import { saveScrollPosition, restoreScrollPosition, resetScrollToTop } from '../utils/scrollMemory.js';
 import { 
     renderProductsInitialEmptyState, 
     renderProductsSearchEmptyState, 
@@ -960,10 +961,30 @@ export const renderProducts = async (container, workspaceId) => {
         const btnBack = container.querySelector('#btn-back-to-products');
         if (btnBack) {
             btnBack.addEventListener('click', () => {
+                if (activeProductDetail) {
+                    saveScrollPosition('subview:products:detail:' + activeProductDetail.id);
+                }
                 activeProductDetail = null;
                 renderProductMainView();
+                restoreScrollPosition('subview:products:list');
             });
         }
+
+        // Keyboard Back Key Handler (Escape, Backspace outside input fields, Alt+ArrowLeft)
+        const handleProductDetailBackKey = (e) => {
+            if (!container || !container.isConnected || !activeProductDetail) return;
+            const tag = document.activeElement?.tagName;
+            const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+            const isBackKey = e.key === 'Escape' || ((e.key === 'Backspace' || (e.altKey && e.key === 'ArrowLeft')) && !isTyping);
+            if (isBackKey) {
+                e.preventDefault();
+                const backBtn = container.querySelector('#btn-back-to-products');
+                if (backBtn) backBtn.click();
+            }
+        };
+        window.removeEventListener('keydown', container.__prdDetailKeyHandler);
+        container.__prdDetailKeyHandler = handleProductDetailBackKey;
+        window.addEventListener('keydown', handleProductDetailBackKey);
 
         // Trend range change
         const trendSelect = container.querySelector('#prd-detail-trend-range');
@@ -1118,11 +1139,13 @@ export const renderProducts = async (container, workspaceId) => {
             });
         });
 
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Sectional Scroll: restore or reset detail view scroll
+        restoreScrollPosition('subview:products:detail:' + prd.id, 0);
     };
 
     // Dedicated Product Editor Screen Controls (Totally custom alone screen)
     const showProductEditorView = () => {
+        saveScrollPosition('subview:products:list');
         const formContainer = container.querySelector('#product-form-container');
         const headerContainer = container.querySelector('.prd-header-container');
         const kpiGrid = container.querySelector('.prd-kpi-grid');
@@ -1132,7 +1155,7 @@ export const renderProducts = async (container, workspaceId) => {
         if (listContainer) listContainer.style.display = 'none';
         if (formContainer) {
             formContainer.style.display = 'block';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            resetScrollToTop();
         }
     };
 
@@ -1145,7 +1168,7 @@ export const renderProducts = async (container, workspaceId) => {
         if (headerContainer) headerContainer.style.display = 'flex';
         if (kpiGrid) kpiGrid.style.display = 'grid';
         if (listContainer) listContainer.style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        restoreScrollPosition('subview:products:list');
     };
 
     // Main Product View Layout (List + Form + Modals)
@@ -2297,6 +2320,7 @@ export const renderProducts = async (container, workspaceId) => {
         const openDetail = (id) => {
             const prd = activeProducts.find(p => p.id === id);
             if (prd) {
+                saveScrollPosition('subview:products:list');
                 renderProductDetailView(prd);
             }
         };
@@ -2551,6 +2575,11 @@ export const renderProducts = async (container, workspaceId) => {
                 }
             });
         });
+
+        // Sectional Scroll: restore product list scroll if in main list view
+        if (!activeProductDetail) {
+            restoreScrollPosition('subview:products:list');
+        }
     };
 
     // Live Media Preview & Dynamic Header Logo Helper

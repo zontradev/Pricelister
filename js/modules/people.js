@@ -9,14 +9,25 @@ import { draftManager } from '../services/draftManager.js';
 import { getUserRestrictions } from '../auth-handler.js';
 import { getFinanceService } from '../services/financeService.js';
 import { renderPeopleInitialEmptyState, renderPeopleSearchEmptyState } from '../utils/emptyStateHelper.js';
+import { saveScrollPosition, restoreScrollPosition, resetScrollToTop } from '../utils/scrollMemory.js';
 
 export const renderPeople = async (container, workspaceId, defaultTab = 'customers') => {
     const peopleService = getPeopleService(workspaceId);
     const invoiceService = getInvoiceService(workspaceId);
     const currentUser = authService.getCurrentUser();
     const userRestrictions = getUserRestrictions();
+    const canSetPrimary = Boolean(userRestrictions?.isCreator || userRestrictions?.isCoAdmin || userRestrictions?.isPrivileged);
     
     let currentTab = defaultTab; // 'customers', 'clients', or 'businesses'
+    try {
+        const storedNav = sessionStorage.getItem('pricelister_target_person_detail');
+        if (storedNav) {
+            const parsedNav = JSON.parse(storedNav);
+            if (parsedNav && parsedNav.mode) {
+                currentTab = parsedNav.mode;
+            }
+        }
+    } catch(e) {}
     let dataList = [];
     let allInvoices = [];
     let activePersonDetail = null; // When non-null, shows dedicated large informative detail view
@@ -72,40 +83,51 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         }
     }
 
-    // Calculate invoice stats for a person
+    // Calculate invoice stats for a person - Strict ID-to-ID matching
     function getPersonStats(person) {
         if (!person) return { count: 0, totalSpent: 0, lastDate: null, due: 0, invoices: [] };
-        const uId = person.uniqueId || person.id;
-        const pId = person.id;
-        const name = (person.name || person.businessName || '').trim().toLowerCase();
-        const phone = (person.phone || '').trim().toLowerCase();
-        const email = (person.email || '').trim().toLowerCase();
+        const uId = String(person.uniqueId || person.id || '').trim();
+        const pId = String(person.id || '').trim();
 
         const matchedInvoices = allInvoices.filter(inv => {
             if (!inv) return false;
             if (currentTab === 'businesses' || isBusinessMode) {
-                const bId = (inv.businessId || '').trim();
-                const bName = (inv.businessName || inv.issuerName || '').trim().toLowerCase();
-                return (bId && (bId === uId || bId === pId)) ||
-                       (name && bName && (bName === name || bName.includes(name) || name.includes(bName)));
+                const bId = String(inv.businessId || inv.businessUniqueId || inv.businessDocId || inv.issuerId || '').trim();
+                const invBusId = String(inv.businessId || '').trim();
+                const invBusUid = String(inv.businessUniqueId || '').trim();
+                const invBusDoc = String(inv.businessDocId || '').trim();
+                const invIssuer = String(inv.issuerId || '').trim();
+                return Boolean(
+                    (bId && (bId === uId || bId === pId)) ||
+                    (invBusId && (invBusId === uId || invBusId === pId)) ||
+                    (invBusUid && (invBusUid === uId || invBusUid === pId)) ||
+                    (invBusDoc && (invBusDoc === uId || invBusDoc === pId)) ||
+                    (invIssuer && (invIssuer === uId || invIssuer === pId))
+                );
             } else if (currentTab === 'clients') {
-                const cId = (inv.clientId || '').trim();
-                const cEmail = (inv.clientEmail || inv.email || '').trim().toLowerCase();
-                const cPhone = (inv.clientPhone || inv.phone || '').trim().toLowerCase();
-                const cName = (inv.clientName || inv.name || '').trim().toLowerCase();
-                return (cId && (cId === uId || cId === pId)) ||
-                       (email && cEmail && cEmail === email) ||
-                       (phone && cPhone && cPhone === phone) ||
-                       (name && cName && (cName === name || cName.includes(name) || name.includes(cName)));
+                const cId = String(inv.clientId || inv.clientUniqueId || inv.clientDocId || '').trim();
+                const invCliId = String(inv.clientId || '').trim();
+                const invCliUid = String(inv.clientUniqueId || '').trim();
+                const invCliDoc = String(inv.clientDocId || '').trim();
+                return Boolean(
+                    (cId && (cId === uId || cId === pId)) ||
+                    (invCliId && (invCliId === uId || invCliId === pId)) ||
+                    (invCliUid && (invCliUid === uId || invCliUid === pId)) ||
+                    (invCliDoc && (invCliDoc === uId || invCliDoc === pId))
+                );
             } else {
-                const custId = (inv.customerId || inv.recipientId || '').trim();
-                const custName = (inv.customerName || inv.recipientName || inv.name || '').trim().toLowerCase();
-                const custPhone = (inv.customerNumber || inv.customerPhone || inv.phone || '').trim().toLowerCase();
-                const custEmail = (inv.customerEmail || inv.email || '').trim().toLowerCase();
-                return (custId && (custId === uId || custId === pId)) ||
-                       (name && custName && (custName === name || custName.includes(name) || name.includes(custName))) ||
-                       (phone && custPhone && custPhone === phone) ||
-                       (email && custEmail && custEmail === email);
+                const custId = String(inv.customerId || inv.customerUniqueId || inv.customerDocId || inv.recipientId || '').trim();
+                const invCustId = String(inv.customerId || '').trim();
+                const invCustUid = String(inv.customerUniqueId || '').trim();
+                const invCustDoc = String(inv.customerDocId || '').trim();
+                const invRecip = String(inv.recipientId || '').trim();
+                return Boolean(
+                    (custId && (custId === uId || custId === pId)) ||
+                    (invCustId && (invCustId === uId || invCustId === pId)) ||
+                    (invCustUid && (invCustUid === uId || invCustUid === pId)) ||
+                    (invCustDoc && (invCustDoc === uId || invCustDoc === pId)) ||
+                    (!inv.clientId && invRecip && (invRecip === uId || invRecip === pId))
+                );
             }
         });
 
@@ -126,7 +148,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         const lastInv = matchedInvoices[0];
         const lastDate = lastInv ? (lastInv.timestamp ? new Date(lastInv.timestamp).toLocaleDateString() : 'Recent') : 'No Orders Yet';
 
-        const computedCount = Math.max(matchedInvoices.length, Number(person.invoiceCount) || 0);
+        // Count is strictly the count of matching invoices connected by ID
+        const computedCount = matchedInvoices.length;
 
         return {
             count: computedCount,
@@ -135,6 +158,52 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             lastDate,
             invoices: matchedInvoices
         };
+    }
+
+    // Resolve Clean Origin IDs (Worker ID & Workspace ID, avoiding raw UIDs)
+    function resolveOriginWorkerId(person) {
+        if (!person) return 'ADMIN-HEAD';
+        if (person.appWorkerId && person.appWorkerId.length <= 20) return person.appWorkerId;
+        if (person.workerId && person.workerId.length <= 20) return person.workerId;
+
+        const cId = person.creatorId || person.createdBy || person.userId;
+        if (cId && cId.length <= 18 && !/^[A-Za-z0-9]{25,}$/.test(cId)) {
+            return cId;
+        }
+
+        const ws = (typeof window !== 'undefined' && window.__activeWorkspace) ? window.__activeWorkspace : {};
+        const curUid = (typeof firebase !== 'undefined' && firebase.auth?.().currentUser?.uid) || '';
+
+        if (cId && (cId === ws.creatorUid || cId === ws.ownerId || cId === ws.adminUid || (curUid && cId === curUid && (ws.role === 'CREATOR_ADMIN' || ws.role === 'ADMIN')))) {
+            return ws.adminId || 'ADMIN-HEAD';
+        }
+
+        const members = (typeof window !== 'undefined' && (window.__cachedMembers || window.__workspaceMembers)) || [];
+        if (Array.isArray(members) && cId) {
+            const found = members.find(m => m && (m.workerUid === cId || m.uid === cId || m.id === cId));
+            if (found) {
+                const resolved = found.appWorkerId || found.workerId || found.adminId;
+                if (resolved) return resolved;
+            }
+        }
+
+        if (ws.myAppWorkerId && curUid && cId === curUid) {
+            return ws.myAppWorkerId;
+        }
+        return ws.adminId || ws.myAppWorkerId || 'ADMIN-HEAD';
+    }
+
+    function resolveOriginWorkspaceId(person) {
+        const ws = (typeof window !== 'undefined' && window.__activeWorkspace) ? window.__activeWorkspace : {};
+        if (ws.workspaceId) return ws.workspaceId;
+        if (ws.realWorkspaceId) return ws.realWorkspaceId;
+        if (ws.uniqueId) return ws.uniqueId;
+
+        const pWs = person?.workspaceId;
+        if (pWs && pWs.length <= 18 && !/^[A-Za-z0-9]{25,}$/.test(pWs)) {
+            return pWs;
+        }
+        return 'PL-WORKSPACE';
     }
 
     // Calculate time-filtered chart data
@@ -335,11 +404,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                     </div>
                                 </div>
 
-                                <div id="person-primary-business-wrap" style="display:${isBusinessMode ? 'flex' : 'none'}; align-items:center; gap:0.6rem; background:#F4F4F5; padding:0.75rem 1rem; border-radius:8px; border:1px solid #E4E4E7;">
-                                    <input type="checkbox" id="person-primary" style="width:16px; height:16px; accent-color:#18181B; cursor:pointer;">
+                                <div id="person-primary-business-wrap" style="display:${isBusinessMode ? 'flex' : 'none'}; align-items:center; gap:0.6rem; background:#F4F4F5; padding:0.75rem 1rem; border-radius:8px; border:1px solid #E4E4E7; opacity:${canSetPrimary ? '1' : '0.65'};">
+                                    <input type="checkbox" id="person-primary" style="width:16px; height:16px; accent-color:#18181B; cursor:${canSetPrimary ? 'pointer' : 'not-allowed'};" ${!canSetPrimary ? 'disabled' : ''}>
                                     <div>
-                                        <label for="person-primary" style="font-size:0.85rem; font-weight:700; color:#18181B; cursor:pointer; margin:0;">Set as Primary Business</label>
-                                        <small style="color:#71717A; font-size:0.75rem; display:block;">Use as default company header & issuer details for newly issued invoices.</small>
+                                        <label for="person-primary" style="font-size:0.85rem; font-weight:700; color:#18181B; cursor:${canSetPrimary ? 'pointer' : 'not-allowed'}; margin:0;">Set as Primary Business</label>
+                                        <small style="color:#71717A; font-size:0.75rem; display:block;">${canSetPrimary ? 'Use as default company header & issuer details for newly issued invoices.' : 'Only Admins and Co-Admins can set the Primary Business.'}</small>
                                     </div>
                                 </div>
                             </div>
@@ -635,14 +704,37 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
         const maxVal = Math.max(...monthlyData.map(m => m.amount), 1000);
 
+        let returnInvoiceNav = null;
+        try {
+            const raw = sessionStorage.getItem('pricelister_return_invoice');
+            if (raw) returnInvoiceNav = JSON.parse(raw);
+        } catch(e) {}
+
+        let returnOverviewNav = null;
+        try {
+            const rawO = sessionStorage.getItem('pricelister_return_overview');
+            if (rawO) returnOverviewNav = JSON.parse(rawO);
+        } catch(e) {}
+
         container.innerHTML = `
             <div class="dedicated-detail-container" style="animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
                 <div id="people-detail-view">
                     <!-- BREADCRUMB & TOP NAV -->
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
-                    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.88rem;">
+                    <div style="display:flex; align-items:center; gap:0.6rem; font-size:0.88rem; flex-wrap:wrap;">
+                        ${returnInvoiceNav ? `
+                            <button type="button" id="btn-back-to-source-invoice" class="btn btn-sm" style="background:#ffffff; color:#18181B; border:1px solid #76767aff; font-weight:700; border-radius:8px; padding:0.32rem 0.8rem; display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer;" title="Back to originating invoice">
+                                ${ICONS.back} <span>Back to Invoice #${escapeHtml(returnInvoiceNav.invoiceNumber)}</span>
+                            </button>
+                            <span style="color:var(--text-muted); font-size:0.8rem;">or</span>
+                        ` : (returnOverviewNav ? `
+                            <button type="button" id="btn-back-to-source-overview" class="btn btn-sm" style="background:#ffffff; color:#18181B; border:1px solid #76767aff; font-weight:700; border-radius:8px; padding:0.32rem 0.8rem; display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; cursor:pointer;" title="Back to Analytics Overview">
+                                ${ICONS.back} <span>Back to Overview</span>
+                            </button>
+                            <span style="color:var(--text-muted); font-size:0.8rem;">or</span>
+                        ` : '')}
                         <button type="button" id="btn-back-to-people" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-weight:600; display:flex; align-items:center; gap:0.35rem; padding:0;">
-                            ${ICONS.back} Back to ${isBusinessMode ? 'Businesses' : (currentTab === 'clients' ? 'Clients' : 'Customers')}
+                            ${!returnInvoiceNav && !returnOverviewNav ? ICONS.back : ''} Back to ${isBusinessMode ? 'Businesses' : (currentTab === 'clients' ? 'Clients' : 'Customers')}
                         </button>
                         <span style="color:var(--text-muted);">/</span>
                         <span style="color:var(--text-primary); font-weight:700;">${escapeHtml(p.name)}</span>
@@ -650,14 +742,14 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
                     <div style="display:flex; gap:0.5rem; align-items:center;">
                         ${(isBusinessMode || currentTab === 'businesses') ? (p.isPrimary ? `
-                            <span class="badge" style="background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7; font-size:0.8rem; font-weight:700; padding:0.35rem 0.75rem; border-radius:999px; display:inline-flex; align-items:center; gap:5px;">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Primary Business (Default)
+                            <span class="badge" style="background:#F4F4F5; color:#18181B; border:1px solid #d4d4d8; font-size:0.8rem; font-weight:700; padding:0.35rem 0.75rem; border-radius:999px; display:inline-flex; align-items:center; gap:5px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Primary Business (Default)
                             </span>
-                        ` : `
-                            <button type="button" id="btn-detail-set-primary" class="btn btn-secondary" style="font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:0.35rem;">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Set as Primary
+                        ` : (canSetPrimary ? `
+                            <button type="button" id="btn-detail-set-primary" class="btn btn-secondary" style="font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:0.35rem; border:1px solid #d4d4d8; background:#ffffff; color:#18181b;" title="Set as workspace primary business">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Set as Primary
                             </button>
-                        `) : ''}
+                        ` : '')) : ''}
                         <button type="button" id="btn-edit-detail-profile" class="btn btn-secondary" style="font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:0.35rem;">
                             ${ICONS.edit} Edit Profile
                         </button>
@@ -859,11 +951,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 </div>
                                 <div class="origin-field-box" style="background:var(--surface-100); padding:0.55rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);">
                                     <div style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Creator ID</div>
-                                    <div style="font-weight:600; color:var(--text-primary); word-break:break-all;">${escapeHtml(String(p.creatorId || p.createdBy || p.userId || 'System / Admin'))}</div>
+                                    <div style="font-weight:700; color:var(--text-primary); word-break:break-all;">${escapeHtml(resolveOriginWorkerId(p))}</div>
                                 </div>
                                 <div class="origin-field-box" style="background:var(--surface-100); padding:0.55rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);">
                                     <div style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Workspace ID</div>
-                                    <div style="font-weight:600; color:var(--text-primary); word-break:break-all;">${escapeHtml(String(workspaceId || p.workspaceId || localStorage.getItem('pricelister_active_workspace') || 'Default Workspace'))}</div>
+                                    <div style="font-weight:700; color:var(--text-primary); word-break:break-all;">${escapeHtml(resolveOriginWorkspaceId(p))}</div>
                                 </div>
                                 <div class="origin-field-box" style="background:var(--surface-100); padding:0.55rem 0.75rem; border-radius:8px; border:1px solid var(--border-color);">
                                     <div style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Created At</div>
@@ -1203,6 +1295,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         `;
 
         bindDetailEvents();
+        // Sectional Scroll: restore or reset detail view scroll
+        restoreScrollPosition('subview:people:detail:' + p.id, 0);
     };
 
     // -------------------------------------------------------------
@@ -1384,6 +1478,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
     const showPersonEditor = (person = null, fromDetail = false) => {
         returnToDetailAfterEditor = fromDetail;
+        if (!fromDetail) {
+            saveScrollPosition('subview:people:list:' + currentTab);
+        } else if (activePersonDetail) {
+            saveScrollPosition('subview:people:detail:' + activePersonDetail.id);
+        }
         const formContainer = container.querySelector('#person-form-container');
         const listView = container.querySelector('#people-list-view');
         const detailView = container.querySelector('#people-detail-view');
@@ -1395,7 +1494,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
         if (formContainer) {
             formContainer.style.display = 'block';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            resetScrollToTop();
         }
 
         const typeName = isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer');
@@ -1496,10 +1595,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
         if (returnToDetailAfterEditor && activePersonDetail && detailView) {
             detailView.style.display = 'block';
+            restoreScrollPosition('subview:people:detail:' + activePersonDetail.id, 0);
         } else if (listView) {
             listView.style.display = 'block';
+            restoreScrollPosition('subview:people:list:' + currentTab);
         }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     function setupPersonEditorView() {
@@ -1706,7 +1806,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     else if (currentTab === 'clients') await peopleService.updateClient(id, payload);
 
                     if (payload.isPrimary) {
-                        await peopleService.setPrimaryBusiness(id).catch(() => {});
+                        if (canSetPrimary) {
+                            await peopleService.setPrimaryBusiness(id).catch(() => {});
+                        } else {
+                            payload.isPrimary = false;
+                        }
                     }
                     showAlert.success(`${typeLabel} updated successfully!`);
                 } else {
@@ -1716,7 +1820,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     else if (currentTab === 'clients') newId = await peopleService.addClient(payload, currentUser?.uid);
 
                     if (payload.isPrimary && newId) {
-                        await peopleService.setPrimaryBusiness(newId).catch(() => {});
+                        if (canSetPrimary) {
+                            await peopleService.setPrimaryBusiness(newId).catch(() => {});
+                        } else {
+                            payload.isPrimary = false;
+                        }
                     }
                     showAlert.success(`${typeLabel} created successfully!`);
                 }
@@ -1762,6 +1870,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 btn.addEventListener('click', (e) => {
                     const targetTab = e.currentTarget.getAttribute('data-tab');
                     if (targetTab === currentTab) return;
+                    saveScrollPosition('subview:people:list:' + currentTab);
                     currentTab = targetTab;
                     activePersonDetail = null;
                     hidePersonEditor();
@@ -1777,13 +1886,91 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
     // ATTACH DETAIL EVENTS
     // -------------------------------------------------------------
     function bindDetailEvents() {
+        const btnBackInvoice = container.querySelector('#btn-back-to-source-invoice');
+        if (btnBackInvoice) {
+            btnBackInvoice.addEventListener('click', () => {
+                let returnInvoiceNav = null;
+                try {
+                    const raw = sessionStorage.getItem('pricelister_return_invoice');
+                    if (raw) returnInvoiceNav = JSON.parse(raw);
+                } catch(e) {}
+                if (returnInvoiceNav && (returnInvoiceNav.invoiceId || returnInvoiceNav.uniqueId || returnInvoiceNav.invoiceNumber)) {
+                    try {
+                        const reopenKey = returnInvoiceNav.invoiceId || returnInvoiceNav.uniqueId || returnInvoiceNav.invoiceNumber;
+                        sessionStorage.setItem('pricelister_reopen_invoice_id', reopenKey);
+                        sessionStorage.setItem('pricelister_reopen_invoice_meta', JSON.stringify(returnInvoiceNav));
+                        sessionStorage.removeItem('pricelister_return_invoice');
+                    } catch(e) {}
+                    const retRoute = returnInvoiceNav.returnRoute || (returnInvoiceNav.isBusinessInvoice ? '/invoices/business' : '/invoices/customer');
+                    if (window.navigateToRoute) {
+                        window.navigateToRoute(retRoute);
+                    } else {
+                        window.location.hash = '#' + retRoute;
+                    }
+                }
+            });
+        }
+
+        const btnBackOverview = container.querySelector('#btn-back-to-source-overview');
+        if (btnBackOverview) {
+            btnBackOverview.addEventListener('click', () => {
+                try {
+                    sessionStorage.removeItem('pricelister_return_overview');
+                } catch(e) {}
+                if (activePersonDetail) {
+                    saveScrollPosition('subview:people:detail:' + activePersonDetail.id);
+                }
+                if (window.navigateToRoute) {
+                    window.navigateToRoute('/overview');
+                } else {
+                    window.location.hash = '#/overview';
+                }
+            });
+        }
+
         const btnBack = container.querySelector('#btn-back-to-people');
         if (btnBack) {
             btnBack.addEventListener('click', () => {
+                try {
+                    sessionStorage.removeItem('pricelister_return_invoice');
+                    sessionStorage.removeItem('pricelister_return_overview');
+                } catch(e) {}
+                if (activePersonDetail) {
+                    saveScrollPosition('subview:people:detail:' + activePersonDetail.id);
+                }
                 activePersonDetail = null;
                 render();
+                restoreScrollPosition('subview:people:list:' + currentTab);
             });
         }
+
+        // Keyboard Back Key Handler (Escape, Backspace outside input fields, Alt+ArrowLeft)
+        const handleDetailBackKey = (e) => {
+            if (!container || !container.isConnected || !activePersonDetail) return;
+            const tag = document.activeElement?.tagName;
+            const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+            
+            const isBackKey = e.key === 'Escape' || 
+                              ((e.key === 'Backspace' || (e.altKey && e.key === 'ArrowLeft')) && !isTyping);
+
+            if (isBackKey) {
+                e.preventDefault();
+                const btnBackInvoice = container.querySelector('#btn-back-to-source-invoice');
+                const btnBackOverview = container.querySelector('#btn-back-to-source-overview');
+                if (btnBackInvoice) {
+                    btnBackInvoice.click();
+                } else if (btnBackOverview) {
+                    btnBackOverview.click();
+                } else {
+                    const btnBackBtn = container.querySelector('#btn-back-to-people');
+                    if (btnBackBtn) btnBackBtn.click();
+                }
+            }
+        };
+
+        window.removeEventListener('keydown', container.__detailKeyHandler);
+        container.__detailKeyHandler = handleDetailBackKey;
+        window.addEventListener('keydown', handleDetailBackKey);
 
         const filterSelect = container.querySelector('#sales-overview-filter-select');
         const customDateInput = container.querySelector('#sales-overview-custom-date');
@@ -1822,10 +2009,14 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         const btnSetPrimary = container.querySelector('#btn-detail-set-primary');
         if (btnSetPrimary && activePersonDetail) {
             btnSetPrimary.addEventListener('click', async () => {
+                if (!canSetPrimary) {
+                    showAlert.error("Permission Denied: Only Admins and Co-Admins can set the Primary Business.");
+                    return;
+                }
                 try {
                     await peopleService.setPrimaryBusiness(activePersonDetail.id);
                     activePersonDetail.isPrimary = true;
-                    showAlert.success(`"${activePersonDetail.name}" set as Primary Business. Invoices will default to this business.`);
+                    showAlert.success(`"${activePersonDetail.name}" set as Primary Business (saved to server).`);
                     renderDedicatedDetailView();
                 } catch(err) {
                     showAlert.error(err.message || 'Failed to set primary business');
@@ -1885,9 +2076,32 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         container.querySelectorAll('.btn-view-invoice-modal').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const invId = e.currentTarget.getAttribute('data-invid');
-                const inv = allInvoices.find(i => i.id === invId);
+                const inv = allInvoices.find(i => (i.id === invId || i.uniqueId === invId));
                 if (inv) {
-                    openInvoiceViewerModal(inv);
+                    const personMeta = {
+                        mode: currentTab || (isBusinessMode ? 'businesses' : 'customers'),
+                        id: activePersonDetail?.id,
+                        uniqueId: activePersonDetail?.uniqueId,
+                        name: activePersonDetail?.name || activePersonDetail?.businessName || 'Contact'
+                    };
+                    try {
+                        sessionStorage.setItem('pricelister_return_person', JSON.stringify(personMeta));
+                        sessionStorage.setItem('pricelister_reopen_invoice_id', inv.id || inv.uniqueId);
+                        sessionStorage.setItem('pricelister_reopen_invoice_meta', JSON.stringify({
+                            invoiceId: inv.id,
+                            uniqueId: inv.uniqueId,
+                            invoiceNumber: inv.busInvNumber || inv.invoiceNumber || inv.uniqueId
+                        }));
+                    } catch(e) {}
+
+                    const targetRoute = inv.isBusinessInvoice ? '/invoices/business' : '/invoices/customer';
+                    const invQuery = encodeURIComponent(inv.uniqueId || inv.id || inv.invoiceNumber);
+
+                    if (window.navigateToRoute) {
+                        window.navigateToRoute(`${targetRoute}?inv=${invQuery}`);
+                    } else {
+                        window.location.hash = `#${targetRoute}?inv=${invQuery}`;
+                    }
                 }
             });
         });
@@ -2123,6 +2337,51 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
             return;
         }
 
+        // Check if directed to view a specific contact from Invoice view
+        let targetPersonNav = null;
+        try {
+            const storedTarget = sessionStorage.getItem('pricelister_target_person_detail');
+            if (storedTarget) targetPersonNav = JSON.parse(storedTarget);
+        } catch(e) {}
+        if (targetPersonNav) {
+            const targetId = (targetPersonNav.id || '').trim().toLowerCase();
+            const targetName = (targetPersonNav.name || '').trim().toLowerCase();
+            const targetPhone = (targetPersonNav.phone || '').trim().toLowerCase();
+            const targetEmail = (targetPersonNav.email || '').trim().toLowerCase();
+            const found = (dataList || []).find(p => {
+                if (!p) return false;
+                const pId = (p.id || '').trim().toLowerCase();
+                const pUniqueId = (p.uniqueId || '').trim().toLowerCase();
+                const pName = (p.name || p.businessName || p.customerName || p.clientName || '').trim().toLowerCase();
+                const pPhone = (p.phone || '').trim().toLowerCase();
+                const pEmail = (p.email || '').trim().toLowerCase();
+                if (targetId && (pId === targetId || pUniqueId === targetId)) return true;
+                if (targetName && pName && (pName === targetName || pName.includes(targetName) || targetName.includes(pName))) return true;
+                if (targetPhone && pPhone && (pPhone === targetPhone || pPhone.includes(targetPhone) || targetPhone.includes(pPhone))) return true;
+                if (targetEmail && pEmail && pEmail === targetEmail) return true;
+                return false;
+            });
+            if (found) {
+                activePersonDetail = found;
+                try { sessionStorage.removeItem('pricelister_target_person_detail'); } catch(e) {}
+                renderDedicatedDetailView();
+                return;
+            } else if (targetName) {
+                activePersonDetail = {
+                    id: targetId || ('synth_' + Date.now()),
+                    name: targetPersonNav.name,
+                    phone: targetPersonNav.phone || '',
+                    email: targetPersonNav.email || '',
+                    address: '',
+                    tags: [isBusinessMode ? 'Business' : (currentTab === 'clients' ? 'Client' : 'Customer')],
+                    isSynthetic: true
+                };
+                try { sessionStorage.removeItem('pricelister_target_person_detail'); } catch(e) {}
+                renderDedicatedDetailView();
+                return;
+            }
+        }
+
         // Apply search filter
         let filtered = [...dataList];
         if (peopleSearchTerm) {
@@ -2268,8 +2527,8 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                                 <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
                                     <strong style="color:var(--text-primary); font-size:0.92rem;">${escapeHtml(person.name)}</strong>
                                     ${(isBusinessMode || currentTab === 'businesses') && person.isPrimary ? `
-                                        <span class="badge badge-primary-business" style="background:#FAFAFA; color:#18181B; border:1px solid #E4E4E7; font-size:0.68rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:999px; display:inline-flex; align-items:center; gap:3px;">
-                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Primary
+                                        <span class="badge badge-primary-business" style="background:#FAFAFA; color:#18181B; border:1px solid #d4d4d8; font-size:0.68rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:999px; display:inline-flex; align-items:center; gap:3px;">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Primary
                                         </span>
                                     ` : ''}
                                 </div>
@@ -2295,9 +2554,9 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                     </td>
                     <td style="padding:0.9rem 1.25rem; text-align:right;">
                         <div style="display:inline-flex; gap:0.4rem; align-items:center;">
-                            ${(isBusinessMode || currentTab === 'businesses') && !person.isPrimary ? `
-                                <button type="button" class="btn btn-sm btn-secondary set-primary-business-btn" data-id="${person.id}" title="Set as default business for all new invoices" style="font-weight:600; font-size:0.75rem; padding:0.25rem 0.55rem; display:inline-flex; align-items:center; gap:3px;">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            ${(isBusinessMode || currentTab === 'businesses') && !person.isPrimary && canSetPrimary ? `
+                                <button type="button" class="btn btn-sm btn-secondary set-primary-business-btn" data-id="${person.id}" title="Set as default business for all new invoices" style="font-weight:600; font-size:0.75rem; padding:0.25rem 0.55rem; display:inline-flex; align-items:center; gap:3px; border:1px solid #d4d4d8; background:#ffffff; color:#18181b;">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                                     Make Primary
                                 </button>
                             ` : ''}
@@ -2449,11 +2708,15 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
         container.querySelectorAll('.set-primary-business-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
+                if (!canSetPrimary) {
+                    showAlert.error("Permission Denied: Only Admins and Co-Admins can set the Primary Business.");
+                    return;
+                }
                 const id = e.currentTarget.getAttribute('data-id');
                 const p = filtered.find(x => x.id === id);
                 try {
                     await peopleService.setPrimaryBusiness(id);
-                    showAlert.success(`"${p?.name || 'Business'}" is now the Primary Business (default for new invoices).`);
+                    showAlert.success(`"${p?.name || 'Business'}" is now the Primary Business (saved to server).`);
                     const refreshed = await peopleService.getAllBusinesses();
                     renderRealtimeList(refreshed);
                 } catch(err) {
@@ -2468,6 +2731,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 const id = e.currentTarget.getAttribute('data-id');
                 const p = filtered.find(x => x.id === id);
                 if (p) {
+                    saveScrollPosition('subview:people:list:' + currentTab);
                     activePersonDetail = p;
                     activeDetailTab = 'invoices';
                     renderDedicatedDetailView();
@@ -2548,6 +2812,7 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
                 // If not in multi-selection mode, open view
                 if (p) {
+                    saveScrollPosition('subview:people:list:' + currentTab);
                     activePersonDetail = p;
                     activeDetailTab = 'invoices';
                     renderDedicatedDetailView();
@@ -2744,6 +3009,11 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
                 }
             });
         });
+
+        // Sectional Scroll: restore list scroll if in main list view
+        if (!activePersonDetail) {
+            restoreScrollPosition('subview:people:list:' + currentTab);
+        }
     };
 
     // -------------------------------------------------------------
@@ -2856,6 +3126,14 @@ export const renderPeople = async (container, workspaceId, defaultTab = 'custome
 
     // Component Unmount Cleanup Hook — invoked by router when navigating away
     container._cleanup = () => {
+        if (container.__detailKeyHandler) {
+            window.removeEventListener('keydown', container.__detailKeyHandler);
+            container.__detailKeyHandler = null;
+        }
+        if (container.__peopleKeyHandler) {
+            window.removeEventListener('keydown', container.__peopleKeyHandler);
+            container.__peopleKeyHandler = null;
+        }
         if (unsubscribe) {
             unsubscribe();
             unsubscribe = null;

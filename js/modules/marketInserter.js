@@ -2438,7 +2438,7 @@ export const renderMarketInserter = async (container, workspaceId) => {
                     const sel = tr.querySelector('[data-field="category"]');
                     if (sel) sel.classList.add('mi-input-error');
                 }
-                if (r.missing.includes('Sale Price (> 0)')) {
+                if (r.missing.includes('Sale Price')) { //no need for (<0) description for message
                     const sp = tr.querySelector('.mi-sale-price');
                     if (sp) sp.classList.add('mi-input-error');
                 }
@@ -2448,7 +2448,7 @@ export const renderMarketInserter = async (container, workspaceId) => {
         }
 
         if (evaluation.validCount === 0) {
-            showAlert.warning('Please enter product details. Every row requires Product Name*, Category*, and Sale Price* (> 0).');
+            showAlert.warning('Please enter product details. Every row requires Product Name, Category, and Sale Price.');
             return;
         }
 

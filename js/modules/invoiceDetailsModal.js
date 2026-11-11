@@ -41,6 +41,52 @@ function formatDateDisplay(inv) {
     });
 }
 
+// Helper to resolve clean Worker ID (avoiding raw Firebase UIDs)
+function resolveInvoiceWorkerId(inv) {
+    if (!inv) return 'ADMIN-HEAD';
+    if (inv.appWorkerId && inv.appWorkerId.length <= 20) return inv.appWorkerId;
+    if (inv.workerId && inv.workerId.length <= 20) return inv.workerId;
+    
+    const cId = inv.creatorId || inv.createdBy || inv.userId;
+    if (cId && cId.length <= 18 && !/^[A-Za-z0-9]{25,}$/.test(cId)) {
+        return cId;
+    }
+    
+    const ws = (typeof window !== 'undefined' && window.__activeWorkspace) ? window.__activeWorkspace : {};
+    const curUid = (typeof firebase !== 'undefined' && firebase.auth?.().currentUser?.uid) || '';
+    
+    if (cId && (cId === ws.creatorUid || cId === ws.ownerId || cId === ws.adminUid || (curUid && cId === curUid && (ws.role === 'CREATOR_ADMIN' || ws.role === 'ADMIN')))) {
+        return ws.adminId || 'ADMIN-HEAD';
+    }
+    
+    const members = (typeof window !== 'undefined' && (window.__cachedMembers || window.__workspaceMembers)) || [];
+    if (Array.isArray(members) && cId) {
+        const found = members.find(m => m && (m.workerUid === cId || m.uid === cId || m.id === cId));
+        if (found) {
+            const resolved = found.appWorkerId || found.workerId || found.adminId;
+            if (resolved) return resolved;
+        }
+    }
+    
+    if (ws.myAppWorkerId && curUid && cId === curUid) {
+        return ws.myAppWorkerId;
+    }
+    return ws.adminId || ws.myAppWorkerId || 'ADMIN-HEAD';
+}
+
+function resolveInvoiceWorkspaceId(inv) {
+    const ws = (typeof window !== 'undefined' && window.__activeWorkspace) ? window.__activeWorkspace : {};
+    if (ws.workspaceId) return ws.workspaceId;
+    if (ws.realWorkspaceId) return ws.realWorkspaceId;
+    if (ws.uniqueId) return ws.uniqueId;
+    
+    const wsId = inv?.workspaceId;
+    if (wsId && wsId.length <= 18 && !/^[A-Za-z0-9]{25,}$/.test(wsId)) {
+        return wsId;
+    }
+    return 'PL-WORKSPACE';
+}
+
 /**
  * Render Dedicated Invoice View Panel (Grey/Black combo - WhatsApp icon green)
  * Replaces dialog overlay with a full, dedicated view screen matching Product View.
@@ -59,7 +105,7 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
     const busEmail = invoice.businessEmail || window.__activeWorkspace?.email || '';
     const busAddress = invoice.businessAddress || window.__activeWorkspace?.address || '';
 
-    // Fallback business image lookup from passed options, global cache, or active workspace
+    // Fallback business image lookup from passed options, global cache, or active workspace - Strict ID-to-ID
     let busPool = [];
     if (Array.isArray(options.allBusinesses)) busPool.push(...options.allBusinesses);
     if (typeof window !== 'undefined' && Array.isArray(window.__cachedBusinesses)) busPool.push(...window.__cachedBusinesses);
@@ -71,17 +117,16 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
         } catch(e) {}
     }
 
-    if (!busImage && busPool.length > 0) {
-        const targetBusId = invoice.businessId || invoice.issuerId;
-        const targetBusName = (busName || '').trim().toLowerCase();
-        const foundBus = busPool.find(b => {
+    let foundBus = null;
+    const targetBusId = invoice.businessId || invoice.businessUniqueId || invoice.businessDocId || invoice.issuerId;
+    if (busPool.length > 0 && targetBusId) {
+        foundBus = busPool.find(b => {
             if (!b) return false;
-            if (targetBusId && (b.id === targetBusId || b.uniqueId === targetBusId || b.businessId === targetBusId)) return true;
-            const bName = (b.name || '').trim().toLowerCase();
-            if (targetBusName && bName && (bName === targetBusName || bName.includes(targetBusName) || targetBusName.includes(bName))) return true;
-            return false;
+            return (b.id === targetBusId || b.uniqueId === targetBusId || b.businessId === targetBusId || 
+                   (b.uniqueId && b.uniqueId === invoice.businessUniqueId) || 
+                   (b.id && b.id === invoice.businessDocId));
         });
-        if (foundBus) {
+        if (foundBus && !busImage) {
             busImage = foundBus.imageUrl || foundBus.imageUri || foundBus.logoUrl || foundBus.logo || foundBus.photoUrl || foundBus.photoURL || foundBus.image || '';
         }
     }
@@ -97,46 +142,43 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
     const custPhone = invoice.customerNumber || invoice.customerPhone || invoice.clientPhone || '';
     const custEmail = invoice.clientEmail || invoice.customerEmail || '';
     const custAddress = invoice.clientAddress || invoice.customerAddress || '';
-    const isClientRecipient = Boolean(invoice.clientId || invoice.isBusinessInvoice);
 
-    // Fallback recipient image lookup from customer/client pools
-    if (!custImage) {
-        let recPool = [];
-        if (Array.isArray(options.allCustomers)) recPool.push(...options.allCustomers);
-        if (Array.isArray(options.allClients)) recPool.push(...options.allClients);
-        if (typeof window !== 'undefined' && Array.isArray(window.__cachedCustomers)) recPool.push(...window.__cachedCustomers);
-        if (typeof window !== 'undefined' && Array.isArray(window.__cachedClients)) recPool.push(...window.__cachedClients);
-        if (typeof localStorage !== 'undefined') {
-            try {
-                const db = JSON.parse(localStorage.getItem('pricelister_demo_db_v2') || '{}');
-                const demoCust = db.Customers || db.CustomerProfiles || [];
-                const demoCli = db.Clients || db.ClientProfiles || [];
-                if (Array.isArray(demoCust)) recPool.push(...demoCust);
-                if (Array.isArray(demoCli)) recPool.push(...demoCli);
-            } catch(e) {}
-        }
+    // Fallback recipient image & object lookup from customer/client pools - Strict ID-to-ID
+    let recPool = [];
+    if (Array.isArray(options.allCustomers)) recPool.push(...options.allCustomers);
+    if (Array.isArray(options.allClients)) recPool.push(...options.allClients);
+    if (typeof window !== 'undefined' && Array.isArray(window.__cachedCustomers)) recPool.push(...window.__cachedCustomers);
+    if (typeof window !== 'undefined' && Array.isArray(window.__cachedClients)) recPool.push(...window.__cachedClients);
+    if (typeof localStorage !== 'undefined') {
+        try {
+            const db = JSON.parse(localStorage.getItem('pricelister_demo_db_v2') || '{}');
+            const demoCust = db.Customers || db.CustomerProfiles || [];
+            const demoCli = db.Clients || db.ClientProfiles || [];
+            if (Array.isArray(demoCust)) recPool.push(...demoCust);
+            if (Array.isArray(demoCli)) recPool.push(...demoCli);
+        } catch(e) {}
+    }
 
-        const targetId = invoice.customerId || invoice.clientId || invoice.recipientId;
-        const targetName = (custName || '').trim().toLowerCase();
-        const targetPhone = (custPhone || '').trim();
-        const targetEmail = (custEmail || '').trim().toLowerCase();
+    let foundRec = null;
+    const targetRecLookupId = invoice.customerId || invoice.customerUniqueId || invoice.customerDocId || invoice.clientId || invoice.clientUniqueId || invoice.clientDocId || invoice.recipientId;
 
-        const foundRec = recPool.find(r => {
+    if (recPool.length > 0 && targetRecLookupId) {
+        foundRec = recPool.find(r => {
             if (!r) return false;
-            if (targetId && (r.id === targetId || r.uniqueId === targetId || r.customerId === targetId || r.clientId === targetId)) return true;
-            const rName = (r.name || r.customerName || r.clientName || '').trim().toLowerCase();
-            if (targetName && rName && (rName === targetName || rName.includes(targetName) || targetName.includes(rName))) return true;
-            const rPhone = (r.phone || r.customerPhone || r.clientPhone || '').trim();
-            if (targetPhone && rPhone && rPhone === targetPhone) return true;
-            const rEmail = (r.email || r.customerEmail || r.clientEmail || '').trim().toLowerCase();
-            if (targetEmail && rEmail && rEmail === targetEmail) return true;
-            return false;
+            return (r.id === targetRecLookupId || r.uniqueId === targetRecLookupId || 
+                   r.customerId === targetRecLookupId || r.clientId === targetRecLookupId ||
+                   (r.uniqueId && r.uniqueId === invoice.customerUniqueId) || 
+                   (r.id && r.id === invoice.customerDocId) ||
+                   (r.uniqueId && r.uniqueId === invoice.clientUniqueId) || 
+                   (r.id && r.id === invoice.clientDocId));
         });
 
-        if (foundRec) {
+        if (foundRec && !custImage) {
             custImage = foundRec.imageUrl || foundRec.imageUri || foundRec.photoUrl || foundRec.photoURL || foundRec.photo || foundRec.avatar || foundRec.picture || foundRec.image || '';
         }
     }
+
+    const isClientRecipient = Boolean(invoice.clientId || invoice.isBusinessInvoice || (foundRec && (foundRec.type === 'client' || foundRec._entityType === 'client')));
 
     // Items calculation
     const items = Array.isArray(invoice.items) ? invoice.items : [];
@@ -182,22 +224,39 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
     const grandTotal = Number(invoice.totalPrice || invoice.grandTotal || invoice.total || (taxableBase + taxAmt + ship));
     const profitMarginPct = grandTotal > 0 ? Math.round((totalProfit / grandTotal) * 100) : 0;
 
+    // Check if navigated from People / Contact view
+    let returnPersonNav = null;
+    try {
+        const rawPerson = sessionStorage.getItem('pricelister_return_person');
+        if (rawPerson) returnPersonNav = JSON.parse(rawPerson);
+    } catch(e) {}
+    if (!returnPersonNav && options.returnPerson) {
+        returnPersonNav = options.returnPerson;
+    }
+
     targetContainer.innerHTML = `
         <div class="invoice-detail-panel" style="animation: fadeIn 0.2s ease; display:flex; flex-direction:column; gap:1.25rem;">
             
             <!-- TOP NAVIGATION & ACTION BAR -->
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #E4E4E7;">
-                <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-                    <button type="button" id="btn-detail-back-invoices" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; padding:0.55rem 1.1rem; border:1px solid #E4E4E7; border-radius:8px; background:#FFFFFF; color:#18181B; cursor:pointer;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                        Back to Invoices
+                <div style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
+                    ${returnPersonNav ? `
+                        <button type="button" id="btn-detail-back-to-person" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; padding:0.5rem 0.95rem; border:1px solid #76767aff; border-radius:8px; background:#FFFFFF; color:#18181B; cursor:pointer;" title="Back to ${escapeHtml(returnPersonNav.name || 'Contact')}">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                            <span>Back to ${returnPersonNav.mode === 'businesses' ? 'Business' : (returnPersonNav.mode === 'clients' ? 'Client' : 'Customer')}: ${escapeHtml(returnPersonNav.name || 'Contact')}</span>
+                        </button>
+                        <span style="color:#71717A; font-size:0.82rem; font-weight:600;">or</span>
+                    ` : ''}
+                    <button type="button" id="btn-detail-back-invoices" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; padding:0.5rem 0.95rem; border:1px solid #E4E4E7; border-radius:8px; background:#FFFFFF; color:#18181B; cursor:pointer;">
+                        ${!returnPersonNav ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>` : ''}
+                        <span>Back to Invoices</span>
                     </button>
                     <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
                         <div style="display:flex; flex-direction:column; gap:2px;">
                             <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
                                 <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#18181B; line-height:1.2;">${escapeHtml(invoice.title || (isBusinessInvoice ? 'B2B Commercial Invoice' : 'Customer Sales Invoice'))}</h2>
                                 <code style="font-family:monospace; font-size:0.85rem; font-weight:800; background:#FAFAFA; border:1.5px solid #E4E4E7; padding:0.2rem 0.55rem; border-radius:6px; color:#18181B;">#${escapeHtml(displayInvNumber)}</code>
-                                <span style="font-size:0.75rem; font-weight:800; padding:0.2rem 0.55rem; border-radius:6px; ${isPaid ? 'background:#18181B; color:#FFFFFF;' : 'background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7;'}">
+                                <span style="font-size:0.75rem; font-weight:800; padding:0.2rem 0.55rem; border-radius:6px; ${isPaid ? 'background:#ffffff; color:#18181B;' : 'background:#F4F4F5; color:#18181B; border:1px solid #E4E4E7;'}">
                                     ${isPaid ? 'PAID' : 'UNPAID'}
                                 </span>
                             </div>
@@ -234,7 +293,13 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
                 <div class="card" style="background:#FFFFFF; border:1.5px solid #E4E4E7; border-radius:14px; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
                     <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #E4E4E7; padding-bottom:0.6rem;">
                         <span style="font-size:0.72rem; font-weight:800; text-transform:uppercase; color:#71717A; letter-spacing:0.05em;">ISSUER (YOUR BUSINESS)</span>
-                        <span style="font-size:0.7rem; font-weight:800; background:#F4F4F5; color:#18181B; padding:0.15rem 0.5rem; border-radius:4px; border:1px solid #E4E4E7;">Issuer</span>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button type="button" id="btn-view-issuer-contact" class="btn btn-xs btn-outline" style="font-size:0.72rem; font-weight:700; padding:0.18rem 0.55rem; border-radius:6px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;" title="View Issuer Business Profile in Directory">
+                                <span>View</span>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                            </button>
+                            <span style="font-size:0.7rem; font-weight:800; background:#F4F4F5; color:#18181B; padding:0.15rem 0.5rem; border-radius:4px; border:1px solid #E4E4E7;">Issuer</span>
+                        </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:0.85rem;">
                         ${busImage ? `
@@ -265,9 +330,15 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
                 <div class="card" style="background:#FFFFFF; border:1.5px solid #E4E4E7; border-radius:14px; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
                     <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #E4E4E7; padding-bottom:0.6rem;">
                         <span style="font-size:0.72rem; font-weight:800; text-transform:uppercase; color:#71717A; letter-spacing:0.05em;">BILLING & RECIPIENT</span>
-                        <span style="font-size:0.7rem; font-weight:800; background:#F4F4F5; color:#18181B; padding:0.15rem 0.5rem; border-radius:4px; border:1px solid #E4E4E7;">
-                            ${isClientRecipient ? 'B2B Client' : 'Customer'}
-                        </span>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button type="button" id="btn-view-recipient-contact" class="btn btn-xs btn-outline" style="font-size:0.72rem; font-weight:700; padding:0.18rem 0.55rem; border-radius:6px; border:1.5px solid #d4d4d8; background:#ffffff; color:#18181b; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;" title="View ${isClientRecipient ? 'Client' : 'Customer'} Profile in Directory">
+                                <span>View</span>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                            </button>
+                            <span style="font-size:0.7rem; font-weight:800; background:#F4F4F5; color:#18181B; padding:0.15rem 0.5rem; border-radius:4px; border:1px solid #E4E4E7;">
+                                ${isClientRecipient ? 'B2B Client' : 'Customer'}
+                            </span>
+                        </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:0.85rem;">
                         ${custImage ? `
@@ -354,7 +425,7 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
                 <div class="card" style="background:#FFFFFF; border:1.5px solid #E4E4E7; border-radius:14px; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
                     <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #E4E4E7; padding-bottom:0.6rem;">
                         <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:#18181B; letter-spacing:0.04em;">FINANCIAL & PROFIT INTELLIGENCE</span>
-                        <span style="font-size:0.72rem; font-weight:800; background:#18181B; color:#FFFFFF; padding:0.15rem 0.55rem; border-radius:999px;">
+                        <span style="font-size:0.72rem; font-weight:800; background:#FFFFFF; color:#18181B; padding:0.15rem 0.55rem; border-radius:999px;">
                             ${profitMarginPct}% Margin
                         </span>
                     </div>
@@ -447,11 +518,11 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
                     </div>
                     <div class="origin-field-box">
                         <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Creator ID:</span>
-                        <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${escapeHtml(invoice.creatorId || invoice.createdBy || invoice.appWorkerId || window.__activeWorkspace?.myAppWorkerId || window.__activeWorkspace?.adminId || 'System / Admin')}</code>
+                        <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${escapeHtml(resolveInvoiceWorkerId(invoice))}</code>
                     </div>
                     <div class="origin-field-box">
                         <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Workspace ID:</span>
-                        <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${escapeHtml(invoice.workspaceId || window.__activeWorkspace?.workspaceId || 'Default Workspace')}</code>
+                        <code class="origin-value" style="font-family:monospace; font-size:0.88rem; font-weight:800; color:#18181B;">${escapeHtml(resolveInvoiceWorkspaceId(invoice))}</code>
                     </div>
                     <div class="origin-field-box">
                         <span class="origin-label" style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:#71717A; display:block; margin-bottom:0.25rem;">Created at:</span>
@@ -475,8 +546,29 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
 
     // Event Bindings
     targetContainer.querySelector('#btn-detail-back-invoices')?.addEventListener('click', () => {
+        try { sessionStorage.removeItem('pricelister_return_person'); } catch(e) {}
         if (typeof options.onBack === 'function') {
             options.onBack();
+        }
+    });
+
+    targetContainer.querySelector('#btn-detail-back-to-person')?.addEventListener('click', () => {
+        if (!returnPersonNav) return;
+        try {
+            sessionStorage.removeItem('pricelister_return_person');
+            sessionStorage.setItem('pricelister_target_person_detail', JSON.stringify({
+                mode: returnPersonNav.mode,
+                id: returnPersonNav.id,
+                uniqueId: returnPersonNav.uniqueId,
+                name: returnPersonNav.name
+            }));
+        } catch(e) {}
+
+        const targetRoute = '/' + (returnPersonNav.mode || 'businesses');
+        if (window.navigateToRoute) {
+            window.navigateToRoute(targetRoute);
+        } else {
+            window.location.hash = '#' + targetRoute;
         }
     });
 
@@ -502,6 +594,76 @@ export const renderInvoiceDetailPanel = (targetContainer, invoice, options = {})
             ? `https://wa.me/${phoneClean}?text=${encodedMsg}`
             : `https://wa.me/?text=${encodedMsg}`;
         window.open(waUrl, '_blank');
+    });
+
+    // View Issuer Business Profile directly from Invoice card
+    targetContainer.querySelector('#btn-view-issuer-contact')?.addEventListener('click', () => {
+        const targetBusId = invoice.businessId || invoice.issuerId || (foundBus?.id || foundBus?.uniqueId || '');
+        const targetBusName = busName || foundBus?.name || '';
+        const returnContext = {
+            invoiceId: invoice.id || invoice.uniqueId,
+            uniqueId: invoice.uniqueId || invoice.id,
+            invoiceNumber: displayInvNumber,
+            isBusinessInvoice: isBusinessInvoice,
+            returnRoute: isBusinessInvoice ? '/invoices/business' : '/invoices/customer'
+        };
+        try {
+            sessionStorage.setItem('pricelister_return_invoice', JSON.stringify(returnContext));
+            sessionStorage.setItem('pricelister_target_person_detail', JSON.stringify({
+                mode: 'businesses',
+                id: targetBusId,
+                name: targetBusName,
+                phone: busPhone || foundBus?.phone || '',
+                email: busEmail || foundBus?.email || ''
+            }));
+        } catch(e) {}
+
+        if (typeof options.onViewContact === 'function') {
+            options.onViewContact('businesses', { id: targetBusId, name: targetBusName, returnContext });
+            return;
+        }
+
+        if (window.navigateToRoute) {
+            window.navigateToRoute('/businesses');
+        } else {
+            window.location.hash = '#/businesses';
+        }
+    });
+
+    // View Recipient Customer / Client Profile directly from Invoice card
+    targetContainer.querySelector('#btn-view-recipient-contact')?.addEventListener('click', () => {
+        const targetRecId = invoice.customerId || invoice.clientId || invoice.recipientId || (foundRec?.id || foundRec?.uniqueId || '');
+        const targetRecName = custName || foundRec?.name || foundRec?.customerName || foundRec?.clientName || '';
+        const targetMode = isClientRecipient ? 'clients' : 'customers';
+        const targetRoute = isClientRecipient ? '/clients' : '/customers';
+        const returnContext = {
+            invoiceId: invoice.id || invoice.uniqueId,
+            uniqueId: invoice.uniqueId || invoice.id,
+            invoiceNumber: displayInvNumber,
+            isBusinessInvoice: isBusinessInvoice,
+            returnRoute: isBusinessInvoice ? '/invoices/business' : '/invoices/customer'
+        };
+        try {
+            sessionStorage.setItem('pricelister_return_invoice', JSON.stringify(returnContext));
+            sessionStorage.setItem('pricelister_target_person_detail', JSON.stringify({
+                mode: targetMode,
+                id: targetRecId,
+                name: targetRecName,
+                phone: custPhone || foundRec?.phone || '',
+                email: custEmail || foundRec?.email || ''
+            }));
+        } catch(e) {}
+
+        if (typeof options.onViewContact === 'function') {
+            options.onViewContact(targetMode, { id: targetRecId, name: targetRecName, returnContext });
+            return;
+        }
+
+        if (window.navigateToRoute) {
+            window.navigateToRoute(targetRoute);
+        } else {
+            window.location.hash = '#' + targetRoute;
+        }
     });
 };
 

@@ -24,12 +24,12 @@ export const getInvoiceService = (workspaceId) => {
             }
         },
 
-        listenInvoices: (isBusiness, callback) => {
+        listenInvoices: (isBusiness, callback, onError = null) => {
             const repo = isBusiness ? businessInvoiceRepo : customerInvoiceRepo;
             return repo.listenAll(data => {
                 const list = Array.isArray(data) ? data : [];
                 callback(list.filter(inv => inv && !inv.isArchive));
-            });
+            }, [], onError);
         },
 
         getInvoiceById: async (id, isBusiness = false) => {

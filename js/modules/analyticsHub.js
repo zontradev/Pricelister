@@ -81,16 +81,18 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
 
     try {
         // Fetch all datasets in parallel
-        const [products, categories, custInvoices, busInvoices, businesses, customers] = await Promise.all([
+        const [products, categories, custInvoices, busInvoices, businesses, customers, clients] = await Promise.all([
             productService.getAllActiveProducts().catch(() => []),
             categoryService.getAllCategories().catch(() => []),
             invoiceService.getAllInvoices(false).catch(() => []),
             invoiceService.getAllInvoices(true).catch(() => []),
             peopleService.getAllBusinesses().catch(() => []),
-            peopleService.getAllCustomers().catch(() => [])
+            peopleService.getAllCustomers().catch(() => []),
+            peopleService.getAllClients().catch(() => [])
         ]);
 
         const allInvoices = [...custInvoices, ...busInvoices];
+        const allCustomers = [...(customers || []), ...(clients || [])];
 
         // State for active feature subview
         let currentFeature = activeFeature;
@@ -369,14 +371,18 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
         // Helper header for subviews
         const getSubHeader = (title, subtitle) => `
             <div class="module-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.75rem; flex-wrap:wrap; gap:1rem;">
-                <div style="display:flex; align-items:center; gap:1rem;">
-                    <button id="btn-back-hub" class="btn btn-secondary" style="font-weight:600; display:inline-flex; align-items:center; gap:6px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                        All Reports
+                <div style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
+                    <button type="button" id="btn-back-overview-from-hub" class="btn btn-secondary" style="font-weight:700; display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; cursor:pointer;" onclick="if(window.navigateToRoute){window.navigateToRoute('/overview')}else{window.location.hash='#/overview'}">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        <span>Back to Overview</span>
                     </button>
-                    <div>
-                        <h2 style="font-size: 1.6rem; color: var(--text-primary); margin:0 0 0.2rem 0; font-weight:700;">${title}</h2>
-                        <p style="color:var(--text-secondary); margin:0; font-size:0.88rem;">${subtitle}</p>
+                    <button type="button" id="btn-back-hub" class="btn btn-secondary" style="font-weight:600; display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; cursor:pointer;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        <span>All Reports</span>
+                    </button>
+                    <div style="margin-left:0.5rem;">
+                        <h2 style="font-size: 1.55rem; color: var(--text-primary); margin:0 0 0.2rem 0; font-weight:800; line-height:1.2;">${title}</h2>
+                        <p style="color:var(--text-secondary); margin:0; font-size:0.86rem;">${subtitle}</p>
                     </div>
                 </div>
             </div>
@@ -1152,18 +1158,33 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
                             </thead>
                             <tbody>
                                 ${busStats.length === 0 ? '<tr><td colspan="5" style="padding:2rem; text-align:center; color:var(--text-muted);">No businesses registered yet.</td></tr>' : ''}
-                                ${busStats.map((b, idx) => `
-                                    <tr class="business-rank-row" data-id="${b.id || b.uniqueId}" style="border-bottom:1px solid var(--border-color); cursor:pointer;">
-                                        <td style="padding:1rem 1.25rem; text-align:center;"><span style="font-weight:700; color:var(--text-muted);">#${idx + 1}</span></td>
-                                        <td style="padding:1rem;">
-                                            <strong style="color:var(--text-primary); font-size:0.92rem;">${b.name}</strong>
-                                            <div style="font-size:0.75rem; color:var(--text-muted);">${b.address || 'No address provided'}</div>
-                                        </td>
-                                        <td style="padding:1rem; font-size:0.85rem; color:var(--text-secondary);">${b.phone || b.email || '—'}</td>
-                                        <td style="padding:1rem;"><span class="badge" style="background:rgba(103,58,183,0.1); color:#673AB7; font-weight:700;">${b.invoiceCount} Invoices</span></td>
-                                        <td style="padding:1rem 1.25rem; font-weight:700; color:var(--primary); font-size:1.05rem;">${formatCurr(b.totalRevenue)}</td>
-                                    </tr>
-                                `).join('')}
+                                ${busStats.map((b, idx) => {
+                                    const bImg = b.imageUrl || b.imageUri || b.logoUrl || b.photoUrl || '';
+                                    const bInitials = (b.name || 'B').trim().substring(0, 2).toUpperCase();
+                                    const avatarHtml = bImg ? `
+                                        <img src="${escapeHtml(bImg)}" alt="" style="width:34px; height:34px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0; background:var(--surface-100);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                        <div style="display:none; width:34px; height:34px; border-radius:8px; background:var(--surface-100); align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">${bInitials}</div>
+                                    ` : `
+                                        <div style="width:34px; height:34px; border-radius:8px; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">${bInitials}</div>
+                                    `;
+                                    return `
+                                        <tr class="business-rank-row" data-id="${b.id || b.uniqueId}" style="border-bottom:1px solid var(--border-color); cursor:pointer;">
+                                            <td style="padding:1rem 1.25rem; text-align:center;"><span style="font-weight:700; color:var(--text-muted);">#${idx + 1}</span></td>
+                                            <td style="padding:1rem;">
+                                                <div style="display:flex; align-items:center; gap:0.75rem;">
+                                                    ${avatarHtml}
+                                                    <div>
+                                                        <strong style="color:var(--text-primary); font-size:0.92rem;">${escapeHtml(b.name)}</strong>
+                                                        <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(b.address || 'No address provided')}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="padding:1rem; font-size:0.85rem; color:var(--text-secondary);">${escapeHtml(b.phone || b.email || '—')}</td>
+                                            <td style="padding:1rem;"><span class="badge" style="background:rgba(103,58,183,0.1); color:#673AB7; font-weight:700;">${b.invoiceCount} Invoices</span></td>
+                                            <td style="padding:1rem 1.25rem; font-weight:700; color:var(--primary); font-size:1.05rem;">${formatCurr(b.totalRevenue)}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -1194,7 +1215,7 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
         // FEATURE 10: TOP CLIENTS (HIGH_VALUE_CLIENT)
         // -------------------------------------------------------------------------
         const renderHighValueClients = () => {
-            const clientStats = customers.map(c => {
+            const clientStats = allCustomers.map(c => {
                 const cName = (c.name || '').trim().toLowerCase();
                 const linked = allInvoices.filter(inv => {
                     if (!inv) return false;
@@ -1230,18 +1251,33 @@ export const renderAnalyticsHub = async (container, workspaceId, activeFeature =
                             </thead>
                             <tbody>
                                 ${clientStats.length === 0 ? '<tr><td colspan="5" style="padding:2rem; text-align:center; color:var(--text-muted);">No clients registered yet.</td></tr>' : ''}
-                                ${clientStats.map((c, idx) => `
-                                    <tr class="client-rank-row" data-id="${c.id || c.uniqueId}" style="border-bottom:1px solid var(--border-color); cursor:pointer;">
-                                        <td style="padding:1rem 1.25rem; text-align:center;"><span style="font-weight:700; color:var(--text-muted);">#${idx + 1}</span></td>
-                                        <td style="padding:1rem;">
-                                            <strong style="color:var(--text-primary); font-size:0.92rem;">${c.name}</strong>
-                                            <div style="font-size:0.75rem; color:var(--text-muted);">${c.address || '—'}</div>
-                                        </td>
-                                        <td style="padding:1rem; font-size:0.85rem; color:var(--text-secondary);">${c.phone || c.email || '—'}</td>
-                                        <td style="padding:1rem;"><span class="badge" style="background:rgba(0,188,212,0.1); color:#00BCD4; font-weight:700;">${c.invoiceCount} Invoices</span></td>
-                                        <td style="padding:1rem 1.25rem; font-weight:700; color:var(--primary); font-size:1.05rem;">${formatCurr(c.totalRevenue)}</td>
-                                    </tr>
-                                `).join('')}
+                                ${clientStats.map((c, idx) => {
+                                    const cImg = c.imageUrl || c.imageUri || c.photoUrl || '';
+                                    const cInitials = (c.name || 'C').trim().substring(0, 2).toUpperCase();
+                                    const avatarHtml = cImg ? `
+                                        <img src="${escapeHtml(cImg)}" alt="" style="width:34px; height:34px; border-radius:8px; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0; background:var(--surface-100);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                        <div style="display:none; width:34px; height:34px; border-radius:8px; background:var(--surface-100); align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">${cInitials}</div>
+                                    ` : `
+                                        <div style="width:34px; height:34px; border-radius:8px; background:var(--surface-100); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-primary);">${cInitials}</div>
+                                    `;
+                                    return `
+                                        <tr class="client-rank-row" data-id="${c.id || c.uniqueId}" style="border-bottom:1px solid var(--border-color); cursor:pointer;">
+                                            <td style="padding:1rem 1.25rem; text-align:center;"><span style="font-weight:700; color:var(--text-muted);">#${idx + 1}</span></td>
+                                            <td style="padding:1rem;">
+                                                <div style="display:flex; align-items:center; gap:0.75rem;">
+                                                    ${avatarHtml}
+                                                    <div>
+                                                        <strong style="color:var(--text-primary); font-size:0.92rem;">${escapeHtml(c.name)}</strong>
+                                                        <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(c.address || '—')}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="padding:1rem; font-size:0.85rem; color:var(--text-secondary);">${escapeHtml(c.phone || c.email || '—')}</td>
+                                            <td style="padding:1rem;"><span class="badge" style="background:rgba(0,188,212,0.1); color:#00BCD4; font-weight:700;">${c.invoiceCount} Invoices</span></td>
+                                            <td style="padding:1rem 1.25rem; font-weight:700; color:var(--primary); font-size:1.05rem;">${formatCurr(c.totalRevenue)}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
                     </div>

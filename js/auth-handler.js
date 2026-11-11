@@ -1857,87 +1857,92 @@ export const initAuthHandler = (pageType) => {
 
                         if (section) section.style.display = 'block';
 
-                        let invites = [];
-                        if (user.email) {
-                            try {
-                                invites = await firestoreService.getPendingInvites(user.email);
-                            } catch (e) {
-                                console.warn("Could not fetch invites:", e);
+                        const renderSetupMailbox = async () => {
+                            let invites = [];
+                            if (user.email) {
+                                try {
+                                    invites = await firestoreService.getPendingInvites(user.email);
+                                } catch (e) {
+                                    console.warn("Could not fetch invites:", e);
+                                }
                             }
-                        }
 
-                        if (badgeCount) {
-                            badgeCount.textContent = `(${invites.length})`;
-                        }
+                            if (badgeCount) {
+                                badgeCount.textContent = `(${invites.length})`;
+                            }
 
-                        if (invites && invites.length > 0) {
-                            if (list) {
-                                list.style.display = 'flex';
-                                list.innerHTML = invites.map(inv => `
-                                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.15rem 1.35rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.03); gap: 1rem; flex-wrap: wrap;">
-                                        <div>
-                                            <strong style="display:block; color: #0f172a; font-size:1.05rem; font-weight:800;">${inv.workspaceName || 'PriceLister Workspace'}</strong>
-                                            <div style="color: #64748b; font-size:0.84rem; margin-top:0.25rem; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-                                                <span>Invited by: <strong style="color:#334155;">${inv.adminEmail}</strong></span>
-                                                <span>&bull;</span>
-                                                <span>Role: <span class="badge-role badge-role-worker" style="padding: 0.15rem 0.5rem; border-radius: 999px;">${inv.role || 'Worker'}</span></span>
+                            if (invites && invites.length > 0) {
+                                if (list) {
+                                    list.style.display = 'flex';
+                                    list.innerHTML = invites.map(inv => `
+                                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 1.15rem 1.35rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.03); gap: 1rem; flex-wrap: wrap;">
+                                            <div>
+                                                <strong style="display:block; color: #0f172a; font-size:1.05rem; font-weight:800;">${inv.workspaceName || 'PriceLister Workspace'}</strong>
+                                                <div style="color: #64748b; font-size:0.84rem; margin-top:0.25rem; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                                                    <span>Invited by: <strong style="color:#334155;">${inv.adminEmail}</strong></span>
+                                                    <span>&bull;</span>
+                                                    <span>Role: <span class="badge-role badge-role-worker" style="padding: 0.15rem 0.5rem; border-radius: 999px;">${inv.role || 'Worker'}</span></span>
+                                                </div>
+                                            </div>
+                                            <div style="display: flex; gap: 0.6rem; align-items: center;">
+                                                <button type="button" class="btn btn-sm accept-invite-btn" data-id="${inv.id}" style="font-weight:700; padding:0.5rem 1.1rem; background:#09090b; color:#ffffff; border-radius:8px; border:none; cursor:pointer;">Join Workspace</button>
+                                                <button type="button" class="btn btn-sm btn-outline reject-invite-btn" data-id="${inv.id}" style="padding:0.5rem 0.85rem; font-weight:600; border-radius:8px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer;">Decline</button>
                                             </div>
                                         </div>
-                                        <div style="display: flex; gap: 0.6rem; align-items: center;">
-                                            <button type="button" class="btn btn-sm accept-invite-btn" data-id="${inv.id}" style="font-weight:700; padding:0.5rem 1.1rem; background:#09090b; color:#ffffff; border-radius:8px; border:none; cursor:pointer;">Join Workspace</button>
-                                            <button type="button" class="btn btn-sm btn-outline reject-invite-btn" data-id="${inv.id}" style="padding:0.5rem 0.85rem; font-weight:600; border-radius:8px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer;">Decline</button>
-                                        </div>
-                                    </div>
-                                `).join('');
+                                    `).join('');
 
-                                // Attach Join & Decline Events
-                                list.querySelectorAll('.accept-invite-btn').forEach(btn => {
-                                    btn.addEventListener('click', async (e) => {
-                                        const id = btn.getAttribute('data-id');
-                                        const invite = invites.find(i => i.id === id);
-                                        if (!invite) return;
-                                        btn.disabled = true;
-                                        btn.textContent = '...';
-                                        await handleSecureJoinInvite(invite, user, () => {
-                                            window.location.href = '/app.html';
-                                        });
-                                        btn.disabled = false;
-                                        btn.textContent = 'Join Workspace';
-                                    });
-                                });
-
-                                list.querySelectorAll('.reject-invite-btn').forEach(btn => {
-                                    btn.addEventListener('click', async (e) => {
-                                        const id = btn.getAttribute('data-id');
-                                        try {
+                                    // Attach Join & Decline Events
+                                    list.querySelectorAll('.accept-invite-btn').forEach(btn => {
+                                        btn.addEventListener('click', async (e) => {
+                                            const id = btn.getAttribute('data-id');
+                                            const invite = invites.find(i => i.id === id);
+                                            if (!invite) return;
                                             btn.disabled = true;
                                             btn.textContent = '...';
-                                            await firestoreService.rejectWorkspaceInvite(id);
-                                            btn.closest('div[style*="background: #ffffff"]')?.remove();
-                                            invites = invites.filter(i => i.id !== id);
-                                            if (badgeCount) {
-                                                badgeCount.textContent = `(${invites.length})`;
-                                            }
-                                            if (invites.length === 0) {
-                                                list.style.display = 'none';
-                                                if (emptyState) emptyState.style.display = 'block';
-                                            }
-                                        } catch (err) {
+                                            await handleSecureJoinInvite(invite, user, () => {
+                                                window.location.href = '/app.html';
+                                            });
                                             btn.disabled = false;
-                                            btn.textContent = 'Decline';
-                                            showAlert.error("Failed to decline invite.");
-                                        }
+                                            btn.textContent = 'Join Workspace';
+                                        });
                                     });
-                                });
+
+                                    list.querySelectorAll('.reject-invite-btn').forEach(btn => {
+                                        btn.addEventListener('click', async (e) => {
+                                            const id = btn.getAttribute('data-id');
+                                            try {
+                                                btn.disabled = true;
+                                                btn.textContent = '...';
+                                                await firestoreService.rejectWorkspaceInvite(id);
+                                                btn.closest('div[style*="background: #ffffff"]')?.remove();
+                                                invites = invites.filter(i => i.id !== id);
+                                                if (badgeCount) {
+                                                    badgeCount.textContent = `(${invites.length})`;
+                                                }
+                                                if (invites.length === 0) {
+                                                    list.style.display = 'none';
+                                                    if (emptyState) emptyState.style.display = 'block';
+                                                }
+                                            } catch (err) {
+                                                btn.disabled = false;
+                                                btn.textContent = 'Decline';
+                                                showAlert.error("Failed to decline invite.");
+                                            }
+                                        });
+                                    });
+                                }
+                                if (emptyState) emptyState.style.display = 'none';
+                            } else {
+                                if (list) {
+                                    list.style.display = 'none';
+                                    list.innerHTML = '';
+                                }
+                                if (emptyState) emptyState.style.display = 'block';
                             }
-                            if (emptyState) emptyState.style.display = 'none';
-                        } else {
-                            if (list) {
-                                list.style.display = 'none';
-                                list.innerHTML = '';
-                            }
-                            if (emptyState) emptyState.style.display = 'block';
-                        }
+                            return invites.length;
+                        };
+
+                        await renderSetupMailbox();
                         
                         if (setupContainer) {
                             setupContainer.style.display = 'block';
@@ -1946,32 +1951,17 @@ export const initAuthHandler = (pageType) => {
                             launcherContainer.style.display = 'none';
                         }
 
-                        // Setup Account Actions: Recheck Email & Invites
+                        // Mailbox Refresh Action (Only reloads mail invites, not entire page)
                         const setupRefreshEmailBtn = document.getElementById('setup-refresh-email-btn');
                         if (setupRefreshEmailBtn) {
                             setupRefreshEmailBtn.onclick = async () => {
                                 const svg = setupRefreshEmailBtn.querySelector('svg');
                                 if (svg) svg.style.animation = 'spin 0.6s linear';
                                 try {
-                                    const recheckWs = await firestoreService.checkWorkspaceExists(user.uid, user.email);
-                                    if (recheckWs) {
-                                        showAlert.success('Workspace found! Connecting...');
-                                        setTimeout(() => window.location.reload(), 300);
-                                        return;
-                                    }
-                                    let refreshedInvites = [];
-                                    if (user.email) {
-                                        refreshedInvites = await firestoreService.getPendingInvites(user.email);
-                                        if (badgeCount) badgeCount.textContent = `(${refreshedInvites.length})`;
-                                        if (refreshedInvites.length > 0) {
-                                            showAlert.success(`Found ${refreshedInvites.length} pending invite(s) for ${user.email}!`);
-                                            setTimeout(() => window.location.reload(), 400);
-                                            return;
-                                        }
-                                    }
-                                    showAlert.success(`Email verified (${user.email}). No pending invitations.`);
+                                    const count = await renderSetupMailbox();
+                                    showAlert.success(`Mailbox refreshed. ${count > 0 ? count + ' invitation(s) found.' : 'No pending invitations.'}`);
                                 } catch (e) {
-                                    showAlert.info('Email rechecked.');
+                                    showAlert.info('Mailbox refreshed.');
                                 } finally {
                                     setTimeout(() => { if (svg) svg.style.animation = ''; }, 600);
                                 }

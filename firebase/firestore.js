@@ -1282,6 +1282,34 @@ export const firestoreService = {
                 }
             }, (err) => console.warn("Workspace metrics listen error:", err));
         }
+    },
+
+    updateWorkspacePrimaryBusiness: async (workspaceDocUid, primaryBusinessId, primaryBusinessName = '') => {
+        if (!workspaceDocUid) return false;
+        if (workspaceDocUid === 'ws_dev_mock' || workspaceDocUid === 'dev-mock-uid') {
+            try {
+                const dbObj = JSON.parse(localStorage.getItem('pricelister_demo_db_v2') || '{}');
+                if (!dbObj.Workspaces) dbObj.Workspaces = {};
+                if (!dbObj.Workspaces[workspaceDocUid]) dbObj.Workspaces[workspaceDocUid] = {};
+                dbObj.Workspaces[workspaceDocUid].primaryBusinessId = primaryBusinessId;
+                dbObj.Workspaces[workspaceDocUid].primaryBusinessName = primaryBusinessName;
+                localStorage.setItem('pricelister_demo_db_v2', JSON.stringify(dbObj));
+            } catch(e) {}
+            return true;
+        }
+
+        try {
+            const wsRef = doc(db, 'Workspaces', workspaceDocUid);
+            await setDoc(wsRef, {
+                primaryBusinessId,
+                primaryBusinessName,
+                primaryBusinessUpdatedAt: Date.now()
+            }, { merge: true });
+            return true;
+        } catch(e) {
+            console.warn("Could not update workspace primary business:", e);
+            return false;
+        }
     }
 };
 
