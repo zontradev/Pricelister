@@ -7785,3 +7785,102 @@ button[disabled] {
     color: #E6E6E6 !important;
     stroke: #E6E6E6 !important;
 }
+
+/* =========================================================================
+   QUANTUM 3-SECOND SMOOTH KINETIC LINE ANIMATION
+   0> animate | 0.5s gentle soft start | 0.5s-2.9s continuous fast sweep | 2.9s-3.0s smooth settle
+   ========================================================================= */
+.quantum-sparkline-svg {
+    overflow: visible !important;
+}
+.quantum-spark-line {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: quantumDrawLine 3s ease forwards;
+    will-change: stroke-dashoffset, opacity;
+}
+.quantum-spark-area {
+    opacity: 0;
+    animation: quantumDrawArea 3s ease forwards;
+    will-change: opacity;
+}
+.quantum-card:hover .quantum-spark-line {
+    stroke-width: 2.7px;
+    transition: stroke-width 0.25s ease;
+}
+.quantum-chevron-btn svg {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.quantum-chevron-btn.folded svg {
+    transform: rotate(-90deg);
+}
+.quantum-collapsible-grid {
+    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, margin 0.25s ease;
+    max-height: 1400px;
+    opacity: 1;
+    overflow: visible;
+}
+.quantum-collapsible-grid.folded {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}
+#q-chart-data-dots circle {
+    opacity: 0;
+    animation: quantumDotsBloom 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes quantumDrawLine {
+    0% {
+        stroke-dashoffset: 1000;
+        opacity: 0.15;
+    }
+    16.7% { /* 0.5s: smooth soft start (no hard pause) */
+        stroke-dashoffset: 940;
+        opacity: 0.45;
+    }
+    96.7% { /* 2.9s: continuous fast sweep through the curves */
+        stroke-dashoffset: 20;
+        opacity: 0.98;
+    }
+    100% { /* 3.0s: seamless final finish and rest */
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+}
+
+@keyframes quantumDrawArea {
+    0% {
+        opacity: 0;
+    }
+    16.7% { /* 0.5s */
+        opacity: 0.08;
+    }
+    96.7% { /* 2.9s */
+        opacity: 0.92;
+    }
+    100% { /* 3.0s */
+        opacity: 1;
+    }
+}
+
+@keyframes quantumDotsBloom {
+    0%, 75% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    92% {
+        opacity: 0.85;
+        transform: scale(1.15);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
